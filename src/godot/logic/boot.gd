@@ -110,6 +110,21 @@ func _test_hook() -> void:
 					farm.tap(farm.world_to_screen(nd.bub_at()))
 			"vnbtn":   # vnbtn:i: bấm nút thứ i của bảng con vật
 				ui.vnp._do(ui.vnp.acts[int(a[1])].cb)
+			"ftset":   # ftset:id:gx:gy:fp:fw: đặt một cây ăn trái
+				G.g.objs.append({"id": a[1], "gx": int(a[2]), "gy": int(a[3]), "seed": 0, "fp": float(a[4]), "fw": float(a[5])})
+				G.mark()
+				farm.lang.changed()
+			"ftopen": ui.ft_open(int(a[1]) if int(a[1]) >= 0 else G.g.objs.size() + int(a[1]))
+			"fttap":
+				var oi: int = int(a[1]) if int(a[1]) >= 0 else G.g.objs.size() + int(a[1])
+				farm.tap(farm.world_to_screen(farm.ft_bub(oi) + Vector2(0, 30)))
+			"ftbtn": ui.ftp._do(ui.ftp.acts[a[1]])
+			"ftinfo":
+				var FI := {"open": ui.ftp.ti, "acts": ui.ftp.acts.keys(), "barn": G.g.barn, "q": farm.q.size()}
+				for oi in G.g.objs.size():
+					if G.ct.tree(oi) != null:
+						FI[str(oi)] = [G.g.objs[oi].id, G.g.objs[oi].fp, G.g.objs[oi].fw, farm.lang_ve.top_of(G.g.objs[oi])]
+				JavaScriptBridge.eval("window.__ntvn=" + JSON.stringify(FI))
 			"vnopen": ui.vn_open({"t": a[1], "j": int(a[2])}, farm.anodes[a[1] + ":0"].foot() if farm.anodes.has(a[1] + ":0") else Vector2.ZERO)
 			"cam":   # cam:gx:gy: đưa camera tới ô
 				ui.main.zoom = 2.0 * ui.Css.K

@@ -269,6 +269,21 @@ func show_ghost(id: String, seed: int, gx: int, gy: int, bad: bool) -> void:   #
 func hide_ghost() -> void:
 	ghost.visible = false
 
+func top_of(o: Dictionary) -> float:   # đỉnh hình món o (tính từ chân, âm là trên chân)
+	var p = PICS.get(o.id)
+	if p == null:
+		return -60.0
+	var b := String(p.b)
+	var m: Dictionary = F.P.meta(b)
+	var top := 0.0
+	for k in frames_for(String(o.id), ft_seed(o)):
+		var a = m.get(k)
+		if a == null and F.main.has_method("op_box"):
+			a = F.main.op_box(op_name(b, String(k)))
+		if a is Array and a.size() >= 4:
+			top = minf(top, float(a[1]))
+	return top if top < 0.0 else -60.0
+
 func pick_obj(n: int, w: Vector2) -> bool:   # chạm trúng điểm ảnh của món n (alpha > 40)
 	var o: Dictionary = LG.objs()[n]
 	var t = LG.Pi.get(o.id)

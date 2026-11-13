@@ -354,6 +354,7 @@ func _process(dt: float) -> void:
 			b.queue_redraw()
 	_fell_sync(tt, zz)
 	_vn_sync(dt)
+	_ft_sync()
 	_parts_step(dt)
 	_jobs(dt)
 	player.step(dt)
@@ -658,6 +659,11 @@ func tap(sp: Vector2) -> void:
 		ui.close_all()
 		ui.vn_open(va, w)
 		return
+	var ti := ft_at(w)
+	if ti >= 0 and plot_at(w) < 0:
+		ui.close_all()
+		ui.ft_open(ti)
+		return
 	var xk := xw_at(w)
 	if xk != "" and plot_at(w) < 0:
 		ui.close_all()
@@ -835,6 +841,15 @@ func _jobs(dt: float) -> void:
 			"work": ok = G.xw.make(j.i_k, j.seed)   # Wh "make": tới xưởng rồi mới xếp món
 			"workc": ok = G.xw.collect(j.i_k)
 			"animal": ok = vn_do(j.va, j.seed)
+			"twater": ok = G.ct.water(j.ti)
+			"tharvest":
+				var fr: String = G.ct.harvest(j.ti)
+				ok = fr != ""
+				if ok:
+					var e = G.ct.tree(j.ti)
+					var c := Vector2(j.pos.x, j.pos.y - 1.0)
+					G.float_text.emit(c.x, c.y, "+" + str(int(G.ct.E(e).yield)) + " " + G.item_name(fr))
+					burst(Vector2(en(c.x, c.y), nn(c.x, c.y) - 36.0), 12, ["#ffd23a", "#f59a2a", "#7bbf53"], 90.0, 2.6, 300.0, 2.2, 0.7, 22.0)
 		if ok:
 			var kx: String = "work" if j.kind == "workc" else j.kind
 			G.use_en(float(G.D.suc.get(kx, 0)))
@@ -1176,6 +1191,103 @@ func vn_do(va: Array, act: String) -> bool:   # lG / kZ khi nhân vật tới n�
 			return m != ""
 		"feed": return V.feed(t, j)
 	return false
+
+# ------------------------------------------------------------------ cây ăn trái (Fj, Ax, Px, Ij bản web)
+func ft_at(w: Vector2) -> int:   # chạm trúng hình cây ăn trái (hoặc bong bóng trên ngọn)
+	if lang == null or G.ct == null:
+		return -1
+	var O: Array = lang.objs()
+	for i in O.size():
+		if G.ct.tree(i) != null and ft_bub(i).distance_squared_to(w) <= 196.0 * sign_le() * sign_le():
+			return i
+	var i := lang.obj_at(w, lang_ve.pick_obj)
+	return i if i >= 0 and G.ct.tree(i) != null else -1
+
+func ft_stand(i: int) -> Vector2:   # Ax: chỗ đứng hái / tưới (dưới gốc)
+	var o: Dictionary = lang.objs()[i]
+	var t = lang.Pi.get(o.id)
+	return Vector2(float(o.gx) + float(t.fw) / 2.0, float(o.gy) + float(t.fd) + 0.2)
+
+func ft_foot(i: int) -> Vector2:
+	var o: Dictionary = lang.objs()[i]
+	var t = lang.Pi.get(o.id)
+	var cx: float = float(o.gx) + float(t.fw) / 2.0
+	var cy: float = float(o.gy) + float(t.fd) / 2.0
+	return Vector2(en(cx, cy), nn(cx, cy))
+
+func ft_bub(i: int) -> Vector2:   # Ij: bong bóng ở ngọn cây (đỉnh hình + 8, nhún)
+	var f := ft_foot(i)
+	return Vector2(f.x, f.y + lang_ve.top_of(lang.objs()[i]) + 2.0)
+
+func ft_job(i: int, kind: String) -> bool:   # Px
+	var key := "t" + str(i) + kind
+	if has_job(key):
+		return false
+	if q.size() >= 30:
+		G.toast.emit("Nhân vật đang có quá nhiều việc rồi.")
+		return false
+	q.append({"key": key, "kind": kind, "i": -1, "ti": i, "seed": "", "pos": ft_stand(i)})
+	return true
+
+class FtBubbles extends Node2D:   # bong bóng trên cây: có trái (hình trái) / đất khô (giọt nước); vẽ trên cùng
+	var farm
+	var tt := 0.0
+	var _rd := 0.0
+	func _process(dt: float) -> void:
+		tt += dt
+		_rd -= dt
+		if _rd <= 0.0:
+			_rd = 1.0 / 15.0
+			queue_redraw()
+	func _draw() -> void:
+		var C = farm.G.ct
+		if C == null or farm.lang == null or farm.ui.bdp != null and farm.ui.bdp.active():
+			return
+		var O: Array = farm.lang.objs()
+		for i in O.size():
+			var a = C.tree(i)
+			if a == null:
+				continue
+			var dry: bool = float(a.fw) <= 0.0 and not C.ripe(a)
+			if not C.ripe(a) and not dry:
+				continue
+			var p: Vector2 = farm.ft_bub(i)
+			if not farm.onscreen_px(p, 40.0):
+				continue
+			var o := 0.0 if farm.G.motion_off() else sin(tt * 3.0 + i) * 1.2
+			_x0(Vector2(p.x, p.y + o), "" if dry else String(C.E(a).p))
+	func _x0(at: Vector2, id: String) -> void:   # X0 (như xưởng, con vật); id "" = giọt nước (MG "drop")
+		var le: float = farm.sign_le()
+		var r := 1.0 if farm.G.motion_off() else 1.0 + 0.08 * sin(tt * 5.0 + at.x)
+		var s := r * le
+		draw_set_transform(at, 0.0, Vector2(s, s))
+		draw_circle(Vector2.ZERO, 10.0, Color(1, 1, 1, 0.97))
+		draw_arc(Vector2.ZERO, 10.0, 0, TAU, 32, Color(0, 0, 0, 0.28), 1.0, true)
+		draw_colored_polygon(PackedVector2Array([Vector2(-3.2, 8.6), Vector2(3.2, 8.6), Vector2(0, 13.5)]), Color(1, 1, 1, 0.97))
+		if id == "":
+			var P := PackedVector2Array([Vector2(0, -6.2)])
+			for k in 13:
+				var t := PI * k / 12.0
+				P.append(Vector2(cos(t) * 4.2, 1.6 + sin(t) * 4.2))
+			draw_colored_polygon(P, Color("#3a9ad9"))
+			draw_circle(Vector2(-1.4, 1.2), 1.1, Color(1, 1, 1, 0.75))
+		else:
+			var tx: Texture2D = farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
+			if tx != null:
+				draw_texture_rect(tx, Rect2(-6.8, -6.8, 13.6, 13.6), false)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+var ftb: Node2D = null
+func _ft_sync() -> void:
+	if ftb == null and main.obj_root != null:
+		ftb = FtBubbles.new()
+		ftb.farm = self
+		ftb.z_index = 50
+		main.obj_root.add_child(ftb)
+
+func onscreen_px(p: Vector2, m: float) -> bool:   # điểm làng p còn trong màn hình
+	var vp: Vector2 = main.get_viewport().get_visible_rect().size / main.zoom
+	return p.x > main.cam.x - m and p.x < main.cam.x + vp.x + m and p.y > main.cam.y - m and p.y < main.cam.y + vp.y + m
 
 # ------------------------------------------------------------------ cây ngã sau giông (bao.gd): vẽ bằng code như zK bản web
 var fells := {}        # sk -> FellNode

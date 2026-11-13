@@ -33,6 +33,7 @@ var bdp = null               # bảng XÂY DỰNG (ui_bd.gd)
 var setp = null              # bảng CÀI ĐẶT (ui_set.gd)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var vnp = null               # bảng chạm con vật / chuồng (ui_vn.gd)
+var ftp = null               # bảng chạm cây ăn trái (ui_ft.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
@@ -63,6 +64,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	nvp = load("res://logic/ui_nv.gd").new(self)
 	lvp = load("res://logic/ui_lv.gd").new(self)
 	vnp = load("res://logic/ui_vn.gd").new(self)
+	ftp = load("res://logic/ui_ft.gd").new(self)
 	setp = load("res://logic/ui_set.gd").new(self)
 	xfp = load("res://logic/ui_xf.gd").new(self)
 	bdp = load("res://logic/ui_bd.gd").new(self)
@@ -2605,6 +2607,10 @@ func tap_plot(i: int) -> void:
 	else:
 		rm_open(i)
 
+func ft_open(i: int) -> void:
+	close_all()
+	ftp.open(i)
+
 func vn_open(va: Dictionary, w: Vector2) -> void:
 	close_all()
 	vnp.open(va, w)
@@ -2625,6 +2631,8 @@ func close_all() -> void:
 	pc_close()
 	if vnp != null:
 		vnp.close()
+	if ftp != null:
+		ftp.close()
 	ord_close()
 	gv_close()
 	rm_close()
@@ -2716,6 +2724,8 @@ func _process(dt: float) -> void:
 		_pc_sync()
 	if vnp != null and vnp.is_open():
 		vnp.step(dt)
+	if ftp != null and ftp.is_open():
+		ftp.step(dt)
 	if gv_i >= 0:
 		_gv_pos()
 	if rm_i >= 0:

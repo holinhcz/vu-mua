@@ -138,6 +138,8 @@ func step(dt: float) -> void:
 				if f.c != null and not G.ripe(f) and float(f.w) < G.water_hold(f) * 0.9:
 					f.w = G.water_hold(f)
 					ch = true
+			if G.ct != null and G.lang != null and G.ct.rain_all():   # zb: cây ăn trái cũng được tưới
+				ch = true
 			if ch:
 				G.mark()
 	var d := dh()
