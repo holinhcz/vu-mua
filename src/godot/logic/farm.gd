@@ -387,7 +387,20 @@ func _chk_step(dt: float) -> void:
 		t += "\n" + String(bad[k])
 	_chk_lb.text = t
 
+var _land_sig := "?"
+func _land_sync() -> void:   # NTLAND (bản 82): báo nền đất đã mua mỗi khi đổi, kể cả lúc mới tải save (nền tìm /root/G không thấy)
+	var L = G.g.get("land")
+	if not (L is Dictionary):
+		return
+	var ks: Array = L.keys()
+	ks.sort()
+	var sg := ",".join(PackedStringArray(ks))
+	if sg != _land_sig and main.has_method("land_changed") and "lot_info" in main and not main.lot_info.is_empty():
+		_land_sig = sg
+		main.land_changed(L)
+
 func _process(dt: float) -> void:
+	_land_sync()
 	_chk_step(dt)
 	# Cài đặt: Chất lượng hình (0 Tiết kiệm, 1 Cân bằng, 2 Nét) và Chuyển động (true = đứng yên) cho bên nền
 	var cfs := str(G.cfg.q) + str(G.motion_off())
