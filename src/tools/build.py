@@ -31,7 +31,7 @@ shutil.rmtree(PKG+'/l',ignore_errors=True); os.makedirs(PKG+'/l',exist_ok=True)
 lv={}
 for f in sorted(glob.glob(S+'/lb/*.wasm')):
     n=os.path.basename(f)[:-5]
-    if os.environ.get('NOG') and n.startswith('g_') and n not in ('g_caylang_da',): continue   # cây đa: n/op của làng chỉ có d0, cần đủ 4 dáng   # hình shop: artifact phụ (n/op), không vào bản chính
+    if os.environ.get('NOG') and n.startswith('g_') and n not in ('g_caylang_da','g_caytrai_chuoi','g_kieng_dao','g_congtrinh_ghe'): continue   # cây đa: n/op của làng chỉ có d0, cần đủ 4 dáng   # hình shop: artifact phụ (n/op), không vào bản chính
     lv[n]=hashlib.md5(open(f,'rb').read()).hexdigest()[:8]
     shutil.copy(f,PKG+'/l/'+n+'.wasm')
 F['logic/lv.json']=json.dumps(lv).encode()
