@@ -1,0 +1,10 @@
+# Cây đu đủ cho Nông Trại Nhỏ
+
+Papaya trees drawn as small 3D models with the banana kit's painter, camera, sun, night transform and thin same-colour edge (`../chuoi/chuoi.py`, SOFT on, EDGE off), baked into `img/dudu.webp`. Made 2026-10-31 (v623) when Link asked "vẽ lại cây đu đủ". Before this the game drew papaya from one flat front-view picture (block `var AA` in the script, ripe or green), the same for every tree; that block is still in the file and is the fallback while the sheet loads.
+
+- `dudu.py`: the tree (drawn at 1.13x life size, KU = 29 x 1.13, like the game's old papaya). One soft straight trunk (2.05-2.9 m), grey-olive below turning green near the top, with a spiral of crescent leaf scars (fainter low down); 14-16 leaves on long pale hollow stalks (young ones up in the middle, old ones out and drooping, kept off the viewer side), each leaf 7 deep lobes cut again into side lobes, with pale veins; fruit packed round the trunk under the crown in tiers of four (green, turning yellow from the tip with streaks, or ripe orange with a little green at the stalk), a few cream flowers; one yellow old leaf on some trees. The ground shadow is baked into the sheet.
+  Frames: d0-d3 decor papaya (0 medium, a few turning and one ripe; 1 tallest with a lean, ripe and turning fruit, a yellow old leaf; 2 young and short, small green bunch, flowers; 3 leaning the other way, ripe and turning, a yellow leaf); d4 planted tree, green fruit; d5 planted tree, ripe fruit; n0-n5 the same at night.
+  `python3 dudu.py 0,1,2,3,4,5 [n] tag` writes a preview to /tmp/claude-0/g/dudu_tag.png; `python3 dudu.py atlas ../../img atlas.json` writes the sheet and the frame table.
+- `patch_dudu.py <index.html> <atlas.json> <out> [dbg.html]`: hooks `plants.papaya` (seed t&3) and `plants.ft_dudu` (t&1 = ripe) to draw from the sheet, sets both bb at run time (the old picture block also sets them at run time), drops cached papaya sprites on load. Reads the engine's short names from the banana block, replaces its own earlier block.
+
+Needs `pip install pycairo`.
