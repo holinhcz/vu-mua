@@ -26,10 +26,12 @@ for dp,dn,fn in os.walk(GL+'data'):
             F[rel]=json.dumps(json.load(open(full)),ensure_ascii=False,separators=(',',':')).encode()
 for k in ICONS:
     F['icons/'+k+'.svg']=open(GL+'icons/'+k+'.svg','rb').read()
-os.makedirs(PKG+'/l',exist_ok=True)
+shutil.rmtree(PKG+'/l',ignore_errors=True); os.makedirs(PKG+'/l',exist_ok=True)
 lv={}
 for f in sorted(glob.glob(S+'/lb/*.wasm')):
-    n=os.path.basename(f)[:-5]; lv[n]=hashlib.md5(open(f,'rb').read()).hexdigest()[:8]
+    n=os.path.basename(f)[:-5]
+    if os.environ.get('NOG') and n.startswith('g_'): continue   # hình shop: artifact phụ (n/op), không vào bản chính
+    lv[n]=hashlib.md5(open(f,'rb').read()).hexdigest()[:8]
     shutil.copy(f,PKG+'/l/'+n+'.wasm')
 F['logic/lv.json']=json.dumps(lv).encode()
 open(PKG+'/logic.pck','wb').write(ML.write_pck((3,4,5,1),sorted(F.items())))

@@ -534,21 +534,35 @@ func _icon(cv: Control, ic: Array, locked: bool) -> void:
 	var inset: Vector2 = cv.size * Vector2(3.0 / 64.0, 3.0 / 52.0)   # lg: (w-6)/(h-6) của khung 128x104
 	tr.position = inset
 	tr.size = cv.size - inset * 2.0
-	tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR   # ảnh đã thu đúng cỡ ô bằng Lanczos (_fit), không mipmap (mipmap trộn điểm trong suốt làm ảnh tối, nhòe)
+	tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS   # NTFAST3: dùng mipmap của texture có sẵn
 	var m: ShaderMaterial = _gray.duplicate()
 	m.set_shader_parameter("g", 1.0 if locked else 0.0)
 	m.set_shader_parameter("a", 0.45 if locked else 1.0)
 	tr.material = m
 	cv.add_child(tr)
+	var kb := _ic_key(ic)
+	if kb.is_empty():
+		return
+	var bk: String = kb[0]
+	var kk: String = kb[1]
+	if kk == "*pen" or not _op_ok(bk, kk):
+		U.F.P.load_bundle(bk)
+	_ic[tr] = [bk, kk]
+	_icon_fill(tr)
+
+func _ic_key(ic: Array) -> Array:   # [gói, khung] của hình thẻ; [] = vẽ bằng code / không có
+	var kind: String = ic[0]
+	if kind in ["road", "nen"] or (kind == "mini" and ic[1] == "_x"):
+		return []
 	var bk := ""
 	var kk := ""
 	match kind:
 		"wt":
 			bk = "x_" + XV.FOLDER[ic[1]]
 			kk = "i_d"
-		"pen":
+		"pen":   # chuồng: ghép đủ 6 lớp ngày (nền, chuồng + rào sau, rào phải, rào trước) như web Jo vẽ nguyên cái
 			bk = "g_congtrinh_chuong_" + String(ic[1])
-			kk = "bd"
+			kk = "*pen"
 		"mini":
 			bk = U.F.lang_ve.bundle("mini_" + String(ic[1]))
 			kk = U.F.lang_ve.key_for("mini_" + String(ic[1]), 0)
@@ -556,17 +570,8 @@ func _icon(cv: Control, ic: Array, locked: bool) -> void:
 			bk = U.F.lang_ve.bundle(String(ic[1]))
 			kk = U.F.lang_ve.key_for(String(ic[1]), int(ic[2]) if ic.size() > 2 else 0)
 	if bk == "":
-		return
-	if kind == "pen":   # chuồng: ghép đủ 6 lớp ngày (nền, chuồng + rào sau, rào phải, rào trước) như web Jo vẽ nguyên cái
-		kk = "*pen"
-		U.F.P.load_bundle(bk)
-	elif not _op_ok(bk, kk):
-		U.F.P.load_bundle(bk)
-	_ic[tr] = [bk, kk]
-	var fk: String = bk + "|" + kk + "@" + str(tr.size)
-	if _fill_c.has(fk):   # NTFAST: có sẵn thì gắn ngay; chưa có thì step() vẽ dần vài thẻ mỗi khung, bấm tab đổi liền
-		tr.texture = _fill_c[fk]
-		_ic.erase(tr)
+		return []
+	return [bk, kk]
 
 func _op_ok(bk: String, kk: String) -> bool:
 	# khung shop có sẵn trong làng (n/op, main.op_pic/op_box): dùng đúng file đó, khỏi cần gói l/g_*
@@ -611,65 +616,42 @@ func _pen_img(bk: String) -> Image:
 	_pen_tx[bk] = out
 	return out
 
+# NTFAST3: hình n/op main đã có sẵn texture (có mipmap) -> gắn thẳng texture đó vào thẻ, không đọc ngược GPU, không thu nhỏ CPU.
+# Chỉ chuồng (ghép 6 lớp) và hình còn nằm trong gói l/ mới làm ảnh bằng CPU, một lần rồi cất.
 var _fit_c := {}
-func _fit(tr: TextureRect, img: Image, key: String) -> void:
-	# web lg/Jo: vẽ ảnh ban ngày vừa khung thẻ. Thu về đúng số điểm ảnh màn hình bằng Lanczos (sau khi tô màu
-	# cho viền trong suốt), nên ảnh sáng, nét như ảnh gốc, không bị mipmap làm tối.
-	var ur0: Rect2i = img.get_used_rect()
-	var w := ur0.size.x if ur0.size.x > 0 else img.get_width()
-	var h := ur0.size.y if ur0.size.y > 0 else img.get_height()
-	var sc := minf(tr.size.x / w, tr.size.y / h)
-	var tw := maxi(1, int(round(w * sc)))
-	var th := maxi(1, int(round(h * sc)))
-	var ck := key + "@" + str(tw) + "x" + str(th)
-	if not _fit_c.has(ck):
+func _fit(img: Image, key: String) -> Texture2D:
+	if not _fit_c.has(key):
 		var c: Image = img.duplicate()
-		if c.has_mipmaps():
-			c.clear_mipmaps()
 		if c.get_format() != Image.FORMAT_RGBA8:
 			c.convert(Image.FORMAT_RGBA8)
-		var ur: Rect2i = c.get_used_rect()   # web lg: vẽ hình đã cắt sát (f.w x f.h) cho vừa khung
+		var ur: Rect2i = c.get_used_rect()   # web lg: vẽ hình đã cắt sát cho vừa khung
 		if ur.size.x > 0 and ur.size.y > 0 and ur.size != c.get_size():
 			c = c.get_region(ur)
-		if sc < 1.0:
-			c.fix_alpha_edges()
-			c.resize(tw, th, Image.INTERPOLATE_LANCZOS)
-		_fit_c[ck] = ImageTexture.create_from_image(c)
-	tr.texture = _fit_c[ck]
+		c.fix_alpha_edges()
+		c.generate_mipmaps()
+		_fit_c[key] = ImageTexture.create_from_image(c)
+	return _fit_c[key]
 
-var _fill_c := {}   # NTFAST: thẻ đã vẽ một lần thì đổi tab lấy lại ngay, khỏi đọc ảnh từ GPU + Lanczos lại
 func _icon_fill(tr: TextureRect) -> void:
 	var a: Array = _ic[tr]
-	var fk: String = a[0] + "|" + a[1] + "@" + str(tr.size)
-	if _fill_c.has(fk):
-		tr.texture = _fill_c[fk]
-		_ic.erase(tr)
-		return
-	_icon_fill2(tr, a)
-	if tr.texture != null and not _ic.has(tr):
-		_fill_c[fk] = tr.texture
-
-func _icon_fill2(tr: TextureRect, a: Array) -> void:
+	var tx: Texture2D = null
 	if a[1] == "*pen":
-		var ip := _pen_img(a[0])
-		if ip != null:
-			_fit(tr, ip, a[0] + "*pen")
-			_ic.erase(tr)
-		return
-	if _op_ok(a[0], a[1]):
-		var nm: String = U.F.lang_ve.op_name(a[0], a[1])
-		var to: Texture2D = U.F.main.op_pic(nm)
-		if to != null:
-			var io: Image = to.get_image()
-			if io != null:
-				_fit(tr, io, "op:" + nm)
-			else:
-				tr.texture = to
-			_ic.erase(tr)
-		return
-	var im: Image = U.F.P.img(a[0], a[1])
-	if im != null:
-		_fit(tr, im, a[0] + ":" + a[1])
+		if _fit_c.has(a[0]) or U.F.P.has_bundle(a[0]):
+			var ip := _pen_img(a[0])
+			if ip != null:
+				tx = _fit(ip, a[0])
+	elif _op_ok(a[0], a[1]):
+		tx = U.F.main.op_pic(U.F.lang_ve.op_name(a[0], a[1]))
+	else:
+		var key: String = a[0] + ":" + a[1]
+		if _fit_c.has(key):
+			tx = _fit_c[key]
+		else:
+			var im: Image = U.F.P.img(a[0], a[1])
+			if im != null:
+				tx = _fit(im, key)
+	if tx != null:
+		tr.texture = tx
 		_ic.erase(tr)
 
 class TileIcon extends Control:   # Mb / Cb / Pb: 2x2 ô đường hoặc nền (hoặc ô nhổ bỏ) vẽ bằng code
@@ -1927,11 +1909,10 @@ func step(dt: float) -> void:
 	if ov_hi != null and ov_hi.visible:
 		ov_hi.queue_redraw()
 		ov_lo.queue_redraw()
-	var nf := 0
+	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
 		if is_instance_valid(tr):
-			if nf < 3:
-				nf += 1
+			if Time.get_ticks_usec() - t0 < 4000:
 				_icon_fill(tr)
 		else:
 			_ic.erase(tr)
