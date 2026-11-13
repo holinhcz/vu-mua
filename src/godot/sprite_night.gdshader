@@ -8,7 +8,8 @@ shader_type canvas_item;
 // like lift (footprint average minus a wider average) brings the edges and outlines back to full contrast.
 varying vec4 vmod;
 const float SHARP = 0.6;
-uniform float uSway = 0.0;   // 1 while the web would sway plants (zoom >= .7)
+uniform float uSway = 0.0;
+uniform float uFast = 0.0;   // test ?do2 only: plain lookup, to measure what the sharp filter costs   // 1 while the web would sway plants (zoom >= .7)
 void vertex() {
 	vmod = COLOR;
 	if (COLOR.a > 0.993 && COLOR.a < 0.998) {   // a swaying plant (alpha 254/255): local origin = its foot
@@ -32,7 +33,7 @@ void fragment() {
 	vec2 dx = dFdx(UV), dy = dFdy(UV);
 	float d = max(length(dx * ts), length(dy * ts));   // picture pixels per screen pixel
 	vec4 c;
-	if (d <= 1.05) {
+	if (d <= 1.05 || uFast > 0.5) {
 		c = texture(TEXTURE, UV, -1.0);
 	} else {
 		float lod = max(0.0, log2(d * 0.5));            // each bilinear tap then covers half the footprint
