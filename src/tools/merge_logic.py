@@ -67,6 +67,22 @@ def add_autoload(pb):
         out += struct.pack('<I', len(k)) + k + struct.pack('<I', len(v)) + v
     return out
 
+FB = 112                 # write_pck: file đầu tiên bắt đầu ở byte 112
+SLICE = 1024 * 1024
+def _rank(p):
+    for i, a in enumerate(('ui/img/', 'ui/svg/', 'icons/', 'ui/font', 'ui/snap/', 'data/', 'ui/')):
+        if p.startswith(a):
+            return i
+    if p.startswith('.godot/'):
+        return 10
+    if p.startswith('logic/'):
+        return 30
+    if p == 'project.binary':
+        return 40
+    if p.endswith(('.gdc', '.gd', '.remap')):
+        return 20
+    return 15
+
 def main():
     site = sys.argv[1]
     pkg = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, 'pkg')
@@ -82,12 +98,16 @@ def main():
             del F[p]           # bản gộp trước: bỏ hết rồi thêm lại
     F.update(dict(mine))
     F['project.binary'] = add_autoload(F['project.binary'])
-    pk = write_pck(hdr, sorted(F.items()))
+    # (bản 72, Link 11-13 "tải 1 lần rồi lưu vào máy") file ít đổi đứng đầu, file hay đổi (logic, main, shader) đứng cuối, cắt
+    # mảnh 1 MB tính từ sau đầu pck (đầu pck 112 byte có chỗ thư mục nên là mảnh riêng). Bản mới chỉ đổi vài mảnh cuối, máy
+    # giữ các mảnh còn lại trong Cache Storage (index.html lưu theo crc từng file trong files.json), khỏi tải lại 15 MB.
+    pk = write_pck(hdr, sorted(F.items(), key=lambda e: (_rank(e[0]), e[0])))
     for f in glob.glob(os.path.join(site, 'pck_*.wasm')):
         os.remove(f)
-    n = 0
-    for i in range(0, len(pk), CHUNK):
-        open(os.path.join(site, 'pck_%d.wasm' % n), 'wb').write(pk[i:i + CHUNK]); n += 1
+    open(os.path.join(site, 'pck_0.wasm'), 'wb').write(pk[:FB])
+    n = 1
+    for i in range(FB, len(pk), SLICE):
+        open(os.path.join(site, 'pck_%d.wasm' % n), 'wb').write(pk[i:i + SLICE]); n += 1
     B = '%08x' % (zlib.crc32(pk) & 0xffffffff)
     h2 = re.sub(r'"index\.pck": \d+', '"index.pck": %d' % len(pk), h)
     h2 = re.sub(r'\bNP=\d+', 'NP=%d' % n, h2)
