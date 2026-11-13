@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "79"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "80"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -379,7 +379,11 @@ func _lot_vis(s: Node) -> bool:
 		return false
 	if s.has_meta("xg") and s.get_meta("xg"):
 		return false
-	return not s.has_meta("pc") or not _owned(s.get_meta("pc"))
+	if not s.has_meta("pc"):
+		return true
+	if s.has_meta("pco"):   # (b80) non-wild scenery on a lot (trees, bamboo, shrine...): web tc() shows it once the lot is OWNED
+		return _owned(s.get_meta("pc"))
+	return not _owned(s.get_meta("pc"))   # wild bush/reed/rock/stump: gone once the lot is bought
 # called by the logic when a lot is bought; also polled, so a loaded save shows right
 func land_changed(land) -> void:
 	if land is Dictionary:
@@ -1325,6 +1329,8 @@ func _verges(road: Image, meta: Dictionary) -> Array:
 				out.append([x + y + 1 + (0.47 if sd > 0 else -0.47), row])
 	return out
 
+# sc.json "i" rows that are NOT wild (logic thread, src/godot/logic/sc_owned_only.json): shown only on an owned lot
+const SC_OWNED_ONLY := [1087, 1150, 1151, 1180, 1211, 1242, 1243, 1276, 1277, 1310, 1343, 1344, 1372, 1396, 1463, 1561, 1593, 1626, 1662, 1697, 1698, 1740, 1815, 1927, 2202]
 func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 	sc_data = sc
 	var V: Array = sc_data["v"]
@@ -1333,6 +1339,10 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 	var L := []
 	for r in sc_data["i"]:
 		L.append([float(r[4]), r])
+	var own_rows := {}
+	for k in SC_OWNED_ONLY:
+		if k < sc_data["i"].size():
+			own_rows[sc_data["i"][k]] = true
 	vg_meta = vmeta
 	for e in _verges(road, vmeta):
 		L.append([e[0], e[1]])
@@ -1358,6 +1368,8 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 		s.visible = false
 		if r.size() > 5 and str(r[5]) != "":
 			s.set_meta("pc", str(r[5]))   # (n41) wild bush/reed/stump: gone once its lot is bought
+			if own_rows.has(r):
+				s.set_meta("pco", true)
 			lot_spr.append(s)
 		s.set_meta("k", e[0])
 		sc_root.add_child(s)
