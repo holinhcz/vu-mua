@@ -1,0 +1,254 @@
+{
+ "xoai": {
+  "file": "xoai.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Xoài cát",
+  "bbox": [
+   41,
+   42,
+   471,
+   469
+  ]
+ },
+ "quyt": {
+  "file": "quyt.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Quýt hồng",
+  "bbox": [
+   50,
+   41,
+   462,
+   471
+  ]
+ },
+ "chomchom": {
+  "file": "chomchom.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Chôm chôm",
+  "bbox": [
+   41,
+   51,
+   471,
+   460
+  ]
+ },
+ "mangcut": {
+  "file": "mangcut.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Măng cụt",
+  "bbox": [
+   41,
+   72,
+   471,
+   439
+  ]
+ },
+ "buoi": {
+  "file": "buoi.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Bưởi da xanh",
+  "bbox": [
+   69,
+   41,
+   443,
+   471
+  ]
+ },
+ "dua": {
+  "file": "dua.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Dừa Bến Tre",
+  "bbox": [
+   55,
+   41,
+   456,
+   471
+  ]
+ },
+ "saurieng": {
+  "file": "saurieng.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Sầu riêng",
+  "bbox": [
+   67,
+   41,
+   444,
+   471
+  ]
+ },
+ "thanhlong": {
+  "file": "thanhlong.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Thanh long",
+  "bbox": [
+   60,
+   41,
+   451,
+   471
+  ]
+ },
+ "duahau": {
+  "file": "duahau.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Dưa hấu",
+  "bbox": [
+   41,
+   69,
+   471,
+   442
+  ]
+ },
+ "nhan": {
+  "file": "nhan.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Nhãn",
+  "bbox": [
+   90,
+   41,
+   422,
+   471
+  ]
+ },
+ "man": {
+  "file": "man.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Mận",
+  "bbox": [
+   99,
+   41,
+   413,
+   471
+  ]
+ },
+ "dudu": {
+  "file": "dudu.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Đu đủ",
+  "bbox": [
+   102,
+   41,
+   409,
+   471
+  ]
+ },
+ "mit": {
+  "file": "mit.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Mít",
+  "bbox": [
+   93,
+   41,
+   418,
+   471
+  ]
+ },
+ "cam": {
+  "file": "cam.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Cam sành",
+  "bbox": [
+   68,
+   41,
+   444,
+   471
+  ]
+ },
+ "chuoi": {
+  "file": "chuoi.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Chuối",
+  "bbox": [
+   41,
+   86,
+   471,
+   426
+  ]
+ },
+ "dieu": {
+  "file": "dieu.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Điều",
+  "bbox": [
+   106,
+   41,
+   406,
+   471
+  ]
+ },
+ "me": {
+  "file": "me.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Me",
+  "bbox": [
+   63,
+   41,
+   449,
+   471
+  ]
+ },
+ "dautay": {
+  "file": "dautay.png",
+  "size": [
+   512,
+   512
+  ],
+  "name": "Dâu tây",
+  "bbox": [
+   72,
+   41,
+   440,
+   471
+  ]
+ }
+}
