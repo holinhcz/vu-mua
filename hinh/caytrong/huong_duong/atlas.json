@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dhuong_duong1": {
+   "file": "dhuong_duong1.png",
+   "w": 262,
+   "h": 127,
+   "ox": -14.56,
+   "oy": -9.89,
+   "gw": 29.11,
+   "gh": 14.11
+  },
+  "dhuong_duong2": {
+   "file": "dhuong_duong2.png",
+   "w": 354,
+   "h": 274,
+   "ox": -19.33,
+   "oy": -26.0,
+   "gw": 39.33,
+   "gh": 30.44
+  },
+  "dhuong_duong3": {
+   "file": "dhuong_duong3.png",
+   "w": 400,
+   "h": 455,
+   "ox": -22.78,
+   "oy": -46.0,
+   "gw": 44.44,
+   "gh": 50.56
+  },
+  "nhuong_duong1": {
+   "file": "nhuong_duong1.png",
+   "w": 262,
+   "h": 127,
+   "ox": -14.56,
+   "oy": -9.89,
+   "gw": 29.11,
+   "gh": 14.11
+  },
+  "nhuong_duong2": {
+   "file": "nhuong_duong2.png",
+   "w": 354,
+   "h": 274,
+   "ox": -19.33,
+   "oy": -26.0,
+   "gw": 39.33,
+   "gh": 30.44
+  },
+  "nhuong_duong3": {
+   "file": "nhuong_duong3.png",
+   "w": 400,
+   "h": 455,
+   "ox": -22.78,
+   "oy": -46.0,
+   "gw": 44.44,
+   "gh": 50.56
+  }
+ }
+}

@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dhanh_tay1": {
+   "file": "dhanh_tay1.png",
+   "w": 263,
+   "h": 129,
+   "ox": -15.0,
+   "oy": -9.44,
+   "gw": 29.22,
+   "gh": 14.33
+  },
+  "dhanh_tay2": {
+   "file": "dhanh_tay2.png",
+   "w": 362,
+   "h": 235,
+   "ox": -20.44,
+   "oy": -20.44,
+   "gw": 40.22,
+   "gh": 26.11
+  },
+  "dhanh_tay3": {
+   "file": "dhanh_tay3.png",
+   "w": 442,
+   "h": 326,
+   "ox": -22.78,
+   "oy": -29.78,
+   "gw": 49.11,
+   "gh": 36.22
+  },
+  "nhanh_tay1": {
+   "file": "nhanh_tay1.png",
+   "w": 263,
+   "h": 129,
+   "ox": -15.0,
+   "oy": -9.44,
+   "gw": 29.22,
+   "gh": 14.33
+  },
+  "nhanh_tay2": {
+   "file": "nhanh_tay2.png",
+   "w": 362,
+   "h": 235,
+   "ox": -20.44,
+   "oy": -20.44,
+   "gw": 40.22,
+   "gh": 26.11
+  },
+  "nhanh_tay3": {
+   "file": "nhanh_tay3.png",
+   "w": 442,
+   "h": 326,
+   "ox": -22.78,
+   "oy": -29.78,
+   "gw": 49.11,
+   "gh": 36.22
+  }
+ }
+}

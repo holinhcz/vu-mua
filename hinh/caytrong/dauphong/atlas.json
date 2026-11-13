@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "ddauphong1": {
+   "file": "ddauphong1.png",
+   "w": 254,
+   "h": 115,
+   "ox": -14.33,
+   "oy": -8.56,
+   "gw": 28.22,
+   "gh": 12.78
+  },
+  "ddauphong2": {
+   "file": "ddauphong2.png",
+   "w": 365,
+   "h": 217,
+   "ox": -20.56,
+   "oy": -18.22,
+   "gw": 40.56,
+   "gh": 24.11
+  },
+  "ddauphong3": {
+   "file": "ddauphong3.png",
+   "w": 410,
+   "h": 321,
+   "ox": -23.0,
+   "oy": -28.0,
+   "gw": 45.56,
+   "gh": 35.67
+  },
+  "ndauphong1": {
+   "file": "ndauphong1.png",
+   "w": 254,
+   "h": 115,
+   "ox": -14.33,
+   "oy": -8.56,
+   "gw": 28.22,
+   "gh": 12.78
+  },
+  "ndauphong2": {
+   "file": "ndauphong2.png",
+   "w": 365,
+   "h": 217,
+   "ox": -20.56,
+   "oy": -18.22,
+   "gw": 40.56,
+   "gh": 24.11
+  },
+  "ndauphong3": {
+   "file": "ndauphong3.png",
+   "w": 410,
+   "h": 321,
+   "ox": -23.0,
+   "oy": -28.0,
+   "gw": 45.56,
+   "gh": 35.67
+  }
+ }
+}

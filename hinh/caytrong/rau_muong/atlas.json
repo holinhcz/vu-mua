@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "drau_muong1": {
+   "file": "drau_muong1.png",
+   "w": 250,
+   "h": 132,
+   "ox": -14.0,
+   "oy": -10.22,
+   "gw": 27.78,
+   "gh": 14.67
+  },
+  "drau_muong2": {
+   "file": "drau_muong2.png",
+   "w": 340,
+   "h": 225,
+   "ox": -18.78,
+   "oy": -20.44,
+   "gw": 37.78,
+   "gh": 25.0
+  },
+  "drau_muong3": {
+   "file": "drau_muong3.png",
+   "w": 375,
+   "h": 309,
+   "ox": -21.0,
+   "oy": -29.78,
+   "gw": 41.67,
+   "gh": 34.33
+  },
+  "nrau_muong1": {
+   "file": "nrau_muong1.png",
+   "w": 250,
+   "h": 132,
+   "ox": -14.0,
+   "oy": -10.22,
+   "gw": 27.78,
+   "gh": 14.67
+  },
+  "nrau_muong2": {
+   "file": "nrau_muong2.png",
+   "w": 340,
+   "h": 225,
+   "ox": -18.78,
+   "oy": -20.44,
+   "gw": 37.78,
+   "gh": 25.0
+  },
+  "nrau_muong3": {
+   "file": "nrau_muong3.png",
+   "w": 375,
+   "h": 309,
+   "ox": -21.0,
+   "oy": -29.78,
+   "gw": 41.67,
+   "gh": 34.33
+  }
+ }
+}

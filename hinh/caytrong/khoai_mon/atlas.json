@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dkhoai_mon1": {
+   "file": "dkhoai_mon1.png",
+   "w": 264,
+   "h": 119,
+   "ox": -15.11,
+   "oy": -8.89,
+   "gw": 29.33,
+   "gh": 13.22
+  },
+  "dkhoai_mon2": {
+   "file": "dkhoai_mon2.png",
+   "w": 349,
+   "h": 193,
+   "ox": -19.89,
+   "oy": -17.0,
+   "gw": 38.78,
+   "gh": 21.44
+  },
+  "dkhoai_mon3": {
+   "file": "dkhoai_mon3.png",
+   "w": 414,
+   "h": 324,
+   "ox": -22.89,
+   "oy": -29.11,
+   "gw": 46.0,
+   "gh": 36.0
+  },
+  "nkhoai_mon1": {
+   "file": "nkhoai_mon1.png",
+   "w": 264,
+   "h": 119,
+   "ox": -15.11,
+   "oy": -8.89,
+   "gw": 29.33,
+   "gh": 13.22
+  },
+  "nkhoai_mon2": {
+   "file": "nkhoai_mon2.png",
+   "w": 349,
+   "h": 193,
+   "ox": -19.89,
+   "oy": -17.0,
+   "gw": 38.78,
+   "gh": 21.44
+  },
+  "nkhoai_mon3": {
+   "file": "nkhoai_mon3.png",
+   "w": 414,
+   "h": 324,
+   "ox": -22.89,
+   "oy": -29.11,
+   "gw": 46.0,
+   "gh": 36.0
+  }
+ }
+}

@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dbong_vai1": {
+   "file": "dbong_vai1.png",
+   "w": 264,
+   "h": 121,
+   "ox": -14.67,
+   "oy": -9.22,
+   "gw": 29.33,
+   "gh": 13.44
+  },
+  "dbong_vai2": {
+   "file": "dbong_vai2.png",
+   "w": 337,
+   "h": 217,
+   "ox": -18.67,
+   "oy": -19.78,
+   "gw": 37.44,
+   "gh": 24.11
+  },
+  "dbong_vai3": {
+   "file": "dbong_vai3.png",
+   "w": 370,
+   "h": 301,
+   "ox": -20.89,
+   "oy": -29.11,
+   "gw": 41.11,
+   "gh": 33.44
+  },
+  "nbong_vai1": {
+   "file": "nbong_vai1.png",
+   "w": 264,
+   "h": 121,
+   "ox": -14.67,
+   "oy": -9.22,
+   "gw": 29.33,
+   "gh": 13.44
+  },
+  "nbong_vai2": {
+   "file": "nbong_vai2.png",
+   "w": 337,
+   "h": 217,
+   "ox": -18.67,
+   "oy": -19.78,
+   "gw": 37.44,
+   "gh": 24.11
+  },
+  "nbong_vai3": {
+   "file": "nbong_vai3.png",
+   "w": 370,
+   "h": 301,
+   "ox": -20.89,
+   "oy": -29.11,
+   "gw": 41.11,
+   "gh": 33.44
+  }
+ }
+}

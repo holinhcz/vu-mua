@@ -1,0 +1,59 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "ddau_rong1": {
+   "file": "ddau_rong1.png",
+   "w": 265,
+   "h": 128,
+   "ox": -12.78,
+   "oy": -10.0,
+   "gw": 29.44,
+   "gh": 14.22
+  },
+  "ddau_rong2": {
+   "file": "ddau_rong2.png",
+   "w": 393,
+   "h": 228,
+   "ox": -22.78,
+   "oy": -20.89,
+   "gw": 43.67,
+   "gh": 25.33
+  },
+  "ddau_rong3": {
+   "file": "ddau_rong3.png",
+   "w": 417,
+   "h": 335,
+   "ox": -23.11,
+   "oy": -32.78,
+   "gw": 46.33,
+   "gh": 37.22
+  },
+  "ndau_rong1": {
+   "file": "ndau_rong1.png",
+   "w": 265,
+   "h": 128,
+   "ox": -12.78,
+   "oy": -10.0,
+   "gw": 29.44,
+   "gh": 14.22
+  },
+  "ndau_rong2": {
+   "file": "ndau_rong2.png",
+   "w": 393,
+   "h": 228,
+   "ox": -22.78,
+   "oy": -20.89,
+   "gw": 43.67,
+   "gh": 25.33
+  },
+  "ndau_rong3": {
+   "file": "ndau_rong3.png",
+   "w": 417,
+   "h": 335,
+   "ox": -23.11,
+   "oy": -32.78,
+   "gw": 46.33,
+   "gh": 37.22
+  }
+ }
+}
