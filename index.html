@@ -128,7 +128,8 @@ var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){cs
 window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
   if(/index\.wasm(\?|$)/.test(s))return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
     return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),{status:200,headers:{'Content-Type':'application/wasm'}})});
-  if(/index\.pck(\?|$)/.test(s))return kept('pck_0.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return new Response(r.body,{status:200,headers:{'Content-Type':'application/octet-stream'}})});
+  if(/index\.pck(\?|$)/.test(s)){var ps=[];for(var q=0;q<NP;q++)ps.push(kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}));
+    return Promise.all(ps).then(function(bs){return new Response(new Blob(bs),{status:200,headers:{'Content-Type':'application/octet-stream'}})})}
   var p=(!o||!o.method||o.method=='GET')?rel(s):null;
   if(p&&p!='info.json'&&p!='files.json'&&!/\.html$/.test(p))return mfP.then(function(){return MF[p]?kept(p):F0(u,o)});
   if(/(^|\/)(info\.json|n\/sc\.json)$/.test(s))return F0(s+'?v='+B,o);
