@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dcc_nha_dam0": {
+   "file": "dcc_nha_dam0.png",
+   "w": 605,
+   "h": 370,
+   "ox": -32.11,
+   "oy": -30.22,
+   "gw": 67.22,
+   "gh": 41.11
+  },
+  "dcc_nha_dam1": {
+   "file": "dcc_nha_dam1.png",
+   "w": 580,
+   "h": 388,
+   "ox": -35.67,
+   "oy": -31.33,
+   "gw": 64.44,
+   "gh": 43.11
+  },
+  "dcc_nha_dam2": {
+   "file": "dcc_nha_dam2.png",
+   "w": 530,
+   "h": 397,
+   "ox": -30.78,
+   "oy": -33.22,
+   "gw": 58.89,
+   "gh": 44.11
+  },
+  "dcc_nha_dam3": {
+   "file": "dcc_nha_dam3.png",
+   "w": 519,
+   "h": 396,
+   "ox": -28.89,
+   "oy": -33.11,
+   "gw": 57.67,
+   "gh": 44.0
+  },
+  "ncc_nha_dam0": {
+   "file": "ncc_nha_dam0.png",
+   "w": 605,
+   "h": 370,
+   "ox": -32.11,
+   "oy": -30.22,
+   "gw": 67.22,
+   "gh": 41.11
+  },
+  "ncc_nha_dam1": {
+   "file": "ncc_nha_dam1.png",
+   "w": 580,
+   "h": 388,
+   "ox": -35.67,
+   "oy": -31.33,
+   "gw": 64.44,
+   "gh": 43.11
+  },
+  "ncc_nha_dam2": {
+   "file": "ncc_nha_dam2.png",
+   "w": 530,
+   "h": 397,
+   "ox": -30.78,
+   "oy": -33.22,
+   "gw": 58.89,
+   "gh": 44.11
+  },
+  "ncc_nha_dam3": {
+   "file": "ncc_nha_dam3.png",
+   "w": 519,
+   "h": 396,
+   "ox": -28.89,
+   "oy": -33.11,
+   "gw": 57.67,
+   "gh": 44.0
+  }
+ }
+}

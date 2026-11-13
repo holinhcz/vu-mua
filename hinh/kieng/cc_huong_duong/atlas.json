@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dcc_huong_duong0": {
+   "file": "dcc_huong_duong0.png",
+   "w": 304,
+   "h": 616,
+   "ox": -17.33,
+   "oy": -61.33,
+   "gw": 33.78,
+   "gh": 68.44
+  },
+  "dcc_huong_duong1": {
+   "file": "dcc_huong_duong1.png",
+   "w": 316,
+   "h": 598,
+   "ox": -17.33,
+   "oy": -61.11,
+   "gw": 35.11,
+   "gh": 66.44
+  },
+  "dcc_huong_duong2": {
+   "file": "dcc_huong_duong2.png",
+   "w": 289,
+   "h": 705,
+   "ox": -15.78,
+   "oy": -70.11,
+   "gw": 32.11,
+   "gh": 78.33
+  },
+  "dcc_huong_duong3": {
+   "file": "dcc_huong_duong3.png",
+   "w": 321,
+   "h": 668,
+   "ox": -18.0,
+   "oy": -69.11,
+   "gw": 35.67,
+   "gh": 74.22
+  },
+  "ncc_huong_duong0": {
+   "file": "ncc_huong_duong0.png",
+   "w": 304,
+   "h": 616,
+   "ox": -17.33,
+   "oy": -61.33,
+   "gw": 33.78,
+   "gh": 68.44
+  },
+  "ncc_huong_duong1": {
+   "file": "ncc_huong_duong1.png",
+   "w": 316,
+   "h": 598,
+   "ox": -17.33,
+   "oy": -61.11,
+   "gw": 35.11,
+   "gh": 66.44
+  },
+  "ncc_huong_duong2": {
+   "file": "ncc_huong_duong2.png",
+   "w": 289,
+   "h": 705,
+   "ox": -15.78,
+   "oy": -70.11,
+   "gw": 32.11,
+   "gh": 78.33
+  },
+  "ncc_huong_duong3": {
+   "file": "ncc_huong_duong3.png",
+   "w": 321,
+   "h": 668,
+   "ox": -18.0,
+   "oy": -69.11,
+   "gw": 35.67,
+   "gh": 74.22
+  }
+ }
+}

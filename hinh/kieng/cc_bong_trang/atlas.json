@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dcc_bong_trang0": {
+   "file": "dcc_bong_trang0.png",
+   "w": 762,
+   "h": 547,
+   "ox": -43.67,
+   "oy": -44.44,
+   "gw": 84.67,
+   "gh": 60.78
+  },
+  "dcc_bong_trang1": {
+   "file": "dcc_bong_trang1.png",
+   "w": 686,
+   "h": 587,
+   "ox": -41.22,
+   "oy": -49.78,
+   "gw": 76.22,
+   "gh": 65.22
+  },
+  "dcc_bong_trang2": {
+   "file": "dcc_bong_trang2.png",
+   "w": 824,
+   "h": 560,
+   "ox": -46.44,
+   "oy": -45.56,
+   "gw": 91.56,
+   "gh": 62.22
+  },
+  "dcc_bong_trang3": {
+   "file": "dcc_bong_trang3.png",
+   "w": 722,
+   "h": 606,
+   "ox": -43.56,
+   "oy": -51.11,
+   "gw": 80.22,
+   "gh": 67.33
+  },
+  "ncc_bong_trang0": {
+   "file": "ncc_bong_trang0.png",
+   "w": 762,
+   "h": 547,
+   "ox": -43.67,
+   "oy": -44.44,
+   "gw": 84.67,
+   "gh": 60.78
+  },
+  "ncc_bong_trang1": {
+   "file": "ncc_bong_trang1.png",
+   "w": 686,
+   "h": 587,
+   "ox": -41.22,
+   "oy": -49.78,
+   "gw": 76.22,
+   "gh": 65.22
+  },
+  "ncc_bong_trang2": {
+   "file": "ncc_bong_trang2.png",
+   "w": 824,
+   "h": 560,
+   "ox": -46.44,
+   "oy": -45.56,
+   "gw": 91.56,
+   "gh": 62.22
+  },
+  "ncc_bong_trang3": {
+   "file": "ncc_bong_trang3.png",
+   "w": 722,
+   "h": 606,
+   "ox": -43.56,
+   "oy": -51.11,
+   "gw": 80.22,
+   "gh": 67.33
+  }
+ }
+}

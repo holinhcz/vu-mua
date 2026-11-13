@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dcc_xuong_rong0": {
+   "file": "dcc_xuong_rong0.png",
+   "w": 421,
+   "h": 466,
+   "ox": -27.44,
+   "oy": -44.44,
+   "gw": 46.78,
+   "gh": 51.78
+  },
+  "dcc_xuong_rong1": {
+   "file": "dcc_xuong_rong1.png",
+   "w": 449,
+   "h": 443,
+   "ox": -26.22,
+   "oy": -39.22,
+   "gw": 49.89,
+   "gh": 49.22
+  },
+  "dcc_xuong_rong2": {
+   "file": "dcc_xuong_rong2.png",
+   "w": 360,
+   "h": 423,
+   "ox": -19.56,
+   "oy": -41.0,
+   "gw": 40.0,
+   "gh": 47.0
+  },
+  "dcc_xuong_rong3": {
+   "file": "dcc_xuong_rong3.png",
+   "w": 365,
+   "h": 504,
+   "ox": -15.11,
+   "oy": -48.0,
+   "gw": 40.56,
+   "gh": 56.0
+  },
+  "ncc_xuong_rong0": {
+   "file": "ncc_xuong_rong0.png",
+   "w": 421,
+   "h": 466,
+   "ox": -27.44,
+   "oy": -44.44,
+   "gw": 46.78,
+   "gh": 51.78
+  },
+  "ncc_xuong_rong1": {
+   "file": "ncc_xuong_rong1.png",
+   "w": 449,
+   "h": 443,
+   "ox": -26.22,
+   "oy": -39.22,
+   "gw": 49.89,
+   "gh": 49.22
+  },
+  "ncc_xuong_rong2": {
+   "file": "ncc_xuong_rong2.png",
+   "w": 360,
+   "h": 423,
+   "ox": -19.56,
+   "oy": -41.0,
+   "gw": 40.0,
+   "gh": 47.0
+  },
+  "ncc_xuong_rong3": {
+   "file": "ncc_xuong_rong3.png",
+   "w": 365,
+   "h": 504,
+   "ox": -15.11,
+   "oy": -48.0,
+   "gw": 40.56,
+   "gh": 56.0
+  }
+ }
+}
