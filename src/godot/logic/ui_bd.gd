@@ -563,7 +563,10 @@ func _icon(cv: Control, ic: Array, locked: bool) -> void:
 	elif not _op_ok(bk, kk):
 		U.F.P.load_bundle(bk)
 	_ic[tr] = [bk, kk]
-	_icon_fill(tr)
+	var fk: String = bk + "|" + kk + "@" + str(tr.size)
+	if _fill_c.has(fk):   # NTFAST: có sẵn thì gắn ngay; chưa có thì step() vẽ dần vài thẻ mỗi khung, bấm tab đổi liền
+		tr.texture = _fill_c[fk]
+		_ic.erase(tr)
 
 func _op_ok(bk: String, kk: String) -> bool:
 	# khung shop có sẵn trong làng (n/op, main.op_pic/op_box): dùng đúng file đó, khỏi cần gói l/g_*
@@ -634,8 +637,19 @@ func _fit(tr: TextureRect, img: Image, key: String) -> void:
 		_fit_c[ck] = ImageTexture.create_from_image(c)
 	tr.texture = _fit_c[ck]
 
+var _fill_c := {}   # NTFAST: thẻ đã vẽ một lần thì đổi tab lấy lại ngay, khỏi đọc ảnh từ GPU + Lanczos lại
 func _icon_fill(tr: TextureRect) -> void:
 	var a: Array = _ic[tr]
+	var fk: String = a[0] + "|" + a[1] + "@" + str(tr.size)
+	if _fill_c.has(fk):
+		tr.texture = _fill_c[fk]
+		_ic.erase(tr)
+		return
+	_icon_fill2(tr, a)
+	if tr.texture != null and not _ic.has(tr):
+		_fill_c[fk] = tr.texture
+
+func _icon_fill2(tr: TextureRect, a: Array) -> void:
 	if a[1] == "*pen":
 		var ip := _pen_img(a[0])
 		if ip != null:
@@ -1913,9 +1927,12 @@ func step(dt: float) -> void:
 	if ov_hi != null and ov_hi.visible:
 		ov_hi.queue_redraw()
 		ov_lo.queue_redraw()
+	var nf := 0
 	for tr in _ic.keys():
 		if is_instance_valid(tr):
-			_icon_fill(tr)
+			if nf < 3:
+				nf += 1
+				_icon_fill(tr)
 		else:
 			_ic.erase(tr)
 

@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "66"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "68"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -46,6 +46,10 @@ var jsw = null              # window, for test hooks (window.__gdcam = "x,y,zoom
 
 # meter
 var ft_last := 0
+var pf_code := 0.0        # (b67) per 2 s window: script time of all _process (village + logic + UI), draw calls
+var pf_draw := 0.0
+var pf_code_shown := 0.0
+var pf_draw_shown := 0.0
 var ft_worst := 0.0
 var ft_worst_shown := 0.0
 var ft_win_start := 0
@@ -2074,12 +2078,25 @@ func _process(_dt: float) -> void:
 	var now := Time.get_ticks_usec()
 	if ft_last > 0:
 		var ms := (now - ft_last) / 1000.0
-		ft_worst = max(ft_worst, ms)
+		if ms > 1000.0:   # (b67) the tab was hidden (the browser stops the game): start a new window, it is not a slow frame
+			ft_win_start = now
+			ft_count = 0
+			ft_worst = 0.0
+			pf_code = 0.0
+			pf_draw = 0.0
+		else:
+			ft_worst = max(ft_worst, ms)
 	ft_last = now
 	ft_count += 1
+	pf_code += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	pf_draw += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 	if now - ft_win_start > 2000000:
 		fps_shown = ft_count * 1e6 / float(now - ft_win_start)
 		ft_worst_shown = ft_worst
+		pf_code_shown = pf_code / maxf(1.0, ft_count)
+		pf_draw_shown = pf_draw / maxf(1.0, ft_count)
+		pf_code = 0.0
+		pf_draw = 0.0
 		ft_worst = 0.0
 		ft_count = 0
 		ft_win_start = now
@@ -2499,6 +2516,7 @@ func _update_meter() -> void:
 			txt += "\n" + str(pre)
 	meter_full = txt
 	meter.text = "bản " + BUILD + " · %d fps · chậm nhất %d ms" % [round(fps_shown), round(ft_worst_shown)]
+	meter.text += "\ncode %.1f ms · vẽ %d lệnh · %d vật" % [pf_code_shown, round(pf_draw_shown), obj_root.get_child_count() if obj_root != null else 0]
 	if jsw != null and info.has("op2"):
 		var o2 = jsw.__op2t
 		meter.text += "\nkho phụ: " + (str(o2) if o2 != null else "?")

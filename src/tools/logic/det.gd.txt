@@ -1,0 +1,124 @@
+# ------------------------------------------------------------------ #khDet (món đang chọn)
+var kd := {}                 # phần của khDet
+
+func _build_det() -> void:
+	var ids: Dictionary = kho_ids[3]
+	kh_det = ids.get("#khDet")
+	if kh_det == null:
+		return
+	_stop(kh_det)
+	kd.dic = _q(kh_det, "khdic")
+	var tx := _q(kh_det, "khdtx")
+	kd.nm = _q(tx, "", "b")
+	kd.co = _q(tx, "khco")
+	kd.hot = _q(tx, "khhot")
+	var pr := _q(kh_det, "kdpr")
+	kd.pr = _q(pr, "", "b")
+	kd.xui = _q(pr, "xui")
+	kd.kdu = _q(pr, "kdu")
+	kd.ka = _q(pr, "ka")
+	var st := _q(kh_det, "kdst")
+	var bs := []
+	for k in st.kids():
+		bs.append(k)
+	kd.minus = bs[0]
+	kd.out = bs[1]
+	kd.plus = bs[2]
+	kd.all = bs[3]
+	kd.sell = _q(kh_det, "kdsell")
+	kd.sxui = _q(kd.sell, "xui")
+	kd.hint = _q(kh_det, "kdhint")
+	_click(kd.minus, func(): _det_q(kh_q - 1), "scale94")
+	_click(kd.plus, func(): _det_q(kh_q + 1), "scale94")
+	_click(kd.all, func(): _det_q(99999999), "scale94")
+	_click(kd.sell, _det_sell, "scale94")
+
+func _det_sell() -> void:
+	var t := kh_sel
+	if t == "":
+		return
+	G.sell(t, kh_q)
+	if int(G.g.barn.get(t, 0)) <= 0:
+		kh_sel = ""
+	kh_sig = ""
+	_kho_sync()
+
+func _det_q(n: int) -> void:
+	if kh_sel == "":
+		return
+	kh_q = clampi(n, 1, maxi(1, int(G.g.barn.get(kh_sel, 0))))
+	kh_sig = ""
+	_kho_sync()
+
+func _inline(b: Control, x: float) -> float:
+	# đặt hộp chữ b ở x (css, trong cha), rộng theo chữ; trả về mép phải
+	if b == null or b.texts.is_empty():
+		return x
+	var t: Dictionary = b.texts[0]
+	var w: float = Box.text_w(t.s, t.size, t.w) + 1.0
+	b.place(Rect2(Vector2(x, b.r.position.y), Vector2(w, b.r.size.y)))
+	t.rect = Rect2(0, t.rect.position.y, w, t.rect.size.y)
+	t.al = "left"
+	b.redraw()
+	return x + w
+
+func _det_sync() -> void:
+	if kh_det == null or kh_sel == "":
+		return
+	var s := kh_sel
+	var h := int(G.g.barn.get(s, 0))
+	kh_q = clampi(kh_q, 1, maxi(1, h))
+	var M := kh_q
+	var p: int = G.price(s)
+	var d: float = G.rel(s)
+	var hx: float = G.hot_x(s)
+	# hình món
+	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + s + ".svg")
+	if sv != "" and kd.dic != null and kd.dic.kids().size() > 0:
+		_set_svg(kd.dic.kids()[0], sv)
+	# Lúa · có 6   🔥 Được giá ×2 hôm nay
+	_txt(kd.nm, String(G.item(s).get("name", s)))
+	var x := _inline(kd.nm, kd.nm.r.position.x)
+	_txt(kd.co, "· có " + G.fmt_n(h))
+	x = _inline(kd.co, x + 4.0)
+	kd.hot.visible = hx > 1.0
+	if hx > 1.0:
+		_txt(kd.hot, "🔥 Được giá ×" + str(hx).replace(".", ",") + " hôm nay")
+		_inline(kd.hot, x + 7.0)
+	# 8 [xu] /cái ▼
+	_txt(kd.pr, G.fmt_n(p))
+	x = _inline(kd.pr, kd.pr.r.position.x)
+	if kd.xui != null:
+		_move(kd.xui, Vector2(x + 5.0, kd.xui.r.position.y))
+		x = kd.xui.r.position.x + kd.xui.r.size.x
+	x = _inline(kd.kdu, x + 3.0)
+	if kd.ka != null:
+		kd.ka.visible = d > 1.08 or d < 0.92
+		if kd.ka.visible:
+			_txt(kd.ka, "▲" if d > 1.08 else "▼")
+			kd.ka.texts[0].col = Color8(47, 158, 68) if d > 1.08 else Color8(214, 69, 65)
+			_inline(kd.ka, x + 3.0)
+	# − 1 + Hết
+	_txt(kd.out, G.fmt_n(M))
+	kd.minus.modulate.a = 0.45 if M <= 1 else 1.0
+	kd.plus.modulate.a = 0.45 if M >= h else 1.0
+	# Bán M · +X [xu]
+	_txt(kd.sell, "Bán " + G.fmt_n(M) + " · +" + G.fmt_n(G.sell_value(s, M)))
+	if kd.sxui != null:
+		var t0: Dictionary = kd.sell.texts[0]
+		var tw: float = Box.text_w(t0.s, t0.size, t0.w)
+		var total: float = tw + 6.0 + kd.sxui.r.size.x
+		var tx0: float = (kd.sell.r.size.x - total) * 0.5
+		t0.rect = Rect2(tx0, t0.rect.position.y, tw + 2.0, t0.rect.size.y)
+		t0.al = "left"
+		_move(kd.sxui, Vector2(tx0 + tw + 6.0, kd.sxui.r.position.y))
+		kd.sell.redraw()
+	# Nên giữ lại N để gieo
+	var xk: int = G.LY if G.D.crops.has(s) else 0
+	var E := h - M
+	var R := ""
+	if xk > 0 and E < xk:
+		R = "Bán hết, không chừa lại để gieo" if E <= 0 else "Nên giữ lại " + G.fmt_n(mini(xk, h)) + " để gieo"
+	kd.hint.visible = R != ""
+	if R != "":
+		_txt(kd.hint, R)
