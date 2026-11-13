@@ -86,6 +86,36 @@ func _test_hook() -> void:
 			"khost": G.g.khost = int(a[1]); G.g.khoB = 0; G.mark()
 			"mat": G.g.mats = {}; for q in a.slice(1): G.g.mats[q.split("=")[0]] = int(q.split("=")[1])
 			"kup": ui.khp.open()
+			"vnset":   # vnset:loại:p,t,s;p,t,s... (p -1 = đói, s 1 = bệnh): xây chuồng + thả con
+				G.g.penb[a[1]] = 1
+				var PL := []
+				for q in a[2].split("/"):
+					var f := q.split(",")
+					PL.append({"p": float(f[0]), "t": float(f[1]), "s": int(f[2]) if f.size() > 2 else 0})
+				G.g.pens[a[1]] = PL
+				G.mark()
+				farm.lang.changed()
+			"vninfo":
+				var I := {"an": farm.anodes.keys(), "open": ui.vnp.is_open(), "sig": ui.vnp.sig != "", "b": ui.vnp.b != null, "barn": G.g.barn, "pens": G.g.pens.ga, "acts": ui.vnp.acts.map(func(x): return x.get("t", "slot"))}
+				for k in farm.anodes:
+					var q: Vector2 = (farm.anodes[k].foot() - ui.main.cam) * ui.main.zoom / ui.Css.K
+					I["s" + k] = [round(q.x), round(q.y)]
+				for t in G.vn.DI:
+					var pp: Vector2i = farm.lang.pen_pos(t)
+					I[t] = [farm.lang.pen_built(t), G.vn.ok(t), farm.lang.fo(pp.x, pp.y), G.vn.list(t).size()]
+				JavaScriptBridge.eval("window.__ntvn=" + JSON.stringify(I))
+			"vntap":   # vntap:loại:j: chạm bong bóng con vật như người chơi
+				var nd = farm.anodes.get(a[1] + ":" + a[2])
+				if nd != null:
+					farm.tap(farm.world_to_screen(nd.bub_at()))
+			"vnbtn":   # vnbtn:i: bấm nút thứ i của bảng con vật
+				ui.vnp._do(ui.vnp.acts[int(a[1])].cb)
+			"vnopen": ui.vn_open({"t": a[1], "j": int(a[2])}, farm.anodes[a[1] + ":0"].foot() if farm.anodes.has(a[1] + ":0") else Vector2.ZERO)
+			"cam":   # cam:gx:gy: đưa camera tới ô
+				ui.main.zoom = 2.0 * ui.Css.K
+				ui.main.cam = Vector2(farm.en(float(a[1]), float(a[2])), farm.nn(float(a[1]), float(a[2]))) - ui.get_viewport().get_visible_rect().size / ui.main.zoom * 0.5
+				if ui.main.has_method("_clamp_cam"):
+					ui.main._clamp_cam()
 			"khotap":
 				for o in farm.lang.objs():
 					if o.id == "kho" or o.id == "kho2":

@@ -353,6 +353,7 @@ func _process(dt: float) -> void:
 			b.zoom = main.zoom
 			b.queue_redraw()
 	_fell_sync(tt, zz)
+	_vn_sync(dt)
 	_parts_step(dt)
 	_jobs(dt)
 	player.step(dt)
@@ -652,6 +653,11 @@ func tap(sp: Vector2) -> void:
 		ui.close_all()
 		ui.kho_open()
 		return
+	var va = vn_at(w)
+	if va != null and plot_at(w) < 0:
+		ui.close_all()
+		ui.vn_open(va, w)
+		return
 	var xk := xw_at(w)
 	if xk != "" and plot_at(w) < 0:
 		ui.close_all()
@@ -828,6 +834,7 @@ func _jobs(dt: float) -> void:
 					ok = true
 			"work": ok = G.xw.make(j.i_k, j.seed)   # Wh "make": tới xưởng rồi mới xếp món
 			"workc": ok = G.xw.collect(j.i_k)
+			"animal": ok = vn_do(j.va, j.seed)
 		if ok:
 			var kx: String = "work" if j.kind == "workc" else j.kind
 			G.use_en(float(G.D.suc.get(kx, 0)))
@@ -1018,6 +1025,157 @@ func xw_tap(k: String) -> void:   # sG: xong thì thu luôn, chưa thì mở b�
 		G.xw.collect(k)
 		return
 	ui.xf_open(k)
+
+# ------------------------------------------------------------------ vật nuôi (mc / az / kW / EW bản web)
+const XW := {"ga": 0.55, "cuu": 0.34, "bo": 0.26, "heo": 0.3, "de": 0.4}   # tốc độ đi trong chuồng (ô/giây)
+var anodes := {}       # "loại:j" -> node vẽ con vật (vatnuoi_ve.gd)
+
+func _pen_rand(t: String, m: Dictionary) -> void:   # chỗ ngẫu nhiên trong chuồng (gà chừa máng phía sau)
+	var a: Dictionary = lang.C.mo[t]
+	var p: Vector2i = lang.pen_pos(t)
+	var g := t == "ga"
+	m.tx = p.x + 0.4 + randf() * (float(a.w) - 0.8)
+	m.ty = p.y + (0.8 if g else 0.4) + randf() * (float(a.h) - (1.2 if g else 0.8))
+
+func _vn_sync(dt: float) -> void:
+	var V = G.vn
+	if V == null or lang == null:
+		return
+	var still: bool = G.motion_off()
+	var want := {}
+	for t in V.DI:
+		if not lang.pen_built(t) or not V.ok(t):
+			V.mc[t] = []
+			continue
+		var n: int = V.list(t).size()
+		var L: Array = V.mc.get(t, [])
+		while L.size() > n:
+			L.pop_back()
+		while L.size() < n:   # az: con mới đứng chỗ ngẫu nhiên
+			var m := {"wait": randf() * 2.0, "dir": 1 if randf() < 0.5 else -1, "ph": randf() * 6.0, "mv": false}
+			_pen_rand(t, m)
+			m.x = m.tx
+			m.y = m.ty
+			L.append(m)
+		V.mc[t] = L
+		var sp: float = XW[t] * dt
+		for j in n:
+			var m: Dictionary = L[j]
+			want[t + ":" + str(j)] = [t, j]
+			if still:   # kW: tắt chuyển động thì đứng yên
+				m.mv = false
+				continue
+			if float(m.wait) > 0.0:
+				m.wait = float(m.wait) - dt
+				m.mv = false
+				if float(m.wait) <= 0.0:
+					_pen_rand(t, m)
+				continue
+			var dx: float = float(m.tx) - float(m.x)
+			var dy2: float = float(m.ty) - float(m.y)
+			var l := sqrt(dx * dx + dy2 * dy2)
+			if l <= sp:
+				m.x = m.tx
+				m.y = m.ty
+				m.wait = 0.8 + randf() * 3.2
+				m.mv = false
+				continue
+			m.x = float(m.x) + dx / l * sp
+			m.y = float(m.y) + dy2 / l * sp
+			m.mv = true
+			m.ph = float(m.ph) + dt * (13.0 if t == "ga" else 9.0)
+			var f := dx - dy2
+			if absf(f) > 0.001:
+				m.dir = 1 if f > 0.0 else -1
+	for k in anodes.keys():   # bán / hết chuồng: gỡ hình
+		if not want.has(k):
+			var n0: Node2D = anodes[k]
+			for e in sortables:
+				if e[0] == n0:
+					sortables.erase(e)
+					break
+			n0.queue_free()
+			anodes.erase(k)
+	for k in want:
+		var t: String = want[k][0]
+		var j: int = want[k][1]
+		var m: Dictionary = V.mc[t][j]
+		var dk := nn(float(m.x), float(m.y))
+		if not anodes.has(k):
+			var n := Node2D.new()
+			n.set_script(load("res://logic/vatnuoi_ve.gd"))
+			n.farm = self
+			n.t = t
+			n.j = j
+			n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+			main.obj_root.add_child(n)
+			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			anodes[k] = n
+		else:
+			for e in sortables:
+				if e[0] == anodes[k]:
+					e[1] = dk
+					break
+
+func vn_at(w: Vector2):   # chạm trúng bong bóng / thân con vật -> {t, j}; trúng chuồng -> {t, j: -1}
+	var V = G.vn
+	if V == null or lang == null:
+		return null
+	var le := sign_le()
+	for k in anodes:
+		var n = anodes[k]
+		var b: Vector2 = n.bub_at()
+		if b.distance_squared_to(w) <= 144.0 * le * le:
+			return {"t": n.t, "j": n.j}
+	var best = null
+	var bd := 1e9
+	for k in anodes:
+		var n = anodes[k]
+		var f: Vector2 = n.foot()
+		var h: float = float(n.H5[n.t]) * n.scale_f()
+		if absf(w.x - f.x) < 18.0 and w.y <= f.y + 4.0 and w.y >= f.y - h - 4.0 and absf(w.y - f.y) < bd:
+			bd = absf(w.y - f.y)
+			best = {"t": n.t, "j": n.j}
+	if best != null:
+		return best
+	var tl := to_tile(w)
+	for t in V.DI:
+		if not lang.pen_built(t):
+			continue
+		var p: Vector2i = lang.pen_pos(t)
+		var a: Dictionary = lang.C.mo[t]
+		if tl.x >= p.x and tl.x < p.x + float(a.w) and tl.y >= p.y and tl.y < p.y + float(a.h):
+			return {"t": t, "j": -1}
+	return null
+
+func vn_job(t: String, j: int, act: String) -> bool:   # Ns: nhân vật đi tới con vật rồi làm (0,35 s; vuốt ve 0,8 s)
+	var key := "animal:" + t + ":" + str(j) + ":" + act
+	if has_job(key):
+		return false
+	if q.size() >= 30:
+		G.toast.emit("Nhân vật đang có quá nhiều việc rồi.")
+		return false
+	var m: Vector2 = G.vn.spot(t, j)
+	q.append({"key": key, "kind": "animal", "i": -1, "va": [t, j], "seed": act, "pos": Vector2(m.x, m.y + 0.3), "dur": 0.8 if act == "pet" else 0.35})
+	return true
+
+func vn_do(va: Array, act: String) -> bool:   # lG / kZ khi nhân vật tới nơi
+	var V = G.vn
+	var t: String = va[0]
+	var j: int = va[1]
+	var e = V.a(t, j)
+	if e == null:
+		return false
+	match act:
+		"pet": return V.pet(t, j)
+		"collect":
+			var m: String = V.collect(t, j)
+			if m != "":
+				var f: Vector2 = anodes[t + ":" + str(j)].foot() if anodes.has(t + ":" + str(j)) else Vector2.ZERO
+				burst(f + Vector2(0, -20), 10, ["#fff3b0", "#ffffff", PY.get(m, "#fff3b0")], 100.0, 2.6, 300.0, 2.4, 0.7, 6.0, true)
+			return m != ""
+		"feed": return V.feed(t, j)
+	return false
 
 # ------------------------------------------------------------------ cây ngã sau giông (bao.gd): vẽ bằng code như zK bản web
 var fells := {}        # sk -> FellNode

@@ -33,6 +33,7 @@ var _en_t := 0.0          # CT
 var night := false        # Xn
 var nv                    # sổ nhiệm vụ (nv.gd)
 var xw                    # xưởng chế biến (xuong.gd)
+var vn                    # vật nuôi (vatnuoi.gd)
 var troi                  # trời: buổi, thời tiết, mùa (troi.gd)
 var lang = null           # lang.gd (farm.gd gán): ô nước, món đặt — UM
 
@@ -136,6 +137,8 @@ func catch_up(off: float) -> void:
 		_grow(e)
 		if xw != null:
 			xw.step(e)
+		if vn != null:
+			vn.step(e, true)
 		a -= e
 	mark()
 
@@ -1363,6 +1366,7 @@ func _ready() -> void:
 	troi = load("res://logic/troi.gd").new(self)
 	_load_data()
 	xw = load("res://logic/xuong.gd").new(self)
+	vn = load("res://logic/vatnuoi.gd").new(self)
 	load_game()
 	xw.sync_pos()
 
@@ -1384,6 +1388,7 @@ func _process(dt: float) -> void:
 		var before := _sig()
 		_grow(t)
 		xw.step(t)
+		vn.step(t)
 		_bug_step(t)
 		_ray_step(t)
 		_mk_step(t)

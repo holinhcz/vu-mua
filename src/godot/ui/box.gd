@@ -346,8 +346,8 @@ static func _runs(s: String) -> Array:
 		var o := ch.unicode_at(0)
 		if o == 0xfe0f:
 			continue
-		if o == 0x25b2 or o == 0x25bc or o == 0x2605:
-			# ▲ ▼ ★ are not in Nunito (the browser takes them from a fallback font): drawn as shapes
+		if o == 0x25b2 or o == 0x25bc or o == 0x2605 or o == 0x2665 or o == 0x2192:
+			# ▲ ▼ ★ ♥ → are not in Nunito (the browser takes them from a fallback font): drawn as shapes
 			if cur != "":
 				out.append(cur)
 				cur = ""
@@ -367,7 +367,7 @@ static func _line_w(s: String, f: Font, fs: int) -> float:
 	var w := 0.0
 	for q in _runs(s):
 		if q is int:
-			w += fs * (0.77 if q < 0 else 1.18)
+			w += fs * (_gw(-q) if q < 0 else 1.18)
 		else:
 			w += f.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	return w
@@ -377,7 +377,7 @@ func _draw_line(f: Font, pos: Vector2, s: String, fs: int, col: Color, shadow: b
 	for q in _runs(s):
 		if q is int and q < 0:
 			_shape(-q, x, pos.y, fs, col)
-			x += fs * 0.77
+			x += fs * _gw(-q)
 		elif q is int:
 			if not shadow:
 				_fg.draw_texture_rect(Css.emoji(q), Rect2(x, pos.y - fs * 0.98, fs * 1.18, fs * 1.18), false, Color(1, 1, 1, col.a))
@@ -386,7 +386,25 @@ func _draw_line(f: Font, pos: Vector2, s: String, fs: int, col: Color, shadow: b
 			_fg.draw_string(f, Vector2(x, pos.y), q, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 			x += f.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 
+static func _gw(o: int) -> float:   # bề ngang hình vẽ thay chữ (theo cỡ chữ)
+	return 1.0 if o == 0x2665 else 0.95 if o == 0x2192 else 0.77
+
 func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
+	if o == 0x2665:   # ♥: hai vòng tròn + mũi nhọn
+		var hx := x + fs * 0.5
+		var hr := fs * 0.22
+		var hy := base - fs * 0.52
+		_fg.draw_circle(Vector2(hx - hr * 0.95, hy), hr, col, true, -1.0, true)
+		_fg.draw_circle(Vector2(hx + hr * 0.95, hy), hr, col, true, -1.0, true)
+		_fg.draw_colored_polygon(PackedVector2Array([Vector2(hx - hr * 1.9, hy + hr * 0.25), Vector2(hx + hr * 1.9, hy + hr * 0.25), Vector2(hx, base - fs * 0.04)]), col)
+		return
+	if o == 0x2192:   # →: thân + đầu mũi tên
+		var ay := base - fs * 0.33
+		var x0 := x + fs * 0.1
+		var x1 := x + fs * 0.85
+		_fg.draw_line(Vector2(x0, ay), Vector2(x1 - fs * 0.05, ay), col, maxf(1.0, fs * 0.08), true)
+		_fg.draw_polyline(PackedVector2Array([Vector2(x1 - fs * 0.28, ay - fs * 0.24), Vector2(x1, ay), Vector2(x1 - fs * 0.28, ay + fs * 0.24)]), col, maxf(1.0, fs * 0.08), true)
+		return
 	var cx := x + fs * 0.385
 	var w := fs * 0.35
 	var top := base - fs * 0.7

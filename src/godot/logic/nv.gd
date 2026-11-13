@@ -202,7 +202,7 @@ func qi(k: String, n := 1) -> void:
 
 # điều kiện mở việc: bản Godot chưa có vật nuôi, xưởng, cây trái, dân làng, hợp tác xã
 func has_fam() -> bool: return false
-func has_pen() -> bool: return false
+func has_pen() -> bool: return G.vn != null and G.vn.has_any()   # nvHasPen
 func has_work() -> bool: return false
 func has_tree() -> bool: return false
 func has_hx() -> bool: return false
