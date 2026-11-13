@@ -1263,11 +1263,15 @@ class ParcelLines extends Node2D:
 			sig = s
 			on = L
 			queue_redraw()
+	var seg := PackedVector2Array()   # NTBAKE: mọi nét đứt gom vào 1 lệnh draw_multiline
 	func _draw() -> void:
 		var c := Color("#f0bd3d") if farm.G.night else Color("#dba013")
+		seg = PackedVector2Array()
 		for id in on:
 			for pl in paths.get(id, []):
 				_dash(pl, c)
+		if seg.size() > 1:
+			draw_multiline(seg, c, 2.4, true)
 	func _dash(pl: PackedVector2Array, c: Color) -> void:
 		# canvas: mẫu 7 nét / 6 hở chạy liền qua các góc, bắt đầu lại ở mỗi moveTo
 		var pen := true
@@ -1290,19 +1294,61 @@ class ParcelLines extends Node2D:
 				left -= st
 				if left <= 0.0001:
 					if pen and run.size() > 1:
-						draw_polyline(run, c, 2.4, true)
+						_put(run)
 					run = PackedVector2Array()
 					pen = not pen
 					left = 7.0 if pen else 6.0
 		if pen and run.size() > 1:
-			draw_polyline(run, c, 2.4, true)
+			_put(run)
+	func _put(run: PackedVector2Array) -> void:
+		for i in run.size() - 1:
+			seg.append(run[i])
+			seg.append(run[i + 1])
 
 class ParcelSign extends Node2D:
 	# JW: cọc gỗ + bảng bo góc 80x30, "Khai hoang"/"Mở khúc sông", dòng 2: "🔒 Cấp N" / "N xu" / ổ khóa
+	# NTBAKE (bản 76): biển là đồ tĩnh -> vẽ MỘT lần vào SubViewport (UPDATE_ONCE) rồi hiện bằng Sprite2D (1 lệnh vẽ).
+	# Chỉ vẽ lại khi đổi ngày/đêm, khóa, cấp, đủ xu. Viền nhấp nháy = ảnh viền riêng, chỉ đổi độ mờ. Phóng to = đổi scale.
+	const K := 3.0                       # điểm ảnh mỗi đơn vị biển
+	const BOX := Rect2(-44, -66, 88, 75)  # khung biển + bóng + viền sáng
 	var farm
 	var id := ""
 	var sig := ""
 	var pulse := false
+	var hold: Node2D
+	var vp: SubViewport
+	var vg: SubViewport
+	var body: Sprite2D
+	var glow: Sprite2D
+	func _ready() -> void:
+		hold = Node2D.new()
+		add_child(hold)
+		vp = _mk_vp(false)
+		vg = _mk_vp(true)
+		body = _mk_sp(vp)
+		glow = _mk_sp(vg)
+		glow.visible = false
+	func _mk_vp(g: bool) -> SubViewport:
+		var v := SubViewport.new()
+		v.size = Vector2i(int(BOX.size.x * K), int(BOX.size.y * K))
+		v.transparent_bg = true
+		v.disable_3d = true
+		v.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		var a := SignArt.new()
+		a.sg = self
+		a.glow = g
+		v.add_child(a)
+		add_child(v)
+		return v
+	func _mk_sp(v: SubViewport) -> Sprite2D:
+		var sp := Sprite2D.new()
+		sp.centered = false
+		sp.texture = v.get_texture()
+		sp.position = BOX.position
+		sp.scale = Vector2.ONE / K
+		sp.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		hold.add_child(sp)
+		return sp
 	func sync() -> void:
 		var G = farm.G
 		var own: bool = farm.pc_own(id)
@@ -1312,16 +1358,29 @@ class ParcelSign extends Node2D:
 		var l: bool = o and r == 0 and int(G.g.coins) >= int(farm.PC.G0[id].cost)
 		pulse = l
 		var s := str(G.night) + str(o) + str(r) + str(l)
-		if s != sig:
+		if s != sig and visible and vp != null:
 			sig = s
-			queue_redraw()
+			vp.get_child(0).queue_redraw()
+			vg.get_child(0).queue_redraw()
+			vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+			vg.render_target_update_mode = SubViewport.UPDATE_ONCE
 	var _le := 0.0
 	func _process(_dt: float) -> void:
-		if not visible:
+		if not visible or hold == null:
 			return
+		if sig == "":
+			sync()
 		var le: float = farm.sign_le()
-		if pulse or absf(le - _le) > 0.002:
-			queue_redraw()
+		if absf(le - _le) > 0.002:
+			_le = le
+			hold.scale = Vector2(le, le)
+		glow.visible = pulse
+		if pulse:
+			glow.modulate.a = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)
+
+class SignArt extends Node2D:   # nét vẽ biển Khai hoang (như cũ), vẽ trong SubViewport của ParcelSign
+	var sg
+	var glow := false
 	static func _rr(x: float, y: float, w: float, h: float, r: float) -> PackedVector2Array:
 		var p := PackedVector2Array()
 		var cs := [[x + w - r, y + r, -PI / 2], [x + w - r, y + h - r, 0.0], [x + r, y + h - r, PI / 2], [x + r, y + r, PI]]
@@ -1334,7 +1393,9 @@ class ParcelSign extends Node2D:
 		var w := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(f, Vector2(-w / 2.0, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 	func _draw() -> void:
+		var farm = sg.farm
 		var G = farm.G
+		var id: String = sg.id
 		var n: Dictionary = farm.PC.G0[id]
 		var nt: bool = G.night
 		var o: bool = farm.pc_next(id)
@@ -1343,10 +1404,14 @@ class ParcelSign extends Node2D:
 		var wood := Color("#8d6b45") if nt else Color("#d1a468")
 		var wood_d := Color("#6a4d30") if nt else Color("#a97c46")
 		var acc := Color("#f0bd3d") if nt else Color("#dba013")
-		# le bản web: max(1, min(1,55, .9 / ba.z)): làng nhỏ lại thì biển to lên để đọc được
-		var le: float = farm.sign_le()
-		_le = le
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2(le, le))
+		draw_set_transform(-sg.BOX.position * sg.K, 0.0, Vector2(sg.K, sg.K))
+		var b := _rr(-40, -62, 80, 30, 6)
+		var bl := b.duplicate()
+		bl.append(b[0])
+		if glow:   # viền sáng nhấp nháy (độ mờ do ParcelSign đổi mỗi khung)
+			if l:
+				draw_polyline(bl, acc, 3.2, true)
+			return
 		# qv(2,1,8): bóng dưới chân cọc
 		var sh := PackedVector2Array()
 		for k in 24:
@@ -1357,15 +1422,8 @@ class ParcelSign extends Node2D:
 		draw_line(Vector2(0, 0), Vector2(0, -36), wood_d, 3.0, true)
 		draw_circle(Vector2(0, 0), 1.5, wood_d)
 		draw_circle(Vector2(0, -36), 1.5, wood_d)
-		var b := _rr(-40, -62, 80, 30, 6)
 		draw_colored_polygon(b, wood)
-		var bl := b.duplicate()
-		bl.append(b[0])
 		draw_polyline(bl, acc if l else wood_d, 1.8 if l else 1.4, true)
-		if l:
-			var f := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)
-			if f > 0.02:
-				draw_polyline(bl, Color(acc, f), 3.2, true)
 		_txt(farm.fnt7, "Mở khúc sông" if n.get("riv", false) else "Khai hoang", -49.0, 10.0, Color("#3b2a08") if o else Color("#6b5a45"))
 		if o and r > 0:
 			# "🔒 Cấp N" 800 11.5px: hình ổ khóa emoji + chữ, cả cụm ở giữa
