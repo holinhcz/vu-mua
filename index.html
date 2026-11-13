@@ -21,7 +21,7 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--txt);font-famil
      st: 'loading'|'out'|'in'|'err'; uid; name; cloud = bản lưu trên mạng (chuỗi JSON, '' nếu chưa có); rev tăng mỗi lần cloud đổi;
      save(chuỗi JSON) = ghi lên mạng (gộp lại, tối đa 1 lần / 15 s, và ngay khi ẩn trang); login() mở đăng nhập Google. -->
 <style>
-#ntc{position:fixed;left:50%;transform:translateX(-50%);top:max(6px,env(safe-area-inset-top,0px));z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+#ntc{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(6px,env(safe-area-inset-top,0px)) + 88px);z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
   color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
 #ntc[hidden]{display:none}
 </style>
@@ -56,10 +56,37 @@ auth.onAuthStateChanged(function(u){
     function(e){N.st='err';show('☁ Không đọc được bản lưu: '+(e&&e.code||e))})});
 })();
 </script>
+<!-- Giftcode: ô nhập của trang; game Godot đọc window.__ntgq và trả lời vào window.__ntgr (main.gd gift_try). -->
+<style>
+#ntgb{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(6px,env(safe-area-inset-top,0px)) + 120px);z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer}
+#ntgp{position:fixed;inset:0;z-index:6;display:grid;place-items:center;background:rgba(0,0,0,.45);padding:16px}
+#ntgp[hidden]{display:none}
+#ntgp>div{width:min(300px,100%);background:#fff8e2;border:2px solid #b08a4a;border-radius:14px;padding:16px;display:grid;gap:10px;font:15px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;color:#4a3a1e}
+#ntgp b{font-size:17px}
+#ntgp input{font:600 18px/1.2 system-ui,sans-serif;padding:10px;border:1px solid #b08a4a;border-radius:8px;text-transform:uppercase;background:#fff;color:#2c2414;width:100%;box-sizing:border-box}
+#ntgp .r{display:flex;gap:8px}
+#ntgp button{flex:1;font:700 15px system-ui,sans-serif;padding:10px;border-radius:9px;border:0;cursor:pointer}
+#ntgok{background:#4f9a3a;color:#fff}#ntgx{background:#e6d8b8;color:#4a3a1e}
+#ntgm{min-height:1.3em;font-weight:600}
+</style>
+<button id="ntgb">🎁 Giftcode</button>
+<div id="ntgp" hidden><div><b>Nhập giftcode</b><input id="ntgi" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Mã quà">
+<div id="ntgm"></div><div class="r"><button id="ntgx">Đóng</button><button id="ntgok">Nhận</button></div></div></div>
+<script>
+(function(){var p=document.getElementById('ntgp'),i=document.getElementById('ntgi'),m=document.getElementById('ntgm');
+window.__ntgq=[];window.__ntgshow=function(){m.textContent=window.__ntgr||''};
+document.getElementById('ntgb').onclick=function(){m.textContent='';i.value='';p.hidden=false;setTimeout(function(){i.focus()},50)};
+document.getElementById('ntgx').onclick=function(){p.hidden=true;var c=document.getElementById('canvas');c&&c.focus()};
+function go(){var v=i.value.trim();if(!v)return;m.textContent='Đang kiểm tra…';window.__ntgq.push(v)}
+document.getElementById('ntgok').onclick=go;i.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Enter')go()});
+i.addEventListener('keyup',function(e){e.stopPropagation()});
+})();
+</script>
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
-var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": false, "fileSizes": {"index.pck": 14216536, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=1,WASM=38034280,PCK=14216536,B='44ee15df',EV='dfd3ae5f';
+var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": false, "fileSizes": {"index.pck": 14218104, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=1,WASM=38034280,PCK=14218104,B='a011b593',EV='dfd3ae5f';
 var msg=document.getElementById('msg'),fill=document.getElementById('fill'),st=document.getElementById('st');
 // The engine asks for index.wasm and index.pck. They are published as engine.wasm (gzip) and pck_<n>.wasm (slices),
 // so those two requests are answered here from the published pieces. Every file of a build carries ?v=<crc> so a
