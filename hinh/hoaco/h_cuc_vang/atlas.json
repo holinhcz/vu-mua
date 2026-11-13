@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dh_cuc_vang0": {
+   "file": "dh_cuc_vang0.png",
+   "w": 212,
+   "h": 261,
+   "ox": -12.44,
+   "oy": -21.89,
+   "gw": 23.56,
+   "gh": 29.0
+  },
+  "dh_cuc_vang1": {
+   "file": "dh_cuc_vang1.png",
+   "w": 204,
+   "h": 235,
+   "ox": -11.67,
+   "oy": -21.33,
+   "gw": 22.67,
+   "gh": 26.11
+  },
+  "dh_cuc_vang2": {
+   "file": "dh_cuc_vang2.png",
+   "w": 215,
+   "h": 272,
+   "ox": -13.0,
+   "oy": -21.44,
+   "gw": 23.89,
+   "gh": 30.22
+  },
+  "dh_cuc_vang3": {
+   "file": "dh_cuc_vang3.png",
+   "w": 218,
+   "h": 249,
+   "ox": -11.56,
+   "oy": -22.44,
+   "gw": 24.22,
+   "gh": 27.67
+  },
+  "nh_cuc_vang0": {
+   "file": "nh_cuc_vang0.png",
+   "w": 212,
+   "h": 261,
+   "ox": -12.44,
+   "oy": -21.89,
+   "gw": 23.56,
+   "gh": 29.0
+  },
+  "nh_cuc_vang1": {
+   "file": "nh_cuc_vang1.png",
+   "w": 204,
+   "h": 235,
+   "ox": -11.67,
+   "oy": -21.33,
+   "gw": 22.67,
+   "gh": 26.11
+  },
+  "nh_cuc_vang2": {
+   "file": "nh_cuc_vang2.png",
+   "w": 215,
+   "h": 272,
+   "ox": -13.0,
+   "oy": -21.44,
+   "gw": 23.89,
+   "gh": 30.22
+  },
+  "nh_cuc_vang3": {
+   "file": "nh_cuc_vang3.png",
+   "w": 218,
+   "h": 249,
+   "ox": -11.56,
+   "oy": -22.44,
+   "gw": 24.22,
+   "gh": 27.67
+  }
+ }
+}

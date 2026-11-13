@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dk_hung_que0": {
+   "file": "dk_hung_que0.png",
+   "w": 171,
+   "h": 178,
+   "ox": -9.78,
+   "oy": -14.89,
+   "gw": 19.0,
+   "gh": 19.78
+  },
+  "dk_hung_que1": {
+   "file": "dk_hung_que1.png",
+   "w": 166,
+   "h": 176,
+   "ox": -9.22,
+   "oy": -14.78,
+   "gw": 18.44,
+   "gh": 19.56
+  },
+  "dk_hung_que2": {
+   "file": "dk_hung_que2.png",
+   "w": 168,
+   "h": 181,
+   "ox": -9.44,
+   "oy": -15.33,
+   "gw": 18.67,
+   "gh": 20.11
+  },
+  "dk_hung_que3": {
+   "file": "dk_hung_que3.png",
+   "w": 166,
+   "h": 193,
+   "ox": -9.22,
+   "oy": -16.67,
+   "gw": 18.44,
+   "gh": 21.44
+  },
+  "nk_hung_que0": {
+   "file": "nk_hung_que0.png",
+   "w": 171,
+   "h": 178,
+   "ox": -9.78,
+   "oy": -14.89,
+   "gw": 19.0,
+   "gh": 19.78
+  },
+  "nk_hung_que1": {
+   "file": "nk_hung_que1.png",
+   "w": 166,
+   "h": 176,
+   "ox": -9.22,
+   "oy": -14.78,
+   "gw": 18.44,
+   "gh": 19.56
+  },
+  "nk_hung_que2": {
+   "file": "nk_hung_que2.png",
+   "w": 168,
+   "h": 181,
+   "ox": -9.44,
+   "oy": -15.33,
+   "gw": 18.67,
+   "gh": 20.11
+  },
+  "nk_hung_que3": {
+   "file": "nk_hung_que3.png",
+   "w": 166,
+   "h": 193,
+   "ox": -9.22,
+   "oy": -16.67,
+   "gw": 18.44,
+   "gh": 21.44
+  }
+ }
+}

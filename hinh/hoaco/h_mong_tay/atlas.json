@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dh_mong_tay0": {
+   "file": "dh_mong_tay0.png",
+   "w": 156,
+   "h": 234,
+   "ox": -8.67,
+   "oy": -21.56,
+   "gw": 17.33,
+   "gh": 26.0
+  },
+  "dh_mong_tay1": {
+   "file": "dh_mong_tay1.png",
+   "w": 156,
+   "h": 233,
+   "ox": -8.67,
+   "oy": -20.67,
+   "gw": 17.33,
+   "gh": 25.89
+  },
+  "dh_mong_tay2": {
+   "file": "dh_mong_tay2.png",
+   "w": 156,
+   "h": 238,
+   "ox": -8.67,
+   "oy": -21.89,
+   "gw": 17.33,
+   "gh": 26.44
+  },
+  "dh_mong_tay3": {
+   "file": "dh_mong_tay3.png",
+   "w": 156,
+   "h": 221,
+   "ox": -8.67,
+   "oy": -20.11,
+   "gw": 17.33,
+   "gh": 24.56
+  },
+  "nh_mong_tay0": {
+   "file": "nh_mong_tay0.png",
+   "w": 156,
+   "h": 234,
+   "ox": -8.67,
+   "oy": -21.56,
+   "gw": 17.33,
+   "gh": 26.0
+  },
+  "nh_mong_tay1": {
+   "file": "nh_mong_tay1.png",
+   "w": 156,
+   "h": 233,
+   "ox": -8.67,
+   "oy": -20.67,
+   "gw": 17.33,
+   "gh": 25.89
+  },
+  "nh_mong_tay2": {
+   "file": "nh_mong_tay2.png",
+   "w": 156,
+   "h": 238,
+   "ox": -8.67,
+   "oy": -21.89,
+   "gw": 17.33,
+   "gh": 26.44
+  },
+  "nh_mong_tay3": {
+   "file": "nh_mong_tay3.png",
+   "w": 156,
+   "h": 221,
+   "ox": -8.67,
+   "oy": -20.11,
+   "gw": 17.33,
+   "gh": 24.56
+  }
+ }
+}

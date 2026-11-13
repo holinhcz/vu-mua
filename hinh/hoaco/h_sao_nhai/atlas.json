@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dh_sao_nhai0": {
+   "file": "dh_sao_nhai0.png",
+   "w": 234,
+   "h": 336,
+   "ox": -13.11,
+   "oy": -32.56,
+   "gw": 26.0,
+   "gh": 37.33
+  },
+  "dh_sao_nhai1": {
+   "file": "dh_sao_nhai1.png",
+   "w": 186,
+   "h": 357,
+   "ox": -10.78,
+   "oy": -34.89,
+   "gw": 20.67,
+   "gh": 39.67
+  },
+  "dh_sao_nhai2": {
+   "file": "dh_sao_nhai2.png",
+   "w": 206,
+   "h": 363,
+   "ox": -13.0,
+   "oy": -35.56,
+   "gw": 22.89,
+   "gh": 40.33
+  },
+  "dh_sao_nhai3": {
+   "file": "dh_sao_nhai3.png",
+   "w": 196,
+   "h": 329,
+   "ox": -12.56,
+   "oy": -31.78,
+   "gw": 21.78,
+   "gh": 36.56
+  },
+  "nh_sao_nhai0": {
+   "file": "nh_sao_nhai0.png",
+   "w": 234,
+   "h": 336,
+   "ox": -13.11,
+   "oy": -32.56,
+   "gw": 26.0,
+   "gh": 37.33
+  },
+  "nh_sao_nhai1": {
+   "file": "nh_sao_nhai1.png",
+   "w": 186,
+   "h": 357,
+   "ox": -10.78,
+   "oy": -34.89,
+   "gw": 20.67,
+   "gh": 39.67
+  },
+  "nh_sao_nhai2": {
+   "file": "nh_sao_nhai2.png",
+   "w": 206,
+   "h": 363,
+   "ox": -13.0,
+   "oy": -35.56,
+   "gw": 22.89,
+   "gh": 40.33
+  },
+  "nh_sao_nhai3": {
+   "file": "nh_sao_nhai3.png",
+   "w": 196,
+   "h": 329,
+   "ox": -12.56,
+   "oy": -31.78,
+   "gw": 21.78,
+   "gh": 36.56
+  }
+ }
+}

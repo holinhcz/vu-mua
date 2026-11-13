@@ -1,0 +1,77 @@
+{
+ "px_per_unit": 9,
+ "frames": {
+  "dh_cuc_trang0": {
+   "file": "dh_cuc_trang0.png",
+   "w": 193,
+   "h": 219,
+   "ox": -10.22,
+   "oy": -17.0,
+   "gw": 21.44,
+   "gh": 24.33
+  },
+  "dh_cuc_trang1": {
+   "file": "dh_cuc_trang1.png",
+   "w": 192,
+   "h": 226,
+   "ox": -11.22,
+   "oy": -17.56,
+   "gw": 21.33,
+   "gh": 25.11
+  },
+  "dh_cuc_trang2": {
+   "file": "dh_cuc_trang2.png",
+   "w": 203,
+   "h": 231,
+   "ox": -11.0,
+   "oy": -18.11,
+   "gw": 22.56,
+   "gh": 25.67
+  },
+  "dh_cuc_trang3": {
+   "file": "dh_cuc_trang3.png",
+   "w": 185,
+   "h": 224,
+   "ox": -10.11,
+   "oy": -17.89,
+   "gw": 20.56,
+   "gh": 24.89
+  },
+  "nh_cuc_trang0": {
+   "file": "nh_cuc_trang0.png",
+   "w": 193,
+   "h": 219,
+   "ox": -10.22,
+   "oy": -17.0,
+   "gw": 21.44,
+   "gh": 24.33
+  },
+  "nh_cuc_trang1": {
+   "file": "nh_cuc_trang1.png",
+   "w": 192,
+   "h": 226,
+   "ox": -11.22,
+   "oy": -17.56,
+   "gw": 21.33,
+   "gh": 25.11
+  },
+  "nh_cuc_trang2": {
+   "file": "nh_cuc_trang2.png",
+   "w": 203,
+   "h": 231,
+   "ox": -11.0,
+   "oy": -18.11,
+   "gw": 22.56,
+   "gh": 25.67
+  },
+  "nh_cuc_trang3": {
+   "file": "nh_cuc_trang3.png",
+   "w": 185,
+   "h": 224,
+   "ox": -10.11,
+   "oy": -17.89,
+   "gw": 20.56,
+   "gh": 24.89
+  }
+ }
+}
