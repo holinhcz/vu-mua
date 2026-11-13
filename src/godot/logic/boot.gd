@@ -31,15 +31,17 @@ class BuildTag extends Node:
 		var f := FileAccess.open("res://logic/build.txt", FileAccess.READ)
 		if f:
 			lb = f.get_as_text().strip_edges()
+	var re := RegEx.create_from_string("^bản \\S+ ")
 	func _process(_dt: float) -> void:
 		if lb == "":
 			return
 		var m = get_tree().current_scene
-		if m == null or not ("meter" in m) or m.meter == null or not ("BUILD" in m):
+		if m == null or not ("meter" in m) or m.meter == null:
 			return
-		var a := "bản " + String(m.BUILD) + " "
-		if m.meter.text.begins_with(a):
-			m.meter.text = "bản " + lb + " " + m.meter.text.substr(a.length())
+		var s: String = m.meter.text
+		var r := re.search(s)
+		if r != null and r.get_string() != "bản " + lb + " ":
+			m.meter.text = "bản " + lb + " " + s.substr(r.get_end())
 
 var _hook_t := 0.0
 var _quiet_n := 0
