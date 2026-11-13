@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "68"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "72"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -86,6 +86,16 @@ func _ready() -> void:
 	zf.m = self
 	zf.process_priority = 100
 	add_child(zf)
+	var pm0 := PMark.new()
+	pm0.m = self
+	pm0.process_priority = -1000000
+	add_child(pm0)
+	var pm1 := PMark.new()
+	pm1.m = self
+	pm1.first = false
+	pm1.process_priority = 1000000
+	add_child(pm1)
+	get_tree().process_frame.connect(_pt_frame)
 	# ban đêm: every village shader ends with night_col() (night.gdshaderinc); plain pictures share sprite_night
 	night_mat = ShaderMaterial.new()
 	night_mat.shader = load("res://sprite_night.gdshader")
@@ -2067,14 +2077,19 @@ func _on_http(res, code, _headers, body: PackedByteArray, h: HTTPRequest) -> voi
 # ---------------------------------------------------------------- per frame
 func _process(_dt: float) -> void:
 	frame_no += 1
+	var tq := Time.get_ticks_usec()
+	var tq0 := tq
 	if jsw != null and frame_no % 10 == 0:
 		_gift_poll()
 	if frame_no % 15 == 7:
 		_lv_night()
+	tq = _pt_add("đêm", tq)
 	_lot_poll()
 	_song_tick()
+	tq = _pt_add("sông", tq)
 	_rain_tick(_dt)
 	_sway_tick()
+	tq = _pt_add("lắc", tq)
 	var now := Time.get_ticks_usec()
 	if ft_last > 0:
 		var ms := (now - ft_last) / 1000.0
@@ -2094,6 +2109,14 @@ func _process(_dt: float) -> void:
 		fps_shown = ft_count * 1e6 / float(now - ft_win_start)
 		ft_worst_shown = ft_worst
 		pf_code_shown = pf_code / maxf(1.0, ft_count)
+		var po := []
+		for k in ["trước", "tổng", "sau", "main", "xếp", "đêm", "sông", "lắc", "nhìn", "tải", "đồng hồ"]:
+			po.append("%s %.1f" % [k, pt.get(k, 0.0) / 1000.0 / maxf(1.0, ft_count)])
+		pt_shown = " · ".join(po)
+		pt.clear()
+		if do_on <= 0:
+			pt_drw = _drw_text(ft_count)
+		pt_proc = _proc_count()
 		pf_draw_shown = pf_draw / maxf(1.0, ft_count)
 		pf_code = 0.0
 		pf_draw = 0.0
@@ -2141,11 +2164,18 @@ func _process(_dt: float) -> void:
 		jsw.__gddc = str(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)) + "," + str(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)) + "," + str(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
 	_clamp_cam()
 	get_viewport().canvas_transform = Transform2D(0.0, Vector2(zoom, zoom), 0.0, -cam * zoom)
+	tq = Time.get_ticks_usec()
 	_update_view()
+	tq = _pt_add("nhìn", tq)
 	_pump_fetch()
 	_decode_some()
 	_evict()
-	_update_meter()
+	tq = _pt_add("tải", tq)
+	_do_step()
+	if frame_no % 15 == 0:   # (b70) the meter (JS read + Label relayout) 4x a second, not every frame
+		_update_meter()
+	tq = _pt_add("đồng hồ", tq)
+	pt["main"] = pt.get("main", 0.0) + (tq - tq0)
 
 func _level_for(pxu: float, nlev: int, base := BASE_PXU) -> int:
 	# finest level needed so that picture pixels >= screen pixels
@@ -2517,6 +2547,7 @@ func _update_meter() -> void:
 	meter_full = txt
 	meter.text = "bản " + BUILD + " · %d fps · chậm nhất %d ms" % [round(fps_shown), round(ft_worst_shown)]
 	meter.text += "\ncode %.1f ms · vẽ %d lệnh · %d vật" % [pf_code_shown, round(pf_draw_shown), obj_root.get_child_count() if obj_root != null else 0]
+	meter.text += "\n" + pt_shown + "\nchạy: " + pt_proc + "\nvẽ lại/khung: " + pt_drw
 	if jsw != null and info.has("op2"):
 		var o2 = jsw.__op2t
 		meter.text += "\nkho phụ: " + (str(o2) if o2 != null else "?")
@@ -2774,6 +2805,70 @@ var lf_sea := -1
 var lf_atl: Texture2D = null
 var lf_rect := []     # piece -> [Rect2 normal, Rect2 mirrored, w, h, ax, ay]
 var lf_busy := false
+# (b72) ?do : counts draw calls with each group hidden for 3 s (all, -UI, -verges, -built/logic, -scenery), then puts all back
+var do_on := -1
+var do_ph := -1
+var do_t := 0
+var do_sum := 0.0
+var do_n := 0
+var do_hid := []
+var do_res := []
+const DO_NAMES := ["tất cả", "bỏ UI", "bỏ viền đường", "bỏ đồ xây/logic", "bỏ cây cảnh"]
+func _do_step() -> void:
+	if do_on < 0:
+		do_on = 1 if _tflag("__do") else 0
+	if do_on != 1 or not first_ready or sc_tex_have < sc_tex_n:
+		return
+	var now := Time.get_ticks_msec()
+	if do_ph < 0:
+		do_ph = 0
+		do_t = now + 8000   # let it settle first
+		return
+	if now < do_t:
+		if now > do_t - 2500:
+			do_sum += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+			do_n += 1
+		return
+	do_res.append("%s %d" % [DO_NAMES[do_ph], round(do_sum / maxf(1.0, do_n))])
+	pt_drw = " · ".join(do_res)
+	do_sum = 0.0
+	do_n = 0
+	do_ph += 1
+	do_t = now + 3500
+	if do_ph >= DO_NAMES.size():
+		for n in do_hid:
+			if is_instance_valid(n):
+				n.visible = true
+		do_hid.clear()
+		do_on = 2
+		pt_drw = "XONG: " + pt_drw
+		return
+	var scs := {}
+	for L in sc_spr:
+		for sp in L:
+			scs[sp] = true
+	if do_ph == 1:
+		for n in get_tree().root.get_children():
+			for c in n.get_children():
+				if c is CanvasLayer and c.layer > 0 and c.visible and c != meter.get_parent():
+					c.visible = false
+					do_hid.append(c)
+			if n is CanvasLayer and n.layer > 0 and n.visible and n != meter.get_parent():
+				n.visible = false
+				do_hid.append(n)
+	for n in obj_root.get_children():
+		if not (n is CanvasItem) or not n.visible:
+			continue
+		var hide := false
+		if scs.has(n):
+			hide = do_ph == 4
+		elif vg_rows.has(n):
+			hide = do_ph == 2
+		else:
+			hide = do_ph == 3
+		if hide:
+			n.visible = false
+			do_hid.append(n)
 func _tflag(n: String) -> bool:   # test switches (window.__nolf / __notr / __nosw)
 	# (b65) also from the address: ?nosky&nohz&nozf&nosort turns the parts off, so Link can read the fps of each
 	return OS.has_feature("web") and bool(JavaScriptBridge.eval("!!window." + n + "||new URLSearchParams(location.search).has('" + n.substr(2) + "')"))
@@ -3198,7 +3293,81 @@ func _lv_night() -> void:
 class ZFixer extends Node:
 	var m
 	func _process(_d: float) -> void:
+		var t0 := Time.get_ticks_usec()
 		m._zfix()
+		m.pt["xếp"] = m.pt.get("xếp", 0.0) + (Time.get_ticks_usec() - t0)
+# (b70) time markers: first and last node to run _process each frame -> total script time of the whole tree
+class PMark extends Node:
+	var m
+	var first := true
+	func _process(_d: float) -> void:
+		var now := Time.get_ticks_usec()
+		if first:
+			m.pt_t0 = now
+			if m.pt_ta > 0:
+				m.pt["trước"] = m.pt.get("trước", 0.0) + (now - m.pt_ta)
+		else:
+			m.pt["tổng"] = m.pt.get("tổng", 0.0) + (now - m.pt_t0)
+			m.pt_tc = now
+			m._pt_after.call_deferred()
+var pt := {}
+var pt_t0 := 0
+var pt_ta := 0
+var pt_tc := 0
+var drw := {}        # (b71) redraws per script/class in this window
+var drw_on := {}     # instance ids already hooked to "draw"
+var pt_drw := ""
+func _pt_frame() -> void:
+	pt_ta = Time.get_ticks_usec()
+func _pt_after() -> void:
+	pt["sau"] = pt.get("sau", 0.0) + (Time.get_ticks_usec() - pt_tc)
+func _pt_drawn(nm: String) -> void:
+	drw[nm] = drw.get(nm, 0) + 1
+static func _nname(n: Node) -> String:
+	var s = n.get_script()
+	if s != null:
+		if s.resource_path != "":
+			return s.resource_path.get_file()
+		var g = s.get_global_name()
+		if g != &"":
+			return str(g)
+		var b = s.get_base_script()
+		return n.get_class() + "<" + (b.resource_path.get_file() if b != null and b.resource_path != "" else "lớp trong") + ">"
+	return n.get_class()
+var pt_shown := ""
+var pt_proc := ""
+func _pt_add(k: String, t0: int) -> int:
+	var t1 := Time.get_ticks_usec()
+	pt[k] = pt.get(k, 0.0) + (t1 - t0)
+	return t1
+# (b70) which scripts keep _process on, and how many nodes of each
+func _proc_count() -> String:
+	var cnt := {}
+	var st := [get_tree().root]
+	while not st.is_empty():
+		var n: Node = st.pop_back()
+		if n.is_processing() or n.is_physics_processing() or n.is_processing_internal():
+			var nm: String = _nname(n) + ("*" if n.is_processing_internal() and not n.is_processing() else "")
+			cnt[nm] = cnt.get(nm, 0) + 1
+		if n is CanvasItem and not drw_on.has(n.get_instance_id()):
+			drw_on[n.get_instance_id()] = true
+			n.draw.connect(_pt_drawn.bind(_nname(n)))
+		for c in n.get_children():
+			st.append(c)
+	var ks := cnt.keys()
+	ks.sort_custom(func(x, y): return cnt[x] > cnt[y])
+	var o := []
+	for i in mini(6, ks.size()):
+		o.append("%s %d" % [ks[i], cnt[ks[i]]])
+	return " · ".join(o)
+func _drw_text(frames: int) -> String:
+	var ks := drw.keys()
+	ks.sort_custom(func(x, y): return drw[x] > drw[y])
+	var o := []
+	for i in mini(6, ks.size()):
+		o.append("%s %.1f" % [ks[i], drw[ks[i]] / maxf(1.0, frames)])
+	drw.clear()
+	return " · ".join(o)
 var zs_ready := false
 var zs_count := -1
 var zs_keys := PackedFloat32Array()
