@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "74"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "75"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -2114,7 +2114,7 @@ func _process(_dt: float) -> void:
 			po.append("%s %.1f" % [k, pt.get(k, 0.0) / 1000.0 / maxf(1.0, ft_count)])
 		pt_shown = " · ".join(po)
 		pt.clear()
-		if do_on <= 0:
+		if do_on <= 0 and do2_on <= 0:
 			pt_drw = _drw_text(ft_count)
 		pt_proc = _proc_count()
 		pf_draw_shown = pf_draw / maxf(1.0, ft_count)
@@ -2172,6 +2172,7 @@ func _process(_dt: float) -> void:
 	_evict()
 	tq = _pt_add("tải", tq)
 	_do_step()
+	_do2_step()
 	if frame_no % 15 == 0:   # (b70) the meter (JS read + Label relayout) 4x a second, not every frame
 		_update_meter()
 	tq = _pt_add("đồng hồ", tq)
@@ -2870,6 +2871,69 @@ func _do_step() -> void:
 		if hide:
 			n.visible = false
 			do_hid.append(n)
+# (b75) ?do2 : hides each top-level layer alone for 1.5 s and lists the ones whose hiding saves most draw calls
+var do2_on := -1
+var do2_L := []
+var do2_i := -2
+var do2_t := 0
+var do2_sum := 0.0
+var do2_n := 0
+var do2_base := 0.0
+var do2_res := []
+func _do2_name(n: Node) -> String:
+	var s := _nname(n)
+	if n == obj_root: s = "obj_root"
+	elif lev_nodes.has(n): s = "nền mức " + str(lev_nodes.find(n))
+	elif n == lf_root: s = "lá"
+	elif n == water: s = "sông"
+	var z: int = n.z_index if n is CanvasItem else 0
+	return "%s(z%d,%d con)" % [s, z, n.get_child_count()]
+func _do2_step() -> void:
+	if do2_on < 0:
+		do2_on = 1 if _tflag("__do2") else 0
+	if do2_on != 1 or info.is_empty():
+		return
+	if do2_i >= 0 and do2_i < do2_L.size() and is_instance_valid(do2_L[do2_i]):
+		do2_L[do2_i].visible = false   # ground levels get their visibility set again every frame
+	var now := Time.get_ticks_msec()
+	if do2_i == -2:
+		do2_i = -1
+		do2_t = now + 15000
+		return
+	if now < do2_t:
+		pt_drw = "đang đo lớp %d/%d" % [do2_i + 1, do2_L.size()]
+		if now > do2_t - 700:
+			do2_sum += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+			do2_n += 1
+		return
+	var v := do2_sum / maxf(1.0, do2_n)
+	do2_sum = 0.0
+	do2_n = 0
+	if do2_i == -1:
+		do2_base = v
+		for n in get_children():
+			if n is CanvasItem and n.visible and n != meter.get_parent():
+				do2_L.append(n)
+			elif n is CanvasLayer and n.visible and n != meter.get_parent():
+				do2_L.append(n)
+	else:
+		var n = do2_L[do2_i]
+		if is_instance_valid(n):
+			n.visible = true
+			do2_res.append([do2_base - v, _do2_name(n)])
+	do2_i += 1
+	if do2_i >= do2_L.size():
+		do2_res.sort_custom(func(x, y): return x[0] > y[0])
+		var o := []
+		for i in mini(8, do2_res.size()):
+			o.append("%s -%d" % [do2_res[i][1], round(do2_res[i][0])])
+		pt_drw = "XONG (gốc %d): " % round(do2_base) + " · ".join(o)
+		do2_on = 2
+		return
+	var m = do2_L[do2_i]
+	if is_instance_valid(m):
+		m.visible = false
+	do2_t = now + 1500
 func _tflag(n: String) -> bool:   # test switches (window.__nolf / __notr / __nosw)
 	# (b65) also from the address: ?nosky&nohz&nozf&nosort turns the parts off, so Link can read the fps of each
 	return OS.has_feature("web") and bool(JavaScriptBridge.eval("!!window." + n + "||new URLSearchParams(location.search).has('" + n.substr(2) + "')"))
