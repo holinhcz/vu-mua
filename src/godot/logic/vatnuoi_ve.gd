@@ -26,29 +26,95 @@ func _process(dt: float) -> void:
 func _m(day: String, nite: String) -> Color:   # m(): màu ban ngày / ban đêm
 	return Color(nite if farm.G.night else day)
 
+# Hình vẽ thẳng ở độ phân giải màn hình (canvas_transform của làng), không phóng ảnh. Godot không khử răng cưa khi
+# tô đa giác, nên mỗi hình = lõi đặc + một vòng 1 px màn hình nhạt dần ra ngoài (mép mịn như canvas bản web).
+# Gom hết tam giác của một lần vẽ thành một lệnh (canvas_item_add_triangle_array), xả trước mỗi lệnh vẽ khác.
+var _aa := 1.0             # 1 px màn hình, tính theo đơn vị đang vẽ
+var _P := PackedVector2Array()
+var _C := PackedColorArray()
+var _I := PackedInt32Array()
+
+func _flush() -> void:
+	if _I.size() > 0:
+		RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), _I, _P, _C)
+	_P = PackedVector2Array()
+	_C = PackedColorArray()
+	_I = PackedInt32Array()
+
+func _tf(o: Vector2, s: Vector2) -> void:   # draw_set_transform, xả lô trước
+	_flush()
+	draw_set_transform(o, 0.0, s)
+
+static func _col(c) -> Color:
+	return c if c is Color else Color(c)
+
+func _shape(P: PackedVector2Array, col: Color) -> void:
+	# lõi: tam giác hoá đa giác; vòng: mỗi cạnh đẩy ra 1 px theo pháp tuyến đỉnh, màu tắt dần
+	var n := P.size()
+	if n < 3:
+		return
+	var tri := Geometry2D.triangulate_polygon(P)
+	if tri.is_empty():
+		return
+	var b := _P.size()
+	_P.append_array(P)
+	for k in n:
+		_C.append(col)
+	for k in tri:
+		_I.append(b + k)
+	var ar := 0.0
+	for k in n:
+		ar += P[k].cross(P[(k + 1) % n])
+	var sg := 1.0 if ar > 0.0 else -1.0
+	var c0 := Color(col.r, col.g, col.b, 0.0)
+	var o := _P.size()
+	for k in n:
+		var a := P[(k + n - 1) % n]
+		var c := P[(k + 1) % n]
+		var e1 := (P[k] - a).normalized()
+		var e2 := (c - P[k]).normalized()
+		var nm := (Vector2(e1.y, -e1.x) + Vector2(e2.y, -e2.x)) * sg
+		nm = nm.normalized() if nm.length() > 0.001 else Vector2(e2.y, -e2.x) * sg
+		_P.append(P[k] + nm * _aa)
+		_C.append(c0)
+	for k in n:
+		var k2 := (k + 1) % n
+		_I.append_array([b + k, b + k2, o + k2, b + k, o + k2, o + k])
+
 func _L(x: float, y: float, rx: float, ry: float, c, rot := 0.0) -> void:   # ellipse tô
-	var P := PackedVector2Array()
-	var n := 20
+	var n := clampi(int(maxf(rx, ry) / _aa * 0.9), 10, 48)
 	var cr := cos(rot)
 	var sr := sin(rot)
-	for i in n:
-		var a := TAU * i / n
+	var P := PackedVector2Array()
+	for k in n:
+		var a := TAU * k / n
 		var px := cos(a) * rx
 		var py := sin(a) * ry
 		P.append(Vector2(x + px * cr - py * sr, y + px * sr + py * cr))
-	draw_colored_polygon(P, c if c is Color else Color(c))
+	_shape(P, _col(c))
 
-func _Dt(x0: float, y0: float, x1: float, y1: float, c, w: float) -> void:   # đoạn thẳng, đầu tròn
-	var col: Color = c if c is Color else Color(c)
-	draw_line(Vector2(x0, y0), Vector2(x1, y1), col, w, true)
-	draw_circle(Vector2(x0, y0), w * 0.5, col)
-	draw_circle(Vector2(x1, y1), w * 0.5, col)
+func _seg(a: Vector2, b: Vector2, col: Color, w: float) -> void:   # đoạn thẳng dày w, hai đầu tròn
+	var d := b - a
+	if d.length() < 0.0001:
+		_L(a.x, a.y, w * 0.5, w * 0.5, col)
+		return
+	var nm := Vector2(-d.y, d.x).normalized() * w * 0.5
+	_shape(PackedVector2Array([a + nm, b + nm, b - nm, a - nm]), col)
+	_L(a.x, a.y, w * 0.5, w * 0.5, col)
+	_L(b.x, b.y, w * 0.5, w * 0.5, col)
+
+func _Dt(x0: float, y0: float, x1: float, y1: float, c, w: float) -> void:   # đoạn thẳng, đầu tròn (lineCap round)
+	_seg(Vector2(x0, y0), Vector2(x1, y1), _col(c), w)
+
+func _line(P: PackedVector2Array, c, w: float) -> void:   # nét cong (đuôi heo, sừng dê)
+	for k in P.size() - 1:
+		_seg(P[k], P[k + 1], _col(c), w)
 
 func _xe(p: Array, c) -> void:   # đa giác tô
 	var P := PackedVector2Array()
 	for i in range(0, p.size(), 2):
 		P.append(Vector2(p[i], p[i + 1]))
-	draw_colored_polygon(P, c if c is Color else Color(c))
+	_shape(P, _col(c))
 
 func _quad(p0: Vector2, c: Vector2, p1: Vector2) -> PackedVector2Array:
 	var P := PackedVector2Array()
@@ -65,7 +131,7 @@ func _ga(ph: float, mv: bool) -> void:   # wW
 	_xe([-7, -10 - n, -14, -16 - n, -12, -8 - n], "#e6dcc3")
 	_L(0, -9 - n, 8.5, 6.5, "#f8f3e6")
 	_L(-1, -8 - n, 5, 3.4, "#e6dcc3")
-	draw_circle(Vector2(7, -15 - n), 4.6, Color("#f8f3e6"))
+	_L(7, -15 - n, 4.6, 4.6, "#f8f3e6")
 	_xe([5, -19.5 - n, 6.5, -23.5 - n, 8, -19.8 - n, 9.5, -23 - n, 10.5, -18.5 - n], "#d93a32")
 	_xe([11, -15.7 - n, 15.2, -14.2 - n, 11, -12.7 - n], "#f0a020")
 	_xe([9, -11.8 - n, 10.6, -8 - n, 8, -9.8 - n], "#d93a32")
@@ -78,9 +144,9 @@ func _cuu(ph: float, mv: bool) -> void:   # MW
 		_Dt(x, -9, x, 0, "#3d342d", 2.6)
 	var o := [[-8, -14, 6], [0, -17, 7], [8, -15, 6.5], [-3, -11, 6.5], [5, -11, 6]]
 	for r in o:
-		draw_circle(Vector2(r[0], r[1] - n), r[2] + 1, Color(0, 0, 0, 0.16))
+		_L(r[0], r[1] - n, r[2] + 1, r[2] + 1, Color(0, 0, 0, 0.16))
 	for r in o:
-		draw_circle(Vector2(r[0], r[1] - n), r[2], Color("#f6f3ec"))
+		_L(r[0], r[1] - n, r[2], r[2], "#f6f3ec")
 	_L(15, -14 - n, 4.2, 5, "#4a3f37", -0.2)
 	_L(12, -18.5 - n, 3, 1.5, "#4a3f37", -0.5)
 	_L(16.6, -15 - n, 0.9, 0.9, "#f3f0e8")
@@ -113,7 +179,7 @@ func _heo(ph: float, mv: bool) -> void:   # SW
 		_L(l[0], 0, 1.9, 1, "#7a4a44")
 	var tail := _quad(Vector2(-15, -15 - n), Vector2(-20, -19 - n), Vector2(-18, -14 - n))
 	tail.append_array(_quad(Vector2(-18, -14 - n), Vector2(-16, -11 - n), Vector2(-19, -12 - n)))
-	draw_polyline(tail, Color(o), 1.4, true)
+	_line(tail, o, 1.4)
 	_L(0, -14 - n, 15.5, 9.5, r)
 	_L(-2, -17 - n, 10, 4.5, Color(1, 1, 1, 0.28))
 	_L(14, -16 - n, 7.4, 6.6, r)
@@ -141,7 +207,7 @@ func _de(ph: float, mv: bool) -> void:   # CW
 	_xe([8, -18 - n, 11, -25 - n, 15, -24 - n, 13, -16 - n], r)
 	_L(15, -25 - n, 4.2, 3.6, r, 0.25)
 	_L(19, -23.4 - n, 2.6, 2, _m("#e8d6c8", "#8a7a70"), 0.35)
-	draw_polyline(_quad(Vector2(13.4, -28 - n), Vector2(11, -33 - n), Vector2(7.5, -31.5 - n)), f, 1.8, true)
+	_line(_quad(Vector2(13.4, -28 - n), Vector2(11, -33 - n), Vector2(7.5, -31.5 - n)), f, 1.8)
 	_L(11.6, -25.5 - n, 3.2, 1.3, o, -0.5)
 	_xe([16.2, -22 - n, 15.4, -17.4 - n, 17.8, -21.4 - n], o)
 	_L(16.4, -26 - n, 0.9, 0.9, "#2b2118")
@@ -163,6 +229,10 @@ func bub_at() -> Vector2:   # chỗ bong bóng (X0: c - p - 14)
 	return Vector2(p.x, p.y - float(H5[t]) * scale_f() - 14.0)
 
 func _draw() -> void:
+	_draw_all()
+	_flush()
+
+func _draw_all() -> void:
 	var V = farm.G.vn
 	var e = V.a(t, j)
 	var L: Array = V.mc.get(t, [])
@@ -173,22 +243,27 @@ func _draw() -> void:
 	var f := scale_f()
 	var r: Dictionary = V.Q[t]
 	var still: bool = farm.G.motion_off()
+	var zm: float = farm.main.zoom
+	_aa = 1.0 / zm
 	# bóng (qv)
 	_L(base.x, base.y, 13.0 * f, 13.0 * f * 0.42, Color(0, 0, 0, 0.24))
-	draw_set_transform(base, 0.0, Vector2(float(m.dir) * f, f))
+	_aa = 1.0 / (zm * f)
+	_tf(base, Vector2(float(m.dir) * f, f))
 	match t:
 		"ga": _ga(float(m.ph), bool(m.mv))
 		"cuu": _cuu(float(m.ph), bool(m.mv))
 		"bo": _bo(float(m.ph), bool(m.mv))
 		"heo": _heo(float(m.ph), bool(m.mv))
 		"de": _de(float(m.ph), bool(m.mv))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_tf(Vector2.ZERO, Vector2.ONE)
+	_aa = 1.0 / zm
 	var p := float(H5[t]) * f
 	var d := 0.0 if still else sin(tt * 3.0 + j) * 1.2
 	var x := base.x
 	var c := base.y
 	# ZR: tim bay sau khi vuốt ve
 	var ht := float(V.hearts_t.get(t + str(j), 0.0))
+	_flush()
 	if ht > 0.0:
 		var fnt: Font = ThemeDB.fallback_font
 		for k in 3:
@@ -197,7 +272,8 @@ func _draw() -> void:
 	var le: float = farm.sign_le()
 	if e.get("s", 0):   # bệnh: vòng trắng chữ thập đỏ + "z"
 		var h := c - p - 14 + d
-		draw_circle(Vector2(x, h), 9 * le, Color(1, 1, 1, 0.95))
+		_L(x, h, 9 * le, 9 * le, Color(1, 1, 1, 0.95))
+		_flush()
 		draw_arc(Vector2(x, h), 9 * le, 0, TAU, 28, Color("#c4302a"), 1.4, true)
 		var pw := 2.4 * le
 		var ph := 6.0 * le
@@ -225,11 +301,15 @@ func _x0(at: Vector2, id: String) -> void:   # X0: bong bóng trắng r 10 + đu
 	var le: float = farm.sign_le()
 	var r := 1.0 if farm.G.motion_off() else 1.0 + 0.08 * sin(tt * 5.0 + at.x)
 	var s := r * le
-	draw_set_transform(at, 0.0, Vector2(s, s))
-	draw_circle(Vector2.ZERO, 10.0, Color(1, 1, 1, 0.97))
-	draw_arc(Vector2.ZERO, 10.0, 0, TAU, 32, Color(0, 0, 0, 0.28), 1.0, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(-3.2, 8.6), Vector2(3.2, 8.6), Vector2(0, 13.5)]), Color(1, 1, 1, 0.97))
+	_tf(at, Vector2(s, s))
+	var a0 := _aa
+	_aa = 1.0 / (farm.main.zoom * s)
+	_L(0, 0, 10.0, 10.0, Color(1, 1, 1, 0.97))
+	_xe([-3.2, 8.6, 3.2, 8.6, 0, 13.5], Color(1, 1, 1, 0.97))
+	_flush()
+	draw_arc(Vector2.ZERO, 10.0, 0, TAU, 48, Color(0, 0, 0, 0.28), 1.0, true)
+	_aa = a0
 	var tx: Texture2D = farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
 	if tx != null:
 		draw_texture_rect(tx, Rect2(-6.8, -6.8, 13.6, 13.6), false)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_tf(Vector2.ZERO, Vector2.ONE)

@@ -97,6 +97,8 @@ func _test_hook() -> void:
 				farm.lang.changed()
 			"vninfo":
 				var I := {"an": farm.anodes.keys(), "open": ui.vnp.is_open(), "sig": ui.vnp.sig != "", "b": ui.vnp.b != null, "barn": G.g.barn, "pens": G.g.pens.ga, "acts": ui.vnp.acts.map(func(x): return x.get("t", "slot"))}
+				I["zoom"] = ui.main.zoom
+				I["K"] = ui.Css.K
 				for k in farm.anodes:
 					var q: Vector2 = (farm.anodes[k].foot() - ui.main.cam) * ui.main.zoom / ui.Css.K
 					I["s" + k] = [round(q.x), round(q.y)]
