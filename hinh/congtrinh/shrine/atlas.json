@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 18.0,
+ "web_image": "img/mieu.webp",
+ "game_ids": [
+  "shrine",
+  "shrine2"
+ ],
+ "fw": 1,
+ "fd": 1,
+ "name": "Miếu nhỏ (cấp 1)",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 900,
+   "h": 1070,
+   "ox": -25.0,
+   "oy": -46.89,
+   "gw": 50.0,
+   "gh": 59.44
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 900,
+   "h": 1070,
+   "ox": -25.0,
+   "oy": -46.89,
+   "gw": 50.0,
+   "gh": 59.44
+  }
+ }
+}

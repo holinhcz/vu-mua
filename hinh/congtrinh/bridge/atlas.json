@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/cauao.webp",
+ "game_ids": [
+  "bridge",
+  "bridge2"
+ ],
+ "fw": 2,
+ "fd": 1,
+ "name": "Cầu ao",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 700,
+   "h": 470,
+   "ox": -37.22,
+   "oy": -33.33,
+   "gw": 77.78,
+   "gh": 52.22
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 700,
+   "h": 470,
+   "ox": -37.22,
+   "oy": -33.33,
+   "gw": 77.78,
+   "gh": 52.22
+  }
+ }
+}

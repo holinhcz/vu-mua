@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/taphoa.webp",
+ "game_ids": [
+  "taphoa",
+  "taphoa2"
+ ],
+ "fw": 2,
+ "fd": 2,
+ "name": "Tạp hóa đầu ngõ (cấp 1)",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 1196,
+   "h": 1016,
+   "ox": -60.89,
+   "oy": -82.33,
+   "gw": 132.89,
+   "gh": 112.89
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 1196,
+   "h": 1016,
+   "ox": -60.89,
+   "oy": -82.33,
+   "gw": 132.89,
+   "gh": 112.89
+  }
+ }
+}

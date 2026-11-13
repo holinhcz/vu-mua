@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/causong.webp",
+ "game_ids": [
+  "causong",
+  "causong2"
+ ],
+ "fw": 1,
+ "fd": 5,
+ "name": "Cầu tre qua sông",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 1597,
+   "h": 932,
+   "ox": -84.78,
+   "oy": -60.67,
+   "gw": 177.44,
+   "gh": 103.56
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 1597,
+   "h": 932,
+   "ox": -84.78,
+   "oy": -60.67,
+   "gw": 177.44,
+   "gh": 103.56
+  }
+ }
+}

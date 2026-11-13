@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/cong.webp",
+ "game_ids": [
+  "gate",
+  "gate2"
+ ],
+ "fw": 3,
+ "fd": 1,
+ "name": "Cổng làng",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 1004,
+   "h": 1045,
+   "ox": -55.89,
+   "oy": -91.89,
+   "gw": 111.56,
+   "gh": 116.11
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 1177,
+   "h": 1122,
+   "ox": -65.33,
+   "oy": -91.89,
+   "gw": 130.78,
+   "gh": 124.67
+  }
+ }
+}

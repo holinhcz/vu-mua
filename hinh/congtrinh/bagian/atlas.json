@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/bagian.webp",
+ "game_ids": [
+  "bagian",
+  "bagian2"
+ ],
+ "fw": 3,
+ "fd": 3,
+ "name": "Nhà ba gian cổ (cấp 1)",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 1768,
+   "h": 1474,
+   "ox": -92.44,
+   "oy": -117.22,
+   "gw": 196.44,
+   "gh": 163.78
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 1768,
+   "h": 1474,
+   "ox": -92.44,
+   "oy": -117.22,
+   "gw": 196.44,
+   "gh": 163.78
+  }
+ }
+}

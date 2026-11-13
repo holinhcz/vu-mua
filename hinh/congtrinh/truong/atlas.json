@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/truong.webp",
+ "game_ids": [
+  "truong",
+  "truong2"
+ ],
+ "fw": 4,
+ "fd": 4,
+ "name": "Trường làng (cấp 1)",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 2226,
+   "h": 1696,
+   "ox": -123.33,
+   "oy": -126.67,
+   "gw": 247.33,
+   "gh": 188.44
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 2226,
+   "h": 1696,
+   "ox": -123.33,
+   "oy": -126.67,
+   "gw": 247.33,
+   "gh": 188.44
+  }
+ }
+}

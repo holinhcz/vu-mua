@@ -1,0 +1,31 @@
+{
+ "px_per_unit": 9.0,
+ "web_image": "img/gieng.webp",
+ "game_ids": [
+  "well",
+  "well2"
+ ],
+ "fw": 1,
+ "fd": 1,
+ "name": "Giếng làng",
+ "frames": {
+  "bd": {
+   "file": "bd.png",
+   "w": 529,
+   "h": 540,
+   "ox": -42.11,
+   "oy": -51.33,
+   "gw": 58.78,
+   "gh": 60.0
+  },
+  "bn": {
+   "file": "bn.png",
+   "w": 529,
+   "h": 540,
+   "ox": -42.11,
+   "oy": -51.33,
+   "gw": 58.78,
+   "gh": 60.0
+  }
+ }
+}
