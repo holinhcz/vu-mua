@@ -1,0 +1,43 @@
+{
+ "px_per_unit": 9,
+ "game_kind": "nhanh",
+ "src": "img/nhanh.webp",
+ "frames": {
+  "dnhanh0": {
+   "file": "dnhanh0.png",
+   "w": 345,
+   "h": 173,
+   "ox": -17.78,
+   "oy": -12.67,
+   "gw": 38.33,
+   "gh": 19.22
+  },
+  "dnhanh1": {
+   "file": "dnhanh1.png",
+   "w": 380,
+   "h": 177,
+   "ox": -21.78,
+   "oy": -11.78,
+   "gw": 42.22,
+   "gh": 19.67
+  },
+  "nnhanh0": {
+   "file": "nnhanh0.png",
+   "w": 345,
+   "h": 173,
+   "ox": -17.78,
+   "oy": -12.67,
+   "gw": 38.33,
+   "gh": 19.22
+  },
+  "nnhanh1": {
+   "file": "nnhanh1.png",
+   "w": 380,
+   "h": 177,
+   "ox": -21.78,
+   "oy": -11.78,
+   "gw": 42.22,
+   "gh": 19.67
+  }
+ }
+}
