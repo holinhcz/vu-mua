@@ -1,0 +1,282 @@
+
+######## w_kho.gd
+- game.gd: hold the module, e.g. var w_kho = load("res://logic/w_kho.gd").new(self), created after _load_data (it reads G.xo, G.D.crops, G.D.items, G.D.mua and uses G._j).
+- game.gd _process: call w_kho.step(dt, false) next to _mk_step(dt). w_kho.step only does the 'mk' day-change part; sat decay stays in game._mk_step.
+- game.catch_up(off): call w_kho.step(off, true) once so a new day records prices and market news.
+- Price with reasons (web $i is wrapped to round(p0*mkEv)): rename game.price body to price0(t) and make price(t) return w_kho.ngKho(t). ngKho calls price0 when it exists, so there is no recursion. Then game.rel() should return w_kho.mkRel(t) instead of the season-only mk_ev.
+- ui.gd: create var wkui = load("res://logic/w_kho_ui.gd").new(self, G.w_kho).
+- ui._det_sync: replace the local 'Nên giữ lại N để gieo' block with R = wkui.det_hint(s, M). That adds NF (open orders plus village fam req), so the text becomes '... cho đơn' / '... cho đơn và để gieo'.
+- ui._det_sync: when wkui.sig(s) changes, free the old chart and add wkui.chart(s, x, y, w, kh_det.z) to kh_det below the hint (grid-column 1/-1, margin-top 6px*z). Grow kh_det and the grid offset by the returned Box height. Only rebuild when sig changes; chart() returns null if there are fewer than 2 days of prices.
+- Wherever the khDet has a sell-everything action with data-sn="all", call G.w_kho.iG(t) and then clear kh_sel.
+- ui._kho_items can use wkui.iP(t, kh_f) as its filter (same rule as now).
+- W8 wrap (kho full: drop the overflow): route the calls of web _v (clear wasteland), km (forest fall pickup), uk, b6 (ditch-draining end) through G.w_kho.W8(callable, args) once those systems exist. The web also wraps Sy (dog dig), but dogs are off-limits here.
+- External hooks for mkWhy/mkTinMoi/step, assigned to G.w_kho.ext[...] as Callables once the systems exist: 'tnOk' and 'tnOn'(day) from disasters, 'Jb' (festival within 29 days: {f:{n,cand},d,k}), 'clgAdd'(k,t) from Chuyện làng, 'Cr' (visiting a friend's village: skip the step). If unset they are skipped, like the web's typeof checks.
+- Save migration: none needed; g.mk.tin and g.mk.d are created lazily (mkS / step).
+NOTES: Godot syntax was checked by rereading only; per the rules, Godot was not run. 1) game.price (ngKho) and game.rel currently leave out mkEv (season, disaster, festival and market-news multipliers), and game.mk_ev is a season-only shortcut. Apply the price0/ngKho hook, or the price shown and the price used for selling will differ from the web. If another agent (key 'mult' lists mkRel) also ports mkWhy/mkEv, keep one copy. 2) Rl is rebuilt as xo + che_bien/thu_tu_hang + cau_ca/ds_ca + nong_trai/ds_trai_cay + every other crop/item key that has a non-empty item(). That matches the web's final list, which is pushed again when the Kho grid is built, but the order may differ slightly; order only affects which items are looked at first. 3) tnSea(day) is taken as G.season(), the in-season crop list is G.D.mua (cay_dung_mua = qO), and Tc().seen is read from g.book.seen without creating g.book. NF also reads g.lang.fam[u].req without creating g.lang, so it does not run R0's init; the result is the same. 4) w_kho_ui.chart draws the svg with a Control _draw that runs only when the chart is rebuilt: viewBox 220x44, meet-scaled and centred, polyline #c98a2a width 2, dots r=2 (last one r=3.2 #3f9a3a), white box radius 10 with an inset 1px rgba(150,112,48,.22) line, label in 11.5px weight 500 #8a6a3a with line-height 1.35. The z argument should be the Kho zoom. 5) ui._cat (rP) is simpler than the web's (no Wf/Mv/sr checks); iP uses it as it is and does not re-port it.
+
+######## w_ruong.gd
+- game.gd _ready (after lang/xw/nv/troi exist): w_ruong = load("res://logic/w_ruong.gd").new(self); in ui setup: w_ruong_ui = load("res://logic/w_ruong_ui.gd").new(ui, G.w_ruong) (its _init sets rules.ui = self)
+- game.gd _process tick: call w_ruong.step(t, false) right after _grow(t). This is the web vw tail: fq tree growth, TD honey, and the g.rain shower timer.
+- game.gd catch_up loop: call w_ruong.step(e, true) after _grow(e). Offline never triggers a shower; rain is reset to 150-300.
+- game.gd _process every frame (dt): call w_ruong.frame(dt). This runs SZ salinity every 2 s, GY snails, Hq chickens/ducks in plots, qH star migration, and oJ every 1 s.
+- game.gd _grow (vw): multiply the growth increment by w_ruong.t_o(e). Web: r.g = min(time, r.g + (o*min(M5,c+.1) + (t-o)*min(M5,c)) * tO(e)). Also add um() > 1 ? .04 : 0 to c, as in web vw.
+- game.gd water(i) (Wp): after a successful water call w_ruong.a_o(i). This spends fresh water on salty plots and sets plot.ng.
+- game.gd harvest(i) (Xu): call w_ruong.z4(i, c, true) before clearing a.c, at the point where web does g.harvested++.
+- troi.gd step rain branch (rQ): count ti.an += 1 each rain step; when it reaches 5, reset to 0 and call G.w_ruong.zb(true) so rain also waters fruit trees.
+- lang.gd _a1() (wh): after rebuilding a1, call G.w_ruong.benclr(); if it returns true, redraw the village (lang.changed() deferred, or lang_ve redraw). This is web Rd/tkInv.
+- farm/village tap on a fruit-tree object (g.objs[idx].id in lang.C.Ei, build mode off) -> w_ruong_ui.open_tree(idx). Set w_ruong_ui.job = func(idx, kind): farm queues a walk to w_ruong.ax_pos(idx) and then calls w_ruong.tree_run(idx, kind).
+- farm tap on the fallen-fruit / forest-spot layer: w_ruong.ft(wx, wy) / w_ruong.rk(wx, wy) take village px coords (lang.en/nn) and return {type:'fall',key} / {type:'rung',k}.
+- ui.gd: call w_ruong_ui.update() each tick while the tree popup is open (bars, info, water button). ui.close_all() should also call w_ruong_ui.close_tree() and w_ruong_ui.close_man().
+- HUD pill row: position w_ruong_ui.pill (created lazily by cz() when salinity is active) next to the other .ghepill pills.
+- Weather/sky panel: w_ruong_ui.sky_card() returns {} or {key:'man', got, b, small, btn:'Xem'}; the button calls w_ruong_ui.sky_click('man').
+- ui_set.gd segment clicks for d/s: also write G.g.dm = value / G.g.sea = value and mark(). Web does this; without it oJ would reset cfg back to a stale g.dm / g.sea from the save.
+- save migration / _fresh: add rain:150 (web fresh state). man, lai, lang.hive/seq, penst, sapst and sv are created lazily by b4(), w6(), _r0() and qh().
+- Hybrid seeds: game.gd plant/can_plant should use w_ruong.sd_n(seed) / w_ruong.sd_use(seed) for ids in w_ruong.ol (web sdN/sdUse keep hybrid seeds in g.lai.h, not g.barn).
+- Bee bonus is already inside x5 via ib(). Wire klHarvest('tree', p, {r, bee}) / klHarvest('crop', ...) once the records system exists.
+NOTES: I did not run Godot. I reread both files by hand for GDScript 4 syntax: typed vars, no := inferred from a Variant, no JS idioms, .get with defaults, int()/float() on JSON numbers. Where something is uncertain:
+1. Hr: Godot has no Hr render list, so _hrl() builds {gx, gy, fw, fd, idx, id} from g.objs plus lang.Pi footprints, the same way lang._a1 does (rotation is not swapped). Caches are keyed on lang.ver plus the objs count, standing in for web Vo.
+2. ip, Cr and Oq: ip (test season override) is taken as always null, Cr (viewing another farm) as false, and the Oq offline fast-forward guard of vw is not part of the port. xi is G.season(). Af and b1 map to G.cfg.s and G.cfg.d. hh=null maps to troi.hh=-1.
+3. JR covers the whole bd_map bounds (263x263) once per land-count change. The water set is fm tiles plus pond objects (= p0), and it computes s7 and PC exactly as the web does.
+4. gr([12,30,18]) vibration pattern is mapped to G.vib(60), because Godot vibrates once. Sounds (Jt) and particles (ro) are dropped.
+5. The tree popup and the salinity panel have no web DOM snapshot. They are built from plain Controls (PanelContainer, Label, RichTextLabel, Button, ProgressBar). Text, buttons and enable rules are 1:1 with the web; colours, sizes and placement (tree popup bottom-centre) are approximations to fix against a snapshot later. The Ko() coin image is rendered as the text 'xu'. The pearl icon tries U.item_ic('pearl') and otherwise shows only the number.
+6. In Hq, Y0.a (the chicken/duck walker: sp 'ganha'/'vit', x, y, z, al, face, mv, act, ph, big) is exposed for a drawing layer to render. No Godot drawing exists for it yet, so it is invisible until someone draws it. The dog-chase setTimeout is omitted (rule 4).
+7. qH runs once (g.sv). On Godot saves without g.up it sets st=1 on open plots and sapst>=1, with no toast. It reads G.lang.C.Di, G.lang.pen_built, G.g.penst and G.xw.N0 / g.work[k].st.
+8. BENCLR leaves out the bx/Rd redraw-box maths; it returns true when anything was cleared. It reads lang.M.hu / lang.HU directly; it does not use hu_at, because the web hu[k] has no kc filter.
+9. Data loaded via G._j: nong_trai/giong_lai (ol), ds_giong_lai (Wc), cay_an_trai_dung_mua (cq), nhan_vat/chuc_nang_mo_cap (V4), dat_dai/khu_song (W5), cong_trinh_chung/bac (CTB), xay_dung/suc_chua_nha (cx). Ei comes from lang.C.Ei. Constants K6=200, Q6=4000, ZM=210, wD and E5's 3200 ms are copied from web_all.js.
+10. Several timers use Time.get_ticks_msec as performance.now: E5 and the 60 s fresh-water warning. The warning and lai.d timestamps use unix ms, as Date.now does.
+
+######## w_xuong.gd
+- game.gd (or wherever modules are made): var wx = preload("res://logic/w_xuong.gd").new(self), created after xw, vn, nv and lang exist (it uses G.xw, G.vn, G.nv, G.lang).
+- Assign ext callables: wx.ext.qs = w_ruong.qs; wx.ext.O0 = w_ruong.o0; wx.ext.u2 = farm.seeds_queued; wx.ext.bdMode = func(): return ui_bd.mode; wx.ext.v6 = <river system mudflat spots>; wx.ext.aeTide = func(dt): (if Ae.st == 0 and Ae.t > 0) Ae.t -= dt  [trader boat].
+- game.gd _process: call wx.step(t, false) each frame. It runs IK, the low-tide announcement and the Lm smoothing. catch_up: step(e, true) does nothing, as on web, where IK only runs while the game is open.
+- Orders panel render (ui.gd orders, the web ws wrapper): call wx.u_() and then wx.h_() before computing ord_plan, as web ws() does with try { u$() } and try { h$() }. They can also run once after load as a save migration for old orders.
+- Auto-play bot (Ur), if or when it is ported: each bot tick calls wx.G_(); then, with chance 0.03, x = wx.P_() and k = x.back(); if x.size() > 2 and wx._9(k.o) < wx._9(x[0].o) * 0.25 then G.swap(k.i). The bot's workshop queue filter uses wx.F_(id).
+- Village help requests (rq filter): rq = rq.filter(func(e): return wx.UJ(e) and got[e.id] < e.n).
+- Mission/achievement steps 'Xây N xưởng' and 'N xưởng đạt k★': f = wx.CI().size(), and CI().filter(ks(k)-1 >= k) using G.xw.ks.
+- Build panel workshop tab (ui_bd xuong category): built count per type = wx.UF(type).
+- Wherever web uses v1() (Lv, fh, $5, bg, jd, h4): game.gd _fh0 already inlines it. Other systems call wx.v1().
+- River mudflat tap: on a tap on a mudflat spot with key K, call wx.gk(K). The drawer uses wx.bS(spot) to hide spots already searched, and wx.Lm (0..1) as the tide level for drawing. wx.pk()/wx.FN()/wx.p6() expose the tide state.
+- Save: nothing to add. g.td {c, p}, g.tdh, g.fac and order m3/sf are all created lazily.
+NOTES: I wrote one new file, /tmp/claude-0/-home-user/ec30a73d-a632-5817-a52f-4d1a59b285b5/scratchpad/proj/logic/w_xuong.gd, and no w_xuong_ui.gd. Every web UI panel for this system is either already in ui.gd / ui_xf.gd / ui_set.gd or is legacy DOM that the web itself hides. Godot was not run; I only reread the file for GDScript 4 syntax.
+
+Points the integrator should know:
+1. Web names with $ are renamed: F$ -> F_, u$ -> u_, h$ -> h_, P$ -> P_, G$ -> G_. _9 keeps its name, and each func line carries the web name as a comment.
+2. G$ swaps orders with G.swap(i), the patched Ed that delays the new customer by 5 minutes. That is what the web runtime runs.
+3. pk() reads web global mu, which is the cached value of qs() (refreshed by YD). Here it calls ext.qs() directly. If ext.qs is not set, mu counts as null and !mu is true.
+4. bS compares g.td.c with GN(). Web compares it with g6, the GN value of the last v6() call, which is the same unless the tide changes between calls. gk resets g.td using GN() for the same reason.
+5. ytt: Godot has no persistent occupancy map like web yc, since lang.yc() derives it. So Th(false/true) has no equivalent and only the position is set: sr gx/gy for workshops, g.fac for workshops and pens (lang.pen_pos reads g.fac). The function then calls G.lang.changed(). The redraw that web does in ob() is like ui_bd._yb calling U.F._xw_sync() or lang_ve.sync(), which the integrator must call. ytt has no callers in web_all.js.
+6. qJ uses G.vn.ro (Ro) and G.spend_ngoc (sc). The A5 sparkle and the pc='' panel-cache reset are left out; G.mark() stands in for kn() and Ba().
+7. gk adds to g.barn directly with no storage-cap check, exactly as web does. Particles and sound are left out.
+8. IK runs its delayed toast with G.get_tree().create_timer(1.2), so G must be in the scene tree.
+9. GF caches results in FA for the whole session, as web does. The cache is never cleared.
+
+######## w_cho.gd
+- Create modules: wc = load("res://logic/w_cho.gd").new(G) after G.vn, G.nv, G.lang exist; wc.WR = <w_ruong instance> (qf, o0, km, sd_n); wcu = load("res://logic/w_cho_ui.gd").new(ui, wc)
+- Save: call wc.mult_init() after load_game()/_migrate() and after reset_game()/_fresh() (web W3 + load migration: g.mult[e]=1 for every Rl item, g.mt=45). _fresh() currently has no 'mult'/'mt'
+- game.gd _process: wc.step(dt, false) (gQ, TU, g.mt mult drift)
+- catch_up chunk loop (vw(t,true)): wc.step(e, true) -> only the g.mt mult drift runs offline
+- wc.ext wiring: SGEO_c(x)->float and SGEO_top(x:int)->float (river geometry; without SGEO_c YB returns null and boats cannot be tapped), Wr(x,y,n)->bool (camera in view), Mt_mode()->String (build mode, 'off'), qc()->String ('map' when map open, used by pill), Cr()->bool, Jb()->Dictionary (festival), vS('rong') (tide), o6(k)->String and e6()->bool (pet system, web calls them unconditionally), VR(id)->bool (pens system; local copy _VR used if unset), Bv(id,j,k), Vb()->Array and lT(o)->bool (river plants), j9() (W9 cache reset)
+- wcu.ext wiring: aN() (camera to boat 2), Ns(dict) (walk to {type:'cho',k}), cl(on:bool) (cải lương music on/off)
+- Farm tap layer (VD/zN): before generic hits, h = wc.GT(sx, sy) using canvas coords comparable to lang.en/nn; if h: walk (Ns) to wc.vQ(h.k) then on arrival wcu.open_cho(h.k) (qN 'cho' = Ui.sel=k + gu('cho')). Long-press tip: wcu.tip(k)
+- Each frame while open: wcu.sync_cho() (rebuilds only when $r.sig changes)
+- Each frame: wcu.pill_sync(<HUD pill row Control, Hs()>) for the 'Chợ nổi đang họp · tan lúc 9:00' pill
+- Clock/sky panel 'Radio' button: wcu.open_rd()
+- ui.gd close_all(): also call wcu.close_cho() and wcu.close_rd()
+- Boat renderer (canvas, other agent): draw 4 boats at wc.Ui.pos with alpha wc.Ui.al, sway (1-al)*6, name label s4[e].n, mui flag s4[e].mui, first 3 item/cg offers of wc.jd()[e] with done = wc.Wx(e, idx); speech bubble wc.Ui.say when wc.Ui.sayT>0 on boat wc.Ui.sb
+- Village house panel (a4) tab 'Mua giống': if wc.bZ(u).size(): add wcu.jR(u, fam, rebuild_callable)
+- Sạp quê (S2) data-gi buttons: call wc.Um(code) (A1 room check built in)
+- W9 keep list (kho system): include chợ nổi 'mua' item offers: if wc.b2(): for each wc.jd()[o][c] with t=='mua' and k=='item' and not wc.Wx(o,c)
+- River plant tap (fT, map system) -> wc.wx(key); renderer uses wc.cT(o) for picked state
+- Điểm danh system may use wc.Sp() for g.dd (l7/m/ms/bu)
+- If ngKho/price wrapper changes: wc uses G.price(t) as web $i
+NOTES: I ported the floating market (chợ nổi), the radio price bulletin, daily g.mult drift, seed buying from neighbours, and the g.dd functions into w_cho.gd and w_cho_ui.gd. Nothing was run in Godot. I reread both files for GDScript 4 syntax: no Variant := inference, no one-line lambdas with ';' or inline 'if' bodies, Control.visible rather than hidden. yu() gives the same numbers as node for the same seed.
+
+Possible overlaps with other agents, for the integrator to dedupe:
+- jd, Dd and jx are listed under the 'barn' key, but the system name says chợ nổi, so I took them. QR is in 'barn' too.
+- Km is in 'gio', TU and Eg are in 'thu', VR is in 'pens'. Cc (copied as _Cc), $T and YT touch g.pet (pet agent). s2 is in 'fish'.
+- G8 also wraps Ws, Tx and bg in the web (other systems).
+
+Web quirk kept as is: wx overwrites g.dd = {day, p} every new day. That wipes the điểm danh data that Sp keeps in the same g.dd (l7, m, ms, bu). The web does the same.
+
+Departures, defaults and missing dependencies:
+- **Pen cap:** gl uses G.vn.gl(). In the web, gl = LH() is recomputed every step, so this matches.
+- **Weather:** $N uses G.nv.Hx, which ignores the web's HT/Af/ip weather overrides.
+- **Wr fallback:** if ext Wr is not set, boats count as on screen, which only affects speech bubbles.
+- **o6 fallback:** if ext o6 is not set, hN and $T produce an empty place name. The web always calls o6, so it should be wired.
+- **wx without Vb/lT:** wx returns false until ext Vb and lT are wired.
+- **Missing helpers:** if e6 is not wired, YT says there is no water. If SGEO_c is missing, YB returns null, so there are no boat positions to tap. The market panel still works when opened from the pill or sky button.
+- **Tap/save calls:** Dd and Um return bool for the tap layer; the web's Um returns undefined. kn()+Ba() map to G.mark(). pn/ta map to G.toast. Sounds (Jt), the coin fly (Ol) and TTS (ok) are dropped.
+- **Panel styling:** there are no web snapshots of the chợ nổi or radio panels, so w_cho_ui builds them with plain Godot Controls. Text, buttons, enabled states and the rebuild-on-sig behaviour match jx/tR/jR/mQ; colours and sizes are approximate (StyleBoxFlat).
+- **Boat positions:** YB numbers are exact, but it depends on SGEO.c, which is not ported anywhere yet. The river geometry module needs a port or a bridge.
+- **Radio once a day:** TU marks the bulletin as done in g.thu.rd so it fires once per morning/evening. The 'Đài phát thanh' toast is the only thing it emits.
+
+######## w_sys.gd
+- game.gd _ready (after load_game and after lang/xw/nv exist): ws = preload('res://logic/w_sys.gd').new(self); set ws.WR = w_ruong, ws.WC = w_cho, ws.WK = w_kho; then set ws.TF = not g.pc.made (the web computes TF after the save loads, but _init may run before load_game).
+- game.gd _process: call ws.step(dt, false) every frame. It runs htTick (1 s throttle), ZZ (tips, 2 s throttle, skipped while visiting) and the tut step (0.1 s throttle).
+- catch_up: nothing needed (step(e, true) only runs the migration-toast timer). Do not run htKh offline.
+- save load / migration (_migrate or after load_game): call ws.gJ() once. Also call ws.sys() so g.sys has stats/shop/unl/visited/spec/reviews/trip (the web LX does this). Init g.up keys via ws._up(). Init g.goal = 0 if missing.
+- game.gd _on_level: web vZ already adds +5 g.sys.pts; htTick ALSO adds (lv - g.ht.lv)*5 each level-up. Both exist in the web, so keep both.
+- nv.gd S8(k, n): after counting, call ws.htC(k, n). This is the web S8 wrapper that feeds Hệ Thống quest counters.
+- Crafting / village hooks (when those systems exist): ngMade -> ws.htC('nghe') and, if quality >= 1, ws.htC('kheo'); Thợ cả when ws.htv('g_tho') and quality >= 2 and randf() < 0.25 gives +1 item. ngGiao succeeded -> ws.htC('dlang'). ctGive changed -> ws.htC('ctg'). ngOnTra bonus = round(delta * ws.htv('g_danh')). Exam fail -> if ws.htBgl(): pass. Daily skill points use ws.htNgay(NGNGAY). Workshop consume -> ws.htTk(ins).
+- game.gd plant (Ev) success -> ws.ht_after_plant(i). game.gd harvest (Xu): pre = ws.ht_dat_before(i); r = harvest; ws.ht_dat_after(i, r, pre). Disaster damage rate tnRate -> ws.ht_tn_rate(r). Ghe trade Hd: c0 = coins before, then ws.ht_ghe(c0). deliver (ks): c0 = coins before, then ws.ht_deliver(c0).
+- game.gd boost() (tw): add ws.jH() (+0.1 while the Hệ Thống fertilizer is active) inside the M5 cap. Other ht node effects (n_cay, n_chuong, t_ban, g_che, l_men, ...) are read in their systems via ws.htv(id). This module only exposes htv; the web applies those effects in other files.
+- ui.gd: build wsu = preload('res://logic/w_sys_ui.gd').new(ui, ws); set wsu.ext IX / ZC / clgOpen as available. Dock #sysBtn -> wsu.open_sys(); badge #sysBdg = ws.red (or ws.badges().sys); #ordBdg/#upBdg/#mapBdg from ws.badges(); ws.coach -> show #coach for 9.5 s.
+- ui.gd _sync_hud goal: replace the hard-coded 'Thu hoạch 5 cây trồng' text with ws.goal_view() (keys no, txt, bar 0..1, go/ready, btn; {} = hide #goal); #goalGo tap -> ws.goal_claim().
+- HUD #trip box: wsu.trip_view() -> {to, t, bar, go, rush, rush_t} ({} = hidden). #tripGo -> ws.Ug(); the 'Tới ngay' button (shown when rush > 0) -> ws.trip_rush().
+- Map tab (qc == 'map'): a pin tap calls wsu.open_place(id); the region tabs come from wsu.region_tabs(). The map canvas QX is not ported.
+- Upgrades panel (#ups): call wsu.ups(container) to build the Z9 rows (oG buttons).
+- w_sys.ext: Cr, busy (Mt.mode != 'off' or an overlay/panel is open), OF, Pu, No, utS_c, ngSao_max, go, G2, and jg_<id> for tips the module cannot evaluate (fell, rong, cho, fest, dieu, tat, vung, tram, ray, lo, quan, hoicho, dulich).
+- Tutorial: ws.tut_text/tut_end are wired to the Cô Ba box in w_sys_ui. Optional hand pointer: use ws.U0.i (0 empty plot, 1 planted unwatered plot, 2 ripe plot, 3 deliver button, 4 7-day button).
+- 7-day gift 'cong' (V1().cong = 1) -> call ws.JL() afterwards. JL also runs on the 7-day panel refresh.
+NOTES: Data comes from the design pack via G._j: du_hanh/dia_danh (cc, including the runtime lv/r/use fields), nang_cap/thung_xe_hang (r8), nang_cap/nang_cap_khac (Gp), khac/Z9, he_thong/* (WH, IH, HTLV, HTGIA, HTB, HTN with mo_ta, HTQ, HTTD), che_bien/hieu_ung_mon_an (Sf), nhiem_vu/muc_tieu_tan_thu (Dc), huong_dan/meo (jg, the runtime 27 entries), nhiem_vu/huong_dan_dau (pA), du_hanh/khung_mien, du_hanh/ten_mien. Function-valued fields are translated in code from web_all.js: Dc.cur, WH ok/run, HTTD conditions, jg.c, pA done/enter, r8/Gp fx. Small literals typed by hand: r3, XO, uJ, Oo, Di, HTTAY.
+
+Uncertain points:
+(1) Dc[26] max is 42 in the data. The web sets it at runtime to x1.length, so the data value is kept.
+(2) The web S0 writes g.mat but the Godot S0 (nv.gd) writes g.mats. I call G.nv.S0 to stay consistent with the port.
+(3) The FH 'qua' sort uses sort_custom, which is not stable; JS sort is stable, so ties may pick a different family.
+(4) NH needs WC (w_cho.gd) for yu/Rl/Ge/Wf/Mv/OL, and FH/kJ need WR (w_ruong.gd) for Wc and lai_add. Wire them before the map or shop is used.
+(5) htKh uses the system clock hour (new Date().getHours()), not G.nv.hour().
+(6) The htSum points icon (SVG HTIC) is shown as '⭐'.
+(7) HTN descriptions use the precomputed mo_ta[k] instead of x.d(v), with identical text.
+(8) N7 takes the review text as a parameter. The star count is ws.lp and the selected place is ws.fs (web module vars).
+(9) jg conditions wx/giong/han use G.troi.cur. sao1 uses G.can_pay(G.up_need(2)). vatlieu uses G.mat_n. Tips without a Godot counterpart return false unless ext jg_<id> is set (same as web _Z when the function is missing).
+(10) Not compiled in Godot (per instructions). Reviewed by eye for GDScript 4 syntax.
+
+######## w_lang.gd
+- game.gd init: w_lang = preload("res://logic/w_lang.gd").new(self); w_lang.WR = w_ruong; w_lang.WC = w_cho (WR gives gg/td/ct_built/o0/qf/ro/m0/Y0, WC gives ho/s2/v1)
+- ui.gd init: w_lang_ui = preload("res://logic/w_lang_ui.gd").new(ui, G.w_lang) (sets w_lang.ui itself)
+- game.gd _process (web wK modules than/dam/cuoi/ma/clg, every frame, NOT during offline catch-up): w_lang.step(t, false)
+- farm tick (web vw: after xuong step fG): w_lang.rq(t, false); catch_up: w_lang.rq(e, true) (web vw(pd,true) -> Rq(t,a=true) -> AD). Web Oq (chunked catch-up when Nq()) is not in this slice: when porting it call w_lang.nq()
+- CD/Uf port (owner of g.objs/bl): call w_lang.than_init(u, fam) for every house, and wire ext: w_lang.ext.Uf = <CD sync>, w_lang.ext.bl = func(): return bl (Array of {u:int, o:{gx,gy,fw,fd,idx}, r:obj}). g.lang.fam keys MUST be Strings ("3"), like JSON saves
+- build placed (web vM ... Kq(t.id)): w_lang.kq(id)
+- tap on spouse {type:'vc'} -> w_lang.nu(); tap on kid {type:'con'} -> w_lang.ru()
+- house panel (a4, $r.mode 'vl'): add w_lang_ui.build_cuoi(box, u, fam) (AU); button data-cuoi already calls w_lang.sk(u); data-nghe -> w_lang.mk(u, nga) then rebuild; data-dam -> w_lang.yk(kind) then rebuild; data-tal (not 'train') -> w_lang.e_y(u)
+- Nghề panel tab 'Nghề': w_lang_ui.build_tab_nghe(box); wire w_lang_ui.ext.ngcClick(act, b) and ext.arm() (NGCV.arm) from the Nghề-panel port; ext.a4 to rebuild house panel
+- hover/long-press tooltip (web Vq): text = w_lang.vq(target_dict) (contains <b>…</b> like web)
+- hụi module step (hui owner, every 2 s when !Cr): w_lang.hui_ky(false); on joining hụi (x6): w_lang.hui_ky(true); wire w_lang.ext.y6/Pm/vk from the hụi port
+- chng module ngTick (every 2 s, if ngOn()): ch = w_lang.ng_gen() (plus ngDtExpire/ngOwe from the nghề-order port)
+- tourist group checkout (du lịch port): w_lang.br(group); wire ext.R6 and ext.e7 (refresh panel)
+- hired farmer planting / plot label: crop = w_lang.bq(i) (Bq), name = w_lang.ed(i) (ED)
+- milestone reward 'Thợ giỏi 3★ về làng' and tutorial V1().tal3 check: w_lang.di(); wire ext.V1
+- ext wiring left for other systems: E2(u) (walker state, Zk), Bf(id), Jb(), mg(), Ae(), BN(t), NN_T(kd), hr(), AD(t), ll(x,y), _b(x,y), aa() -> Vector2, Mt_mode(), Cr(), ngThoMul(b), c7(t), clgRender(now), tU(), i1(), sig_reset(), ku_reset()
+- save migration: none required; accessors lazily create g.ut, g.ngs, g.ndn, g.ndt, g.ngm, g.nghe, g.hn, g.hnk, g.ct, g.tn, g.clg, g.thu, g.lg, g.dam, g.ma, g.cuoi (Sk) like the web typeof checks
+NOTES: Nothing has been run in Godot. I checked both files by reading them for GDScript 4 syntax: keyword-safe access with ["in"], PackedStringArray joins, JS truthiness through _tr, and JS Object.keys order through _okeys.
+
+What needs attention:
+- Data: all tables load from the design pack with G._j. That covers TINH, TINHK, HOLIST, XUNGT, THUT, TENR, GPRATE, THICH, NGAYN, M6, NGH, NGTHI, NGK, NGX, NGSAO, NGPHAT, NGNAN, NGHOI, NGCT, NGLE, NGCUOI, HNHU, CLGK, CLGT, CLGCON, TNW, TNK, TNNAN, HTN->HTI, CTB, cx, w3, aY, EU, CU, LU, UT*, xo, Wf, to->pT, PR, V_, a7, Co and Z7. The only constants written inline are the small web literals: CHATMAX=3, DPMAX=500, NGNGAY=15, NGCHINH=3, CLGMAX=100, TNLV=15, _d=6.
+- The fam dictionary assumes String keys, as JSON produces. If the CD port stores int keys, lookups through _okeys and str(k) will miss.
+- Wrappers: Mk, Sk, bk and k6 are wrapped in the web by Jg("nghe"), Jg("cuoi"), !qf("dam") and !qf("ma"). I reproduced these inside the functions, using w_ruong.qf and the Z7 names.
+- Things not available in Godot, and what I did instead:
+  - rC: the debug hour override hh is ignored. b1 is read as G.cfg.d ("day"/"night").
+  - tnSea: the ip override is ignored. It uses G.cfg.s or nQ(day).
+  - ngThoMul: defaults to 1, matching the web when it is not online (dr.st != "ok").
+- Simplifications: gr([..]) vibration patterns became a single G.vib(ms) call. Jt sounds are skipped.
+- zU: only the rules are kept (kid birth after Ck() >= 0, and the spouse watering one dry plot every 45 s with the "tưới giùm" float text). The L0/bo walking is skipped.
+- k6: keeps the spawn, g.ma and fade/move state in Xr. Trails and sound are dropped. Tapping or following the will-o'-wisp is handled by other web functions, not in this slice.
+- My slice includes functions owned by other systems only because they read g.lang: KN (hụi), BR (du lịch) and Kq (build toasts). They depend on ext callables. KN returns early if ext y6/Pm/vk are not wired.
+- Uncertain:
+  - G.B0 is a constant read through the instance, and NV.Yu is an inner class of a preloaded script; both should work in Godot 4.
+  - Array lambdas capture loop variables as fresh locals.
+  - The Bq branch tests `kr[a.lc]` with G.D.crops.has.
+- Web scheduling: thanDaily, thanPQLate and gpWedding run only from the 'than' module step (each second), so step() covers them. ngGen is driven by ngTick, which is outside my slice.
+
+######## w_htx.gd
+- Create the modules: in game.gd or the assembler: var w_htx = preload('res://logic/w_htx.gd').new(G); set w_htx.WL = w_lang, w_htx.WC = w_cho, w_htx.WS = w_sys, w_htx.WX = w_xuong. Then var w_htx_ui = preload('res://logic/w_htx_ui.gd').new(ui, w_htx); the constructor sets w_htx.ui and connects the render signal.
+- game.gd _process (per frame, non-offline): call w_htx.step(dt, false). This covers hayday (SH every 1 s), htx (every 1 s), hui (KN every 2 s) and yQ (every 1 s). catch_up: either call w_htx.step(e, true), which is a no-op because web ui() steps don't run offline, or skip it.
+- w_lang.ext wiring needed by w_lang.hui_ky: w_lang.ext.y6 = w_htx.y6; w_lang.ext.Pm = w_htx.pm; w_lang.ext.vk = w_htx.vk; w_lang.ext.Jb = w_htx.jb; w_lang.ext.R6 = w_htx.r6.
+- w_htx.ext: Mt_mode, Cr, qc (current screen, 'map' hides the festival pill), z6 (returns the built communal-house object {gx,gy,fw,fd} or null; L2 needs it), and the optional network hooks Ll, Nu, fI, k3, Zl.
+- HUD pill row (Hs()): call w_htx_ui.pill_sync(parent) each frame or each second. This is bQ: the festival pill, which opens w_htx_ui.open_fest(), i.e. gu('hoi').
+- While the festival panel is open, call w_htx_ui.sync_fest() each frame (QT; it rebuilds only when the signature changes). If the generic village panel NN() uses $r.mode=='hoi', route it to sync_fest.
+- Hui panel entry points (web data-hr='hui' and sky 'hui' Xem): call w_htx_ui.x6(). The sky overview row text comes from w_htx.sky_hui() -> [got, small].
+- Growth boost (web tw/ch formula: +0.04 when Dx()>1): add 0.04 when w_htx.dx() > 1 in game.gd boost(). The web line is (typeof Dx=='function'&&Dx()>1?.04:0).
+- Cooperative stats hooks (web m9 callers): after harvest/collect/deliver/xuong-done, call w_htx.m9(1|3) as in the web wrapper: harvest+cat 'harvest' or collect+cat 'nuoi' -> m9(1); deliver+'don' -> m9(3); xuong item + 'xuong' -> m9(1). Needs the cI() category, which isn't ported.
+- Cooperative building buffs (web wrappers): Sm *= (1+.03*Ru('dinh')), aw = min(.25, aw+.01*Ru('cho')), Mc *= (1+.02*Ru('ben')). All are 0 while offline.
+- nv.gd has_hx() currently returns false; it could return w_htx.nv_has_hx(). HTX badge #htxBdg = w_htx.htx_badge().
+- hdnTick (not ported) should call w_htx.hdn_start(cu) on festival day; the hoi-cho/fair code should use w_htx.l2(), e_r(), fm().
+- Save migration: SH runs once on any save without g.hdv>=2. It rescales plot/pen/work/fruit progress from the old time scale and gifts 4 seeds of every unlocked crop the barn lacks, the same as a fresh web game. Existing Godot saves were already on the Hay Day time scale, so set g.hdv = 2 in game.gd _migrate for existing Godot saves (and decide whether _fresh should keep it unset to get the web's welcome seeds).
+NOTES: I translated the 47 listed functions plus the missing callees that belong to this system, without running Godot. I reread both files by hand and fixed the problems I found: typed vars on calls into untyped modules, JS strict equality on JSON numbers done through _eqn, and stable sorts done through _stable_sort.
+
+**State keys that clash with how the Godot build already stores things:**
+- `$0` creates g.ng {n, first, tot, the, vip} exactly as the web does. The Godot build keeps the sen đỏ count in g.ngoc (nv.x0), so g.ng.n is not used for the balance.
+- `PH` creates g.mat as the web does, but Godot materials live in g.mats (boot.gd, nv.S0).
+- The integrator should decide whether to alias these keys or leave them as written.
+
+**Data sources:**
+- From the design pack: g9 (khac/g9), LL (khac/LL), xu (le_hoi/le_hoi), HDNG, HDNO, HDNRES (hoi_dinh/*), U7 (nong_trai/gia_ban_si_cay), ol (nong_trai/giong_lai), Tv (che_bien/cong_thuc_thoi_gian_goc).
+- Generated from web_all.js with /tmp/claude-0/-home-user/ec30a73d-a632-5817-a52f-4d1a59b285b5/scratchpad/gen_htx.py: gI, lJ, cJ.
+- d9 = 90, _d = 6 and VN = 12 are the web constants.
+
+**Network:** the cooperative's network state (_i) is the dictionary w_htx.I {mem, xas, loaded, dirty}. Rf only sets I.dirty. With no network layer, ed/b9/w8/v9 return the player alone or nothing, and JJ never pays out because I.loaded is false.
+
+**Which other module each part needs:**
+- h4 needs w_cho (WC.yu, s2, v1, ho).
+- hdnStart needs w_lang (_r0, ut_houses, htv).
+- The hui panel needs w_lang.k_s.
+- pI needs w_xuong.UJ.
+- bR needs w_sys.mR, and Dk needs w_sys.j5.
+- If WC or WL is not assigned, those calls will crash.
+
+**Things I'm not fully sure of:**
+- L2 uses hh === null as G.troi.hh < 0 and b1 as G.cfg.d.
+- I2 uses nv._bias() as -getTimezoneOffset().
+- SH uses G.crop().time, G.vn.Q[].time and G.xw.R[].time, assuming they carry the new Hay Day times. Its try/catch fallback (g.hdv = 1) is not reproduced.
+- setTimeout is done with G.get_tree().create_timer.
+- The hui panel prints numbers JS-style (5 / 4.1) for the bể-hụi percentage. Its "Mức góp" buttons are toggle buttons to stand in for aria-pressed.
+- Log lines in "Sổ hụi" are drawn as "• line" labels in place of the ul.kh-gb list.
+
+######## w_ca.gd
+- Construct: game.gd (or main) creates `w_ca = load('res://logic/w_ca.gd').new(G)` and then `w_ca_ui = load('res://logic/w_ca_ui.gd').new(ui, w_ca)` (the ui ctor sets w_ca.ui). Set w_ca.WR = w_ruong, w_ca.WC = w_cho, w_ca.WS = w_sys, w_ca.WK = w_kho.
+- w_ca.ext: 'Zd' = farm walk-grid check (x,y,n)->bool (web Zd, used by _U/GS); 'Gl' = farm job queue taking {key,kind,pos,dur,run[,fishing]} (TT kind 'gofish' with job.fishing={wx,wy} for aa.fishing; hZ kind 'lo'); 'No' = material drop (Lu) (k,a,pos); 'L1' = lack panel taking {mats|items, xu, why, go}; '_8' = order-needs dict (U9-based) for DF/B$/N$; 'Ur' = autoplay state getter (returns {on,fs,rx} or null); 'zc' = open tab ('fish'); 'g2' = close character panel; 'ec' = redraw character panel.
+- w_ca_ui.ext: 'Ns' = queue trap-visit job {type:'lo', key}; when it arrives call w_ca.rk(key). Also set 'ec' and 'g2'.
+- game.gd _process / rule tick: call w_ca.step(t, false). It runs dN, CH, WQ (1 s), rY (1 s), iV (2 s), the fishing reel vE while the fish tab is open, the tat-ao DN loop and the kite ZN loop.
+- catch_up(off): call w_ca.step(e, true). Only dN runs offline, as in the web main step.
+- save load/migration: G.g.fish = w_ca.jf(G.g.get('fish')) (web JF in YF). g.pet/g.lo/g.dieu/g.book are created lazily by cc()/t1()/fh()/tc().
+- w_cho ext: w_cho.ext['o6'] = w_ca.o6 and w_cho.ext['e6'] = w_ca.e6 (w_cho.YT/T_/hN already call those). w_cho._Cc duplicates w_ca.cc: keep one.
+- Fishing tab: add w_ca_ui.fish_panel() as the 'fish' tab (#pn-fish). On show call w_ca.me_open(); on leave call w_ca.zo() and clear the character's aa.fishing. The tab title is w_ca.title. Space key while the fish tab is open: down -> w_ca.me(), up -> w_ca.e8(). The pond drawer (SX) draws into w_ca_ui._f.area from w_ca.fo.
+- Village tap on own water cell (fishing mode / Câu cá button): w_ca.tt(gx, gy).
+- Pick mode: while w_ca.yf != null, a village tap on tile (gx, gy) -> w_ca.nk(gx, gy) (web nK), and water tiles get the gold outline. w_ca_ui.pick_bar() shows and hides the bar itself.
+- Trap objects: draw from G.g.lo.set. A tap on a trap tile -> w_ca.lo_at(x,y) -> job stand at w_ca.lo_stand(key) -> w_ca.rk(key). Tooltip: w_ca.lo_tip(key).
+- Pets: tap hit (aS) -> job at w_ca.pet_stand(k), label w_ca.uz(k), tooltip w_ca.tk(k), run w_ca.pet_job(k).
+- ui_pc.gd tabs 'nuoi', 'dieu', 'lo': replace SOON with w_ca_ui.tab_body(id). The tab label for 'lo' is w_ca_ui.tab_name('lo'). Redraw when the panel signature changes.
+- Tat ao entry (wQ/ui caller of y4): call w_ca.y4(); it opens the overlay through w_ca_ui.tat_open(). The tat drawer (_K) draws into w_ca_ui.tat_area() from w_ca.ai. Am() gates the pond marker (ZK/XK).
+- Kite: w_ca_ui.kite_key(event) from _unhandled_input while w_ca.zi != null. The contest drawer (gU) draws into w_ca_ui.kite_area() from w_ca.zi. The flying kite over the character (uU) draws when G.g.dieu.on && cur && cg().
+- w_kho.Rl must be reachable as w_ca.WK.Rl for iV, and w_sys.htv for xB/F4 (n_cau).
+NOTES: Translated from the web bodies, including the monkey-patch wrappers. I wrote helper scripts to read the wrapper bodies (P7, F4, vE, gE, yE, Xh, b6, wg). Data comes from the design pack: cau_ca/ca (lc), ds_ca (Wf, all 9 entries because the web pushes ca_linh, ca_lang and ca_bong_lau), moi (c1), lo_lop_cau_giang (ns), ten_can, mo_ta_can, nang_can (OY), nang_can_cap (HY), tat_muong (m6), mini_game/dieu (k4) and nhan_vat/ten_chuc_nang (Z7). The bait SVG icons (c1.cam/trun/thom.ic and Ze.sau) were generated from web_all.js by a script into the BAIT_IC const. They are baked once into textures and cached.
+
+Uncertain points:
+1. gr() vibration patterns ([30,40,30]) are reduced to their first element, because G.vib takes an int.
+2. L1 and Ur go through ext. If they are not wired, fF/uF fall back to the web's else-branch message, and autoplay never triggers.
+3. In w2, the web's ll() viewport check for bank fallback cells is treated as true.
+4. When o6 needs it, o6 calls G.lang._a1() to read lang.a1.
+5. QO walks the whole map box in lang.M.B. It is cached by lang.ver.
+6. ZT is cached by lang.ver, which stands in for the web's Vo.
+7. Sounds (Jt) are omitted everywhere.
+8. Possible duplicates with other agents: Cc (w_cho._Cc), qf/Jg (w_lang/w_ruong), Tc (w_kho uses a partial). Pet functions Xx, Jx, GQ, jQ, DQ, VQ and the trap/bait functions are listed under the coins/barn keys in missing_by_key.json, so check another agent did not port them too.
+9. GDScript was only reread, not run. Watch Dictionary keys that clash with method names: 'has' and 'set' are already rewritten to bracket access.
+
+######## w_duong.gd
+- Create the module: game.gd (or main): G.wd = preload("res://logic/w_duong.gd").new(G), after G.vn and G.lang exist. Assign wd.WR = w_ruong instance, wd.WL = w_lang instance, wd.WC = w_cho instance, wd.WH = w_htx instance.
+- wd.ext: 'Vo' -> Callable that invalidates the baked village ground (mùa nước nổi changed). 'Bv'(k,j,kind) -> animal 'buy' animation, or leave unset. 'ac_del'(u) -> remove family member u's walking actor (web delete ac[u]). 'Ae'() -> ghe thương hồ dict {st, offers}. 'hr'() -> xe chè dict {st, offer}.
+- Per-frame (online only, the web runs $q in the UI step): call wd.step(dt, false) in game.gd _process. step() returns immediately when offline=true, so the catch_up call is harmless but not needed.
+- w_cho.ext['VR'] = wd.VR (w_cho already defers to ext VR).
+- Thiên tai: tnTick (owned by the plots agent) must call wd.tn_hit(ev, x < day) for each due event (web: for x in max(o.last+1, day-2)..day: ev = tnOn(x); if ev and tnOk(): tnHit(ev, x < day)).
+- Job runner / auto-helper (web Ns/xx): use wd.rT(t) for a job-ready check and wd.I_(feed) for feed jobs already queued (it reads G.lang.F.cur/q keys 'animal:k:j:act').
+- Sell-surplus grouping (web bA in w_kho/ui_kho): use wd.W9() as the keep-list (item -> qty).
+- Road tiers or other code: wd.laid(x,y). Communal-house helpers (qQ, z6, hội đình placement): wd.d4().
+- Mini-games (Xếp trái, Ô ăn quan, Đua gà) when ported: on the game's 'end' message call wd.xt_end(level, stars) / wd.oq_end(mode, winner, level) / wd.dg_end(mode, place, diff) and send the returned {xu, left, max} back as the 'reward' message.
+- Save migration: nothing required. g.fl, g.xtr, g.oq, g.dg and g.tn.lo are created lazily like the web does. lang.gd already initialises road/mv/penb.
+NOTES: I did not run Godot. I reread w_duong.gd by eye for GDScript 4 syntax.
+
+1. G.vib(ms) calls int(ms), so passing an Array crashes it. ui_bd.gd and w_ca.gd already pass arrays (for example G.vib([12,30,18])). In w_duong I added a local _gr that turns [buzz, pause, buzz] into timed G.vib(int) calls; the integrator may want to fix G.vib itself.
+
+2. tnRate: the web wraps it with *(1-htv('n_chiu')). I applied that inside tn_rate using WL.htv. w_sys.ht_tn_rate does the same thing, so do not apply both.
+
+3. d4() returns a WR._hrl() entry {gx,gy,fw,fd,idx,id} or a lang.SO dict. Web callers then read n.pc and n.fw/fd; Hr entries in Godot have no 'pc' key, so callers may need G.lang.fo(gx,gy) instead.
+
+4. YD's web vr() is taken as G.day(). The 'eV(t)' part of $q belongs to another system and is not called.
+
+5. The mini-game day() is the real local calendar date string 'Y-M-D' (not the game day), copied as is.
+
+6. tn_hit uses G.cells[ix] for web pi(ix) and lang.il(x,y)=='canal' for Il. Toast and vibration are deferred with G.get_tree().create_timer, the same as w_htx._later.
+
+7. The keys penb, hn and gh had no missing functions.

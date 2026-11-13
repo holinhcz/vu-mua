@@ -56,7 +56,31 @@ func close() -> void:   # g2
 		box.queue_free()
 		box = null
 
+const WTABS := ["nuoi", "dieu", "lo"]   # NTWEB: tab của w_ca_ui (QQ, diều, lờ lọp)
+var _wscroll := 0
+var _wsc: ScrollContainer = null
+
+func _wtab() -> bool:
+	return WTABS.has(tab) and G.w_all != null and G.w_all.WCAU != null
+
+static func _wsig(v) -> Variant:   # chữ ký thô: số làm tròn 30 (giây đếm lùi không dựng lại mỗi khung)
+	if v is Dictionary:
+		var o := {}
+		for k in v:
+			o[k] = _wsig(v[k])
+		return o
+	if v is Array:
+		var a := []
+		for x in v:
+			a.append(_wsig(x))
+		return a
+	if v is float:
+		return int(v / 30.0)
+	return v
+
 func _sig() -> String:
+	if _wtab():   # NTWEB
+		return JSON.stringify([tab, _wsig([G.g.get("pet"), G.g.get("lo"), G.g.get("dieu"), G.g.get("fish"), int(G.g.coins), G.day()])])
 	var f := []
 	for r in G.FB:
 		f.append(int(G.g.barn.get(r[0], 0)))
@@ -249,6 +273,9 @@ func _dn(n: Dictionary) -> float:
 
 # ------------------------------------------------------------------ dựng
 func _draw() -> void:
+	if _wsc != null and is_instance_valid(_wsc):   # NTWEB: giữ chỗ cuộn khi dựng lại
+		_wscroll = _wsc.scroll_vertical
+	_wsc = null
 	sig = _sig()
 	var n: Dictionary = (T.ns_dn if tab == "dn" else T.ns_nv).duplicate(true)
 	var bx: Dictionary = n.kids[0]
@@ -264,7 +291,7 @@ func _draw() -> void:
 	tt.r = [tcx - (tw + pw) * 0.5, tt.r[1], tw + pw, tt.r[3]]
 	tt.tr = [tcx - tw * 0.5, ttr[1], tw + 0.5, ttr[3]]
 	tt.text = s
-	var H: float = _dn(n) if tab == "dn" else _nv(n)
+	var H: float = _dn(n) if tab == "dn" else (_wbody(body) if _wtab() else _nv(n))   # NTWEB
 	# cao hộp theo nội dung, giữa màn (tối đa như web: 610 - 18)
 	var top0: float = float(body.r[1]) - float(bx.r[1])
 	var bot: float = float(bx.r[1]) + float(bx.r[3]) - float(body.r[1]) - float(body.r[3])
@@ -293,7 +320,23 @@ func _draw() -> void:
 	if tb != null:
 		tb._kids.clip_contents = true   # .tre-ts cuộn ngang: tab dư bị che
 	_hook(box)
+	var hb = ids.get(".pcwbody")
+	if hb != null and _wtab():   # NTWEB: thân tab = w_ca_ui.tab_body
+		var sc := ScrollContainer.new()
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		sc.size = hb.size
+		hb.add_child(sc)
+		var c: Control = G.w_all.WCAU.tab_body(tab)
+		c.custom_minimum_size.x = hb.size.x
+		sc.add_child(c)
+		sc.set_deferred("scroll_vertical", _wscroll)
+		_wsc = sc
 	U._layout()
+
+func _wbody(body: Dictionary) -> float:   # NTWEB: thân trống cho tab w_ca_ui
+	body.kids = []
+	body.cls = "pcwbody"
+	return 420.0
 
 func _tre(x: float, y: float, w: float, h: float) -> Dictionary:
 	var src: Dictionary = T.tre
@@ -326,7 +369,9 @@ func _tre(x: float, y: float, w: float, h: float) -> Dictionary:
 	return o
 
 func _tab(tk: String) -> void:
-	if tk == "nv" or tk == "dn":
+	if tk == "nv" or tk == "dn" or (WTABS.has(tk) and G.w_all != null and G.w_all.WCAU != null):   # NTWEB
+		if tab != tk:
+			_wscroll = 0
 		tab = tk
 		sig = ""
 		_draw()

@@ -183,6 +183,8 @@ func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn
 	var v := Pl()
 	v.c[k] = int(v.c.get(k, 0)) + n
 	v.wk.c[k] = int(v.wk.c.get(k, 0)) + n
+	if G.w_all != null:   # NTWEB S8 bọc: đếm việc cho Hệ Thống
+		G.w_all.WS.htC(k, n)
 
 func Xs(k: String) -> int:
 	return int(Pl().c.get(k, 0))
@@ -199,13 +201,15 @@ func qi(k: String, n := 1) -> void:
 		s.stats[k] = int(s.stats.get(k, 0)) + 1
 		S8(k)
 		OI(k)
+		if G.w_all != null:   # NTWEB qi bọc: thi đua tuần của xã (m9)
+			G.w_all.qi(k)
 
 # điều kiện mở việc: bản Godot chưa có vật nuôi, xưởng, cây trái, dân làng, hợp tác xã
 func has_fam() -> bool: return false
 func has_pen() -> bool: return G.vn != null and G.vn.has_any()   # nvHasPen
 func has_work() -> bool: return false
 func has_tree() -> bool: return false
-func has_hx() -> bool: return false
+func has_hx() -> bool: return G.w_all != null and G.w_all.WH.nv_has_hx()   # NTWEB nvHasHx
 
 # ------------------------------------------------------------------ 1. hằng ngày
 const NVPT := 15

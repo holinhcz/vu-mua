@@ -78,6 +78,8 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	G.changed.connect(func(): _sync_hud())
 	G.toast.connect(say)
 	G.level_up.connect(func(_n, _g): if lvp != null: lvp.lvT = 2.5)
+	if G.w_all != null:   # NTWEB: bảng của các mô-đun dịch từ web
+		G.w_all.ui_setup(self)
 	_layout()
 	_sync_hud()
 
@@ -325,11 +327,19 @@ func _sync_hud() -> void:
 	var t := (posmod(G.day(), 28))
 	_txt(hid.get("#seaT"), G.SEA_N[G.season()] + (" " + str(t % 7 + 1) if G.cfg.s == "auto" else ""))
 	var hv := int(G.g.get("harvested", 0))
-	_txt(hid.get("#goalTxt"), "Thu hoạch 5 cây trồng (" + str(mini(5, hv)) + "/5)")
+	var gtx := "Thu hoạch 5 cây trồng (" + str(mini(5, hv)) + "/5)"
+	var gfr := minf(1.0, hv / 5.0)
+	if G.w_all != null and hid.get("#goal") != null:   # NTWEB fy: mục tiêu tân thủ (w_sys.goal_view)
+		var gv: Dictionary = G.w_all.WS.goal_view()
+		hid["#goal"].visible = not gv.is_empty()
+		if not gv.is_empty():
+			gtx = String(gv.txt) + (" · " + String(gv.btn) if gv.get("ready", false) else "")
+			gfr = float(gv.bar)
+	_txt(hid.get("#goalTxt"), gtx)
 	var gb = hid.get("#goalBar")
 	if gb != null:
 		var par: Control = gb.get_parent().get_parent()
-		gb.place(Rect2(gb.r.position, Vector2(par.r.size.x * minf(1.0, hv / 5.0), gb.r.size.y)))
+		gb.place(Rect2(gb.r.position, Vector2(par.r.size.x * gfr, gb.r.size.y)))
 
 # #coinsPill bản web rộng theo số (width auto, bám mép phải): số dài hơn thì ô xu nới sang trái, không cắt chữ
 func _coins_txt(s: String) -> void:
@@ -1626,7 +1636,9 @@ func _det_sync() -> void:
 	var xk: int = G.LY if G.D.crops.has(s) else 0
 	var E := h - M
 	var R := ""
-	if xk > 0 and E < xk:
+	if G.w_all != null and G.w_all.WKU != null:   # NTWEB eG: tính cả số cần cho đơn (NF)
+		R = G.w_all.WKU.det_hint(s, M)
+	elif xk > 0 and E < xk:
 		R = "Bán hết, không chừa lại để gieo" if E <= 0 else "Nên giữ lại " + G.fmt_n(mini(xk, h)) + " để gieo"
 	kd.hint.visible = R != ""
 	if R != "":
@@ -2630,6 +2642,8 @@ func close_all() -> void:
 	rm_close()
 	lock_close()
 	dock_open(false)
+	if G != null and G.w_all != null:   # NTWEB bảng cây, hạn mặn, chợ nổi, radio, lễ hội
+		G.w_all.close_all()
 
 func item_ic(id: String, px: float) -> Texture2D:
 	# hình món của bản web (Ai, ui/svg/kh, khung 64), vẽ ra đúng số px màn hình cần (làm tròn lên 2^n): luôn nét
@@ -2712,6 +2726,8 @@ func _process(dt: float) -> void:
 			_kho_sync()
 		if od_on:
 			_ord_sync()
+		if G.w_all != null:   # NTWEB bảng cây, chợ nổi, lễ hội, nút viên
+			G.w_all.ui_tick()
 	if pc_id != "":
 		_pc_sync()
 	if vnp != null and vnp.is_open():

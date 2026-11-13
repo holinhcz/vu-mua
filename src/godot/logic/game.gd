@@ -36,6 +36,7 @@ var xw                    # xưởng chế biến (xuong.gd)
 var vn                    # vật nuôi (vatnuoi.gd)
 var troi                  # trời: buổi, thời tiết, mùa (troi.gd)
 var lang = null           # lang.gd (farm.gd gán): ô nước, món đặt — UM
+var w_all = null          # NTWEB: w_all.gd, các mô-đun dịch từ web
 
 # ------------------------------------------------------------------ data
 func _j(p: String):
@@ -94,10 +95,16 @@ func _fresh() -> Dictionary:
 		"harvested": 0, "last": now, "land": {"nha": 1},
 		"pc": {"lv": 1, "xp": 0, "en": 100.0, "et": now, "n": 0, "cnt": {}},
 		"ray": {"p": {}, "th": 0, "cd": 0, "k": 0}, "gio": {"lv": 1}, "sys": {"pts": 0, "stats": {}}, "lvq": [],
-		"orders": [], "delivered": 0, "ngoc": 0}
+		"orders": [], "delivered": 0, "ngoc": 0, "rain": 150, "goal": 0}   # NTWEB rain, goal như bản web
 
 func _migrate(s: Dictionary) -> Dictionary:
 	# bản lưu cũ hơn: thêm khóa thiếu, không xóa gì
+	if not s.has("hdv"):   # NTWEB: bản lưu Godot đã theo nhịp Hay Day, không để SH (w_htx) đổi tỉ lệ
+		s.hdv = 2
+	if not s.has("sv2"):   # NTWEB: bản lưu Godot đã có sao, không để gJ (w_sys) cộng thêm 1 sao
+		s.sv2 = 1
+	if not s.has("ht"):   # NTWEB: điểm Hệ Thống theo cấp đã cộng ở _on_level, không để htS (w_sys) cộng lần nữa
+		s.ht = {"mig": 1}
 	var f := _fresh()
 	for k in f.keys():
 		if not s.has(k):
@@ -120,6 +127,8 @@ func load_game() -> void:
 		g = _migrate(s)
 	else:
 		g = _fresh()
+	if w_all != null:   # NTWEB
+		w_all.on_load()
 	# tính bù thời gian tắt game (bản web: vw(t, true) chia nhỏ từng bước)
 	var off := clampf((_now_ms() - float(g.get("last", _now_ms()))) / 1000.0, 0.0, 86400.0 * 30.0)
 	if off > 1.0:
@@ -135,6 +144,8 @@ func catch_up(off: float) -> void:
 	while a > 0.0:
 		var e := minf(stp, a)
 		_grow(e)
+		if w_all != null:   # NTWEB vw(e, true) đuôi
+			w_all.step(e, true)
 		if xw != null:
 			xw.step(e)
 		if vn != null:
@@ -194,6 +205,8 @@ func _cloud_step(dt: float) -> void:
 	if take:
 		g = _migrate(s)
 		g.cuid = uid
+		if w_all != null:   # NTWEB
+			w_all.on_load()
 		for k in ["objs"]:
 			if not (g.get(k) is Array):
 				g[k] = []
@@ -224,6 +237,8 @@ func mark() -> void:
 func reset_game() -> void:   # #reset bấm lần 2
 	g = _fresh()
 	g.sys.welcomed = true
+	if w_all != null:   # NTWEB
+		w_all.on_load()
 	ord_fill()
 	save_game()
 	changed.emit()
@@ -269,6 +284,8 @@ func motion_off() -> bool:   # he: Link 11-13 chuyển động luôn bật trên
 	return false
 
 func vib(ms) -> void:   # gr: rung khi bật Âm thanh và rung
+	if ms is Array:   # NTWEB: gr([rung, nghỉ, rung]) -> rung lần đầu
+		ms = ms[0] if ms.size() > 0 else 0
 	if int(cfg.a) == 1:
 		Input.vibrate_handheld(int(ms))
 
@@ -607,8 +624,8 @@ func star(a: Dictionary) -> int:    # E1
 func in_season(c: String) -> bool:  # ls(c) > 1
 	return D.mua[season()].has(c)
 
-func boost() -> float:   # tw(): 1 + Hệ Thống, lễ, ... (chưa có ở đợt này)
-	return 1.0
+func boost() -> float:   # tw(): 1 + PX() + jH() + (gB() - 1) + (Dx() > 1 ? .04 : 0)
+	return 1.0 + (w_all.boost_add() if w_all != null else 0.0)   # NTWEB
 
 func time_left(a: Dictionary) -> float:   # b3
 	var c := minf(M5, boost()) * (1.04 if in_season(a.c) else 1.0)   # ch() x ls (dX 1,04)
@@ -623,8 +640,8 @@ func _grow(t: float) -> void:
 		var l: float = drain(e) * (troi.dry_k() if troi != null else 1.0)   # UM(e) x VB
 		var o := minf(t, float(r.w) / l) if float(r.w) > 0.0 else 0.0
 		r.w = maxf(0.0, float(r.w) - o * l)
-		var c := boost() + 0.04 * (star(r) - 1) + (0.04 if in_season(r.c) else 0.0)
-		r.g = minf(float(crop(r.c).time), float(r.g) + o * minf(M5, c + 0.1) + (t - o) * minf(M5, c))
+		var c: float = boost() + 0.04 * (star(r) - 1) + (0.04 if in_season(r.c) else 0.0) + (w_all.um_add() if w_all != null else 0.0)   # NTWEB um
+		r.g = minf(float(crop(r.c).time), float(r.g) + (o * minf(M5, c + 0.1) + (t - o) * minf(M5, c)) * (w_all.t_o(e) if w_all != null else 1.0))   # NTWEB tO
 
 var _dr := {}
 var _dr_sig := ""
@@ -664,15 +681,23 @@ func can_plant(i: int, seed: String) -> String:
 		return "x"
 	if int(crop(seed).get("lv", 1)) > lv():
 		return crop(seed).name + " tới cấp " + str(crop(seed).lv) + " mới mở khóa giống."
-	if int(g.barn.get(seed, 0)) < 1:
+	if sd_n(seed) < 1:   # NTWEB sdN
+		if w_all != null and w_all.is_hyb(seed):
+			return "Hết hạt lai " + crop(seed).name.to_lower() + ". Trồng hai giống gốc sát nhau để lai tiếp."
 		return "Hết giống " + crop(seed).name.to_lower() + ". Mua ở Chợ phiên, chợ nổi sáng sớm hoặc nhà hàng xóm."
 	return ""
+
+func sd_n(seed: String) -> int:   # NTWEB sdN: giống lai ở g.lai.h
+	return w_all.WR.sd_n(seed) if w_all != null else int(g.barn.get(seed, 0))
 
 func plant(i: int, seed: String) -> bool:   # Ev
 	if can_plant(i, seed) != "":
 		return false
 	var e := p(i)
-	g.barn[seed] = int(g.barn[seed]) - 1
+	if w_all != null:   # NTWEB sdUse
+		w_all.WR.sd_use(seed)
+	else:
+		g.barn[seed] = int(g.barn[seed]) - 1
 	e.c = seed
 	e.g = 0.0
 	e.w = 0.0
@@ -680,6 +705,8 @@ func plant(i: int, seed: String) -> bool:   # Ev
 	g.sel = seed
 	nv.qi("plant")
 	float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.5, "-1 giống")
+	if w_all != null:   # NTWEB Ev bọc: phân xanh
+		w_all.WS.ht_after_plant(i)
 	return true
 
 func fast_ripe(i: int) -> bool:   # fL: chín ngay bằng sen đỏ
@@ -705,6 +732,8 @@ func water(i: int) -> bool:   # Wp
 		return false
 	a.w = water_hold(a)
 	nv.S8("water")
+	if w_all != null and lang != null:   # NTWEB aO: ô nhiễm mặn tốn nước ngọt
+		w_all.WR.a_o(i)
 	return true
 
 func harvest(i: int) -> bool:   # Xu
@@ -713,6 +742,7 @@ func harvest(i: int) -> bool:   # Xu
 		return false
 	if not kho_fit(1):   # g8 (bản web bọc Xu)
 		return false
+	var pre: Array = w_all.WS.ht_dat_before(i) if w_all != null else []   # NTWEB dat(Xu)
 	var n := 2 + (1 if randf() < 0.12 else 0)   # l7
 	var c: String = a.c
 	g.barn[c] = int(g.barn.get(c, 0)) + n
@@ -720,6 +750,8 @@ func harvest(i: int) -> bool:   # Xu
 	if c.begins_with("lua") or c.begins_with("nep"):
 		_drop("rice", i)
 	g.harvested = int(g.harvested) + 1
+	if w_all != null and lang != null:   # NTWEB z4: lai giống
+		w_all.WR.z4(i, c, true)
 	nv.qi("harvest")
 	float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.5, "+" + str(n) + " " + crop(c).name)
 	if nv.bt_harvest(c):
@@ -729,6 +761,8 @@ func harvest(i: int) -> bool:   # Xu
 	a.g = 0.0
 	a.w = 0.0
 	a.b = 0
+	if w_all != null:   # NTWEB dat(Xu): đất lành
+		w_all.WS.ht_dat_after(i, true, pre)
 	return true
 
 func catch_bug(i: int) -> bool:   # Ty
@@ -952,7 +986,10 @@ func hot_x(t: String) -> float:   # NA
 			return h[1]
 	return 1.0
 
-func price(t: String) -> int:   # ngKho = $i: giá x hệ số chợ x (1 + đẹp làng) x được giá
+func price(t: String) -> int:   # NTWEB ngKho: $i bọc chợ có lý do (w_kho)
+	return w_all.WK.ngKho(t) if w_all != null else price0(t)
+
+func price0(t: String) -> int:   # $i gốc: giá x hệ số chợ x (1 + đẹp làng) x được giá
 	var base := int(round(float(item(t).get("sell", 0)) * float(g.get("mult", {}).get(t, 1.0))))
 	return int(round(base * hot_x(t)))
 
@@ -980,6 +1017,8 @@ func mk_ev(t: String) -> float:   # mkWhy: hợp mùa rẻ hơn, trái mùa đ�
 	return 1.0
 
 func rel(t: String) -> float:   # mkRel: > 1,08 lên giá (▲), < 0,92 rớt giá (▼)
+	if w_all != null:   # NTWEB mkRel có lý do (w_kho)
+		return w_all.WK.mkRel(t)
 	return float(g.get("mult", {}).get(t, 1.0)) * mk_ev(t) * mk_f(t, float(mk().sat.get(t, 0.0)))
 
 func sell_value(t: String, n: int, peek: bool = true) -> int:   # mkTong
@@ -1367,6 +1406,7 @@ func _ready() -> void:
 	_load_data()
 	xw = load("res://logic/xuong.gd").new(self)
 	vn = load("res://logic/vatnuoi.gd").new(self)
+	w_all = load("res://logic/w_all.gd").new(self)   # NTWEB
 	load_game()
 	xw.sync_pos()
 
@@ -1387,6 +1427,8 @@ func _process(dt: float) -> void:
 			t = 0.25
 		var before := _sig()
 		_grow(t)
+		if w_all != null:   # NTWEB vw đuôi
+			w_all.step(t, false)
 		xw.step(t)
 		vn.step(t)
 		_bug_step(t)
@@ -1402,6 +1444,8 @@ func _process(dt: float) -> void:
 			_regen()
 		if _sig() != before:
 			changed.emit()
+	if w_all != null:   # NTWEB các bước mỗi khung
+		w_all.frame(dt)
 	_save_t += dt
 	if _save_t > 5.0:
 		_save_t = 0.0
@@ -1709,6 +1753,7 @@ func deliver(i: int) -> Variant:   # ks (+ vá: khách chưa tới, thiếu hàn
 		return {"lack": k, "why": "Đơn của " + str(x.who) + " còn thiếu:"}
 	for e in x.items:
 		g.barn[e[0]] = int(g.barn.get(e[0], 0)) - int(e[1])
+	var c0 := int(g.coins)   # NTWEB ks bọc
 	g.coins = int(g.coins) + int(x.reward)
 	g.delivered = int(g.delivered) + 1
 	nv.qi("deliver")
@@ -1716,6 +1761,8 @@ func deliver(i: int) -> Variant:   # ks (+ vá: khách chưa tới, thiếu hàn
 	add_xp(maxi(4, int(round(x.reward / 8.0))), "deliver")
 	_drop_at("deliver", ppos)
 	toast.emit("Giao hàng cho " + str(x.who) + ", nhận " + fmt_n(x.reward) + " xu.")
+	if w_all != null:   # NTWEB ks bọc: giá chợ + mối ruột (Hệ Thống)
+		w_all.WS.ht_deliver(c0)
 	g.orders[i] = new_order()
 	mark()
 	return true

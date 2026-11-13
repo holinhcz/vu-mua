@@ -819,6 +819,8 @@ func tap(sp: Vector2) -> void:
 		ui.close_all()
 		xw_tap(xk)
 		return
+	if plot_at(w) < 0 and G.w_all != null and G.w_all.tree_tap(w):   # NTWEB hg: chạm cây ăn trái
+		return
 	var i := plot_at(w)
 	if i < 0 and lang != null:
 		var h = lang.hu_pick(w)
@@ -887,13 +889,22 @@ func queue_job(i: int, kind: String, seed: String = "") -> bool:
 		return false
 	if kind == "plant":
 		var why: String = G.can_plant(i, seed)
-		if why == "" and int(G.g.barn.get(seed, 0)) <= seeds_queued(seed):
+		if why == "" and G.sd_n(seed) <= seeds_queued(seed):   # NTWEB sdN (giống lai)
 			why = "Hết giống " + G.crop(seed).name.to_lower() + "."
 		if why != "":
 			G.toast.emit(why)
 			return false
 	var c: Dictionary = G.cells[i]
 	q.append({"key": key, "kind": kind, "i": i, "seed": seed, "pos": Vector2(c.gx + 0.5, c.gy + 1.04)})
+	return true
+
+func ext_job(key: String, pos: Vector2, dur: float, run: Callable) -> bool:   # NTWEB Gl / Ns / Px: việc của mô-đun web (đi tới pos rồi chạy run)
+	if has_job(key):
+		return false
+	if q.size() >= 30:
+		G.toast.emit("Nhân vật đang có quá nhiều việc rồi.")
+		return false
+	q.append({"key": key, "kind": "ext", "i": -1, "seed": "", "pos": pos, "dur": dur, "run": run})
 	return true
 
 func sleep_go() -> void:   # TV: về nhà (yT 6,3; 4,6) ngủ 12 giây, dậy đầy sức
@@ -991,6 +1002,10 @@ func _jobs(dt: float) -> void:
 			"work": ok = G.xw.make(j.i_k, j.seed)   # Wh "make": tới xưởng rồi mới xếp món
 			"workc": ok = G.xw.collect(j.i_k)
 			"animal": ok = vn_do(j.va, j.seed)
+			"ext":   # NTWEB: run tự tính sức / kinh nghiệm như bản web
+				var rr = j.run.call()
+				if rr is bool and rr:
+					G.mark()
 		if ok:
 			var kx: String = "work" if j.kind == "workc" else j.kind
 			G.use_en(float(G.D.suc.get(kx, 0)))
