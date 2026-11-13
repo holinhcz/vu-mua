@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "78"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "79"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -2883,6 +2883,8 @@ var do2_res := []
 var do2_ms := 0.0
 var do2_last := 0
 var do2_bms := 0.0
+var do2_phase := 0
+var do2_fast := 0.0
 func _do2_name(n: Node) -> String:
 	var s := _nname(n)
 	if n == obj_root: s = "obj_root"
@@ -2892,21 +2894,24 @@ func _do2_name(n: Node) -> String:
 	var z: int = n.z_index if n is CanvasItem else 0
 	return "%s(z%d,%d con)" % [s, z, n.get_child_count()]
 func _do2_step() -> void:
+	# (b79) pairs: each layer is measured shown, then hidden, right after each other, so loading or animation drift
+	# cancels out. The last item is the sharp-picture filter (uFast) instead of a layer.
 	if do2_on < 0:
 		do2_on = 1 if _tflag("__do2") else 0
 	if do2_on != 1 or info.is_empty():
 		return
-	if do2_i >= 0 and do2_i < do2_L.size() and is_instance_valid(do2_L[do2_i]):
+	var off := do2_i >= 0 and do2_phase == 1
+	if off and do2_i < do2_L.size() and is_instance_valid(do2_L[do2_i]):
 		do2_L[do2_i].visible = false   # ground levels get their visibility set again every frame
 	var now := Time.get_ticks_msec()
 	if do2_i == -2:
 		do2_i = -1
-		do2_t = now + 15000
+		do2_t = now + 25000
 		do2_last = now
 		return
 	if now < do2_t:
-		pt_drw = "đang đo lớp %d/%d" % [do2_i + 1, do2_L.size()]
-		if now > do2_t - 1200:
+		pt_drw = "đang đo lớp %d/%d" % [do2_i + 1, do2_L.size() + 1]
+		if do2_i >= 0 and now > do2_t - 1200:
 			do2_sum += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 			do2_ms += now - do2_last
 			do2_n += 1
@@ -2918,37 +2923,44 @@ func _do2_step() -> void:
 	do2_sum = 0.0
 	do2_ms = 0.0
 	do2_n = 0
-	if do2_i == do2_L.size():
-		night_mat.set_shader_parameter("uFast", 0.0)
-		do2_res.sort_custom(func(x, y): return x[2] > y[2])
-		var o := []
-		for i in mini(8, do2_res.size()):
-			o.append("%s -%d lệnh -%.1fms" % [do2_res[i][1], round(do2_res[i][0]), do2_res[i][2]])
-		pt_drw = "XONG (gốc %d lệnh, %.1f ms/khung; lọc nét đơn giản: -%.1fms): " % [round(do2_base), do2_bms, do2_bms - vms] + " · ".join(o)
-		do2_on = 2
-		return
 	if do2_i == -1:
+		for n in get_children():
+			if (n is CanvasItem or n is CanvasLayer) and n.visible and n != meter.get_parent():
+				do2_L.append(n)
+		do2_i = 0
+		do2_phase = 0
+		do2_t = now + 2000
+		return
+	if do2_phase == 0:
 		do2_base = v
 		do2_bms = vms
-		for n in get_children():
-			if n is CanvasItem and n.visible and n != meter.get_parent():
-				do2_L.append(n)
-			elif n is CanvasLayer and n.visible and n != meter.get_parent():
-				do2_L.append(n)
-	else:
+		do2_phase = 1
+		if do2_i < do2_L.size():
+			if is_instance_valid(do2_L[do2_i]):
+				do2_L[do2_i].visible = false
+		else:
+			night_mat.set_shader_parameter("uFast", 1.0)
+		do2_t = now + 2000
+		return
+	# phase 1 done: put it back, keep the difference
+	if do2_i < do2_L.size():
 		var n = do2_L[do2_i]
 		if is_instance_valid(n):
 			n.visible = true
 			do2_res.append([do2_base - v, _do2_name(n), do2_bms - vms])
-	do2_i += 1
-	if do2_i >= do2_L.size():
-		night_mat.set_shader_parameter("uFast", 1.0)   # last window: everything shown, plain picture lookup
-		do2_t = now + 2500
+	else:
+		night_mat.set_shader_parameter("uFast", 0.0)
+		do2_fast = do2_bms - vms
+		do2_res.sort_custom(func(x, y): return x[2] > y[2])
+		var o := []
+		for k in mini(8, do2_res.size()):
+			o.append("%s -%d lệnh -%.1fms" % [do2_res[k][1], round(do2_res[k][0]), do2_res[k][2]])
+		pt_drw = "XONG (%.1f ms/khung, %d lệnh; lọc nét đơn giản -%.1fms): " % [do2_bms, round(do2_base), do2_fast] + " · ".join(o)
+		do2_on = 2
 		return
-	var m = do2_L[do2_i]
-	if is_instance_valid(m):
-		m.visible = false
-	do2_t = now + 2500
+	do2_i += 1
+	do2_phase = 0
+	do2_t = now + 2000
 func _tflag(n: String) -> bool:   # test switches (window.__nolf / __notr / __nosw)
 	# (b65) also from the address: ?nosky&nohz&nozf&nosort turns the parts off, so Link can read the fps of each
 	return OS.has_feature("web") and bool(JavaScriptBridge.eval("!!window." + n + "||new URLSearchParams(location.search).has('" + n.substr(2) + "')"))
