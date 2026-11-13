@@ -338,9 +338,13 @@ func _chk_step(dt: float) -> void:
 		var best = null
 		var bd := 36.0
 		var what := ""
-		for q in main.objs:
+		var OL: Array = main.info.get("objs", [])
+		for qi in main.objs.size():
+			var q: Dictionary = main.objs[qi]
+			if qi < OL.size() and str(OL[qi][6]) != String(o.id):
+				continue
 			var ft: Vector2 = q["piv"] if q.has("piv") else Vector2(q["x"] + q["w"] * 0.5, q["y"] + q["h"] * 0.88)
-			var d := ft.distance_to(f)
+			var d := ft.distance_to(f) * 0.5
 			if d < bd:
 				bd = d
 				best = q
@@ -375,8 +379,12 @@ func _chk_step(dt: float) -> void:
 			why.append("không ảnh")
 		if what == "s" and sp3.has_meta("pco"):
 			why.append("pco")
-		if not sp3.is_visible_in_tree():
+		if not sp3.visible:
+			why.append("tự ẩn")
+		elif not sp3.is_visible_in_tree():
 			why.append("cha ẩn")
+		if what == "o":
+			why.append("lev " + str(best.get("lev", "")) + (" sst" if best.has("sst") else "") + (" op " + str(best["op"][0]) if best["op"] != null else " op null"))
 		bad.append(String(o.id) + "@" + String(o.pc) + "[" + what + "]: " + ",".join(why))
 	var lo := 0
 	for s0 in lang_ve.nodes:
@@ -399,7 +407,50 @@ func _land_sync() -> void:   # NTLAND (bản 82): báo nền đất đã mua m�
 		_land_sig = sg
 		main.land_changed(L)
 
+# NTWEB (bản 83): cảnh bên nền phải khớp đúng dữ liệu web (lang.SO vật cảnh + lang.HU cây rừng/cỏ hoang). Hình cảnh nào
+# của nền không ứng với món nào của web (món Link đã xoá khỏi web, như đá hoang) thì giấu luôn, cả bóng dưới nước.
+var _pruned := false
+func _web_prune() -> void:
+	if _pruned or lang == null or not ("sc_spr" in main) or main.sc_spr.is_empty() or main.sc_data.is_empty():
+		return
+	_pruned = true
+	var grid := {}
+	var addp := func(x: float, y: float) -> void:
+		var k := Vector2i(int(floor(x / 32.0)), int(floor(y / 32.0)))
+		if not grid.has(k):
+			grid[k] = []
+		grid[k].append(Vector2(x, y))
+	for o in lang.SO:
+		addp.call(float(o.sx), float(o.sy))
+	for o in lang.HU:
+		addp.call(float(o.sx), float(o.sy))
+	var V: Array = main.sc_data["v"]
+	var n := 0
+	for j in main.sc_spr.size():
+		if j == 16 or j >= V.size() or V[j] == null:
+			continue
+		for sp in main.sc_spr[j]:
+			var f: Vector2 = sp.position if sp.has_meta("sw") else sp.position - Vector2(float(V[j][0]), float(V[j][1]))
+			var c := Vector2i(int(floor(f.x / 32.0)), int(floor(f.y / 32.0)))
+			var hit := false
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					for q in grid.get(c + Vector2i(dx, dy), []):
+						if q.distance_to(f) < 12.0:
+							hit = true
+			if hit:
+				continue
+			sp.set_meta("cay", true)   # main._lot_vis: "cay" = giấu luôn
+			sp.visible = false
+			n += 1
+			for rs in main.sc_rall.get(j, []):
+				if is_instance_valid(rs) and absf(rs.position.x - sp.position.x) < 0.5:
+					rs.set_meta("cay", true)
+					rs.visible = false
+	print("web_prune: giấu ", n, " hình cảnh không có trong web")
+
 func _process(dt: float) -> void:
+	_web_prune()
 	_land_sync()
 	_chk_step(dt)
 	# Cài đặt: Chất lượng hình (0 Tiết kiệm, 1 Cân bằng, 2 Nét) và Chuyển động (true = đứng yên) cho bên nền
