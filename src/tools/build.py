@@ -9,11 +9,12 @@ GL='/mnt/project-files/nong-trai-chung/godot-logic/'
 GROUND=sys.argv[1] if len(sys.argv)>1 else '/mnt/project-files/nong-trai-chung/src/godot/nen/ban28'
 ICONS=['sau','rom','phan','voi','bao','xp','cui']
 PKG=S+'/pkg'
-r=subprocess.run([S+'/gd/godot','--headless','--path',S+'/proj','--export-pack','Web',S+'/out/logic.pck'],capture_output=True,text=True)
+PROJ=os.environ.get('PROJ',S+'/proj')
+r=subprocess.run([S+'/gd/godot','--headless','--path',PROJ,'--export-pack','Web',S+'/out/logic.pck'],capture_output=True,text=True)
 if 'ERROR' in r.stdout+r.stderr: print(r.stdout[-3000:],r.stderr[-3000:]);sys.exit(1)
 _,mine=ML.read_pck(open(S+'/out/logic.pck','rb').read())
 F={p:d for p,d in mine if p.startswith(('logic/','ui/'))}
-UI=S+'/proj/ui/'
+UI=PROJ+'/ui/'
 for d in ['svg','emo','font','snap','img']:
     for dp,dn,fn in os.walk(UI+d):
         for f in fn:
@@ -34,6 +35,7 @@ for f in sorted(glob.glob(S+'/lb/*.wasm')):
     lv[n]=hashlib.md5(open(f,'rb').read()).hexdigest()[:8]
     shutil.copy(f,PKG+'/l/'+n+'.wasm')
 F['logic/lv.json']=json.dumps(lv).encode()
+if os.environ.get('BN'): F['logic/build.txt']=os.environ['BN'].encode()
 open(PKG+'/logic.pck','wb').write(ML.write_pck((3,4,5,1),sorted(F.items())))
 # bản làng -> site
 SITE=S+'/site'

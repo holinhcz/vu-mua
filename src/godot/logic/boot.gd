@@ -20,6 +20,26 @@ func _ready() -> void:
 	P = PicsS.new()
 	P.name = "Pics"
 	add_child(P)
+	var tag := BuildTag.new()   # NTBUILD: số bản trên đồng hồ = số bản thật lần đẩy này (logic/build.txt do bước build ghi)
+	tag.name = "BuildTag"
+	tag.process_priority = 100000
+	add_child(tag)
+
+class BuildTag extends Node:
+	var lb := ""
+	func _ready() -> void:
+		var f := FileAccess.open("res://logic/build.txt", FileAccess.READ)
+		if f:
+			lb = f.get_as_text().strip_edges()
+	func _process(_dt: float) -> void:
+		if lb == "":
+			return
+		var m = get_tree().current_scene
+		if m == null or not ("meter" in m) or m.meter == null or not ("BUILD" in m):
+			return
+		var a := "bản " + String(m.BUILD) + " "
+		if m.meter.text.begins_with(a):
+			m.meter.text = "bản " + lb + " " + m.meter.text.substr(a.length())
 
 var _hook_t := 0.0
 var _quiet_n := 0
