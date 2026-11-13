@@ -116,18 +116,28 @@ function install(){F0('info.json?v='+B).then(function(r){return r.json()}).then(
     function next(){while(run<2&&i<L.length){(function(e){run++;var abs=new URL(e.u,location.href).href;
       F0(e.u).then(function(r){if(r.ok)return c.put(abs,r)}).catch(function(){}).then(function(){run--;done++;show();next()})})(L[i++])}}
     show();next()})})}).catch(function(){})}
+// Every file of the game is kept in the browser's own store (Cache Storage) under its content crc from files.json,
+// so a reload reads from the phone and a new build downloads only the files that changed (Link 11-13 "tải rồi đéo lưu lại à").
+var BASE=new URL('.',location.href).href,MF=null;
+var mfP=F0('files.json?v='+B).then(function(r){return r.json()}).then(function(j){MF=j;return j},function(){MF={};return MF});
+function rel(s){var a=new URL(s,location.href).href;if(a.indexOf(BASE)!=0)return null;return a.slice(BASE.length).split('?')[0]}
+function kept(p){return mfP.then(function(){var h=MF[p];if(!h)return F0(p);var q=p+'?h='+h;return stored(q)})}
+var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){csP.then(function(c){if(!c)return;var keep={};
+  Object.keys(MF).forEach(function(p){keep[new URL(p+'?h='+MF[p],location.href).href]=1});
+  c.keys().then(function(ks){ks.forEach(function(q){if(!keep[q.url])c.delete(q)})})})})}
 window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
-  if(/(^|\/)d\/[^\/?]+\.wasm\?v=/.test(s))return stored(s);
-  if(/index\.wasm(\?|$)/.test(s))return F0('engine.wasm?v='+EV).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+  if(/index\.wasm(\?|$)/.test(s))return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
     return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),{status:200,headers:{'Content-Type':'application/wasm'}})});
-  if(/index\.pck(\?|$)/.test(s)){var a=[];for(var k=0;k<NP;k++)a.push('pck_'+k+'.wasm?v='+B);return Promise.resolve(joined(a,'application/octet-stream'))}
-  if(/(^|\/)(info\.json|w\/[^\/?]+|n\/sc\.json)$/.test(s))return F0(s+'?v='+B,o);
+  if(/index\.pck(\?|$)/.test(s))return kept('pck_0.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return new Response(r.body,{status:200,headers:{'Content-Type':'application/octet-stream'}})});
+  var p=(!o||!o.method||o.method=='GET')?rel(s):null;
+  if(p&&p!='info.json'&&p!='files.json'&&!/\.html$/.test(p))return mfP.then(function(){return MF[p]?kept(p):F0(u,o)});
+  if(/(^|\/)(info\.json|n\/sc\.json)$/.test(s))return F0(s+'?v='+B,o);
   return F0(u,o)};
 if(typeof DecompressionStream=='undefined'){msg.textContent='Trình duyệt này cũ quá, không giải nén được game.';return}
 var engine=new Engine(CFG);
 engine.startGame({onProgress:function(cur,tot){var t=tot>0?tot:WASM+PCK;fill.style.width=Math.min(100,cur/t*100)+'%'}}).then(function(){st.hidden=true;
   // the whole village is stored only after the first view is sharp (Godot sets __gdready), so it does not slow that view
-  (function w(){if(window.__gdready)install();else setTimeout(w,500)})()},function(e){msg.textContent='Lỗi: '+(e&&e.message||e)});
+  (function w(){if(window.__gdready)tidyUp();else setTimeout(w,500)})()},function(e){msg.textContent='Lỗi: '+(e&&e.message||e)});
 })();
 </script>
 </body></html>
