@@ -17,6 +17,45 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--txt);font-famil
 </head><body>
 <canvas id="canvas" tabindex="0"></canvas>
 <div id="st"><div><span id="msg">Đang tải game…</span><span id="bar"><i id="fill"></i></span></div></div>
+<!-- Lưu game lên mạng (Firebase vu-mua). Game Godot đọc/ghi qua window.__ntc:
+     st: 'loading'|'out'|'in'|'err'; uid; name; cloud = bản lưu trên mạng (chuỗi JSON, '' nếu chưa có); rev tăng mỗi lần cloud đổi;
+     save(chuỗi JSON) = ghi lên mạng (gộp lại, tối đa 1 lần / 15 s, và ngay khi ẩn trang); login() mở đăng nhập Google. -->
+<style>
+#ntc{position:fixed;left:50%;transform:translateX(-50%);top:max(6px,env(safe-area-inset-top,0px));z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
+#ntc[hidden]{display:none}
+</style>
+<button id="ntc" hidden></button>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+var N=window.__ntc={st:'loading',uid:'',name:'',cloud:'',rev:0,save:function(){},login:function(){}};
+var btn=document.getElementById('ntc');
+function show(t){btn.textContent=t;btn.hidden=false}
+if(!window.firebase){N.st='err';return}
+var app,auth,db;
+try{app=firebase.initializeApp({apiKey:"AIzaSyDmF3QtPD-CJGVXQhTFaIMPmmHoJUg5r0I",authDomain:"vu-mua.firebaseapp.com",projectId:"vu-mua",
+  storageBucket:"vu-mua.firebasestorage.app",messagingSenderId:"330432933067",appId:"1:330432933067:web:662e67c2b20dae39ad3f4e"});
+  auth=firebase.auth();db=firebase.firestore()}catch(e){N.st='err';return}
+var pend=null,busy=false,lastW=0,timer=0;
+function ref(){return db.collection('saves').doc(N.uid)}
+function flush(){if(!pend||busy||N.st!='in')return;var s=pend;pend=null;busy=true;
+  ref().set({d:s,t:Date.now()}).then(function(){lastW=Date.now();show('☁ Đã lưu · '+N.name)},function(){pend=pend||s;show('☁ Chưa lưu được, thử lại sau')}).then(function(){busy=false})}
+N.save=function(s){pend=String(s);if(N.st!='in')return;var w=15000-(Date.now()-lastW);clearTimeout(timer);if(w<=0)flush();else timer=setTimeout(flush,w)};
+N.login=function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+  auth.signInWithPopup(p).catch(function(e){if(e&&/popup|operation-not-supported/i.test(e.code||''))auth.signInWithRedirect(p);else show('☁ Đăng nhập lỗi: '+(e&&e.code||e))})};
+btn.onclick=function(){if(N.st=='out')N.login()};
+document.addEventListener('visibilitychange',function(){if(document.visibilityState=='hidden'){clearTimeout(timer);flush()}});
+auth.getRedirectResult().catch(function(){});
+auth.onAuthStateChanged(function(u){
+  if(!u){N.st='out';N.uid='';N.name='';show('☁ Đăng nhập Google để lưu làng');return}
+  N.uid=u.uid;N.name=(u.displayName||u.email||'').split(' ').pop();show('☁ Đang tải bản lưu…');
+  ref().get().then(function(d){var x=d.exists?d.data():null;N.cloud=x&&x.d?String(x.d):'';N.rev++;N.st='in';show('☁ Đã nối · '+N.name);if(pend)N.save(pend)},
+    function(e){N.st='err';show('☁ Không đọc được bản lưu: '+(e&&e.code||e))})});
+})();
+</script>
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
