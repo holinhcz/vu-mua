@@ -296,7 +296,99 @@ func _plot_view(i: int) -> void:
 # ------------------------------------------------------------------ frame
 var _dirty := false
 var _cfg_sig := ""
+# NTCHK (bản 81): ?chk trên địa chỉ -> mỗi 4 giây soi các món cảnh (nhà, cây, miếu...) mà logic coi là đang có ở gần giữa
+# màn, tìm hình bên nền, món nào không hiện thì ghi lý do lên dòng chữ trên cùng màn hình (để Link chụp gửi).
+var _chk := -1
+var _chk_t := 0.0
+var _chk_lb: Label = null
+func _chk_step(dt: float) -> void:
+	if _chk < 0:
+		_chk = 1 if (main.has_method("_tflag") and main._tflag("__chk")) else 0
+	if _chk != 1 or lang == null:
+		return
+	_chk_t -= dt
+	if _chk_t > 0.0:
+		return
+	_chk_t = 4.0
+	if _chk_lb == null:
+		var cl := CanvasLayer.new()
+		cl.layer = 120
+		add_child(cl)
+		_chk_lb = Label.new()
+		_chk_lb.position = Vector2(8, 260)
+		_chk_lb.add_theme_font_size_override("font_size", int(13 * maxf(1.0, main.dpr)))
+		_chk_lb.add_theme_color_override("font_color", Color(1, 1, 0.3))
+		_chk_lb.add_theme_color_override("font_outline_color", Color.BLACK)
+		_chk_lb.add_theme_constant_override("outline_size", 6)
+		_chk_lb.autowrap_mode = TextServer.AUTOWRAP_WORD
+		_chk_lb.size = Vector2(get_viewport().get_visible_rect().size.x - 16, 0)
+		cl.add_child(_chk_lb)
+	var vs: Vector2 = get_viewport().get_visible_rect().size / main.zoom
+	var vc: Vector2 = main.cam + vs * 0.5
+	var R: float = maxf(vs.x, vs.y) * 0.6
+	var n_ok := 0
+	var bad := []
+	var V: Array = main.sc_data.get("v", []) if "sc_data" in main else []
+	for o in lang.SO:
+		if o.wild or not lang.so_shown(o):
+			continue
+		var f := Vector2(float(o.sx), float(o.sy))
+		if f.distance_to(vc) > R:
+			continue
+		var best = null
+		var bd := 36.0
+		var what := ""
+		for q in main.objs:
+			var ft: Vector2 = q["piv"] if q.has("piv") else Vector2(q["x"] + q["w"] * 0.5, q["y"] + q["h"] * 0.88)
+			var d := ft.distance_to(f)
+			if d < bd:
+				bd = d
+				best = q
+				what = "o"
+		for j in main.sc_spr.size():
+			if j >= V.size() or V[j] == null:
+				continue
+			for sp in main.sc_spr[j]:
+				var ft2: Vector2 = sp.position if sp.has_meta("sw") else sp.position - Vector2(float(V[j][0]), float(V[j][1]))
+				var d2 := ft2.distance_to(f)
+				if d2 < bd:
+					bd = d2
+					best = sp
+					what = "s"
+		if best == null:
+			bad.append(String(o.id) + "@" + String(o.pc) + ": nền không có hình")
+			continue
+		var sp3: Sprite2D = best["spr"] if what == "o" else best
+		var vis := sp3.visible and sp3.texture != null and sp3.is_visible_in_tree()
+		if vis:
+			n_ok += 1
+			continue
+		var why := []
+		var pcm: String = (String(best.get("pc", "")) if what == "o" else String(sp3.get_meta("pc", "")))
+		if pcm != "":
+			why.append("pc " + pcm + (" mua" if main._owned(pcm) else " CHƯA mua"))
+		if (best.get("xg", false) if what == "o" else sp3.get_meta("xg", false)):
+			why.append("xg")
+		if (best.get("cay", false) if what == "o" else sp3.get_meta("cay", false)):
+			why.append("cay")
+		if sp3.texture == null:
+			why.append("không ảnh")
+		if what == "s" and sp3.has_meta("pco"):
+			why.append("pco")
+		if not sp3.is_visible_in_tree():
+			why.append("cha ẩn")
+		bad.append(String(o.id) + "@" + String(o.pc) + "[" + what + "]: " + ",".join(why))
+	var lo := 0
+	for s0 in lang_ve.nodes:
+		if is_instance_valid(s0) and s0 is Sprite2D and (not s0.visible or s0.texture == null or not s0.is_visible_in_tree()):
+			lo += 1
+	var t := "KIỂM: cảnh hiện %d, mất %d · đồ mình đặt mất %d/%d (đất %s)" % [n_ok, bad.size(), lo, lang_ve.nodes.size(), ",".join(PackedStringArray(G.g.land.keys()))]
+	for k in mini(10, bad.size()):
+		t += "\n" + String(bad[k])
+	_chk_lb.text = t
+
 func _process(dt: float) -> void:
+	_chk_step(dt)
 	# Cài đặt: Chất lượng hình (0 Tiết kiệm, 1 Cân bằng, 2 Nét) và Chuyển động (true = đứng yên) cho bên nền
 	var cfs := str(G.cfg.q) + str(G.motion_off())
 	if cfs != _cfg_sig:
