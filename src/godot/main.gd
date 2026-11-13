@@ -10,7 +10,7 @@ const GLEV := 6              # ground levels 0..5
 const BASE_L := 4            # ground level always kept under everything (0.5 px/unit)
 const DECODE_MS := 8.0       # decode budget per frame once the first view is sharp (40 ms before, under the loading text)
 const NHTTP := 4
-const BUILD := "72"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
+const BUILD := "74"          # shown in the meter = the artifact version it ships as (bump with every publish), so a stale copy on a phone is easy to spot
 
 var info := {}
 var base_url := ""
@@ -2817,14 +2817,15 @@ const DO_NAMES := ["tất cả", "bỏ UI", "bỏ viền đường", "bỏ đồ
 func _do_step() -> void:
 	if do_on < 0:
 		do_on = 1 if _tflag("__do") else 0
-	if do_on != 1 or not first_ready or sc_tex_have < sc_tex_n:
+	if do_on != 1 or info.is_empty():
 		return
 	var now := Time.get_ticks_msec()
 	if do_ph < 0:
 		do_ph = 0
-		do_t = now + 8000   # let it settle first
+		do_t = now + 15000   # let it settle first
 		return
 	if now < do_t:
+		pt_drw = "đang đo %s… %s" % [DO_NAMES[do_ph], " · ".join(do_res)]
 		if now > do_t - 2500:
 			do_sum += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 			do_n += 1
