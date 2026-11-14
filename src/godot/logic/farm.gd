@@ -537,6 +537,7 @@ func _process(dt: float) -> void:
 	_fell_sync(tt, zz)
 	_vn_sync(dt)
 	_crit_sync()
+	_dan_sync(tt)
 	_tree_bub_sync(tt)
 	_parts_step(dt)
 	_jobs(dt)
@@ -836,6 +837,9 @@ func tap(sp: Vector2) -> void:
 			ui.vl_open(int(h.u))
 		"sonha":
 			ui.vl_chip(h.o)
+		"dan":   # chạm người dân: mở bảng nhà
+			ui.close_all()
+			ui.vl_open(int(h.u))
 		"parcel":
 			ui.pc_open(String(h.id), w)
 		"scnlock":
@@ -1011,6 +1015,13 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var ii: int = i
 		var cr := func(p: Vector2) -> bool: return _crop_hit(ii, p)
 		_pk_add(L, {"type": "plot", "i": i}, 44, nn(c.gx + 0.5, c.gy + 0.5) + 14.0, cr, {"gr": 4 if dia else 0})
+	if not dans.is_empty():   # dân làng (DD, ord 48): trong khung người
+		var le := sign_le()
+		for x in dans:
+			var fx := en(float(x.x), float(x.y))
+			var fy := nn(float(x.x), float(x.y))
+			var hb := func(p: Vector2) -> bool: return absf(p.x - fx) < 10.0 * le and p.y > fy - 34.0 * le and p.y < fy + 4.0
+			_pk_add(L, {"type": "dan", "u": int(x.u)}, 48, fy, hb, {"mv": true})
 	if lang != null:   # cây ăn trái (hình), kho (hình + nền), thùng ong
 		var O: Array = lang.objs()
 		if G.w_all != null:
@@ -1596,6 +1607,64 @@ func _crit_sync() -> void:
 			if e[0] == n:
 				e[1] = dk
 				break
+
+# ------------------------------------------------------------------ dân làng trên làng (ID: người làm thuê đi làm, FD: người đứng trước nhà)
+var dnodes := {}   # khóa -> node dan_ve
+var dans := []     # [{key, u, x, y, lk, mv, ph, face, wave, carry, bob}] khung này
+
+func _dan_list(tt: float) -> Array:
+	var out := []
+	if G.w_all == null or G.g.get("lang") == null:
+		return out
+	var WL = G.w_all.WL
+	var fam: Dictionary = WL._r0().fam
+	for n in WL.ac:
+		if WL.tu(n) or not fam.has(n):
+			continue
+		var r: Dictionary = WL.ac[n]
+		out.append({"key": "a" + str(n), "u": int(r.u), "x": r.x, "y": r.y, "lk": int(fam[n].get("lk", 0)), "mv": int(r.st) == 1 or int(r.st) == 2,
+			"ph": r.ph, "face": r.face, "carry": r.carry, "bob": int(r.st) == 2})
+	if not G.night and not (ui.bdp != null and ui.bdp.mode == "place"):
+		for h in WL.bl():
+			var f = fam.get(str(h.u))
+			if f == null or WL._tr(f.get("job")) or WL.zk(h.u):
+				continue
+			var p: Vector2 = WL._home(h.u)
+			out.append({"key": "h" + str(h.u), "u": int(h.u), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
+				"face": 1 if String(h.r.id).ends_with("2") else -1, "wave": WL._tr(f.get("req")) and sin(tt * 0.8 + float(h.u)) > 0.6, "carry": null, "bob": false})
+	return out
+
+func _dan_sync(tt: float) -> void:
+	dans = _dan_list(tt)
+	var seen := {}
+	for x in dans:
+		seen[x.key] = 1
+		var n = dnodes.get(x.key)
+		var dk := nn(float(x.x), float(x.y))
+		if n == null:
+			n = Node2D.new()
+			n.set_script(load("res://logic/dan_ve.gd"))
+			n.farm = self
+			n.d = x
+			main.obj_root.add_child(n)
+			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			dnodes[x.key] = n
+			continue
+		n.d = x
+		for e in sortables:
+			if e[0] == n:
+				e[1] = dk
+				break
+	for k in dnodes.keys():
+		if seen.has(k):
+			continue
+		var n: Node2D = dnodes[k]
+		for e in sortables:
+			if e[0] == n:
+				sortables.erase(e)
+				break
+		n.queue_free()
+		dnodes.erase(k)
 
 # ------------------------------------------------------------------ bong bóng trên cây ăn trái (Ij) và thùng ong (Aq)
 var tbubs := {}    # idx g.objs -> Bubble (dùng chung bong bóng ô ruộng)

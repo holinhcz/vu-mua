@@ -53,6 +53,8 @@ func _init(game) -> void:
 	WL.WR = WR
 	WL.WC = WC
 	WL.WS = WS             # dedupe: w_lang.htv -> w_sys.htv
+	WL.WD = WD             # rT: việc vườn / chuồng còn làm được
+	WD.ext["ac_del"] = func(u) -> void: WL.ac.erase(WL._ks(u))   # tnHit: nhà gặp nạn thì người đang đi làm về
 	WH.WL = WL
 	WH.WC = WC
 	WH.WS = WS

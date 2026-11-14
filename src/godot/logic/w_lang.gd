@@ -32,7 +32,6 @@ var ui = null              # w_lang_ui.gd (tự gán khi tạo)
 #   R6() -> Dictionary       (g.dl du lịch)
 #   mg() -> Array, Ae() -> Dictionary          (bến ghe sông Vàm, ghe thương hồ)
 #   BN(t) -> String, NN_T(kd) -> String, hr() -> Dictionary   (chữ rê chuột của hệ khác, điên điển, xe chè)
-#   AD(t)                    (AD: làm thuê lúc ẩn trang / offline)
 #   ll(x, y) -> bool, _b(x, y) -> bool, aa() -> Vector2         (ô trong bản đồ, ô đất đã có, chỗ nhân vật)
 #   Mt_mode() -> String, Cr() -> bool, ngThoMul(b) -> float, c7(t) -> String, V1() -> Dictionary
 #   clgRender(now), tU(), i1(), sig_reset(), e7(), ku_reset(), s2() -> Array (khi không có WC)
@@ -2135,9 +2134,7 @@ func rq(t: float, a: bool) -> void:   # Rq: mỗi khung (a = đang chạy bù / 
 	if WR != null:
 		WR.td(t)
 	if a:
-		var f := _x("AD")
-		if f.is_valid():
-			f.call(t)
+		a_d(t)
 
 func k_s(t) -> float:   # kS: tỉ lệ bể hụi theo thân chủ hụi
 	var a = _fam_of(t)
@@ -2458,6 +2455,7 @@ func than_step(dt: float) -> void:   # ui({id: "than"}).step
 func step(t: float, offline: bool) -> void:   # wK: than, dam ($K), cuoi (zU), ma (k6), clg (clgTick); bản web không chạy khi bù offline
 	if offline:
 		return
+	q_d(t)
 	than_step(t)
 	dam_tick(t)
 	cuoi_step(t)
@@ -2992,3 +2990,400 @@ func b_i(t) -> void:   # bI: gửi đi học nghề
 		a.wt = 0
 	_ta(String(a.n) + " lên chợ huyện học nghề, " + G.ao(n_l(n)) + " nữa về. Trong lúc học thì nghỉ làm thuê.")
 	_ba()
+
+# ------------------------------------------------------------------ người làm thuê đi làm trên làng (ac, qD, zD, iT, XM, t4, Zq, _D, xx, Ax, Wb, AD)
+# ac[u] = {u, x, y, tx, ty, st (0 rảnh, 1 đi, 2 làm), t, t2, task, ph, face, carry, ct, job}; farm.gd vẽ theo ac
+var WD = null              # w_duong.gd (bộ ráp gán): rT
+var ac := {}
+var jb := 0                # có việc vừa xong: lưu
+var _ym := 0.0
+var _jm := 0.0             # JM: AD 5 giây một lần
+
+func _cell(k: int) -> Dictionary:   # pi: ô ruộng k
+	return G.cells[k]
+
+func xm(t: int) -> Variant:   # XM: việc kế ở ô ruộng t
+	var a: Dictionary = G.p(t)
+	if a.is_empty() or not _tr(a.get("u")):
+		return null
+	if _tr(a.get("b")):
+		return "bug"
+	if a.get("c") != null and G.ripe(a):
+		return "harvest"
+	if a.get("c") != null and _n(a.get("w")) < 2:
+		return "water"
+	if a.get("c") == null:
+		var n := bq(t)
+		if n != "" and WR.sd_n(n) >= 1:
+			return "plant"
+	return null
+
+func t4(t: int, a: String, n: bool) -> bool:   # t4: làm việc a ở ô t (n = đang thấy trên màn hình)
+	var e: Dictionary = G.p(t)
+	if a == "bug":
+		if not _tr(e.get("b")):
+			return false
+		e.b = 0
+		if n:
+			G.float_text.emit(_cell(t).gx + 0.5, _cell(t).gy + 0.5, "Bắt sâu")
+		return true
+	if a == "harvest":
+		if e.get("c") == null or not G.ripe(e):
+			return false
+		if n:
+			return G.harvest(t)
+		var r := String(e.c)
+		G.g.barn[r] = _barn(r) + 2 + (1 if randf() < 0.12 else 0)   # l7
+		G._drop("harvest", t)
+		if r.begins_with("lua") or r.begins_with("nep"):
+			G._drop("rice", t)
+		WR.z4(t, r, false)
+		G.g.harvested = _i(G.g.get("harvested")) + 1
+		_qi("harvest")
+		e.lc = r
+		e.c = null
+		e.g = 0.0
+		e.w = 0.0
+		e.b = 0
+		return true
+	if a == "water":
+		if e.get("c") == null or G.ripe(e):
+			return false
+		e.w = G.water_hold(e)
+		return true
+	if a == "plant":
+		if e.get("c") != null:
+			return false
+		var r := bq(t)
+		if r == "" or WR.sd_n(r) < 1:
+			return false
+		WR.sd_use(r)
+		e.c = r
+		e.g = 0.0
+		e.w = G.water_hold(e)
+		_qi("plant")
+		return true
+	return false
+
+func _pen_box(r: String) -> Rect2:   # mo[r]: khung chuồng (ô)
+	var p: Vector2i = G.lang.pen_pos(r)
+	var m: Dictionary = G.lang.C.mo[r]
+	return Rect2(p.x, p.y, float(m.w), float(m.h))
+
+func zq(t: String) -> Array:   # Zq: việc ở vườn / chuồng
+	var a := []
+	if t == "vuon":
+		var O: Array = G.lang.objs()
+		for n in O.size():
+			var e = WR.ql(n)
+			if e == null:
+				continue
+			if WR.wc(e):
+				a.append({"key": "th" + str(n), "t": "th", "i": n, "pr": 0})
+			elif float(e.fw) < WR.f2() * 0.35:
+				a.append({"key": "tw" + str(n), "t": "tw", "i": n, "pr": 1})
+	elif t == "chan":
+		for r in G.lang.C.Di:
+			if not G.vn.ok(r):
+				continue
+			var o: Dictionary = G.vn.Q[r]
+			var L: Array = G.vn.list(r)
+			for c in L.size():
+				var l: Dictionary = L[c]
+				if float(l.p) >= float(o.time):
+					a.append({"key": "c" + r + str(c), "t": "c", "k": r, "j": c, "pr": 0})
+				elif float(l.p) < 0.0 and _barn(o.feed) > (WD.LP if WD != null and G.D.crops.has(o.feed) else 0):
+					a.append({"key": "f" + r + str(c), "t": "f", "k": r, "j": c, "pr": 1})
+	return a
+
+func ax(t: int) -> Variant:   # Ax: chỗ đứng hái / tưới cây t
+	for h in WR._hrl():
+		if int(h.idx) == t:
+			return Vector2(float(h.gx) + float(h.fw) / 2.0, float(h.gy) + float(h.fd) + 0.2)
+	return null
+
+func _d(t: Dictionary) -> Variant:   # _D: chỗ đứng làm việc t
+	if t.t == "th" or t.t == "tw":
+		return ax(int(t.i))
+	var b := _pen_box(String(t.k))
+	return Vector2(b.position.x + b.size.x / 2.0 + (0.35 if int(t.j) % 2 else -0.35), b.position.y + b.size.y + 0.35)
+
+func xx(t: Dictionary, a: bool) -> Variant:   # xx: làm việc vườn / chuồng (a = chỉ hỏi món sẽ ra)
+	if WD != null and not WD.rT(t):
+		return null
+	if t.t == "th":
+		var r = WR.ql(int(t.i))
+		var o: Dictionary = WR._ei()[r.id]
+		if a:
+			return o.p if WR.x5(int(t.i)) else null
+		var tb: int = WR.ib(int(t.i))
+		G.g.barn[String(o.p)] = _barn(o.p) + int(o.yield) + tb
+		r.fp = 0
+		_qi("harvest")
+		return o.p
+	if t.t == "tw":
+		if a:
+			return WR.qm(int(t.i))
+		WR.ql(int(t.i)).fw = WR.f2()
+		return "w"
+	if t.t == "c":
+		var q: Dictionary = G.vn.Q[t.k]
+		var c: String = q.make2 if q.get("make2") and randf() < 0.5 else q.make
+		if a:
+			return c
+		var f: Dictionary = G.vn.list(t.k)[int(t.j)]
+		G.g.barn[c] = _barn(c) + 1
+		f.p = -1
+		_qi("collect")
+		return c
+	if t.t == "f" and G.vn.feed(String(t.k), int(t.j), true):
+		return "f"
+	return null
+
+func fb(t: String, a: Dictionary, n: bool) -> int:   # Fb: đứng xưởng (thu hàng xong, xếp món a.jr)
+	var e = G.g.work.get(t)
+	if not (e is Dictionary) or not _tr(e.get("b")):
+		return 0
+	var r := 0
+	if G.xw.df(t) > 0:
+		if n:
+			G.xw.collect(t)
+		else:
+			for l in e.r.keys():
+				G.g.barn[l] = _barn(l) + int(e.r[l])
+			e.r = {}
+		r = 1
+	var o = a.get("jr")
+	var R: Dictionary = G.xw.R
+	if _tr(o) and R.has(o) and R[o].w == G.xw.sr[t].type and e.q.size() < G.xw.nc(t) and G.xw.has_in(String(o)):
+		for l in R[o]["in"]:
+			G.g.barn[String(l[0])] = _barn(l[0]) - int(l[1])
+		e.q.append(o)
+		r = 1
+	return r
+
+func _home(u) -> Vector2:   # _f: chỗ đứng trước cửa nhà
+	var t = r1(u)
+	if t == null:
+		return Vector2.ZERO
+	var a: Dictionary = t.o
+	if String(t.r.id).ends_with("2"):
+		return Vector2(float(a.gx) + float(a.fw) + 0.42, float(a.gy) + float(a.fd) * 0.35)
+	return Vector2(float(a.gx) + float(a.fw) * 0.35, float(a.gy) + float(a.fd) + 0.42)
+
+func zd(t, a: Dictionary) -> Dictionary:   # zD: người nhà t đi làm
+	var k := _ks(t)
+	if not ac.has(k):
+		var r := _home(t)
+		ac[k] = {"u": int(float(k)), "x": r.x, "y": r.y, "tx": r.x, "ty": r.y, "st": 0, "t": 0.0, "t2": _nn(0.5, 1.5), "task": null, "ph": _nn(0, 6), "face": 1,
+			"carry": null, "ct": 0.0, "job": a.job}
+	return ac[k]
+
+static func wb(t: Dictionary, a: float, n: float) -> bool:   # Wb: đi thẳng tới (tx, ty); true = tới nơi
+	var e: float = t.tx - t.x
+	var r: float = t.ty - t.y
+	var o := sqrt(e * e + r * r)
+	if o < 0.04:
+		t.x = t.tx
+		t.y = t.ty
+		return true
+	var c := minf(o, n * a)
+	t.x += e / o * c
+	t.y += r / o * c
+	t.ph += a * 8.0
+	var f := e - r
+	if absf(f) > 0.001:
+		t.face = 1 if f > 0 else -1
+	return false
+
+func q_d(t: float) -> void:   # qD: mỗi khung
+	var a := _r0()
+	for n in ac.keys():
+		if not a.fam.has(n) or not _tr(a.fam[n].get("job")):
+			ac.erase(n)
+	for n in a.fam:
+		var e: Dictionary = a.fam[n]
+		if not _tr(e.get("job")) or tu(n) or r1(n) == null:
+			continue
+		var r := zd(n, e)
+		if r.job != e.job:
+			r.job = e.job
+			r.task = null
+			r.st = 0
+		r.ct = maxf(0.0, r.ct - t)
+		if r.ct <= 0.0:
+			r.carry = null
+		var o := _wr(r.x, r.y, 120)
+		if e.job == "ruong":
+			if r.st == 2:
+				r.t -= t
+				r.ph += t * 3.0
+				if r.t <= 0.0:
+					var l = r.task
+					r.task = null
+					r.st = 0
+					if l != null and xm(int(l.i)) == l.t:
+						var c = G.p(int(l.i)).get("c")
+						if t4(int(l.i), String(l.t), o):
+							jb = 1
+							if l.t == "harvest":
+								r.carry = c
+								r.ct = 2.5
+				continue
+			if r.task == null:
+				var f := -1
+				var s := 1e9
+				var h = null
+				for k in ux(n):
+					var M = xm(int(k))
+					if M != null:
+						var T := _cell(int(k))
+						var w := Vector2(T.gx + 0.5 - r.x, T.gy + 1.0 - r.y).length() + (0.0 if M == "harvest" or M == "bug" else (1.0 if M == "water" else 2.0))
+						if w < s:
+							s = w
+							f = int(k)
+							h = M
+				if f < 0:
+					r.t2 -= t
+					if r.t2 <= 0.0:
+						r.t2 = _nn(3, 7)
+						var p := ux(n)
+						if p.size():
+							var d := _cell(int(_t0(p)))
+							r.tx = d.gx + _nn(0.2, 0.8)
+							r.ty = d.gy + 1.04
+					wb(r, t, 0.6)
+					continue
+				var v := _cell(f)
+				r.task = {"i": f, "t": h}
+				r.tx = v.gx + 0.5
+				r.ty = v.gy + 1.04
+				r.st = 1
+			if wb(r, t, 1.5):
+				r.st = 2
+				r.t = 0.9 if r.task != null and r.task.t == "harvest" else 0.6
+		elif E4.has(e.job):
+			i_t(n, e, r, t, o)
+		else:
+			var x = G.xw.sr.get(e.job)
+			if x == null or not G.xw.built(e.job):
+				e.job = null
+				continue
+			r.tx = float(x.gx) + float(x.fw) * 0.3
+			r.ty = float(x.gy) + float(x.fd) + 0.4
+			if wb(r, t, 1.4):
+				r.st = 2
+				r.t2 -= t
+				r.ph += t * 2.0
+				if r.t2 <= 0.0:
+					r.t2 = 1.6
+					if fb(e.job, e, o):
+						jb = 1
+			else:
+				r.st = 1
+	_ym += t
+	if jb and _ym > 0.8:
+		jb = 0
+		_ym = 0.0
+		_ba()
+
+func i_t(t, a: Dictionary, n: Dictionary, e: float, r: bool) -> void:   # iT: làm vườn / chăm chuồng
+	if not yx(a.job):
+		var o := String(CO.get(a.job, "chỗ làm"))
+		a.job = null
+		ac.erase(_ks(t))
+		_ta(String(a.n) + " nghỉ vì " + o.to_lower() + " không còn gì để chăm.")
+		return
+	if n.st == 2:
+		n.t -= e
+		n.ph += e * 3.0
+		if n.t <= 0.0:
+			var l = n.task
+			n.task = null
+			n.st = 0
+			if l != null:
+				var c = xx(l, false)
+				if c != null:
+					jb = 1
+					if c != "w" and c != "f":
+						n.carry = c
+						n.ct = 2.5
+		return
+	if n.task == null:
+		var s = null
+		var h := 1e9
+		for k in zq(a.job):
+			var M = _d(k)
+			if M != null:
+				var T: float = (M - Vector2(n.x, n.y)).length() + float(k.pr) * 1.5
+				if T < h:
+					h = T
+					s = k
+					s.p = M
+		if s == null:
+			n.t2 -= e
+			if n.t2 <= 0.0:
+				n.t2 = _nn(3, 7)
+				if a.job == "vuon":
+					var p := []
+					for d in G.lang.objs().size():
+						if WR.ql(d) != null:
+							p.append(d)
+					if p.size():
+						var v = ax(int(_t0(p)))
+						if v != null:
+							n.tx = v.x + _nn(-0.3, 0.3)
+							n.ty = v.y
+				else:
+					var p: Array = G.lang.C.Di.filter(func(z): return G.vn.ok(z))
+					if p.size():
+						var b := _pen_box(String(_t0(p)))
+						n.tx = b.position.x + _nn(0, b.size.x)
+						n.ty = b.position.y + b.size.y + 0.35
+			wb(n, e, 0.6)
+			return
+		n.task = s
+		n.tx = s.p.x
+		n.ty = s.p.y
+		n.st = 1
+	if wb(n, e, 1.5):
+		n.st = 2
+		n.t = 0.9 if n.task != null and (n.task.t == "th" or n.task.t == "c") else 0.6
+
+func a_d(t: float) -> void:   # AD: lúc tắt game / ẩn trang: làm thẳng không cần đi
+	_jm += t
+	if _jm < 5.0:
+		return
+	_jm = 0.0
+	uf()
+	var a := _r0()
+	for n in a.fam:
+		var e: Dictionary = a.fam[n]
+		if not _tr(e.get("job")):
+			continue
+		if e.job == "ruong":
+			for r in ux(n):
+				var o := 0
+				var l = xm(int(r))
+				while o < 3 and l != null:
+					t4(int(r), String(l), false)
+					o += 1
+					l = xm(int(r))
+		elif E4.has(e.job):
+			var m := 0
+			for k in zq(e.job):
+				if m < 12 and xx(k, false) != null:
+					m += 1
+		else:
+			fb(e.job, e, false)
+
+func dan_at(w: Vector2, le: float, en: Callable, nn: Callable) -> int:   # DD: người làm thuê bị chạm (0 = không)
+	for n in ac:
+		if tu(n):
+			continue
+		var e: Dictionary = ac[n]
+		var r: float = en.call(e.x, e.y)
+		var o: float = nn.call(e.x, e.y)
+		if absf(w.x - r) < 10.0 * le and w.y > o - 34.0 * le and w.y < o + 4.0:
+			return int(float(n))
+	return 0
