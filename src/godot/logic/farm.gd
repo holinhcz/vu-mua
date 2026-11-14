@@ -2281,9 +2281,47 @@ class FxNode extends Node2D:
 			var fs := 13
 			var w := f.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 			draw_string(f, Vector2(bx - w / 2.0, by + 0.5 + (f.get_ascent(fs) - f.get_descent(fs)) / 2.0), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+	const HDNCO := ["#d8402a", "#f2c21e", "#2f86c9", "#3f9a3a", "#f6f2e8"]
+	func _hdn_flags(G) -> void:   # hdnItems: 5 cờ ngũ sắc trước đình (đã treo cờ, tới hết ngày hội)
+		var h = G.g.get("hdn")
+		var cu = h.get("cur") if h is Dictionary else null
+		if not (cu is Dictionary) or G.w_all == null:
+			return
+		if farm.ui != null and farm.ui.bdp != null and String(farm.ui.bdp.mode) != "off":
+			return
+		var WH = G.w_all.WH
+		var day: int = WH._vr()
+		if day > int(cu.d) or (day < int(cu.d) and not WH._tr(cu.v.get("co"))):
+			return
+		var dn = WH._z6()
+		if dn == null:
+			return
+		var tt := Time.get_ticks_msec() / 1000.0
+		var still: bool = G.motion_off()
+		for ix in 5:
+			var gx: float = float(dn.gx) - 0.4 + (float(dn.fw) + 0.8) * ix / 4.0
+			var gy: float = float(dn.gy) + float(dn.fd) + 0.9
+			var bx: float = farm.en(gx, gy)
+			var by: float = farm.nn(gx, gy)
+			var top := by - 54.0
+			var wv := 0.0 if still else sin(tt * 3.0 + ix) * 3.0
+			draw_line(Vector2(bx, by), Vector2(bx, top), Color("#6a4a2a"), 2.2, true)
+			var pts := PackedVector2Array()
+			var a := Vector2(bx, top + 1.0)
+			for k in 9:   # quadraticCurveTo trên rồi dưới
+				var t := k / 8.0
+				pts.append(a.lerp(Vector2(bx + 9.0, top + wv - 1.0), t).lerp(Vector2(bx + 9.0, top + wv - 1.0).lerp(Vector2(bx + 18.0, top + 2.0 + wv), t), t))
+			var b0 := Vector2(bx + 18.0, top + 12.0 + wv)
+			for k in 9:
+				var t := k / 8.0
+				pts.append(b0.lerp(Vector2(bx + 9.0, top + 10.0 + wv), t).lerp(Vector2(bx + 9.0, top + 10.0 + wv).lerp(Vector2(bx, top + 12.0), t), t))
+			draw_colored_polygon(pts, Color(HDNCO[ix]))
+			pts.append(pts[0])
+			draw_polyline(pts, Color(0, 0, 0, 0.25), 0.8, true)
 	func _draw() -> void:
 		var G = farm.G
 		var f: Font = farm.fnt
+		_hdn_flags(G)
 		_tn_marks(G)
 		# ô chín: 3 sao lấp lánh bay lên (vòng vàng dưới gốc là RipeRing, nằm dưới cây)
 		var tt := Time.get_ticks_msec() / 1000.0

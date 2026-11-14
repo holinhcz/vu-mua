@@ -5,11 +5,14 @@ extends "res://logic/ui_bang.gd"
 
 var UB := {}                # #pov
 var UT := {}                # khối mẫu
+static var NOTE := {}       # span.note ("Đã nhận"), mẫu ở sys_tab.json
 
 func _init(ui) -> void:
 	super(ui)
 	UB = Snap.load_snap("ut")["#pov"][0]
 	UT = Snap.load_snap("ut_tab")
+	if NOTE.is_empty():
+		NOTE = Snap.load_snap("sys_tab").note
 
 func _ls_build(L: Array, cur: String, go: Callable, blocks: Array) -> void:   # tab + thân
 	var n := _cl(UB)
@@ -60,7 +63,8 @@ func _bar(tpl: Dictionary, f: float, x: float, y: float, w: float) -> Dictionary
 	b.kids[0].r[2] = w * clampf(f, 0.0, 1.0)
 	return b
 
-# .lslist: mỗi dòng {b, s, bar (0..1 | null), right: "done" | "fail" | "" | ["lsg", chữ, âm?] | [nút: chữ, chính?, bật, act], me}
+# .lslist: mỗi dòng {b, s, bar (0..1 | null), right: "done" | "fail" | "" | ["lsg", chữ, âm?] | ["note", chữ] | [nút: chữ, chính?, bật, act]
+#   | [[nút], [nút] ...] (nhiều nút), me}
 func _rows(rows: Array) -> Dictionary:
 	var ls := _cl(UT.list)
 	var x := float(ls.r[0])
@@ -75,23 +79,38 @@ func _rows(rows: Array) -> Dictionary:
 		var pl := 4.5
 		var pr := 6.0
 		var rt = R.get("right", "")
-		var rn = null      # nút / dấu / số bên phải
+		var rns := []      # nút / dấu / số bên phải (nhiều nút thì xếp trái sang phải, cách 6)
+		var rws := []
+		var has_btn := false
+		for q in (rt if rt is Array and rt.size() and rt[0] is Array else [rt]):
+			var rn = null
+			var rw := 0.0
+			if q is Array and q[0] == "lsg":
+				rn = _cl(UT.lsg_neg if q[2] else UT.lsg)
+				rw = _tw(rn, String(q[1]))
+				rn.text = q[1]
+			elif q is Array and q[0] == "note":   # span.note: "Đã nhận"
+				rn = _cl(NOTE)
+				rw = _tw(rn, String(q[1]))
+				rn.text = q[1]
+			elif q is Array:
+				rn = _cl(UT.btnp if q[1] and q[2] else UT.btn)
+				rw = _tw(rn, String(q[0])) + _px(rn, "padding-left") + _px(rn, "padding-right") + 2.0
+				rn.text = q[0]
+				_act(rn, q[3], q[2])
+				has_btn = true
+			elif q is String and (q == "done" or q == "fail" or q == "none"):
+				rn = _cl(UT.done if q != "fail" else UT.fail)
+				rw = 22.5
+				if q == "none":
+					rn.text = ""
+			if rn != null:
+				rns.append(rn)
+				rws.append(rw)
 		var rw := 0.0
-		if rt is Array and rt[0] == "lsg":
-			rn = _cl(UT.lsg_neg if rt[2] else UT.lsg)
-			rw = _tw(rn, String(rt[1]))
-			rn.text = rt[1]
-		elif rt is Array:
-			rn = _cl(UT.btnp if rt[1] and rt[2] else UT.btn)
-			rw = _tw(rn, String(rt[0])) + _px(rn, "padding-left") + _px(rn, "padding-right") + 2.0
-			rn.text = rt[0]
-			_act(rn, rt[3], rt[2])
-		elif rt == "done" or rt == "fail" or rt == "none":
-			rn = _cl(UT.done if rt != "fail" else UT.fail)
-			rw = 22.5
-			if rt == "none":
-				rn.text = ""
-		var bw := W0 - pl - pr - ((rw + 6.0) if rn != null else 0.0)
+		for w in rws:
+			rw += float(w) + 6.0
+		var bw := W0 - pl - pr - rw
 		var hb := _put(bb, [_r(String(R.b), _cl(bb))], "left", bw)
 		var ch := hb
 		var kids := [bb]
@@ -106,7 +125,7 @@ func _rows(rows: Array) -> Dictionary:
 			ch += 1.5 + hs
 			kids.append(sm)
 		var h := maxf(33.0, ch + 9.0)
-		if rn is Dictionary and rt is Array and rt[0] != "lsg":
+		if has_btn:
 			h = maxf(h, 36.0)
 		var cy := y + (h - ch) * 0.5
 		_mv(c, x, y)
@@ -126,15 +145,18 @@ func _rows(rows: Array) -> Dictionary:
 		nm.erase("text")
 		nm.erase("tr")
 		var ck := [nm]
-		if rn != null:
+		var rx := x + W0 - pr - rw + 6.0
+		for j in rns.size():
+			var rn: Dictionary = rns[j]
+			var ww: float = rws[j]
 			var rh := float(rn.r[3])
-			var rx := x + W0 - pr - rw
 			_mv(rn, rx, y + (h - rh) * 0.5)
-			rn.r[2] = rw
+			rn.r[2] = ww
 			if rn.has("tr"):
 				var tw := _tw(rn, String(rn.text))
-				rn.tr = [rx + (rw - tw) * 0.5, float(rn.r[1]) + (rh - float(rn.tr[3])) * 0.5, tw, rn.tr[3]]
+				rn.tr = [rx + (ww - tw) * 0.5, float(rn.r[1]) + (rh - float(rn.tr[3])) * 0.5, tw, rn.tr[3]]
 			ck.append(rn)
+			rx += ww + 6.0
 		c.kids = ck
 		out.append(c)
 		y += h + 3.75

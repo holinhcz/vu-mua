@@ -588,6 +588,322 @@ func hdn_start(cu: Dictionary) -> void:   # hdnStart: nhà nào tới dự hội
 		G.g.hc = {}
 	G.g.hc.sp = cu.d
 
+const HDNVIEC := {"cong": ["Dựng cổng chào tre", "Hội đông hơn.", {"cui": 15, "xu": 300}], "co": ["Treo cờ ngũ sắc, kết hoa", "Hội đông hơn.", {"xu": 400}]}
+const HDNTHUONG := [null, [10, 3000], [6, 1600], [3, 800]]
+const HDNHANG := ["", "nhất", "nhì", "ba"]
+const HDNVONG := ["Vòng loại", "Bán kết", "Chung kết"]
+const HDNMON := {"xu": "Xu", "lua": "Lúa", "nhang": "Nhang", "ruou_nep": "Rượu nếp"}
+var HDNT := 0.0
+var hdn_who = null          # chatPick bọc: nhà đang trò chuyện có đi dự hội (thân gấp đôi)
+
+func hdn_big() -> bool:   # hdnBig
+	return int(WL.ut_s().c) >= 3
+
+func hdn_max() -> int:   # hdnMax
+	var c := int(WL.ut_s().c)
+	return 2 if c >= 4 else (1 if c >= 1 else 0)
+
+static func hdn_mon(day: int) -> int:   # hdnMon
+	return int(floor(day / 28.0))
+
+func hdn_scale(q: Dictionary) -> Dictionary:   # hdnScale
+	var out := {}
+	for k in q:
+		out[k] = _rnd(float(q[k]) * WL.WD.tn_mul() / 100.0) * 100 if k == "xu" else q[k]
+	return out
+
+func hdn_why() -> String:   # hdnWhy
+	var o := hdn_s()
+	var c := int(WL.ut_s().c)
+	if c < 1:
+		return "Có chức (Tổ trưởng trở lên) mới đứng ra mở hội."
+	if _z6() == null:
+		return "Làng chưa có đình (khai hoang Sân đình)."
+	if _tr(o.get("cur")):
+		return "Đang lo một hội rồi."
+	var day := hdn_day_pick()
+	if _i(o.m.get(str(hdn_mon(day)))) >= hdn_max():
+		return "Tháng này mở đủ " + str(hdn_max()) + " hội rồi."
+	return ""
+
+func hdn_day_pick() -> int:   # hdnDayPick: 3 ngày sau, né ngày lễ và ngày thiên tai
+	var day := _vr() + 3
+	var tries := 0
+	while tries < 6 and (mm(day) != null or WL.tn_on(day) != null):
+		day += 1
+		tries += 1
+	return day
+
+func hdn_open_hoi() -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	WL.clg_cap("xom", _hdn_open_hoi0)
+
+func _hdn_open_hoi0() -> void:   # hdnOpenHoi
+	var why := hdn_why()
+	if why != "":
+		_ta(why)
+		return
+	var o := hdn_s()
+	var big := hdn_big()
+	var day := hdn_day_pick()
+	var need := hdn_scale({"xu": 3000, "lua": 40, "nhang": 10, "ruou_nep": 4} if big else {"xu": 1500, "lua": 20, "nhang": 5, "ruou_nep": 2})
+	o.cur = {"d": day, "at": _vr(), "big": big, "giai": HDNO.duplicate(), "need": need, "got": {"xu": 0, "lua": 0, "nhang": 0, "ruou_nep": 0},
+		"me": {"xu": 0, "lua": 0, "nhang": 0, "ruou_nep": 0}, "by": {}, "dd": _vr(), "v": {}, "g": {}}
+	var mk := str(hdn_mon(day))
+	o.m[mk] = _i(o.m.get(mk)) + 1
+	_ta("Định mở hội đình " + str(day - _vr()) + " ngày nữa. Bà con bắt đầu góp lễ, mình lo dựng cổng, treo cờ.")
+	_kn()
+	_ba()
+
+func hdn_huy() -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	WL.clg_cap("xom", _hdn_huy0)
+
+func _hdn_huy0() -> void:   # hdnHuy: hoãn hội
+	var o := hdn_s()
+	if not _tr(o.get("cur")) or _vr() >= int(o.cur.d):
+		return
+	WL.ut_add(-10, "Hoãn hội đình")
+	_ta("Hoãn hội, đồ bà con góp coi như mất.")
+	o.erase("cur")
+	_kn()
+	_ba()
+
+func hdn_gop(cu: Dictionary, day: int) -> float:   # hdnGop: dân góp mỗi ngày trong 3 ngày chuẩn bị
+	if day >= int(cu.d) or _eqn(cu.get("dd"), day):
+		return 0.0
+	var F: Dictionary = WL._r0().fam
+	var hs: Array = WL.ut_houses()
+	var n_hs := maxi(5, hs.size())
+	var nd := mini(3, day - int(cu.dd))
+	var tot := 0.0
+	cu.dd = day
+	const WT := [0.0, 0.4, 0.7, 1.0, 1.3, 1.6]
+	for x in nd:
+		for uu in hs:
+			var ff: Dictionary = F[_ks(uu)]
+			var tm := _i(ff.get("tim"))
+			if tm < 1:
+				continue
+			var wt: float = WT[mini(5, tm)]
+			if ff.get("tp") == "sd":
+				wt *= 1.4
+			if ff.get("tp") == "kho":
+				wt *= 1.2 if _n(ff.get("cd")) >= day - 1 else 0.3
+			for r in HDNRES:
+				var k := String(r[0])
+				var left := _n(cu.need[k]) - _n(cu.got[k])
+				var amt := _n(cu.need[k]) * 0.6 / 3.0 * wt / n_hs
+				amt = minf(left, _rnd(amt / 10.0) * 10.0 if k == "xu" else float(WL._ct_rnd(amt)))
+				if amt > 0:
+					cu.got[k] = _n(cu.got[k]) + amt
+					var u := _ks(uu)
+					cu.by[u] = _n(cu.by.get(u)) + amt * (1.0 if k == "xu" else (10.0 if k == "lua" else 20.0))
+					tot += amt * (1.0 if k == "xu" else 10.0)
+	return tot
+
+func hdn_me(cu: Dictionary, k: String) -> int:   # hdnMe: mình còn góp được bao nhiêu
+	return maxi(0, int(minf(_n(cu.need[k]) - _n(cu.got[k]), ceil(_n(cu.need[k]) / 2.0) - _n(cu.me.get(k)))))
+
+func hdn_give(k: String) -> void:   # hdnGive
+	var cu = _hdn_cur()
+	if cu == null or _vr() >= int(cu.d):
+		return
+	var left := hdn_me(cu, k)
+	var amt := 0
+	if left <= 0:
+		_ta("Mình góp đủ nửa phần rồi, nửa kia để bà con góp.")
+		return
+	if k == "xu":
+		amt = mini(left, int(_n(G.g.coins)))
+		G.g.coins = _n(G.g.coins) - amt
+	else:
+		amt = mini(left, _barn(k))
+		G.g.barn[k] = _barn(k) - amt
+	if amt == 0:
+		_ta("Không đủ xu." if k == "xu" else "Kho hết " + String({"lua": "lúa", "nhang": "nhang", "ruou_nep": "rượu nếp"}.get(k, k)) + ".")
+		return
+	cu.got[k] = _n(cu.got[k]) + amt
+	cu.me[k] = _n(cu.me.get(k)) + amt
+	_kn()
+	_ba()
+
+func hdn_viec(k: String) -> void:   # hdnViec: dựng cổng, treo cờ
+	var cu = _hdn_cur()
+	if cu == null or _tr(cu.v.get(k)) or _vr() > int(cu.d):
+		return
+	var V: Array = HDNVIEC[k]
+	var q := hdn_scale(V[2])
+	if not WL.WD.tn_have(q):
+		_ta("Còn thiếu " + WL.WD.tn_miss(q) + ".")
+		return
+	WL.WD.tn_take(q)
+	cu.v[k] = 1
+	WL.ut_add(2, V[0])
+	_ta(String(V[0]) + " xong. " + String(V[1]))
+	_kn()
+	_ba()
+
+func hdn_end(cu: Dictionary) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	WL.clg_cap("xom", _hdn_end0.bind(cu))
+
+func _hdn_end0(cu: Dictionary) -> void:   # hdnEnd: qua ngày hội
+	var o := hdn_s()
+	var F: Dictionary = WL._r0().fam
+	if not _tr(cu.get("att")):
+		hdn_start(cu)
+	var n_att: int = cu.att.size()
+	var ratio := float(n_att) / float(cu.tot) if _n(cu.tot) else 0.0
+	WL.ut_add(20 + _rnd(30 * ratio), "Mở hội đình, " + str(n_att) + "/" + _sa(cu.tot) + " nhà tới dự")
+	for uu in cu.att:
+		if F.has(_ks(uu)):
+			WL.than_add(F[_ks(uu)], 20)
+	var U = WL.ut_s()
+	if _tr(U.get("vx")) and _tr(U.vx.get("t")):
+		for tk in U.vx.t:
+			if not _tr(tk.get("ok")):
+				tk.ok = 1
+				WL.ut_add(10, "Mở hội thay việc: " + String(tk.n))
+				break
+	var gr := {}
+	for id in cu.giai:
+		var gg = cu.g.get(id)
+		gr[id] = gg.rank if gg is Dictionary and gg.get("st") == "xong" else 0
+	o.log.push_front({"d": cu.d, "big": cu.big, "att": n_att, "tot": cu.tot, "g": gr})
+	o.log = o.log.slice(0, 12)
+	o.erase("cur")
+	_ta("Hội đình đã xong: " + str(n_att) + "/" + _sa(cu.tot) + " nhà tới dự. Bà con còn bàn tán mãi.")
+
+func hdn_names(cu: Dictionary, id: String, cnt: int) -> Array:   # hdnNames: tên nhà thi cùng (ngẫu nhiên cố định theo ngày)
+	var F: Dictionary = WL._r0().fam
+	var src: Array = cu.att if _tr(cu.get("att")) and cu.att.size() else WL.ut_houses().map(func(u): return _ks(u))
+	var arr := []
+	for uu in src:
+		if F.has(_ks(uu)):
+			arr.append(String(F[_ks(uu)].n))
+	var rng = WC.yu(int(cu.d) * 7 + HDNO.find(id) * 13 + 1)
+	for x in range(arr.size() - 1, 0, -1):
+		var jx := int(floor(rng.next() * (x + 1)))
+		var tmp = arr[x]
+		arr[x] = arr[jx]
+		arr[jx] = tmp
+	const GEN := ["Chú Ba", "Cô Tư", "Bác Bảy", "Chị Sáu", "Anh Năm"]
+	while arr.size() < cnt:
+		arr.append(GEN[arr.size() % GEN.size()])
+	return arr.slice(0, cnt)
+
+func hdn_g(cu: Dictionary, id: String) -> Dictionary:   # hdnG
+	if not (cu.g.get(id) is Dictionary):
+		cu.g[id] = {"rd": 0, "st": "chua"}
+	return cu.g[id]
+
+func hdn_fin(id: String, rank: int) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	WL.clg_cap("xom", _hdn_fin0.bind(id, rank))
+
+func _hdn_fin0(id: String, rank: int) -> void:   # hdnFin: xong một giải
+	var cu = _hdn_cur()
+	if cu == null:
+		return
+	var gg := hdn_g(cu, id)
+	if gg.st == "xong":
+		return
+	gg.st = "xong"
+	gg.rank = rank if rank >= 1 and rank <= 3 else 0
+	var T = HDNTHUONG[int(gg.rank)]
+	var vd0 := _tr(hdn_s().get("vd"))
+	if T != null:
+		WL.ut_add(T[0], String(HDNG[id]) + ": giải " + HDNHANG[int(gg.rank)])
+		var xu := _v0(T[1])
+		G.g.coins = _n(G.g.coins) + xu
+		if int(gg.rank) == 1:
+			hdn_s().vd = 1
+		_ta(String(HDNG[id]) + ": đoạt giải " + HDNHANG[int(gg.rank)] + "! +" + _sa(xu) + " xu." + (" Mở khóa Khăn đỏ vô địch trong Tủ đồ." if int(gg.rank) == 1 and not vd0 else ""))
+	else:
+		_ta(String(HDNG[id]) + ": chưa vào giải, năm sau gỡ lại.")
+	_kn()
+	_ba()
+
+func hdn_round(id: String, win: bool) -> void:   # hdnRound: đá dế 3 vòng
+	var cu = _hdn_cur()
+	if cu == null:
+		return
+	var gg := hdn_g(cu, id)
+	if gg.st != "dang":
+		return
+	if win:
+		gg.rd = _i(gg.rd) + 1
+		if int(gg.rd) >= 3:
+			hdn_fin(id, 1)
+			return
+		gg.st = "chua"
+		_ta(String(HDNG[id]) + ": thắng vòng " + str(int(gg.rd)) + ", vô " + ("chung kết" if int(gg.rd) == 2 else "bán kết") + ".")
+		_ba()
+		return
+	hdn_fin(id, [0, 3, 2][int(gg.rd)])
+
+func hdn_de_lv(rd: int) -> int:   # hdnDeOpp(...).team[0][1]: cấp dế đối thủ (dzHoiLv chưa có thì 1)
+	var f := _x("dzHoiLv")
+	var b := float(f.call()) if f.is_valid() else 1.0
+	return maxi(1, _rnd(b + rd - 1))
+
+func hdn_play(id: String) -> void:   # hdnPlay: đá dế (dzHoi), đố vui (sO) là mini game, chưa có thì báo
+	var cu = _hdn_cur()
+	if cu == null or _vr() != int(cu.d):
+		_ta("Tới ngày hội mới vào thi.")
+		return
+	var gg := hdn_g(cu, id)
+	if gg.st == "xong":
+		return
+	var f := _x("hdn_play")
+	if f.is_valid():
+		f.call(id, cu, gg)
+	else:
+		_ta("Sắp có")
+
+func hdn_red() -> int:   # hdnRed
+	var cu = _hdn_cur()
+	if cu != null:
+		if _vr() == int(cu.d):
+			for id in cu.giai:
+				var gg = cu.g.get(id)
+				if not (gg is Dictionary) or gg.get("st") != "xong":
+					return 1
+		return 0
+	return 0 if hdn_why() != "" else 1
+
+func hdn_bk_sub() -> String:   # hdnBkSub
+	var cu = hdn_s().get("cur")
+	if _tr(cu):
+		var left := int(cu.d) - _vr()
+		return "Hội còn " + str(left) + " ngày" if left > 0 else "Hôm nay mở hội"
+	return "Chưa mở được" if hdn_why() != "" else "Mở được hội"
+
+func hdn_tick(dt: float) -> void:   # hdnTick: mỗi 2 giây
+	HDNT -= dt
+	if HDNT > 0:
+		return
+	HDNT = 2.0
+	if _cr():
+		return
+	var o := hdn_s()
+	var cu = o.get("cur")
+	var day := _vr()
+	var ch := false
+	if _tr(cu):
+		if day < int(cu.d):
+			var tot := hdn_gop(cu, day)
+			if tot > 0:
+				ch = true
+				_ta("Bà con góp lễ cho hội đình thêm khoảng " + _sa(_rnd(tot)) + " xu tiền của.")
+		elif day == int(cu.d) and not _tr(cu.get("att")):
+			hdn_start(cu)
+			ch = true
+			_ta("Hôm nay hội đình! " + str(cu.att.size()) + " nhà tới dự. Ra sân đình vào thi.")
+		elif day > int(cu.d):
+			hdn_end(cu)
+			ch = true
+	if ch:
+		_kn()
+		_ba()
+
 func fm() -> Dictionary:   # Fm: g.hc (hội chợ sân đình)
 	var t = G.g.get("hc")
 	if not _tr(t) or not (t is Dictionary):
@@ -1149,5 +1465,6 @@ func step(t: float, offline: bool) -> void:   # htx, hui, yQ (trong wK), hayday;
 		return
 	hayday_step(t)
 	htx_step(t)
+	hdn_tick(t)
 	hui_step(t)
 	y_q(t)

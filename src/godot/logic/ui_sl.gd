@@ -56,7 +56,7 @@ func _links() -> Array:   # [[tên nhóm, lớp, [[khóa, tên, hình, dòng ph�
 			["hui", "Hụi làng", "hui", W.hui_bk_sub(), 0],
 			["ut", "Uy tín làng", "uytin", W.ut_bk_sub(), W.ut_red()],
 			["tn", "Thiên tai, hoạn nạn", "thientai", W.tn_bk_sub(), W.tn_red()],
-			["hdn", "Hội đình", "hoidinh", W.hdn_bk_sub(), 0]]],
+			["hdn", "Hội đình", "hoidinh", W.hdn_bk_sub(), W.WH.hdn_red() if W.WH != null else 0]]],
 		["Tin tức trong làng", "tt", [["st", "Chuyện làng", "chuyen", W.clg_bk_sub(), W.clg_red()],
 			["gd", "Sổ tay", "sotay", "Cách chơi, mẹo hay", 0],
 			["rk", "Xếp hạng", "hang", "Bảng tuần này", 0]]],
@@ -231,6 +231,10 @@ func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
 			U.gd_open()
 		"rk":
 			U.rk_open()
+		"hdn":
+			U.hdn_open()
+		"st":
+			U.clg_open()
 		_:
 			U.say(SOON)
 

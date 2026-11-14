@@ -386,7 +386,10 @@ func tn_pick(kind: String, cnt: int) -> Array:   # tnPick
 		pool.remove_at(x)
 	return out
 
-func tn_lo_end() -> void:   # tnLoEnd
+func tn_lo_end() -> void:   # (bọc clgCap "tt": câu báo chép vào Chuyện làng)
+	WL.clg_cap("tt", _tn_lo_end0)
+
+func _tn_lo_end0() -> void:   # tnLoEnd
 	var o: Dictionary = WL.tn_s()
 	var lo = o.get("lo")
 	if not _tr(lo):
@@ -398,7 +401,10 @@ func tn_lo_end() -> void:   # tnLoEnd
 		WL.ut_add(-15, "Bỏ mặc bà con sau " + nm)
 	o.erase("lo")
 
-func tn_hit(ev: Dictionary, late: bool) -> void:   # tnHit
+func tn_hit(ev: Dictionary, late: bool) -> void:   # (bọc clgCap "tt": câu báo chép vào Chuyện làng)
+	WL.clg_cap("tt", _tn_hit0.bind(ev, late))
+
+func _tn_hit0(ev: Dictionary, late: bool) -> void:   # tnHit
 	var o: Dictionary = WL.tn_s()
 	var pr: Dictionary = o.p if (_num(o.p.get("d")) and _num(ev.get("d")) and int(o.p.d) == int(ev.d)) else {}
 	var kind := String(ev.k)

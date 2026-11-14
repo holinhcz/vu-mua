@@ -121,6 +121,8 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var order := []
 	for pe in ["::before", "::after"]:
 		if n.has(pe) and not (pe == "::before" and not icon.is_empty()):
+			if c.get("display", "") == "flex" and c.get("flex-direction", "row") == "row":
+				n[pe]["_flexrow"] = true
 			var pb = _pseudo(b, n[pe], R, z, pe)
 			if pb != null:
 				order.append([_zi(n[pe].get("pos", "static"), String(n[pe].get("zi", "auto"))), -1 if pe == "::before" else 100000, pb])
@@ -311,7 +313,13 @@ static func _pseudo(b: Control, p: Dictionary, R: Array, z: float, which: String
 		return null
 	var pos: String = p.get("pos", "static")
 	if pos == "static" and s == "":
-		return null
+		# đường kẻ sau tiêu đề trong hàng flex (h3::after của .sysx, ...): nằm sát mép phải, giữa theo chiều dọc
+		var lh := _plen(p.get("h", "auto"), z)
+		if which != "::after" or not p.get("_flexrow", false) or lh <= 0.0 or lh > 3.0 * z or _plen(p.get("w", "auto"), z) <= 0.0:
+			return null
+		p = p.duplicate()
+		p.right = "0px"
+		p.top = str((H - lh) * 0.5 / z) + "px"
 	var fs := Css.px(p.get("fs", "12px")) * z
 	var fw := int(p.get("fw", "700"))
 	var tw: float = Box.text_w(s, fs, fw) if s != "" else 0.0

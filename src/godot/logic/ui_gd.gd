@@ -142,4 +142,4 @@ func _tip() -> void:   # data-gd="tip"
 	G.mark()
 
 func _clg() -> void:   # data-gd="st": Chuyện làng
-	U.say(U.SOON)
+	U.clg_open()

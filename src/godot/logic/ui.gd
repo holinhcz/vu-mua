@@ -40,11 +40,15 @@ var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
 var huip = null              # bảng HỤI LÀNG (ui_hui.gd)
 var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
 var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
+var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
+var clgp = null              # bảng CHUYỆN LÀNG (ui_clg.gd)
+var sysp = null              # bảng HỆ THỐNG (ui_sys.gd)
 var klp = null               # bảng KỶ LỤC (ui_kl.gd)
 var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
 var gdp = null               # SỔ TAY (ui_gd.gd)
 var rkp = null               # BẢNG XẾP HẠNG (ui_rk.gd)
 var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
+var sys_bdg: Control = null  # số việc chờ trên nút Hệ Thống (#sysBdg: htRed)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
@@ -434,6 +438,9 @@ func _build_dock() -> void:
 			elif lab.contains("Sổ làng"):
 				_click(b, func(): dock_open(false); sl_open(), "scale94")
 				sl_bdg = _bdg_make(d, b)
+			elif lab.contains("Hệ Thống"):
+				_click(b, func(): dock_open(false); sys_open(), "scale94")
+				sys_bdg = _bdg_make(d, b)
 			else:
 				_click(b, func(): say(SOON), "scale94")
 
@@ -473,6 +480,7 @@ func _ng_bdg() -> void:   # ngBdg, lV
 		return
 	_bdg_set(ng_bdg, G.w_all.WL.ng_red())
 	_bdg_set(sl_bdg, G.w_all.WCA.lv_red())
+	_bdg_set(sys_bdg, G.w_all.WS.htRed())
 
 func _buttons(b: Control, out: Array) -> Array:
 	# theo thứ tự trong trang (Snap.build xếp con theo z-index để vẽ: nút "on" bị đẩy xuống cuối)
@@ -1508,7 +1516,7 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
-	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
+	for p in _pans():
 		if p != null:
 			p.close()
 	if vlp != null:
@@ -2992,6 +3000,31 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	kho_close()
 	rkp.open()
 
+func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
+	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, klp, klcp, gdp, rkp]
+
+func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
+	if get(v) == null:
+		set(v, load(path).callv("new", [self] + args))
+	close_all()
+	kho_close()
+	return get(v)
+
+func hdn_open(t := "") -> void:   # hdnOpen: Sổ làng › Hội đình
+	if G.w_all == null:
+		return
+	_pan_open("hdnp", "res://logic/ui_hdn.gd", [G.w_all.WH]).open(t)
+
+func sys_open(t := "") -> void:   # gu("sys"): Menu › Hệ Thống
+	if G.w_all == null:
+		return
+	_pan_open("sysp", "res://logic/ui_sys.gd", [G.w_all.WS]).open(t)
+
+func clg_open(t := "") -> void:   # clgOpen: Sổ làng › Chuyện làng
+	if G.w_all == null:
+		return
+	_pan_open("clgp", "res://logic/ui_clg.gd", [G.w_all.WL]).open(t)
+
 func tn_open(t := "") -> void:   # tnOpen: Sổ làng › Thiên tai, hoạn nạn
 	if G.w_all == null:
 		return
@@ -3029,7 +3062,7 @@ func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	hrp.open()
 
 func close_all() -> void:
-	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
+	for p in _pans():
 		if p != null and p.on:
 			p.close()
 	if ngp != null and ngp.on:
@@ -3107,7 +3140,7 @@ func _process(dt: float) -> void:
 		vlp.step(dt)
 	if ngp != null:
 		ngp.step(dt)
-	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
+	for p in _pans():
 		if p != null:
 			p.step(dt)
 	_ng_bdg()
@@ -3175,7 +3208,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or (huip != null and huip.on) or (gpp != null and gpp.on) or (tnp != null and tnp.on) or (klp != null and klp.on) or (klcp != null and klcp.on) or (gdp != null and gdp.on) or (rkp != null and rkp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or _pans().any(func(p): return p != null and p.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -3190,7 +3223,7 @@ func _input(e: InputEvent) -> void:
 		vlp.input(e)
 	if ngp != null:
 		ngp.input(e)
-	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
+	for p in _pans():
 		if p != null:
 			p.input(e)
 	if xfp != null:

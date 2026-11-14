@@ -56,6 +56,7 @@ func _init(game) -> void:
 	WL.WD = WD             # rT: việc vườn / chuồng còn làm được
 	WD.ext["ac_del"] = func(u) -> void: WL.ac.erase(WL._ks(u))   # tnHit: nhà gặp nạn thì người đang đi làm về
 	WH.WL = WL
+	WL.WH = WH
 	WH.WC = WC
 	WH.WS = WS
 	WH.WX = WX
@@ -311,22 +312,30 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	WHU.pill_sync(pills)
 	_ray_pill()
 	_tn_pill()
+	_hdn_pill()
 
-var tpill: Control = null   # TNPILL: "Đêm nay bão lớn về · phòng chống" / "N nhà gặp nạn · giúp bà con"
-func _tn_pill() -> void:   # tnPill
-	var tx: Array = WD.tn_pill_txt()
-	var show: bool = not tx.is_empty() and (U.bdp == null or String(U.bdp.mode) == "off")
+var pl := {}   # nút viên theo khóa: tn (TNPILL), hdn (HDNPILL)
+func _pill_put(k: String, tx, cb: Callable) -> void:   # tx: [chữ, gấp?] hoặc rỗng = ẩn (ẩn cả lúc đang xây)
+	var show: bool = tx is Array and not tx.is_empty() and (U.bdp == null or String(U.bdp.mode) == "off")
+	var p = pl.get(k)
 	if not show:
-		if tpill != null:
-			tpill.visible = false
+		if p != null:
+			p.visible = false
 		return
-	if tpill == null:
-		tpill = PILL.new(U)
-		tpill.pressed.connect(func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"))
-		pills.add_child(tpill)
-	tpill.visible = true
-	tpill.text = String(tx[0])
-	tpill.hurry = bool(tx[1])
+	if p == null:
+		p = PILL.new(U)
+		p.pressed.connect(cb)
+		pills.add_child(p)
+		pl[k] = p
+	p.visible = true
+	p.text = String(tx[0])
+	p.hurry = bool(tx[1])
+
+func _tn_pill() -> void:   # tnPill: "Đêm nay bão lớn về · phòng chống" / "N nhà gặp nạn · giúp bà con"
+	_pill_put("tn", WD.tn_pill_txt(), func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"))
+
+func _hdn_pill() -> void:   # hdnPill: "Hội đình còn N ngày · chuẩn bị" / "Hôm nay hội đình · vào thi"
+	_pill_put("hdn", WH.hdn_pill_txt(), func() -> void: U.hdn_open("giai" if WH.hdn_today() else "mo"))
 
 var rpill: Control = null   # Lg: nút viên "Rầy nâu: N ô · phun thuốc"
 func _ray_pill() -> void:   # l_

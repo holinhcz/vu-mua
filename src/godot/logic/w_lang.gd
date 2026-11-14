@@ -453,6 +453,8 @@ func htv(id: String) -> float:   # htv
 	return 0.0
 
 func than_add(f: Dictionary, v: float, flo := 0.0) -> int:   # thanAdd
+	if _hdn_who != null and v > 0 and _r0().fam.get(_ks(_hdn_who)) == f:
+		v *= 2.0
 	than_sync(f)
 	var T := tinh_of(f)
 	var t0 := int(f.tim)
@@ -746,7 +748,10 @@ func vl_ten(u, f: Dictionary) -> String:   # vlTen
 			return x + " " + th + " " + tn
 	return x + " " + (w[1] if old else String(THUT[uu % THUT.size()])) + " " + String(L[uu % L.size()]) + " " + str(2 + uu % 8)
 
-func gp_wedding() -> void:   # gpWedding
+func gp_wedding() -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _gp_wedding0)
+
+func _gp_wedding0() -> void:   # gpWedding
 	var L = _lang()
 	if L == null or not _tr(L.get("fam")):
 		return
@@ -1066,7 +1071,14 @@ func hn_le_take(u, f: Dictionary) -> void:   # hnLeTake
 			G.g.barn[String(id)] = _barn(id) - q
 			return
 
-func ng_learned(b: String, u) -> void:   # ngLearned
+func ng_learned(b: String, u) -> void:   # ngLearned (bọc: ghi Chuyện làng "Học xong nghề …")
+	_ng_learned0(b, u)
+	var x = nghe_by_id(b)
+	var f = _r0().fam.get(_ks(u))
+	if x != null:
+		clg_add("nha", "Học xong nghề " + String(x.n).to_lower() + (" ở nhà " + String(f.n) if f != null else "") + ".")
+
+func _ng_learned0(b: String, u) -> void:
 	var o := ng_s()
 	o.thay[b] = int(float(_ks(u)))
 	o.hd = _vr()
@@ -1666,7 +1678,10 @@ func ut_xu_txt(x: Dictionary, s: String) -> String:   # utXuTxt
 	var fb = F.get(_ks(x.b))
 	return s.replace("{A}", String(fa.n) if fa != null else "nhà kia").replace("{B}", String(fb.n) if fb != null else "nhà kia")
 
-func ut_xu_pick(j: int) -> void:   # utXuPick
+func ut_xu_pick(j: int) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ut_xu_pick0.bind(j))
+
+func _ut_xu_pick0(j: int) -> void:   # utXuPick
 	var o := ut_s()
 	var t = ut_task("xu")
 	var x = o.vx.get("xu") if o.get("vx") is Dictionary else null
@@ -1696,7 +1711,10 @@ func ut_xu_pick(j: int) -> void:   # utXuPick
 		ut_done(t)
 	_ba()
 
-func ut_bau() -> void:   # utBau: họp bầu (Tổ trưởng: 5 nhà trong tổ; Trưởng xóm, ấp: cả làng; Hương cả: làng mời)
+func ut_bau() -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ut_bau0)
+
+func _ut_bau0() -> void:   # utBau: họp bầu (Tổ trưởng: 5 nhà trong tổ; Trưởng xóm, ấp: cả làng; Hương cả: làng mời)
 	var o := ut_s()
 	var c := int(o.c) + 1
 	if c > 4:
@@ -1805,7 +1823,10 @@ func ct_can_start(b: String) -> String:   # ctCanStart
 		return "Đang góp xây " + str(CTMAX) + " công trình, xong bớt một cái mới kêu gọi tiếp."
 	return ""
 
-func ct_start(b: String) -> void:   # ctStart
+func ct_start(b: String) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ct_start0.bind(b))
+
+func _ct_start0(b: String) -> void:   # ctStart
 	var why := ct_can_start(b)
 	if why != "":
 		_ta(why)
@@ -1901,7 +1922,10 @@ func ct_give(i: int, res: String) -> void:   # ctGive
 	ut_add(1, "Góp xây công trình chung")
 	_ba()
 
-func ct_go(i: int) -> void:   # ctGo: khởi công
+func ct_go(i: int) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ct_go0.bind(i))
+
+func _ct_go0(i: int) -> void:   # ctGo: khởi công
 	var ds: Array = ct_s().ds
 	if i < 0 or i >= ds.size() or ds[i].st != "gop":
 		return
@@ -1914,7 +1938,10 @@ func ct_go(i: int) -> void:   # ctGo: khởi công
 	_ta("Khởi công " + String(_pi()[c.id].n).to_lower() + "! " + str(CTGIO[int(CTB[c.id])]) + " tiếng nữa khánh thành.")
 	_ba()
 
-func ct_quit(i: int) -> void:   # ctQuit
+func ct_quit(i: int) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ct_quit0.bind(i))
+
+func _ct_quit0(i: int) -> void:   # ctQuit
 	var o := ct_s()
 	if i < 0 or i >= o.ds.size():
 		return
@@ -1924,7 +1951,10 @@ func ct_quit(i: int) -> void:   # ctQuit
 	o.ds.remove_at(i)
 	_ba()
 
-func _ct_done(c: Dictionary) -> void:   # ctDone: khánh thành
+func _ct_done(c: Dictionary) -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _ct_done0.bind(c))
+
+func _ct_done0(c: Dictionary) -> void:   # ctDone: khánh thành
 	var o := ct_s()
 	var F: Dictionary = _r0().fam
 	var b: String = c.id
@@ -2089,6 +2119,60 @@ func clg_bk_sub() -> String:   # clgBkSub
 			a += 1
 	return str(n) + " chuyện mới" if n else (str(a) + " chuyện chờ bạn" if a else "Chuyện mới trong làng")
 
+
+func clg_act_lb(r: Dictionary) -> String:   # chữ nút việc xen vào ("" = không có / hết hạn)
+	if not _tr(r.get("a")) or _tr(r.get("x")) or int(r.d) != _vr():
+		return ""
+	var i := int(r.a.i)
+	var a = CLGT[i].get("a") if i < CLGT.size() else null
+	if not (a is Dictionary):
+		return ""
+	var it = a.get("it")
+	return String(a.l) + (" · " + _sa(a.xu) + " xu" if _tr(a.get("xu")) else (" · " + _sv(it[1]) + " " + String(_ae(it[0]).name).to_lower() if it is Array and not _ae(it[0]).is_empty() else ""))
+
+func clg_act(q: int) -> void:   # clgAct: việc xen vào
+	var o := clg_s()
+	var r = null
+	for x in o.l:
+		if int(x.q) == q:
+			r = x
+			break
+	if r == null or not _tr(r.get("a")) or _tr(r.get("x")):
+		return
+	if int(r.d) != _vr():
+		_ta("Chuyện qua rồi, không xen vào được nữa.")
+		return
+	var i := int(r.a.i)
+	var a = CLGT[i].get("a") if i < CLGT.size() else null
+	if not (a is Dictionary):
+		return
+	var F: Dictionary = _r0().fam
+	var fa = F.get(_ks(r.a.u))
+	var fb = F.get(_ks(r.a.v)) if _tr(r.a.get("v")) else null
+	if _tr(a.get("xu")) and _n(G.g.coins) < _n(a.xu):
+		_ta("Cần " + _sa(a.xu) + " xu.")
+		return
+	if a.get("it") is Array:
+		var it := String(a.it[0])
+		var q2 := int(a.it[1])
+		if _ae(it).is_empty() or int(G.g.barn.get(it, 0)) < q2:
+			_ta("Cần " + str(q2) + " " + (String(_ae(it).name).to_lower() if not _ae(it).is_empty() else it) + " trong kho.")
+			return
+		G.g.barn[it] = int(G.g.barn[it]) - q2
+	if _tr(a.get("xu")):
+		G.g.coins = _n(G.g.coins) - _n(a.xu)
+	var tx := ""
+	if fa != null and _tr(a.get("th")):
+		tx += than_txt(than_add(fa, float(a.th)))
+	if fb != null and _tr(a.get("tb")):
+		tx += than_txt(than_add(fb, float(a.tb)))
+	if _tr(a.get("ut")):
+		ut_add(float(a.ut), "Lo chuyện xóm")
+	r.x = 1
+	r.r = _clg_fill(String(a.m), r.a.u, r.a.get("v"))
+	_ta(String(r.r) + tx)
+	_ba()
+
 func gp_bk_sub() -> String:   # gpBkSub
 	var L = G.g.get("lang")
 	var n: int = L.fam.size() if L is Dictionary and L.get("fam") is Dictionary else 0
@@ -2101,13 +2185,8 @@ func hui_bk_sub() -> String:
 		return "Đang chơi · kỳ " + str(k) + "/" + str(_D)
 	return "Chưa tham gia"
 
-func hdn_bk_sub() -> String:   # hdnBkSub (mở hội: chờ bảng Hội đình)
-	var o = G.g.get("hdn")
-	var cu = o.get("cur") if o is Dictionary else null
-	if cu is Dictionary:
-		var left := int(cu.d) - _vr()
-		return "Hội còn " + str(left) + " ngày" if left > 0 else "Hôm nay mở hội"
-	return "Chưa mở được"
+func hdn_bk_sub() -> String:   # hdnBkSub
+	return WH.hdn_bk_sub() if WH != null else "Chưa mở được"
 
 func kl_bk_sub() -> String:   # klBkSub
 	var k = G.g.get("kl")
@@ -2147,6 +2226,15 @@ func clg_s() -> Dictionary:   # clgS: g.clg
 	if not _num(o.get("lv")):
 		o.lv = _jr()
 	return o
+
+func clg_cap(k: String, f: Callable) -> void:   # clgCap: câu báo (G.toast) phát ra trong lúc f chạy thì chép vào sổ
+	var got := []
+	var cb := func(m): got.append(m)
+	G.toast.connect(cb)
+	f.call()
+	G.toast.disconnect(cb)
+	for m in got:
+		clg_add(k, m)
 
 func clg_add(k: String, t, a = null) -> Variant:   # clgAdd
 	if not _tr(t):
@@ -2318,7 +2406,10 @@ func sg() -> Variant:   # Sg: đám đang đãi
 	var a := zm()
 	return t if a >= _n(t.t0) and a < _n(t.t1) else null
 
-func bk(u0 = null, k0 := "") -> void:   # bk: thiệp mời đám
+func bk(u0 = null, k0 := "") -> void:   # (bọc clgCap "xom": câu báo chép vào Chuyện làng)
+	clg_cap("xom", _bk0.bind(u0, k0))
+
+func _bk0(u0 = null, k0 := "") -> void:   # bk: thiệp mời đám
 	if _qf("dam"):   # bk bọc: if (!qf("dam"))
 		return
 	var t := tg()
@@ -3242,7 +3333,14 @@ func chat_start(u) -> Variant:   # chatStart -> cv (null = không nói được)
 	var t: Dictionary = THOAI[ti]
 	return {"u": int(float(_ks(u))), "inv": inv, "t": ti, "st": 1, "sum": 0, "node": t.r, "lines": [["n", xung(f, String(t.mo))]], "opts": chat_opts(t.r, f), "out": null}
 
-func chat_pick(c: Dictionary, i: int) -> bool:   # chatPick; true = xong cuộc trò chuyện
+func chat_pick(c: Dictionary, i: int) -> bool:   # chatPick (bọc hội đình: nhà đi dự hội thì thân gấp đôi)
+	_hdn_who = c.u if WH != null and WH.hdn_att(c.u) else null
+	var r := _chat_pick0(c, i)
+	_hdn_who = null
+	return r
+
+var _hdn_who = null
+func _chat_pick0(c: Dictionary, i: int) -> bool:   # chatPick gốc; true = xong cuộc trò chuyện
 	var f = _fam_of(c.u)
 	if f == null:
 		return true
@@ -3520,6 +3618,7 @@ func b_i(t) -> void:   # bI: gửi đi học nghề
 # ------------------------------------------------------------------ người làm thuê đi làm trên làng (ac, qD, zD, iT, XM, t4, Zq, _D, xx, Ax, Wb, AD)
 # ac[u] = {u, x, y, tx, ty, st (0 rảnh, 1 đi, 2 làm), t, t2, task, ph, face, carry, ct, job}; farm.gd vẽ theo ac
 var WD = null              # w_duong.gd (bộ ráp gán): rT
+var WH = null              # w_htx.gd (bộ ráp gán): hội đình (hdn_att khi trò chuyện)
 var ac := {}
 var jb := 0                # có việc vừa xong: lưu
 var _ym := 0.0
@@ -3941,7 +4040,10 @@ func ng_don_ok(d: Dictionary) -> bool:   # ngDonOk
 func ng_red() -> int:   # ngRed: số đơn giao được (chấm trên nút Nghề)
 	return ng_d().l.filter(func(d): return ng_don_ok(d)).size() if ng_on() else 0
 
-func ng_giao(id: String) -> void:   # ngGiao
+func ng_giao(id: String) -> void:   # (bọc clgCap "buon": câu báo chép vào Chuyện làng)
+	clg_cap("buon", _ng_giao0.bind(id))
+
+func _ng_giao0(id: String) -> void:   # ngGiao
 	var o := ng_d()
 	var d = null
 	for x in o.l:
@@ -4031,7 +4133,10 @@ func tk(id: String) -> void:   # Tk: nhân vật về nhà làm một món ngh�
 	F.ext_job("nghe", Vector2(6.25, 4.35), float(ng_dur(gx)), run)   # _T(): góc nhà
 	_ta("Nhân vật về nhà " + String(gx.n).to_lower() + ".")
 
-func ng_thi(b: String) -> void:   # ngThi: thi lên sao với thầy
+func ng_thi(b: String) -> void:   # (bọc clgCap "nha": câu báo chép vào Chuyện làng)
+	clg_cap("nha", _ng_thi0.bind(b))
+
+func _ng_thi0(b: String) -> void:   # ngThi: thi lên sao với thầy
 	var s := ng_sao(b)
 	var t := s + 1
 	var T = NGTHI[t] if t < NGTHI.size() else null
