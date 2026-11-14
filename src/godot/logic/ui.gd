@@ -1703,7 +1703,19 @@ func _kho_sync() -> void:
 		khp.sync_panel(ids, tot_n, G.kho_cap())
 	var wb = ids.get(".khworth2")
 	if wb != null:
-		_txt(_q(wb, "", "b"), G.fmt_n(worth))
+		var wbb := _q(wb, "", "b")
+		_txt(wbb, G.fmt_n(worth))
+		if wbb != null and not wbb.texts.is_empty():   # <b> co theo số, đồng xu nằm ngay sau (số lớn không đè lên xu)
+			var t0: Dictionary = wbb.texts[0]
+			var tw: float = Box.text_w(t0.s, t0.size, t0.w)
+			var xi := _q(wb, "xui")
+			var gap: float = (xi.r.position.x - wbb.r.end.x) if xi != null and not wbb.has_meta("wgap") else float(wbb.get_meta("wgap", 6.5))
+			wbb.set_meta("wgap", gap)
+			wbb.place(Rect2(wbb.r.position, Vector2(tw + 1.0, wbb.r.size.y)))
+			t0.rect = Rect2(t0.rect.position, Vector2(tw + 1.0, t0.rect.size.y))
+			wbb.redraw()
+			if xi != null:
+				_move(xi, Vector2(wbb.r.end.x + gap, xi.r.position.y))
 	# lưới món
 	for g0 in [kho_ids[0].get(".khgrid"), kho_ids[3].get(".khgrid")]:
 		for k in g0.kids():
