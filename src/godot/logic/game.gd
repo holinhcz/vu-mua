@@ -1265,13 +1265,16 @@ const DJ_PLOT := {"m": ["rom", "phan", "voi"], "xu": [0, 0, 50, 150, 400, 1200, 
 const HJ := [0, 0, 3, 7, 12, 25, 40]
 const NS_FEE := [0, 0, 2, 3, 4, 6, 10]   # n$
 
-func up_need(a: int, n := 1) -> Dictionary:   # hl("plot", a, n)
-	var r: Array = DJ_PLOT.q[a]
+const DJ_PEN := {"m": ["tre", "la", "may"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 0], [3, 2, 1], [4, 3, 2], [6, 6, 5], [10, 10, 8]]}
+
+func up_need(a: int, n := 1, kind := "plot") -> Dictionary:   # hl(kind, a, n): ô ruộng / chuồng
+	var D2: Dictionary = DJ_PEN if kind == "pen" else DJ_PLOT
+	var r: Array = D2.q[a]
 	var m := []
 	for l in 3:
 		if int(r[l]) * n > 0:
-			m.append([DJ_PLOT.m[l], int(r[l]) * n])
-	return {"xu": int(DJ_PLOT.xu[a]) * n, "m": m, "lv": HJ[a]}
+			m.append([D2.m[l], int(r[l]) * n])
+	return {"xu": int(D2.xu[a]) * n, "m": m, "lv": HJ[a]}
 
 func k4(t: int) -> Array:   # K4: các ô đã mở đang t sao
 	var a := []
@@ -1301,6 +1304,25 @@ func us_plot(a: int) -> String:   # Us("plot", a)
 	if a <= 1:
 		return "Giữ nước " + ao(float(D.y7[1])) + ", chưa tăng tốc"
 	return "Cây lớn nhanh +" + str(4 * (a - 1)) + "% · giữ nước " + ao(float(D.y7[a]))
+
+static func us_pen(a: int) -> String:   # Us("pen", a)
+	if a <= 1:
+		return "Chưa nâng"
+	return "Ra hàng nhanh +" + str(6 * (a - 1)) + "%" + (" · 25% lần cho ăn không tốn đồ ăn" if a >= 4 else "")
+
+func pen_up(t: String) -> bool:   # lf("pen", t)
+	if vn == null:
+		return false
+	var n: int = vn.ps(t)
+	if n >= 6:
+		return false
+	if not _pay(up_need(n + 1, 1, "pen")):
+		return false
+	g.penst[t] = n + 1
+	toast.emit(String(lang.CO.get(t, "Chuồng")) + " lên " + str(n) + "★: " + us_pen(n + 1) + ".")
+	vib(15)
+	mark()
+	return true
 
 static func stars5(t: int) -> String:   # $h
 	var a := ""

@@ -793,7 +793,7 @@ func _wh(key: String, rid: String) -> void:   # Wh "make": nhân vật đi tới
 	sig = ""
 
 # ------------------------------------------------------------------ hộp hỏi "Tốn N sen" (dd)
-func _ask(at, cost: int, title: String, sub: String, cb: Callable) -> void:
+func _ask(at, cost: int, title: String, sub: String, cb: Callable, coin := false) -> void:   # coin: giá bằng xu (không phải sen)
 	_ask_close()
 	var tp: Dictionary = T.ask if sub != "" else T.ask2
 	if tp.is_empty():
@@ -802,7 +802,9 @@ func _ask(at, cost: int, title: String, sub: String, cb: Callable) -> void:
 		cb.call()
 		return
 	var n: Dictionary = tp.duplicate(true)
-	var ax = _ask_lay(n, title, sub, str(cost))
+	var ax = _ask_lay(n, title, sub, G.fmt_n(cost) if coin else str(cost))
+	if coin:
+		_ask_coin(n)
 	var ids := {}
 	var o := Vector2(float(n.r[0]), float(n.r[1]))
 	ask = U._build(n, ids, o)
@@ -882,6 +884,12 @@ static func _ask_lay(n: Dictionary, title: String, sub: String, cost: String):
 					q.tr = [nx, q.tr[1], qw, q.tr[3]]
 	n.erase("::after")
 	return dw
+
+static func _ask_coin(n: Dictionary) -> void:   # hình giá: đồng xu thay sen đỏ
+	if n.get("tag", "") == "img":
+		n.src = "xui"
+	for k in n.get("kids", []):
+		_ask_coin(k)
 
 func _ask_close() -> void:
 	if ask != null and is_instance_valid(ask):

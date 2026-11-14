@@ -118,7 +118,7 @@ func _test_hook() -> void:
 				G.mark()
 				farm.lang.changed()
 			"vninfo":
-				var I := {"an": farm.anodes.keys(), "open": ui.vnp.is_open(), "sig": ui.vnp.sig != "", "b": ui.vnp.b != null, "barn": G.g.barn, "pens": G.g.pens.ga, "acts": ui.vnp.acts.map(func(x): return x.get("t", "slot"))}
+				var I := {"an": farm.anodes.keys(), "open": ui.rm_v, "st": ui.rv._st, "g": ui.rm_g.visible, "r": ui.rm_r.visible, "coins": G.g.coins, "barn": G.g.barn, "pens": G.g.pens.ga, "penst": G.g.get("penst", {})}
 				I["zoom"] = ui.main.zoom
 				I["K"] = ui.Css.K
 				for k in farm.anodes:
@@ -132,8 +132,8 @@ func _test_hook() -> void:
 				var nd = farm.anodes.get(a[1] + ":" + a[2])
 				if nd != null:
 					farm.tap(farm.world_to_screen(nd.bub_at()))
-			"vnbtn":   # vnbtn:i: bấm nút thứ i của bảng con vật
-				ui.vnp._do(ui.vnp.acts[int(a[1])].cb)
+			"vnbtn":   # vnbtn:k: bấm nút k của vòng nút con vật / chuồng (fast, star, water, harvest, chip)
+				ui._rm_do(a[1])
 			"vnopen": ui.vn_open({"t": a[1], "j": int(a[2])}, farm.anodes[a[1] + ":0"].foot() if farm.anodes.has(a[1] + ":0") else Vector2.ZERO)
 			"cam":   # cam:gx:gy: đưa camera tới ô
 				ui.main.zoom = 2.0 * ui.Css.K

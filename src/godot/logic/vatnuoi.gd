@@ -207,16 +207,6 @@ func vet(t: String, j: int) -> bool:   # EC
 	G.mark()
 	return true
 
-func cure_now(t: String, j: int) -> bool:   # "Chữa ngay" 2 sen đỏ
-	var e = a(t, j)
-	if e == null or not e.get("s", 0) or not G.spend_ngoc(2):
-		return false
-	e.s = 0
-	e.h = 0.0
-	G.toast.emit("Thuốc tốt, " + q4(t, j).to_lower() + " khỏe lại liền!")
-	G.mark()
-	return true
-
 func left(t: String, e: Dictionary) -> float:   # b8: giây còn lại
 	return maxf(0.0, (float(Q[t].time) - float(e.p)) / maxf(0.2, cy(t)))
 
@@ -231,26 +221,6 @@ func fast(t: String, j: int) -> bool:   # "Xong ngay"
 	G.mark()
 	return true
 
-func fast_all_cost(t: String) -> int:   # "Cả chuồng xong ngay": Ro(lâu nhất) + số con - 1
-	var s := 0.0
-	var n := 0
-	for e in list(t):
-		if growing(t, e):
-			s = maxf(s, left(t, e))
-			n += 1
-	return 0 if n == 0 else ro(s) + n - 1
-
-func fast_all(t: String) -> bool:
-	var c := fast_all_cost(t)
-	if c == 0 or not G.spend_ngoc(c):
-		return false
-	for e in list(t):
-		if growing(t, e):
-			e.p = float(Q[t].time)
-	G.mark()
-	return true
-
-# ------------------------------------------------------------------ chạy theo giờ
 func step(dt: float, offline := false) -> void:
 	# lớn (vw): con có ăn, không bệnh, không còn nhỏ
 	for t in DI:
