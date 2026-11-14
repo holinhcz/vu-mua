@@ -2,6 +2,8 @@ extends Node2D
 # Nét vẽ chung cho các hình vẽ bằng mã trên làng (con vật trong chuồng, gà vịt sổng, chim sáo...): vẽ thẳng ở độ phân giải
 # màn hình (canvas_transform của làng), không phóng ảnh. Lớp con đặt `farm` rồi gọi _L / _Dt / _xe ... trong _draw, cuối cùng _flush().
 
+const Bong = preload("res://logic/bong.gd")
+
 var farm
 var tt := 0.0
 
@@ -105,19 +107,10 @@ func _quad(p0: Vector2, c: Vector2, p1: Vector2) -> PackedVector2Array:
 		P.append(p0.lerp(c, u).lerp(c.lerp(p1, u), u))
 	return P
 
-func _x0(at: Vector2, id: String) -> void:   # X0: bong bóng trắng r 10 + đuôi, icon món 6,8 (như xưởng)
+func _x0(at: Vector2, id: String, red := false) -> void:   # X0: bong bóng dùng chung (bong.gd), hình món id
 	var le: float = farm.sign_le()
 	var r := 1.0 if farm.G.motion_off() else 1.0 + 0.08 * sin(tt * 5.0 + at.x)
 	var s := r * le
-	_tf(at, Vector2(s, s))
-	var a0 := _aa
-	_aa = 1.0 / (farm.main.zoom * s)
-	_L(0, 0, 10.0, 10.0, Color(1, 1, 1, 0.97))
-	_xe([-3.2, 8.6, 3.2, 8.6, 0, 13.5], Color(1, 1, 1, 0.97))
 	_flush()
-	draw_arc(Vector2.ZERO, 10.0, 0, TAU, 48, Color(0, 0, 0, 0.28), 1.0, true)
-	_aa = a0
-	var tx: Texture2D = farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
-	if tx != null:
-		draw_texture_rect(tx, Rect2(-6.8, -6.8, 13.6, 13.6), false)
-	_tf(Vector2.ZERO, Vector2.ONE)
+	var hinh: Texture2D = Bong.anh(id.substr(1), s * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
+	Bong.ve(self, at, s, hinh, red)

@@ -1,5 +1,6 @@
 extends Node2D
 # Lớp trên của xưởng (vẽ sau lửa): ảnh che, khung chạy hiện tại; rồi thanh tiến độ / bong bóng món xong (Ey, X0 bản web).
+const Bong = preload("res://logic/bong.gd")   # bong bóng X0 dùng chung
 
 var xv
 var mode := "front"     # front: ảnh che + khung chạy; bub: bong bóng / thanh tiến độ (trên hơi khói)
@@ -47,16 +48,9 @@ func _img(name: String) -> void:
 	var c: Vector2 = xv.centre()
 	draw_texture_rect(tx, Rect2(c.x + float(r[0]), c.y + float(r[1]), float(r[2]), float(r[3])), false)
 
-func _x0(at: Vector2, id: String) -> void:   # X0: bong bóng trắng r 10 + đuôi, icon món 6,8
+func _x0(at: Vector2, id: String) -> void:   # X0: bong bóng dùng chung (bong.gd)
 	var farm = xv.farm
 	var le: float = farm.sign_le()
 	var r := 1.0 if farm.G.motion_off() else 1.0 + 0.08 * sin(xv.t * 5.0 + at.x)
 	var s := r * le
-	draw_set_transform(at, 0.0, Vector2(s, s))
-	draw_circle(Vector2.ZERO, 10.0, Color(1, 1, 1, 0.97))
-	draw_arc(Vector2.ZERO, 10.0, 0, TAU, 32, Color(0, 0, 0, 0.28), 1.0, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(-3.2, 8.6), Vector2(3.2, 8.6), Vector2(0, 13.5)]), Color(1, 1, 1, 0.97))
-	var tx: Texture2D = farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
-	if tx != null:
-		draw_texture_rect(tx, Rect2(-6.8, -6.8, 13.6, 13.6), false)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	Bong.ve(self, at, s, farm.ui.item_ic(id, 13.6 * s * farm.main.zoom))

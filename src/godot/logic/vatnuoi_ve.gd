@@ -168,15 +168,8 @@ func _draw_all() -> void:
 			var s := fmod((2.2 - ht) * 0.8 + k * 0.3, 1.0)
 			draw_string(fnt, Vector2(x - 8 + k * 8 - 4, c - p - 8 - s * 18), "♥", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.886, 0.271, 0.227, minf(1.0, ht)))
 	var le: float = farm.sign_le()
-	if e.get("s", 0):   # bệnh: vòng trắng chữ thập đỏ + "z"
-		var h := c - p - 14 + d
-		_L(x, h, 9 * le, 9 * le, Color(1, 1, 1, 0.95))
-		_flush()
-		draw_arc(Vector2(x, h), 9 * le, 0, TAU, 28, Color("#c4302a"), 1.4, true)
-		var pw := 2.4 * le
-		var ph := 6.0 * le
-		draw_rect(Rect2(x - pw / 2, h - ph / 2, pw, ph), Color("#c4302a"))
-		draw_rect(Rect2(x - ph / 2, h - pw / 2, ph, pw), Color("#c4302a"))
+	if e.get("s", 0):   # bệnh: bong bóng đỏ chữ thập + "z"
+		_x0(Vector2(x, c - p - 14 + d), "@benh", true)
 		if not still and sin(tt * 2 + j) > 0.6:
 			draw_string(ThemeDB.fallback_font, Vector2(x + 10, c - p + 2), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(8 * le), Color(80 / 255.0, 80 / 255.0, 120 / 255.0, 0.8))
 		return

@@ -1,5 +1,6 @@
 extends Node2D
 const Css = preload("res://ui/css.gd")
+const Bong = preload("res://logic/bong.gd")   # bong bóng X0 dùng chung
 # Vẽ ruộng + nhân vật lên làng Godot (main.gd của thread nền, không sửa gì bên đó).
 # Ô đất nằm sát nền (z -5); cây, bong bóng, nhân vật chen vào obj_root của làng theo độ sâu,
 # để nhà cửa cây cối trước sau đúng chỗ. Chạm ô -> việc vào hàng đợi -> nhân vật đi tới làm.
@@ -1646,15 +1647,7 @@ class FellNode extends Node2D:
 		if zz < 0.6:
 			return
 		var s: float = (1.0 + 0.08 * sin(tt * 5.0 + x)) * farm.sign_le()
-		draw_set_transform(Vector2(x, y), 0.0, Vector2(s, s))
-		var wc := Color(1, 1, 1, 0.97)
-		draw_circle(Vector2.ZERO, 10, wc, true, -1.0, true)
-		draw_arc(Vector2.ZERO, 10, 0, TAU, 40, Color(0, 0, 0, 0.28), 1.0, true)
-		draw_colored_polygon(PackedVector2Array([Vector2(-3.2, 8.6), Vector2(3.2, 8.6), Vector2(0, 13.5)]), wc)
-		var ic: Texture2D = farm.ui.icon("cui", 17.0 * s * farm.main.zoom)
-		if ic != null:
-			draw_texture_rect(ic, Rect2(-8.5, -9.18, 17, 17), false)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		Bong.ve(self, Vector2(x, y), s, farm.ui.icon("cui", 17.0 * s * farm.main.zoom), false, 17.0)
 
 class ParcelLines extends Node2D:
 	# đường biên khu (TH.lot bản web, chép sẵn ra parcel_lot.json): nét đứt 7/6, dày 2,4, màu accent
@@ -1908,96 +1901,22 @@ class Bubble extends Node2D:
 			var by := dy + 0.6 + (fnt.get_ascent(fs) - fnt.get_descent(fs)) / 2.0
 			draw_string(fnt, Vector2(3.0 - w / 2.0, by), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tc)
 			return
-		# X0 bản web: tròn trắng r10 + viền đen .28, đuôi tam giác, hình MG cỡ 6,8 — vẽ bằng nét vector (khử răng cưa)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
-		var wc := Color(1, 1, 1, 0.97)
-		draw_circle(Vector2.ZERO, 10.0, wc, true, -1.0, true)
-		draw_arc(Vector2.ZERO, 10.0, 0.0, TAU, 64, Color(0, 0, 0, 0.28), 1.0, true)
-		var tl := PackedVector2Array([Vector2(-3.2, 8.6), Vector2(3.2, 8.6), Vector2(0, 13.5)])
-		draw_colored_polygon(tl, wc)
-		draw_polyline(PackedVector2Array([Vector2(-3.2, 8.6), Vector2(0, 13.5), Vector2(3.2, 8.6)]), wc, 0.5, true)
-		var e := 6.8
-		var pal = farm.G.troi.st.get("pal", {}) if farm.G.troi != null else {}
-		var leaf := Color(String(pal.get("leaf", "#4d9a3a")))
+		# X0: khung ảnh dùng chung (bong.gd), xanh = thường, đỏ = sâu / rầy
+		var px := 13.6 * k * zoom
+		var hinh: Texture2D = null
+		var red := false
 		match kind:
 			"drop":
-				_bez_fill([Vector2(0, -e), Vector2(e * 1.1, e * 0.1), Vector2(e * 0.8, e), Vector2(0, e), Vector2(-e * 0.8, e), Vector2(-e * 1.1, e * 0.1), Vector2(0, -e)], Color("#3a8fd6"))
+				hinh = Bong.anh("nuoc", k * zoom)
 			"ray":
-				draw_string(fnt, Vector2(-6, 5), "!", HORIZONTAL_ALIGNMENT_CENTER, 12, 15, Color(0.85, 0.15, 0.1))
+				hinh = Bong.anh("gap", k * zoom)
+				red = true
+			"sau":
+				hinh = farm.ui.icon("sau", px)
+				red = true
 			_:
-				match id:
-					"lua":
-						_ell(Vector2(0, -1), e * 0.42, e * 0.95, Color("#e6b93c"))
-						_dt(Vector2(0, e * 0.5), Vector2(0, e), Color("#9a7a2a"), 1.4)
-					"carot":
-						_poly([-e * 0.55, -e * 0.55, e * 0.55, -e * 0.55, 0, e], Color("#ef8c2b"))
-						_si(Vector2(0, -e * 0.5), e * 0.7, -0.4, 2.0, leaf)
-						_si(Vector2(0, -e * 0.5), e * 0.7, 0.4, 2.0, leaf)
-					"cachua":
-						_ell(Vector2(0, 1), e * 0.8, e * 0.75, Color("#dc3b2f"))
-						_ell(Vector2(0, -e * 0.55), e * 0.4, e * 0.18, leaf)
-					"dau":
-						_poly([-e * 0.7, -e * 0.5, e * 0.7, -e * 0.5, 0, e], Color("#df3550"))
-						_ell(Vector2(0, -e * 0.5), e * 0.7, e * 0.28, Color("#df3550"))
-						_ell(Vector2(0, -e * 0.72), e * 0.4, e * 0.16, leaf)
-					"bap":
-						_ell(Vector2.ZERO, e * 0.45, e * 0.95, Color("#f2c63a"))
-						_dt(Vector2(-e * 0.2, -e * 0.6), Vector2(-e * 0.2, e * 0.6), Color(0, 0, 0, 0.2), 0.8)
-						_dt(Vector2(e * 0.2, -e * 0.6), Vector2(e * 0.2, e * 0.6), Color(0, 0, 0, 0.2), 0.8)
-					_:
-						# hình món (Yu = icon svg của bản web) ở ô -1,25e..1,25e, vẽ đúng số px màn hình
-						var px := e * 2.5 * k * zoom
-						var tx: Texture2D = farm.ui.icon("sau", px) if id == "sau" else farm.ui.item_ic(id, px)
-						if tx != null:
-							draw_texture_rect(tx, Rect2(-e * 1.25, -e * 1.35, e * 2.5, e * 2.5), false)
-						else:
-							_ell(Vector2.ZERO, e * 0.6, e * 0.6, Color(120 / 255.0, 120 / 255.0, 120 / 255.0, 0.35))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	func _ell(c: Vector2, rx: float, ry: float, col: Color) -> void:   # L: elip đặc, viền khử răng cưa
-		var pts := PackedVector2Array()
-		for a in 40:
-			var t := a / 40.0 * TAU
-			pts.append(c + Vector2(cos(t) * rx, sin(t) * ry))
-		draw_colored_polygon(pts, col)
-		pts.append(pts[0])
-		draw_polyline(pts, col, 0.35, true)
-	func _dt(a: Vector2, b: Vector2, col: Color, w: float) -> void:   # Dt: nét bo tròn hai đầu
-		draw_line(a, b, col, w, true)
-		draw_circle(a, w / 2.0, col, true, -1.0, true)
-		draw_circle(b, w / 2.0, col, true, -1.0, true)
-	func _poly(q: Array, col: Color) -> void:   # xe
-		var pts := PackedVector2Array()
-		for j in range(0, q.size(), 2):
-			pts.append(Vector2(q[j], q[j + 1]))
-		draw_colored_polygon(pts, col)
-		pts.append(pts[0])
-		draw_polyline(pts, col, 0.35, true)
-	func _si(c: Vector2, n: float, rot: float, r: float, col: Color) -> void:   # Si: lá (2 đường cong bậc 2)
-		var pts := PackedVector2Array()
-		for j in 13:
-			var t := j / 12.0
-			pts.append(_q(Vector2.ZERO, Vector2(r, -n * 0.55), Vector2(0, -n), t))
-		for j in range(1, 13):
-			var t := j / 12.0
-			pts.append(_q(Vector2(0, -n), Vector2(-r, -n * 0.55), Vector2.ZERO, t))
-		var tr := Transform2D(rot, c)
-		for j in pts.size():
-			pts[j] = tr * pts[j]
-		draw_colored_polygon(pts, col)
-	static func _q(a: Vector2, b: Vector2, c: Vector2, t: float) -> Vector2:
-		return a.lerp(b, t).lerp(b.lerp(c, t), t)
-	func _bez_fill(q: Array, col: Color) -> void:   # moveTo + các bezierCurveTo (mỗi đoạn 3 điểm)
-		var pts := PackedVector2Array([q[0]])
-		var j := 1
-		while j + 2 < q.size():
-			var p0: Vector2 = pts[pts.size() - 1]
-			for m in range(1, 17):
-				var t := m / 16.0
-				var u := 1.0 - t
-				pts.append(p0 * u * u * u + q[j] * 3.0 * u * u * t + q[j + 1] * 3.0 * u * t * t + q[j + 2] * t * t * t)
-			j += 3
-		draw_colored_polygon(pts, col)
-		draw_polyline(pts, col, 0.35, true)
+				hinh = farm.ui.item_ic(id, px)
+		Bong.ve(self, Vector2.ZERO, k, hinh, red)
 
 class FxNode extends Node2D:
 	var farm
