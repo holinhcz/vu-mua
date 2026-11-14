@@ -1,4 +1,4 @@
-# Vẽ ảnh bong bóng (khung + hình trong) ra PNG nền trong, 9 px mỗi đơn vị làng -> godot/ui/img/bong/
+# Vẽ ảnh bong bóng (khung + hình trong), vòng ô chín, hạt vừa gieo ra PNG nền trong, 9 px mỗi đơn vị làng -> godot/ui/img/bong/
 # Chạy: python3 lam.py  (cần playwright)
 import os
 from playwright.sync_api import sync_playwright
@@ -16,10 +16,16 @@ def vong():   # vòng ô chín: elip 21 x 10,5 nét 2,2 vàng tươi + quầng s
 <ellipse rx="21" ry="10.5" fill="none" stroke="#ffe066" stroke-width="4.2" opacity=".55" filter="url(#q)"/>
 <ellipse rx="21" ry="10.5" fill="none" stroke="#ffcc1a" stroke-width="2.2"/>
 <ellipse rx="21" ry="10.5" fill="none" stroke="#fff6c2" stroke-width=".7" opacity=".9"/></svg>'''
+def hat():   # 3 hạt giống trên ô vừa gieo (wG giai đoạn 0 bản web); khung -10,5..10,5 x -4,5..3,5 đơn vị, gốc = tâm ô
+    e=lambda x,y,rx,ry,c: f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}" fill="{c}"/>'
+    b=e(-6,-1,3.2,1.6,'#6a4a30')+e(2,1,3.4,1.7,'#6a4a30')+e(7,-2,3,1.5,'#6a4a30')
+    b+=e(-6,-2.3,1.4,.8,'#e8d9a8')+e(2,-.3,1.4,.8,'#e8d9a8')+e(7,-3.3,1.2,.7,'#e8d9a8')
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10.5 -4.5 21 8" width="189" height="72">{b}</svg>'
 def hinh(body):   # ô hình 13,6 x 13,6 đơn vị (-6,8..6,8) -> 128 px
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6.8 -6.8 13.6 13.6" width="128" height="128">{body}</svg>'
 F={
  'vong': vong(),
+ 'hat': hat(),
  'xanh': khung('#2f86d6'),
  'do': khung('#d9443a'),
  'nuoc': hinh('<path d="M0 -6 C2.2 -2.6 4.6 0 4.6 2.4 C4.6 5 2.5 6.4 0 6.4 C-2.5 6.4 -4.6 5 -4.6 2.4 C-4.6 0 -2.2 -2.6 0 -6 Z" fill="#3a8fd6" stroke="#2a6fb0" stroke-width=".5"/><path d="M-2.4 2 C-2.4 3.6 -1.4 4.6 -0.2 4.8" fill="none" stroke="#ffffff" stroke-width=".9" stroke-linecap="round" opacity=".85"/>'),

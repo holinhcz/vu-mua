@@ -258,12 +258,16 @@ func _plot_view(i: int) -> void:
 	if a.c == null:
 		return
 	var st: int = G.stage(a)
-	if st == 0:
-		cs.texture = null
-		cs.visible = false
-		v.seeds = true
+	if st == 0:   # vừa gieo: ảnh 3 hạt (ui/img/bong/hat.png, -10,5..10,5 x -4,5..3,5 quanh tâm ô), nằm đúng lớp của cây
+		var ht: Texture2D = Bong.anh("hat", main.zoom)
+		if ht != null:
+			cs.texture = ht
+			var k := Vector2(21.0 / ht.get_width(), 8.0 / ht.get_height())
+			cs.scale = k
+			v.k = k
+			cs.offset = Vector2(-10.5 / k.x, (-4.5 - 3.5) / k.y)   # cs đặt ở tâm ô + 3,5
+			cs.visible = true
 	else:
-		v.seeds = false
 		var b := crop_bundle(a.c)
 		var key: String = d + str(a.c) + str(st)
 		var tx: Texture2D = P.texz(b, key, PPU, main.zoom)
@@ -488,7 +492,7 @@ func _process(dt: float) -> void:
 		var cs: Sprite2D = v.crop
 		if cs.visible:
 			# gió lay nhẹ (pP): +-0,05 rad, đứng yên khi xa
-			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 else 0.0
+			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 and G.stage(G.p(i)) > 0 else 0.0
 			# chín: nhún lên (W = -|sin(3t + gx)| x 2); vừa gieo: nảy từ 0,25 lên (easeOutBack); vừa tưới/thu: lắc
 			var gc: Dictionary = G.cells[i]
 			var W := -absf(sin(tt * 3.0 + gc.gx)) * 2.0 if G.ripe(G.p(i)) else 0.0
@@ -1933,17 +1937,6 @@ class FxNode extends Node2D:
 	func _draw() -> void:
 		var G = farm.G
 		var f: Font = farm.fnt
-		# hạt giống (giai đoạn 0) — bản web vẽ 3 hạt nâu nhỏ
-		for i in G.B0:
-			var v: Dictionary = farm.plots[i]
-			var a: Dictionary = G.p(i)
-			if not G.owned(i) or a.c == null or G.stage(a) != 0:
-				continue
-			var c: Dictionary = G.cells[i]
-			var p := Vector2(farm.en(c.gx + 0.5, c.gy + 0.5), farm.nn(c.gx + 0.5, c.gy + 0.5, G.CO))
-			for s in [[-6, -1, 3.2], [2, 1, 3.4], [7, -2, 3.0]]:
-				_ell(p + Vector2(s[0], s[1]), s[2], s[2] * 0.5, Color(0.42, 0.29, 0.19))
-				_ell(p + Vector2(s[0], s[1] - 1.3), s[2] * 0.42, s[2] * 0.25, Color(0.91, 0.85, 0.66))
 		# ô chín: 3 sao lấp lánh bay lên (vòng vàng dưới gốc là RipeRing, nằm dưới cây)
 		var tt := Time.get_ticks_msec() / 1000.0
 		for i in G.B0:
@@ -2022,12 +2015,6 @@ class FxNode extends Node2D:
 					draw_line(a + d * t0, a + d * t1, col, w, true)
 				t += per
 			g += L
-	func _ell(c: Vector2, rx: float, ry: float, col: Color) -> void:
-		var pts := PackedVector2Array()
-		for a in 14:
-			var t := a / 14.0 * TAU
-			pts.append(c + Vector2(cos(t) * rx, sin(t) * ry))
-		draw_colored_polygon(pts, col)
 	func _star4(c: Vector2, r: float, col: Color) -> void:   # sao 4 cánh (xe 8 điểm, eo .3)
 		var q := [0, -1, 0.3, -0.3, 1, 0, 0.3, 0.3, 0, 1, -0.3, 0.3, -1, 0, -0.3, -0.3]
 		var pts := PackedVector2Array()
