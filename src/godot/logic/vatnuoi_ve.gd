@@ -122,6 +122,17 @@ func scale_f() -> float:
 	var e = farm.G.vn.a(t, j)
 	return float(WW[t]) * (0.58 if e != null and float(e.get("b", 0)) > 0.0 else 1.0)
 
+func has_bub() -> bool:   # đang hiện bong bóng (bệnh, có hàng, đói); con nhỏ / đang lớn chỉ có thanh
+	var V = farm.G.vn
+	var e = V.a(t, j)
+	if e == null:
+		return false
+	if e.get("s", 0):
+		return true
+	if float(e.get("b", 0)) > 0.0:
+		return false
+	return V.ready(t, e) or V.hungry(e)
+
 func bub_at() -> Vector2:   # chỗ bong bóng (X0: c - p - 14)
 	var p := foot()
 	return Vector2(p.x, p.y - float(H5[t]) * scale_f() - 14.0)

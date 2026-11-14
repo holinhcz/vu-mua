@@ -293,39 +293,6 @@ func _job(key: String, pos, dur: float, run) -> void:   # Gl / Ns / Px: xếp vi
 		return
 	F.ext_job(key, p, dur, run)
 
-func critter_tap(w: Vector2) -> bool:   # farm.tap: ZP bầy chim sáo, Iq gà vịt sổng -> "Xùy xùy!"
-	if WR == null or not _ok():
-		return false
-	if WR.zp(w.x, w.y):
-		U.close_all()
-		WR.ib_bay("Xùy xùy!")
-		return true
-	if WR.iq(w.x, w.y):
-		U.close_all()
-		WR.dx("Xùy xùy!")
-		return true
-	return false
-
-func tree_tap(w: Vector2) -> bool:   # farm.tap: chạm cây ăn trái (g.objs[idx].id trong lang.C.Ei) -> hg
-	if WRU == null or G.lang == null or G.lang.F == null:
-		return false
-	var L = G.lang
-	var hv: int = WR.hive_at(w.x, w.y)   # jD: thùng ong -> sx lấy mật
-	if hv >= 0:
-		U.close_all()
-		WR.sx(hv)
-		return true
-	var idx: int = L.obj_at(w, L.F.lang_ve.pick_obj)
-	if idx < 0:
-		return false
-	var o = L.objs()[idx]
-	if not (o is Dictionary) or not L.C.get("Ei", {}).has(String(o.get("id", ""))):
-		return false
-	if WR.ql(idx) == null:
-		return false
-	U.rm_tree(idx)
-	return true
-
 func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	if WRU == null or not _ok():
 		return

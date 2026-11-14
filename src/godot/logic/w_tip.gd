@@ -108,34 +108,9 @@ func _show() -> void:
 	var y := maxf(box.size.y + 6.0, mp.y - 14.0)
 	box.position = Vector2(x - n / 2.0, y - box.size.y)
 
-# ------------------------------------------------------------------ Cu / cH: thứ dưới chuột (theo thứ tự chạm của farm.tap)
+# ------------------------------------------------------------------ Cu / cH: thứ dưới chuột (cùng cách chọn với chạm: farm.pick)
 func _cu(F, w: Vector2) -> Dictionary:
-	var xk: String = F.xw_at(w)
-	if xk != "":
-		return {"type": "work", "k": xk}
-	var va = F.vn_at(w)
-	var i: int = F.plot_at(w)
-	if va != null and i < 0:
-		if int(va.j) >= 0:
-			return {"type": "animal", "k": String(va.t), "j": int(va.j)}
-		return {"type": "pen", "k": String(va.t)}
-	if i >= 0:
-		return {"type": "plot", "i": i}
-	var L = G.lang
-	var n: int = L.obj_at(w, F.lang_ve.pick_obj)
-	if n >= 0:
-		var o = L.objs()[n]
-		if o is Dictionary and L.C.get("Ei", {}).has(String(o.get("id", ""))):
-			return {"type": "tree", "i": n}
-	if F._kho_at(w):
-		return {"type": "khohang"}
-	var sg: String = F.sign_at(w)
-	if sg != "":
-		return {"type": "parcel", "id": sg}
-	var h = L.hu_pick(w)
-	if h != null:
-		return h
-	return {}
+	return F.pick(w)
 
 # ------------------------------------------------------------------ fp: chữ của từng loại (bản web, nguyên văn)
 func fp(t: Dictionary) -> String:   # fp

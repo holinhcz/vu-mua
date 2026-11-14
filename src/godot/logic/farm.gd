@@ -779,30 +779,6 @@ func goto(p: Vector2) -> void:   # FR: bỏ việc "goto" cũ, đi tới ô (x, 
 		st = 0
 	q.append({"key": "goto", "kind": "walk", "i": -1, "seed": "", "pos": p})
 
-func _kho_at(w: Vector2) -> bool:
-	# bản web: trong ô nền của kho, hoặc |x - sx| < 92 và sy - 150 <= y <= sy + 10 (sx, sy = tâm nền)
-	if lang == null:
-		return false
-	var n := ((w.y - 968.0) / 16.0 + (w.x - 4268.0) / 32.0) / 2.0
-	var e := ((w.y - 968.0) / 16.0 - (w.x - 4268.0) / 32.0) / 2.0
-	var L: Array = lang.objs()
-	for j in range(L.size() - 1, -1, -1):
-		var o: Dictionary = L[j]
-		if not (o.id == "kho" or o.id == "kho2"):
-			continue
-		var t = lang.Pi.get(o.id)
-		var fw: float = float(t.fw) if t != null else 3.0
-		var fd: float = float(t.fd) if t != null else 3.0
-		var gx := float(o.gx)
-		var gy := float(o.gy)
-		if n >= gx and n < gx + fw and e >= gy and e < gy + fd:
-			return true
-		var sx := en(gx + fw / 2.0, gy + fd / 2.0)
-		var sy := nn(gx + fw / 2.0, gy + fd / 2.0)
-		if absf(w.x - sx) < 92.0 and w.y >= sy - 150.0 and w.y <= sy + 10.0:
-			return true
-	return false
-
 func tap(sp: Vector2) -> void:
 	var w := screen_to_world(sp)
 	if ui.bdp != null and ui.bdp.active():
@@ -812,71 +788,282 @@ func tap(sp: Vector2) -> void:
 		ui.close_all()
 		stop_jobs()
 		return
-	var fk: String = G.troi.bao.hit(w)
-	if fk != "":
-		ui.close_all()
-		if G.troi.bao.state(fk) == "burn":
-			G.troi.bao.chop(fk)   # chỉ báo "đang cháy âm ỉ"
-			return
-		var key := "fall" + fk
-		if not has_job(key):
-			q.append({"key": key, "kind": "fall", "i": -1, "seed": fk, "pos": G.troi.bao.stand(fk)})
-		return
-	if G.w_all != null and G.w_all.critter_tap(w):   # NTWEB ZP / Iq: chạm bầy chim sáo, gà vịt sổng -> "Xùy xùy!"
-		return
-	if plot_at(w) < 0 and _kho_at(w):   # kho hàng đã xây: chạm mở Kho (web: type "khohang" -> zc("barn"))
-		ui.close_all()
-		ui.kho_open()
-		return
-	var va = vn_at(w)
-	if va != null and plot_at(w) < 0:
-		ui.close_all()
-		ui.vn_open(va, w)
-		return
-	var xk := xw_at(w)
-	if xk != "" and plot_at(w) < 0:
-		ui.close_all()
-		xw_tap(xk)
-		return
-	if plot_at(w) < 0 and G.w_all != null and G.w_all.tree_tap(w):   # NTWEB hg: chạm cây ăn trái
-		return
-	var i := plot_at(w)
-	if i < 0 and lang != null:
-		var h = lang.hu_pick(w)
-		if h != null:
+	var h := pick(w)
+	match String(h.get("type", "")):
+		"fall":
 			ui.close_all()
-			if h.type == "scnlock":
-				var a = PC.G0.get(h.id)
-				if a != null:
-					G.toast.emit("Khai hoang " + String(a.name).to_lower() + " trước đã (" + G.fmt_n(int(a.cost)) + " xu).")
+			var fk := String(h.k)
+			if G.troi.bao.state(fk) == "burn":
+				G.troi.bao.chop(fk)   # chỉ báo "đang cháy âm ỉ"
 				return
+			if not has_job("fall" + fk):
+				q.append({"key": "fall" + fk, "kind": "fall", "i": -1, "seed": fk, "pos": G.troi.bao.stand(fk)})
+		"birds":
+			ui.close_all()
+			G.w_all.WR.ib_bay("Xùy xùy!")
+		"gavit":
+			ui.close_all()
+			G.w_all.WR.dx("Xùy xùy!")
+		"work":
+			ui.close_all()
+			xw_tap(String(h.k))
+		"animal", "pen":
+			ui.close_all()
+			ui.vn_open({"t": h.k, "j": int(h.get("j", -1))}, w)
+		"tree":
+			ui.rm_tree(int(h.i))
+		"hive":
+			ui.close_all()
+			G.w_all.WR.sx(int(h.i))
+		"khohang":
+			ui.close_all()
+			ui.kho_open()
+		"parcel":
+			ui.pc_open(String(h.id), w)
+		"scnlock":
+			ui.close_all()
+			var a = PC.G0.get(h.id)
+			if a != null:
+				G.toast.emit("Khai hoang " + String(a.name).to_lower() + " trước đã (" + G.fmt_n(int(a.cost)) + " xu).")
+		"scn", "paddy":
+			ui.close_all()
 			var key := ("scn" + String(h.o.key)) if h.type == "scn" else ("paddy" + str(h.gx) + "," + str(h.gy))
 			if not has_job(key):
 				var sp2: Vector2 = Vector2(h.o.gx + h.o.fw / 2.0, h.o.gy + h.o.fd + 0.3) if h.type == "scn" else Vector2(h.gx + 0.5, h.gy + 1.3)
 				q.append({"key": key, "kind": h.type, "i": -1, "seed": "", "h": h, "pos": sp2})
-			return
-	if i < 0:
-		var sg := sign_at(w)
-		if sg != "":
-			ui.pc_open(sg, w)
-			return
-		ui.close_all()
-		# chạm 2 lần nhanh lên nền trống: nhân vật đi tới chỗ đó (FR bản web: việc "goto")
-		var t := _now()
-		if t - float(_tap0.t) < 350.0 and _css(sp.distance_to(_tap0.p)) < 24.0:
-			goto(to_tile(w))
-			_tap0 = {"t": -1e9, "p": Vector2.ZERO}
-		else:
-			_tap0 = {"t": t, "p": sp}
-		return
-	if _now() < i7:
-		return
-	var a: Dictionary = G.p(i)
-	if a.get("b", 0) or a.get("oc", 0):
-		ui.close_all()
-		queue_job(i, "bug")
-		return
-	ui.tap_plot(i)
+		"plot":
+			if _now() < i7:
+				return
+			var i := int(h.i)
+			var a: Dictionary = G.p(i)
+			if a.get("b", 0) or a.get("oc", 0):
+				ui.close_all()
+				queue_job(i, "bug")
+				return
+			ui.tap_plot(i)
+		_:
+			ui.close_all()
+			# chạm 2 lần nhanh lên nền trống: nhân vật đi tới chỗ đó (FR bản web: việc "goto")
+			var t := _now()
+			if t - float(_tap0.t) < 350.0 and _css(sp.distance_to(_tap0.p)) < 24.0:
+				goto(to_tile(w))
+				_tap0 = {"t": -1e9, "p": Vector2.ZERO}
+			else:
+				_tap0 = {"t": t, "p": sp}
+
+# ------------------------------------------------------------------ chọn vật bị chạm như bản web (cH + RE / vbHit)
+# 1. Bong bóng đang hiện (Su.bubs): chạm trong vòng bong bóng thì chọn đúng thứ có bong bóng đó.
+# 2. Ứng viên có cờ bub (bong bóng xưởng, bong bóng con vật): ord nhỏ nhất.
+# 3. Trúng hình ngay dưới ngón tay: thứ nằm trên cùng (đứng trước, chân thấp hơn) thắng; bằng nhau thì ord nhỏ hơn.
+# 4. Đồ đang đi (mv: chim, gà vịt, con vật) lố tay tới 12 px css: gần nhất. 5. Chạm trong nền (gr > 2): gr lớn, ord nhỏ.
+# 6. Gần hình trong 8 px css: gần nhất. 7. Còn lại: ruộng lúa (gr 1).
+# ord như web: xưởng 2, chim 3, gà vịt 5, cây ngã 7, biển khai hoang 41, con vật 42, chuồng 43, ô ruộng 44, cây ăn trái 45,
+# kho 46, thùng ong 49, cây rừng / cỏ hoang 51, ruộng lúa 52.
+const PK_R := 12.0    # t.R: px css cho đồ đang đi
+const PK_RS := 8.0    # t.RS: px css gần hình
+
+func _pk_near(f: Callable, w: Vector2, maxpx: float) -> float:   # px css tới chỗ trúng hình gần nhất (0 = trúng ngay, 99 = không)
+	if f.call(w):
+		return 0.0
+	var z: float = ui.cz()
+	for r in [3.0, 6.0, 9.0, 12.0]:
+		if r > maxpx:
+			break
+		for k in 8:
+			var a: float = k * TAU / 8.0
+			if f.call(w + Vector2(cos(a), sin(a)) * r / z):
+				return r
+	return 99.0
+
+func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bong bóng
+	var z: float = ui.cz()
+	for i in G.B0:   # ô ruộng
+		var b: Bubble = plots[i].bub
+		if b.visible and b.kind != "lock" and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
+			return {"type": "plot", "i": i}
+	for i in tbubs:   # cây ăn trái / thùng ong
+		var b: Bubble = tbubs[i]
+		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
+			var o: Dictionary = lang.objs()[i]
+			return {"type": "hive" if o.id == "thungong" else "tree", "i": i}
+	var le := sign_le()
+	for k in anodes:   # con vật
+		var n = anodes[k]
+		if n.has_bub() and n.bub_at().distance_to(w) <= 10.0 * le + 3.0 / z:
+			return {"type": "animal", "k": n.t, "j": n.j}
+	for k in G.xw.list_built():   # xưởng có hàng xong
+		if G.xw.df(k) > 0:
+			var e: Dictionary = G.xw.sr[k]
+			var cx: float = e.gx + e.fw / 2.0
+			var cy: float = e.gy + e.fd / 2.0
+			var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
+			if Vector2(en(cx, cy), nn(cx, cy, bh)).distance_to(w) <= 16.0:
+				return {"type": "work", "k": k}
+	return null
+
+func _pk_add(L: Array, h: Dictionary, ord: float, dep: float, hit, opt := {}) -> void:   # M(A, h, ord, keys, {gr, mv, bub})
+	L.append({"h": h, "ord": ord, "dep": dep, "hit": hit, "gr": int(opt.get("gr", 0)), "mv": bool(opt.get("mv", false)), "bub": bool(opt.get("bub", false))})
+
+func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
+	var L := []
+	var tl := to_tile(w)
+	var WR = G.w_all.WR if G.w_all != null else null
+	# xưởng: bong bóng (bub), nền (gr 3), thân
+	for k in G.xw.list_built():
+		var e: Dictionary = G.xw.sr[k]
+		var cx: float = e.gx + e.fw / 2.0
+		var cy: float = e.gy + e.fd / 2.0
+		var c := en(cx, cy)
+		var f := nn(cx, cy)
+		var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
+		var inside: bool = tl.x >= e.gx - 0.1 and tl.x < e.gx + e.fw + 0.1 and tl.y >= e.gy - 0.1 and tl.y < e.gy + e.fd + 0.1
+		var body := func(p: Vector2) -> bool: return absf(p.x - c) < (e.fw + e.fd) * 13 and p.y >= f - bh + 6 and p.y <= f
+		if inside or body.call(w):
+			_pk_add(L, {"type": "work", "k": k}, 2, f, body, {"gr": 3 if inside else 0})
+	if WR != null:   # chim sáo, gà vịt sổng
+		var fl = WR.flock
+		if fl != null and not fl.fled:
+			_pk_add(L, {"type": "birds"}, 3, nn(float(fl.birds[0].x), float(fl.birds[0].y)), func(p: Vector2) -> bool: return WR.zp(p.x, p.y), {"mv": true})
+		var ga = WR.Y0.a
+		if ga != null:
+			_pk_add(L, {"type": "gavit"}, 5, nn(float(ga.x), float(ga.y)), func(p: Vector2) -> bool: return WR.iq(p.x, p.y), {"mv": true})
+	var B = G.troi.bao   # cây ngã / cháy
+	var fk: String = B.hit(w)
+	if fk != "" and B.by.has(fk):
+		var t: Dictionary = B.by[fk]
+		_pk_add(L, {"type": "fall", "k": fk}, 7, nn(float(t.gx) + float(t.fw) / 2.0, float(t.gy) + float(t.fd) / 2.0), func(p: Vector2) -> bool: return B.hit(p) == fk)
+	for t in PC.x1:   # biển khai hoang
+		if pc_own(t) or (PC.G0[t].get("riv", false) and not pc_next(t)):
+			continue
+		var a: Array = PC.G0[t].sign
+		var sgn: String = t
+		var hs := func(p: Vector2) -> bool: return sign_at(p) == sgn
+		if _pk_near(hs, w, PK_RS) < 99.0:
+			_pk_add(L, {"type": "parcel", "id": t}, 41, nn(a[0] + 0.5, a[1] + 0.5), hs)
+	var V = G.vn   # con vật: bong bóng (bub) + thân (mv); chuồng: nền (gr 3) + khung
+	if V != null and lang != null:
+		var le := sign_le()
+		for k in anodes:
+			var n = anodes[k]
+			var ft: Vector2 = n.foot()
+			if n.has_bub() and n.bub_at().distance_to(w) <= 12.0 * le:
+				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, func(_p: Vector2) -> bool: return true, {"bub": true})
+			var hh: float = float(n.H5[n.t]) * n.scale_f()
+			var hb := func(p: Vector2) -> bool: return absf(p.x - ft.x) < 14.0 and p.y <= ft.y + 3.0 and p.y >= ft.y - hh
+			if _pk_near(hb, w, PK_R) < 99.0:
+				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, hb, {"mv": true})
+		for t in V.DI:
+			if not lang.pen_built(t):
+				continue
+			var pp: Vector2i = lang.pen_pos(t)
+			var m: Dictionary = lang.C.mo[t]
+			var pw := float(m.w)
+			var ph := float(m.h)
+			var inside: bool = tl.x >= pp.x and tl.x < pp.x + pw and tl.y >= pp.y and tl.y < pp.y + ph
+			var x0 := en(pp.x, pp.y + ph) - 6.0
+			var x1 := en(pp.x + pw, pp.y) + 6.0
+			var y0 := nn(pp.x, pp.y, 60.0)
+			var y1 := nn(pp.x + pw, pp.y + ph) + 6.0
+			if inside or (w.x >= x0 and w.x <= x1 and w.y >= y0 and w.y <= y1):
+				_pk_add(L, {"type": "pen", "k": t, "j": -1}, 43, nn(pp.x + pw / 2.0, pp.y + ph / 2.0), null, {"gr": 3 if inside else 0})
+	# ô ruộng: trong hình thoi mặt ô (gr 4), cây trên ô (hình)
+	for i in G.B0:
+		if not G.owned(i):
+			continue
+		var c: Dictionary = G.cells[i]
+		var ue := en(c.gx + 0.5, c.gy + 0.5)
+		var ce := nn(c.gx + 0.5, c.gy + 0.5, G.CO)
+		if absf(w.x - ue) > 32.0 + 12.0 or w.y > ce + 16.0 + 12.0 or w.y < ce - 120.0:
+			continue
+		var dia: bool = absf(w.x - ue) / 32.0 + absf(w.y - ce) / 16.0 <= 1.0
+		var ii: int = i
+		var cr := func(p: Vector2) -> bool: return _crop_hit(ii, p)
+		_pk_add(L, {"type": "plot", "i": i}, 44, nn(c.gx + 0.5, c.gy + 0.5) + 14.0, cr, {"gr": 4 if dia else 0})
+	if lang != null:   # cây ăn trái (hình), kho (hình + nền), thùng ong
+		var O: Array = lang.objs()
+		for idx in O.size():
+			var o = O[idx]
+			if not (o is Dictionary):
+				continue
+			var tp = lang.Pi.get(o.id)
+			var fw: float = float(tp.fw) if tp != null else 1.0
+			var fd: float = float(tp.fd) if tp != null else 1.0
+			var cx: float = float(o.gx) + fw / 2.0
+			var cy: float = float(o.gy) + fd / 2.0
+			var sx := en(cx, cy)
+			var sy := nn(cx, cy)
+			if absf(w.x - sx) > 140.0 or w.y > sy + 40.0 or w.y < sy - 260.0:
+				continue
+			var ix: int = idx
+			var px := func(p: Vector2) -> bool: return lang_ve.pick_obj(ix, p)
+			if lang.C.Ei.has(o.id):
+				if WR != null and WR.ql(idx) != null and _pk_near(px, w, PK_RS) < 99.0:
+					_pk_add(L, {"type": "tree", "i": idx}, 45, sy, px)
+			elif o.id == "kho" or o.id == "kho2":
+				var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
+				if inside or _pk_near(px, w, PK_RS) < 99.0:
+					_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0})
+			elif o.id == "thungong":
+				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
+				if hb.call(w):
+					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb)
+		var hu = lang.hu_pick(w)   # cây rừng / cỏ hoang (51), ruộng lúa (52, nền gr 1)
+		if hu != null:
+			if hu.type == "paddy" or (hu.type == "scnlock" and not hu.has("o")):
+				_pk_add(L, hu, 52, w.y, null, {"gr": 1})
+			else:
+				_pk_add(L, hu, 51, float(hu.o.sy), func(_p: Vector2) -> bool: return true)
+	return L
+
+func _crop_hit(i: int, w: Vector2) -> bool:   # chạm trúng hình cây trên ô (khung ảnh thu 15% như khung làng)
+	var cs: Sprite2D = plots[i].crop
+	if not cs.visible or cs.texture == null:
+		return false
+	var r := Rect2(cs.position + cs.offset * cs.scale, cs.texture.get_size() * cs.scale)
+	return r.grow(-r.size.x * 0.15).has_point(w)
+
+func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trống)
+	var bb = _pk_bubs(w)
+	if bb != null:
+		return bb
+	var L := _pk_list(w)
+	if L.is_empty():
+		return {}
+	var best = null
+	for c in L:   # bong bóng xưởng / con vật
+		if c.bub and (best == null or c.ord < best.ord):
+			best = c
+	if best != null:
+		return best.h
+	var px = null    # De: trúng hình, trên cùng
+	var mv = null    # we: đồ đang đi, gần nhất
+	var nr = null    # En: gần hình
+	var gd = null    # He: nền
+	for c in L:
+		if c.hit is Callable:
+			var d := _pk_near(c.hit, w, PK_R)
+			if d <= 0.0:
+				if px == null or c.dep > px.dep or (c.dep == px.dep and c.ord < px.ord):
+					px = c
+			elif c.mv and d <= PK_R:
+				if mv == null or d < mv.d:
+					mv = {"c": c, "d": d}
+			elif d <= PK_RS:
+				if nr == null or d < nr.d:
+					nr = {"c": c, "d": d}
+		if c.gr and (gd == null or c.gr > gd.gr or (c.gr == gd.gr and c.ord < gd.ord)):
+			gd = c
+	if px != null:
+		return px.h
+	if mv != null:
+		return mv.c.h
+	if gd != null and gd.gr > 2:
+		return gd.h
+	if nr != null:
+		return nr.c.h
+	if gd != null:
+		return gd.h
+	return {}
 
 # ------------------------------------------------------------------ jobs (aa.q bản web)
 var q := []
@@ -1404,37 +1591,6 @@ func _tree_bub_sync(tt: float) -> void:
 		b.k = (1.0 + 0.08 * sin(tt * 5.0 + b.position.x)) * sign_le()
 		b.zoom = main.zoom
 		b.queue_redraw()
-
-func vn_at(w: Vector2):   # chạm trúng bong bóng / thân con vật -> {t, j}; trúng chuồng -> {t, j: -1}
-	var V = G.vn
-	if V == null or lang == null:
-		return null
-	var le := sign_le()
-	for k in anodes:
-		var n = anodes[k]
-		var b: Vector2 = n.bub_at()
-		if b.distance_squared_to(w) <= 144.0 * le * le:
-			return {"t": n.t, "j": n.j}
-	var best = null
-	var bd := 1e9
-	for k in anodes:
-		var n = anodes[k]
-		var f: Vector2 = n.foot()
-		var h: float = float(n.H5[n.t]) * n.scale_f()
-		if absf(w.x - f.x) < 18.0 and w.y <= f.y + 4.0 and w.y >= f.y - h - 4.0 and absf(w.y - f.y) < bd:
-			bd = absf(w.y - f.y)
-			best = {"t": n.t, "j": n.j}
-	if best != null:
-		return best
-	var tl := to_tile(w)
-	for t in V.DI:
-		if not lang.pen_built(t):
-			continue
-		var p: Vector2i = lang.pen_pos(t)
-		var a: Dictionary = lang.C.mo[t]
-		if tl.x >= p.x and tl.x < p.x + float(a.w) and tl.y >= p.y and tl.y < p.y + float(a.h):
-			return {"t": t, "j": -1}
-	return null
 
 func vn_job(t: String, j: int, act: String) -> bool:   # Ns: nhân vật đi tới con vật rồi làm (0,35 s; vuốt ve 0,8 s)
 	var key := "animal:" + t + ":" + str(j) + ":" + act
