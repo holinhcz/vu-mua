@@ -315,12 +315,63 @@ func _build_hud() -> void:
 	_click(hid.get("#nvBtn"), func(): nvp.open(), "scale")
 	_click(hid.get("#setBtn"), func(): setp.open(), "scale")
 	_click(hid.get("#pcAv"), func(): pcp.open(), "scale")
-	for k in [".autob", ".ngpill", ".hudTab", "#clock", "#coinsPill"]:
+	_auto_setup(hid.get(".autob"))
+	for k in [".ngpill", ".hudTab", "#clock", "#coinsPill"]:
 		var b = hid.get(k)
 		if b != null:
 			_click(b, func(): say(SOON))
 	for b in hid.get(".evb*", []):
 		_click(b, func(): say(SOON), "scale")
+
+# ------------------------------------------------------------------ nút AUTO (IA bản web): dựng theo mẫu autob.json (tắt / bật + số việc)
+var auto_b: Control = null   # .autob gốc trong HUD (giữ chỗ, ẩn nét vẽ của nó)
+var auto_v: Control = null   # bản dựng theo trạng thái
+var auto_sig := ""
+static var AUTOB := {}
+
+func _auto_setup(b) -> void:
+	if b == null:
+		return
+	auto_b = b
+	_click(b, func(): G.w_all.WAU.toggle(); _auto_sync(), "scale")
+	_auto_sync()
+
+func _auto_sync() -> void:   # IA
+	if auto_b == null or G.w_all == null or G.w_all.WAU == null:
+		return
+	var A = G.w_all.WAU
+	var lb: String = A.label()
+	var sg := str(A.on) + lb
+	if sg == auto_sig:
+		return
+	auto_sig = sg
+	if AUTOB.is_empty():
+		AUTOB = Snap.load_snap("autob")
+	var n: Dictionary = (AUTOB.on if A.on else AUTOB.off).duplicate(true)
+	if A.on:
+		var sm: Dictionary = n.kids[3]
+		var fs := Css.px(String(sm.css.get("font-size", "11px"))) * float(sm.get("z", 1.0))
+		var tw := Box.text_w(lb, fs, int(String(sm.css.get("font-weight", "700"))))
+		if lb == "":
+			n.kids = n.kids.slice(0, 3)
+			n.r[2] = float(sm.r[0]) - 6.0 * 0.75 + 7.5 - float(n.r[0])
+		else:
+			sm.text = lb
+			sm.r[2] = tw
+			if sm.has("tr"):
+				sm.tr[2] = tw
+			n.r[2] = float(sm.r[0]) + tw + 7.5 - float(n.r[0])
+	Snap._move(n, Vector2(-float(n.r[0]), -float(n.r[1])))
+	if auto_v != null:
+		auto_v.queue_free()
+	auto_v = _build(n, {})
+	auto_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	auto_b.self_modulate = Color(1, 1, 1, 0)
+	for k in auto_b.get_children():
+		if k != auto_v:
+			k.visible = false
+	auto_b.add_child(auto_v)
+	auto_b.size.x = float(n.r[2]) * Css.K   # vùng bấm theo bề ngang mới
 
 func _set_focus(on: bool) -> void:
 	if on == focus:
@@ -3150,6 +3201,7 @@ func _process(dt: float) -> void:
 		if p != null:
 			p.step(dt)
 	_ng_bdg()
+	_auto_sync()
 	if xfp != null:
 		xfp.step(dt)
 	if bdp != null:

@@ -19,6 +19,7 @@ var WH    # w_htx.gd    hợp tác xã, hụi, lễ hội, nhịp Hay Day
 var WCA   # w_ca.gd     câu cá, thú nuôi thêm, lờ lọp, diều
 var WD    # w_duong.gd  chuồng, thiên tai, trò chơi nhỏ
 var WDL   # w_dl.gd     du lịch miệt vườn
+var WAU   # w_auto.gd   AUTO: nhân vật tự chơi
 
 var U = null    # ui.gd (ui_setup)
 var TIP = null  # w_tip.gd
@@ -46,6 +47,7 @@ func _init(game) -> void:
 	WCA = load("res://logic/w_ca.gd").new(G)
 	WD = load("res://logic/w_duong.gd").new(G)
 	WDL = load("res://logic/w_dl.gd").new(G)
+	WAU = load("res://logic/w_auto.gd").new(G)
 	# 2. tham chiếu chéo
 	WC.WR = WR
 	WC.CA = WCA            # dedupe: w_cho._Cc -> w_ca.cc (g.pet)
@@ -169,6 +171,8 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 	WCA.step(dt, false)
 	WD.step(dt, false)
 	WDL.step(dt)
+	if U != null:
+		WAU.step(dt)
 
 # ------------------------------------------------------------------ móc vào luật game.gd
 func boost_add() -> float:   # tw: jH() + (gB() - 1) + (Dx() > 1 ? .04 : 0)
@@ -220,6 +224,7 @@ static func _v2(p) -> Vector2:
 # ------------------------------------------------------------------ giao diện (ui.gd gọi sau khi dựng xong)
 func ui_setup(ui) -> void:
 	U = ui
+	WAU.U = ui
 	var F = U.F
 	WRU = load("res://logic/w_ruong_ui.gd").new(U, WR)
 	WKU = load("res://logic/w_kho_ui.gd").new(U, WK)
