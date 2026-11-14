@@ -18,41 +18,61 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--txt);font-famil
 <canvas id="canvas" tabindex="0"></canvas>
 <div id="st"><div><span id="msg">Đang tải game…</span><span id="bar"><i id="fill"></i></span></div></div>
 <!-- Lưu game lên mạng (Firebase vu-mua). Game Godot đọc/ghi qua window.__ntc:
-     st: 'loading'|'out'|'in'|'err'; uid; name; cloud = bản lưu trên mạng (chuỗi JSON, '' nếu chưa có); rev tăng mỗi lần cloud đổi;
-     save(chuỗi JSON) = ghi lên mạng (gộp lại, tối đa 1 lần / 15 s, và ngay khi ẩn trang); login() mở đăng nhập Google. -->
+     st: 'loading'|'out'|'in'|'kick'|'err'; uid; name; cloud = bản lưu trên mạng (chuỗi JSON, '' nếu chưa có); rev tăng mỗi lần cloud đổi;
+     save(chuỗi JSON) = ghi lên mạng (gộp lại, tối đa 1 lần / 15 s, và ngay khi ẩn trang); login() mở đăng nhập Google.
+     Mỗi tài khoản chỉ chơi ở 1 máy: vào game thì ghi mã phiên ss của máy này lên saves/<uid>; máy nào thấy ss khác mình
+     thì thành 'kick' (thôi lưu lên mạng, che màn "Đang chơi ở máy khác"). Ghi bản lưu bằng giao dịch: chỉ ghi khi ss vẫn là mình. -->
 <style>
 #ntc{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(6px,env(safe-area-inset-top,0px)) + 88px);z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
   color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
 #ntc[hidden]{display:none}
+#ntk{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(20,16,8,.72);padding:16px}
+#ntk[hidden]{display:none}
+#ntk>div{width:min(300px,100%);background:#fff8e2;border:2px solid #b08a4a;border-radius:14px;padding:18px;display:grid;gap:12px;text-align:center;
+  font:15px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;color:#4a3a1e}
+#ntk b{font-size:17px}
+#ntk button{font:700 15px system-ui,sans-serif;padding:11px;border-radius:9px;border:0;cursor:pointer;background:#4f9a3a;color:#fff}
 </style>
 <button id="ntc" hidden></button>
+<div id="ntk" hidden><div><b>Đang chơi ở máy khác</b><span>Tài khoản này vừa vào game ở máy khác nên máy này tạm dừng lưu.</span>
+<button id="ntkgo">Chơi ở máy này</button></div></div>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 var N=window.__ntc={st:'loading',uid:'',name:'',cloud:'',rev:0,save:function(){},login:function(){}};
-var btn=document.getElementById('ntc');
+var btn=document.getElementById('ntc'),kick=document.getElementById('ntk');
 function show(t){btn.textContent=t;btn.hidden=false}
 if(!window.firebase){N.st='err';return}
 var app,auth,db;
 try{app=firebase.initializeApp({apiKey:"AIzaSyDmF3QtPD-CJGVXQhTFaIMPmmHoJUg5r0I",authDomain:"vu-mua.firebaseapp.com",projectId:"vu-mua",
   storageBucket:"vu-mua.firebasestorage.app",messagingSenderId:"330432933067",appId:"1:330432933067:web:662e67c2b20dae39ad3f4e"});
   auth=firebase.auth();db=firebase.firestore()}catch(e){N.st='err';return}
-var pend=null,busy=false,lastW=0,timer=0;
+var SS=Date.now().toString(36)+Math.random().toString(36).slice(2,8);   // mã phiên của máy này
+var pend=null,busy=false,lastW=0,timer=0,unsub=null;
 function ref(){return db.collection('saves').doc(N.uid)}
+function kicked(){if(N.st=='kick')return;N.st='kick';pend=null;clearTimeout(timer);kick.hidden=false;show('☁ Đang chơi ở máy khác')}
 function flush(){if(!pend||busy||N.st!='in')return;var s=pend;pend=null;busy=true;
-  ref().set({d:s,t:Date.now()}).then(function(){lastW=Date.now();show('☁ Đã lưu · '+N.name)},function(){pend=pend||s;show('☁ Chưa lưu được, thử lại sau')}).then(function(){busy=false})}
-N.save=function(s){pend=String(s);if(N.st!='in')return;var w=15000-(Date.now()-lastW);clearTimeout(timer);if(w<=0)flush();else timer=setTimeout(flush,w)};
+  db.runTransaction(function(tx){return tx.get(ref()).then(function(d){var x=d.exists?d.data():null;
+    if(x&&x.ss&&x.ss!==SS)return 'kick';tx.set(ref(),{d:s,t:Date.now(),ss:SS},{merge:true});return 'ok'})})
+  .then(function(r){if(r=='kick'){kicked();return}lastW=Date.now();show('☁ Đã lưu · '+N.name)},
+    function(){if(N.st=='in'){pend=pend||s;show('☁ Chưa lưu được, thử lại sau')}}).then(function(){busy=false})}
+N.save=function(s){if(N.st=='kick')return;pend=String(s);if(N.st!='in')return;var w=15000-(Date.now()-lastW);clearTimeout(timer);if(w<=0)flush();else timer=setTimeout(flush,w)};
 N.login=function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
   auth.signInWithPopup(p).catch(function(e){if(e&&/popup|operation-not-supported/i.test(e.code||''))auth.signInWithRedirect(p);else show('☁ Đăng nhập lỗi: '+(e&&e.code||e))})};
 btn.onclick=function(){if(N.st=='out')N.login()};
+document.getElementById('ntkgo').onclick=function(){location.reload()};   // vào lại = giành phiên về máy này, đọc bản mới nhất
 document.addEventListener('visibilitychange',function(){if(document.visibilityState=='hidden'){clearTimeout(timer);flush()}});
 auth.getRedirectResult().catch(function(){});
 auth.onAuthStateChanged(function(u){
+  if(unsub){unsub();unsub=null}
   if(!u){N.st='out';N.uid='';N.name='';show('☁ Đăng nhập Google để lưu làng');return}
   N.uid=u.uid;N.name=(u.displayName||u.email||'').split(' ').pop();show('☁ Đang tải bản lưu…');
-  ref().get().then(function(d){var x=d.exists?d.data():null;N.cloud=x&&x.d?String(x.d):'';N.rev++;N.st='in';show('☁ Đã nối · '+N.name);if(pend)N.save(pend)},
+  ref().get().then(function(d){var x=d.exists?d.data():null;N.cloud=x&&x.d?String(x.d):'';
+    return ref().set({ss:SS},{merge:true}).then(function(){   // giành phiên: máy đang chơi tài khoản này sẽ bị đẩy ra
+      N.rev++;N.st='in';show('☁ Đã nối · '+N.name);if(pend)N.save(pend);
+      unsub=ref().onSnapshot(function(d2){var y=d2.data();if(y&&y.ss&&y.ss!==SS)kicked()},function(){})})},
     function(e){N.st='err';show('☁ Không đọc được bản lưu: '+(e&&e.code||e))})});
 })();
 </script>

@@ -155,8 +155,8 @@ func catch_up(off: float) -> void:
 
 func save_game() -> void:
 	g.last = _now_ms()
-	if _c_rev != 0 or _c_out():   # NTCLOUD: giờ lưu "thật" = chỉ những lần lưu sau khi đã đọc bản trên mạng (lần lưu lúc mở game không tính)
-		g.svt = g.last
+	if (_c_rev != 0 or _c_out()) and not _c_kick():   # NTCLOUD: giờ lưu "thật" = chỉ những lần lưu sau khi đã đọc bản trên mạng (lần lưu lúc mở game không tính)
+		g.svt = g.last   # bị máy khác đẩy ra thì thôi: vào lại máy này vẫn lấy bản của máy kia
 	var txt := JSON.stringify(g)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
@@ -187,6 +187,10 @@ func _prog(s: Dictionary) -> float:   # NTCLOUD: độ xa của bản lưu (cấ
 func _c_out() -> bool:   # NTCLOUD: chưa đăng nhập (chơi chỉ trên máy): lần lưu nào cũng là lưu thật
 	var n = _ntc_obj()
 	return n == null or str(n.st) == "out"
+
+func _c_kick() -> bool:   # NTCLOUD: tài khoản đang chơi ở máy khác (trang đã che màn, thôi lưu lên mạng)
+	var n = _ntc_obj()
+	return n != null and str(n.st) == "kick"
 
 func _cloud_save(txt: String) -> void:
 	# chỉ đẩy lên sau khi đã đọc bản trên mạng của tài khoản này (khỏi đè làng trên mạng bằng làng mới tinh của máy lạ)
