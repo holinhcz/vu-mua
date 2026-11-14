@@ -7,6 +7,7 @@ extends RefCounted
 #  3. Sức dưới 12%: ăn món hồi sức trong kho, không có thì về nhà ngủ (TV). Sức dưới 3 thì nghỉ, không nhận việc.
 #  4. Xếp tối đa 4 việc đi làm: phun rầy, thú y con bệnh, gặt ô chín, thu / cho ăn vật nuôi, thu xưởng, bắt sâu, hái trái,
 #     gieo hạt (z$: giống cần cho đơn trước, không thì giống lời nhất), tưới ô khô, tưới cây.
+#  4b. Đơn hàng có món không làm ra được thì tự đổi đơn khác (~30 giây); đơn kẹt 45 phút cũng đổi (G$).
 #  5. Mua thêm con khi chuồng còn chỗ và dư xu gấp 4; xếp món xưởng còn thiếu cho đơn (giữ lại 4 hạt mỗi giống);
 #     kho gần đầy thì bán bớt món rẻ; nâng sao kho, ô ruộng, chuồng khi dư xu gấp 2–3.
 # Bản Godot chưa có: câu cá tự động, thương lái / ghe / tạp hóa / xe chè, nhận quà ngày và sổ nhiệm vụ, mua giống chợ phiên.
@@ -57,10 +58,26 @@ func _jf(items: Array, keep := {}) -> bool:   # jF: đủ hàng (giữ lại LP 
 			return false
 	return true
 
-func _ord() -> Dictionary:   # món cần cho mọi đơn hàng đang có (luôn giữ, làm trước)
+func _can(items: Array) -> bool:   # đơn làm ra được: cây phải còn hạt để gieo (Auto chưa mua giống), món khác còn nguồn (F8)
+	for r in items:
+		var k := String(r[0])
+		if _crop(k):
+			if _bn(k) <= 0 and not _growing(k):
+				return false
+		elif not G._f8(k):
+			return false
+	return true
+
+func _growing(k: String) -> bool:   # có ô đang trồng cây k
+	for a in G.B0:
+		if G.p(a).get("c") == k:
+			return true
+	return false
+
+func _ord() -> Dictionary:   # món cần cho các đơn hàng làm được (luôn giữ, làm trước)
 	var a := {}
 	for x in u9():
-		if x.src == "o":
+		if x.src == "o" and x.can:
 			for r in x.items:
 				a[String(r[0])] = int(a.get(String(r[0]), 0)) + int(r[1])
 	return a
@@ -114,7 +131,7 @@ func u9() -> Array:   # U9: việc giao hàng xếp theo lời / thời gian
 	for i in O.size():
 		var o = O[i]
 		if o is Dictionary and not (float(o.get("w", 0)) > now):
-			a.append({"items": o.items, "xu": float(o.get("reward", 0)), "go": G.deliver.bind(i), "src": "o"})
+			a.append({"items": o.items, "xu": float(o.get("reward", 0)), "go": G.deliver.bind(i), "src": "o", "i": i})
 	if G.w_all != null:
 		var WL = G.w_all.WL
 		var F: Dictionary = WL._r0().fam
@@ -125,12 +142,13 @@ func u9() -> Array:   # U9: việc giao hàng xếp theo lời / thời gian
 				a.append({"items": it, "xu": float(r.get("xu", 0)) * 1.2, "go": WL.gb.bind(u), "src": "d"})
 	var od := {}   # hàng đơn hàng: việc khác không được đụng
 	for x in a:
-		if x.src == "o":
+		x.can = _can(x.items)
+		if x.src == "o" and x.can:
 			for r in x.items:
 				od[String(r[0])] = int(od.get(String(r[0]), 0)) + int(r[1])
 	for x in a:
 		x.miss = _wf(x.items)
-		x.sc = x.xu / (1.0 + x.miss / 60.0) + (1e9 if x.src == "o" else 0.0)   # đơn hàng ưu tiên cao nhất
+		x.sc = x.xu / (1.0 + x.miss / 60.0) + (1e9 if x.src == "o" and x.can else 0.0)   # đơn hàng làm được ưu tiên cao nhất
 		x.ok = _jf(x.items) if x.src == "o" else _jf(x.items, od)
 	a.sort_custom(func(p, q): return p.sc > q.sc)
 	_jc = a
@@ -262,7 +280,7 @@ func _turn() -> void:
 			var act := ""
 			if G.vn.ready(x, e) and room > 3:
 				act = "collect"
-			elif G.vn.hungry(e) and o.call(String(k.feed)) - _feed_q(x, String(k.feed)) > (LP if _crop(String(k.feed)) else 0):
+			elif G.vn.hungry(e) and _bn(String(k.feed)) - _feed_q(x, String(k.feed)) > (LP if _crop(String(k.feed)) else 0):
 				act = "feed"
 			if act != "" and F.vn_job(x, j, act):
 				s -= 1
@@ -358,6 +376,9 @@ func _turn() -> void:
 			if w.q.size() == E:
 				break
 			c += 1
+	# đơn kẹt (G$): đơn có món không làm ra được thì đổi sau ~30 giây; đơn làm được mà 45 phút chưa đủ hàng cũng đổi
+	if _stuck():
+		c += 1
 	# kho gần đầy: bán bớt
 	var cap: int = G.kho_cap()
 	if G.kho_room() < cap * 0.12 and _sell_some(cap, res):
@@ -387,6 +408,29 @@ func _turn() -> void:
 	if c:
 		n += c
 		G.mark()
+
+var os := {}   # Ur.os: số lượt thấy đơn chưa giao được, theo chữ ký đơn
+func _stuck() -> bool:
+	var seen := {}
+	var done := false
+	for x in u9():
+		if x.src != "o":
+			continue
+		var sg := str(x.items) + "|" + str(x.xu)
+		seen[sg] = 1
+		if x.ok:
+			os.erase(sg)
+			continue
+		os[sg] = int(os.get(sg, 0)) + 1
+		if not done and (os[sg] > 1800 or (not x.can and os[sg] > 20)):
+			G.swap(int(x.i))
+			os.erase(sg)
+			_jk = -1
+			done = true
+	for k in os.keys():
+		if not seen.has(k):
+			os.erase(k)
+	return done
 
 func _feed_q(t2: String, f: String) -> int:   # I$: việc cho ăn món f đang xếp
 	var a := 0
