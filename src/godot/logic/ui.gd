@@ -34,6 +34,8 @@ var setp = null              # bảng CÀI ĐẶT (ui_set.gd)
 var vlp = null               # bảng NHÀ DÂN (ui_vl.gd)
 var ngp = null               # bảng NGHỀ THỦ CÔNG (ui_ng.gd)
 var ng_bdg: Control = null   # số đơn làng giao được trên nút Nghề (ngBdg)
+var slp = null               # bảng SỔ LÀNG (ui_sl.gd)
+var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
@@ -419,11 +421,14 @@ func _build_dock() -> void:
 				_click(b, func(): dock_open(false); bdp.open_shop(), "scale94")
 			elif lab == "Nghề":
 				_click(b, func(): dock_open(false); ng_open(), "scale94")
-				_ng_bdg_make(d, b)
+				ng_bdg = _bdg_make(d, b)
+			elif lab.contains("Sổ làng"):
+				_click(b, func(): dock_open(false); sl_open(), "scale94")
+				sl_bdg = _bdg_make(d, b)
 			else:
 				_click(b, func(): say(SOON), "scale94")
 
-func _ng_bdg_make(d: Dictionary, b: Control) -> void:   # #ngheBdg: huy hiệu đỏ như số trên nút Kho, ẩn khi 0
+func _bdg_make(d: Dictionary, b: Control) -> Control:   # #ngheBdg, #bookBdg: huy hiệu đỏ như số trên nút Kho, ẩn khi 0
 	var sn = null
 	for sel in d:
 		for n in d[sel]:
@@ -431,7 +436,7 @@ func _ng_bdg_make(d: Dictionary, b: Control) -> void:   # #ngheBdg: huy hiệu �
 			if not f.is_empty() and f.get("id", "") == "stockN":
 				sn = f
 	if sn == null:
-		return
+		return null
 	var n0: Dictionary = sn.duplicate(true)
 	var br: Rect2 = b.get_global_rect()
 	var bs: Dictionary = b.get_meta("snap", {})
@@ -442,17 +447,23 @@ func _ng_bdg_make(d: Dictionary, b: Control) -> void:   # #ngheBdg: huy hiệu �
 	n0.text = "0"
 	Snap._move(n0, Vector2(float(bs.r[0]) - float(ks.r[0]), float(bs.r[1]) - float(ks.r[1])))
 	var ids2 := {}
-	ng_bdg = _build(n0, ids2, Vector2(float(bs.r[0]), float(bs.r[1])))
-	ng_bdg.visible = false
-	b.add(ng_bdg)
+	var bd: Control = _build(n0, ids2, Vector2(float(bs.r[0]), float(bs.r[1])))
+	bd.visible = false
+	b.add(bd)
+	return bd
 
-func _ng_bdg() -> void:   # ngBdg
-	if ng_bdg == null or G.w_all == null:
+func _bdg_set(bd: Control, n: int) -> void:
+	if bd == null:
 		return
-	var n: int = G.w_all.WL.ng_red()
-	ng_bdg.visible = n > 0
-	if n > 0 and ng_bdg.texts.size():
-		ng_bdg.set_text(0, str(n))
+	bd.visible = n > 0
+	if n > 0 and bd.texts.size():
+		bd.set_text(0, str(n))
+
+func _ng_bdg() -> void:   # ngBdg, lV
+	if G.w_all == null:
+		return
+	_bdg_set(ng_bdg, G.w_all.WL.ng_red())
+	_bdg_set(sl_bdg, G.w_all.WCA.lv_red())
 
 func _buttons(b: Control, out: Array) -> Array:
 	# theo thứ tự trong trang (Snap.build xếp con theo z-index để vẽ: nút "on" bị đẩy xuống cuối)
@@ -1488,6 +1499,8 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
+	if slp != null:
+		slp.close()
 	if vlp != null:
 		vlp.close()
 	if ngp != null:
@@ -2919,7 +2932,18 @@ func ng_open(t := "") -> void:   # ngcOpen: nút Nghề trong Menu
 	kho_close()
 	ngp.open(t)
 
+func sl_open() -> void:   # Al("book"): nút Sổ làng trong Menu
+	if G.w_all == null:
+		return
+	if slp == null:
+		slp = load("res://logic/ui_sl.gd").new(self, G.w_all.WCA, G.w_all.WL, G.w_all.WH)
+	close_all()
+	kho_close()
+	slp.open()
+
 func close_all() -> void:
+	if slp != null and slp.on:
+		slp.close()
 	if ngp != null and ngp.on:
 		ngp.close()
 	if vlp != null:
@@ -2995,6 +3019,8 @@ func _process(dt: float) -> void:
 		vlp.step(dt)
 	if ngp != null:
 		ngp.step(dt)
+	if slp != null:
+		slp.step(dt)
 	_ng_bdg()
 	if xfp != null:
 		xfp.step(dt)
@@ -3060,7 +3086,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -3075,5 +3101,7 @@ func _input(e: InputEvent) -> void:
 		vlp.input(e)
 	if ngp != null:
 		ngp.input(e)
+	if slp != null:
+		slp.input(e)
 	if xfp != null:
 		xfp.input(e)

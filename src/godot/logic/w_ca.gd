@@ -811,6 +811,119 @@ func tc() -> Dictionary:   # Tc
 		G.g.erase("dua")
 	return t
 
+# danh hiệu (Bs): [id, tên, mô tả, max, thưởng]; cur theo id ở bs_cur
+const BS := [["nong", "Nhà nông chính hiệu", "Thu được 12 loại nông sản", 12, 2000],
+	["vuon", "Nhà vườn miệt thứ", "Có 8 loại trái cây, sản vật vườn sông", 8, 3000],
+	["kheo", "Thợ khéo tay", "Làm ra 20 món chế biến, sản phẩm", 20, 5000],
+	["cau", "Tay câu cự phách", "Câu đủ mọi loại cá", -1, 8000],
+	["dung", "Người dựng làng", "Xây, đặt 25 loại công trình và đồ vật", 25, 6000],
+	["than", "Con cháu của làng", "3 gia đình thân thiết đủ 5 ♥", 3, 8000],
+	["lao", "Lão nông tri điền", "Đạt cấp 100, mở tượng Lão nông trong Xây dựng", 100, 20000],
+	["all", "Làng kiểu mẫu", "Đạt hết các danh hiệu khác", 7, 30000]]
+
+func bs_list() -> Array:   # Bs: [{id, n, d, max, xu}]
+	var out := []
+	for b in BS:
+		out.append({"id": b[0], "n": b[1], "d": b[2], "max": Wf.size() if int(b[3]) < 0 else int(b[3]), "xu": int(b[4])})
+	return out
+
+func book_ns() -> Array:   # xo: nông sản
+	return G.xo
+
+func book_tc() -> Array:   # dT: trái cây, sản vật
+	return (WC.Mv if WC != null else []) + ["mat_ong", "dien_dien", "bong_sung", "keo_neo"]
+
+func book_mon() -> Array:   # pT: món chế biến, sản phẩm
+	var out := []
+	for t in (WC.to if WC != null else []):
+		if not (t in ["mat_ong", "dien_dien", "bong_sung", "keo_neo"]):
+			out.append(t)
+	return out
+
+func book_ct() -> Array:   # gT: công trình, đồ vật
+	var out := []
+	var og: Array = G.lang.C.get("og", []) if G.lang != null else []
+	for t in og:
+		if not _tr(t.get("hide")) and t.id != "pond":
+			out.append(String(t.id))
+	return out
+
+func cx(L: Array) -> int:   # Cx
+	var a := tc()
+	var n := 0
+	for e in L:
+		if _tr(a.seen.get(e)):
+			n += 1
+	return n
+
+func bs_cur(id: String) -> int:
+	match id:
+		"nong": return cx(book_ns())
+		"vuon": return cx(book_tc())
+		"kheo": return cx(book_mon())
+		"cau": return cx(Wf)
+		"dung":
+			var t := tc()
+			var a := 0
+			for n in book_ct():
+				if _tr(t.obj.get(n)):
+					a += 1
+			return a
+		"than":
+			var c := 0
+			var L = G.g.get("lang")
+			if L is Dictionary and L.get("fam") is Dictionary:
+				for k in L.fam:
+					if float(L.fam[k].get("tim", 0)) >= 5:
+						c += 1
+			return c
+		"lao": return G.lv()
+		"all":
+			var t := tc()
+			var a := 0
+			for b in BS:
+				if b[0] != "all" and _tr(t.tt.get(b[0])):
+					a += 1
+			return a
+	return 0
+
+func tb(t: Dictionary) -> bool:   # tB: nhận được
+	return not _tr(tc().tt.get(t.id)) and bs_cur(t.id) >= int(t.max)
+
+func lv_red() -> int:   # lV: số danh hiệu chờ nhận (#bookBdg)
+	var n := 0
+	for t in bs_list():
+		if tb(t):
+			n += 1
+	return n
+
+func cv(id: String) -> void:   # cV: nhận danh hiệu
+	var a = null
+	for e in bs_list():
+		if e.id == id:
+			a = e
+	if a == null or not tb(a):
+		return
+	var n := tc()
+	n.tt[id] = 1
+	n.cur = id
+	G.g.coins = float(G.g.coins) + int(a.xu)
+	_ta("Đạt danh hiệu \"" + String(a.n) + "\"! Thưởng " + _sa(a.xu) + " xu.")
+	_gr([12, 30, 18])
+	_ba()
+
+func ab() -> Variant:   # aB: danh hiệu đang mang
+	var t := tc()
+	var a = null
+	for n in bs_list():
+		if _tr(t.tt.get(n.id)):
+			a = n
+	if _tr(t.get("cur")):
+		for n in bs_list():
+			if n.id == t.cur:
+				a = n
+	return a
+
 func _ov(t: String) -> String:   # oV: món ẩn -> món đang hiện cùng vòng xoay
 	var P: Dictionary = G.lang.Pi if G.lang != null else {}
 	var a = P.get(t)

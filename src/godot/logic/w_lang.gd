@@ -1608,6 +1608,94 @@ func tn_on(day: int) -> Variant:   # tnOn
 			return ev
 	return null
 
+# ------------------------------------------------------------------ dòng phụ, chấm đỏ của thẻ lối vào Sổ làng
+const UTM := [[0, "Người mới về"], [150, "Có tiếng trong xóm"], [300, "Người có uy tín"], [500, "Người được cả xóm nể"], [750, "Người được cả ấp nể"], [950, "Bậc cao niên cả làng kính"]]
+
+func ut_rank() -> String:   # utRank
+	var p := _n(ut_s().p)
+	var r: String = UTM[0][1]
+	for m in UTM:
+		if p >= float(m[0]):
+			r = m[1]
+	return r
+
+func ut_can_len() -> bool:   # utCanLen
+	var o := ut_s()
+	if int(o.c) >= 4 or _n(o.get("bd", -1)) == float(_vr()):
+		return false
+	for x in ut_cond(int(o.c) + 1):
+		if not _tr(x[0]):
+			return false
+	return true
+
+func ut_bk_sub() -> String:   # utBkSub
+	var o := ut_s()
+	return _sv(o.p) + " điểm · " + (String(UTCHUC[int(o.c)]) if int(o.c) > 0 else ut_rank())
+
+func ut_red() -> int:   # utRed
+	var o := ut_s()
+	return 1 if ut_can_len() or (o.get("vx") is Dictionary and _tr(o.vx.get("xu"))) else 0
+
+func tn_bk_sub() -> String:   # tnBkSub
+	if not tn_ok():
+		return "Lên cấp " + str(TNLV) + " mới gặp"
+	var ev = tn_on(_vr() + 1)
+	var nn: int = tn_s().nan.size()
+	if ev != null:
+		return String(TNK.get(ev.k, {}).get("w", ""))
+	return str(nn) + " nhà gặp nạn" if nn else "Xóm bình yên"
+
+func tn_red() -> int:   # tnRed (phần chuẩn bị trước nạn; phần cứu nhà gặp nạn chờ bảng Thiên tai)
+	if not tn_ok():
+		return 0
+	var o := tn_s()
+	var ev = tn_on(_vr() + 1)
+	if ev != null and (_n(o.p.get("d", -1)) != float(ev.d) or not _tr(o.p.get("b"))):
+		return 1
+	return 0
+
+func clg_red() -> int:   # clgRed
+	var o := clg_s()
+	var n := 0
+	for x in o.l:
+		if _n(x.q) > _n(o.sn):
+			n += 1
+	return n
+
+func clg_bk_sub() -> String:   # clgBkSub
+	var n := clg_red()
+	var o := clg_s()
+	var a := 0
+	for x in o.l:
+		if _tr(x.get("a")) and not _tr(x.get("x")) and int(x.d) == _vr():
+			a += 1
+	return str(n) + " chuyện mới" if n else (str(a) + " chuyện chờ bạn" if a else "Chuyện mới trong làng")
+
+func gp_bk_sub() -> String:   # gpBkSub
+	var L = G.g.get("lang")
+	var n: int = L.fam.size() if L is Dictionary and L.get("fam") is Dictionary else 0
+	return str(n) + " nhà · dòng họ, bà con" if n else "Dòng họ, bà con"
+
+func hui_bk_sub() -> String:
+	var E = G.g.get("hui")
+	if E is Dictionary and not _tr(E.get("done")):
+		var k: int = ext["y6"].call() if ext.has("y6") else 0
+		return "Đang chơi · kỳ " + str(k) + "/" + str(_D)
+	return "Chưa tham gia"
+
+func hdn_bk_sub() -> String:   # hdnBkSub (mở hội: chờ bảng Hội đình)
+	var o = G.g.get("hdn")
+	var cu = o.get("cur") if o is Dictionary else null
+	if cu is Dictionary:
+		var left := int(cu.d) - _vr()
+		return "Hội còn " + str(left) + " ngày" if left > 0 else "Hôm nay mở hội"
+	return "Chưa mở được"
+
+func kl_bk_sub() -> String:   # klBkSub
+	var k = G.g.get("kl")
+	var n: int = k.b.size() if k is Dictionary and k.get("b") is Dictionary else 0
+	return str(n) + " loại · trái khủng" if n else "Trái khủng, hội thi"
+
 func eg() -> Dictionary:   # Eg: g.thu
 	var t = G.g.get("thu")
 	if not (t is Dictionary):

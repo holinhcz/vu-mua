@@ -20,6 +20,7 @@ var in0 := Vector2.ZERO
 var scroll := 0.0
 var hmax := 0.0
 var drag = null
+var moved_t := false        # ngón tay vừa kéo cuộn: nhả ra không tính là bấm
 var B := {}                 # bản chụp #pov của bảng nhà dân (mẫu p.note)
 var T := {}                 # khối mẫu chung (ui/snap/vl_tab.json)
 var _area := ""             # lớp của vùng thân cuộn (.vltab / .lsbody)
@@ -145,10 +146,10 @@ func _r(s: String, sty: Dictionary) -> Array:
 	return [s, sty]
 
 # ------------------------------------------------------------------ dựng: xếp khối vô vùng thân, dựng, gắn nút
-func _show(n: Dictionary, vt: Dictionary, blocks: Array) -> void:
+func _show(n: Dictionary, vt: Dictionary, blocks: Array, top := 7.5) -> void:
 	# xếp khối dọc: .vl-sec cách khối trên 12, khối sau .vl-sec 4,5, còn lại 6
 	var x0 := 16.5
-	var y := float(vt.r[1]) + 7.5
+	var y := float(vt.r[1]) + top
 	var y0 := y
 	var prev := ""
 	var kids := []
@@ -164,7 +165,7 @@ func _show(n: Dictionary, vt: Dictionary, blocks: Array) -> void:
 	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch + 7.5], "css": {"display": "block", "position": "static"}, "kids": kids}
 	vt.kids = [inn]
 	_area = String(vt.cls).split(" ")[0]
-	hmax = maxf(0.0, ch + 15.0 - float(vt.r[3]))
+	hmax = maxf(0.0, ch + top + 7.5 - float(vt.r[3]))
 	scroll = clampf(scroll, 0.0, hmax)
 	var old := box
 	ids = {}
@@ -233,6 +234,8 @@ func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bả
 		_wire(k)
 
 func _on(cb: Callable) -> void:
+	if moved_t:
+		return
 	cb.call()
 	_redo()
 
@@ -440,6 +443,7 @@ func input(e: InputEvent) -> bool:
 		var d: float = pos.y - drag.y0
 		if absf(d) > 6.0:
 			drag.moved = true
+			moved_t = true
 		if drag.moved:
 			_scroll_to(drag.s0 - d)
 	return false
