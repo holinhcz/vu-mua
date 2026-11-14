@@ -453,6 +453,9 @@ func clear_hu(o: Dictionary) -> int:   # _v: dọn cây rừng / cỏ hoang lấ
 	G.g.clr[o.key] = 1
 	var a := int(C.Nd.get(o.id, 5))
 	G.g.coins += a
+	if G.w_all != null:   # No("clear"): dọn cây có khi rơi tre, mây, cuốc (vật liệu nâng sao)
+		G.w_all.No("clear", 1, [o.gx + 0.5, o.gy + 0.5])
+	G.vib(10)
 	if o.id == "tram":
 		G.g.barn["cui"] = int(G.g.barn.get("cui", 0)) + 2
 		G.float_text.emit(o.gx + o.fw / 2.0, o.gy + o.fd / 2.0 - 0.6, "+2 Củi khô")
@@ -465,6 +468,7 @@ func clear_paddy(x: int, y: int) -> void:   # Dy: gặt lúa hoang ở khu đã 
 	G.g.clr[str(x) + "," + str(y)] = 1
 	G.g.barn["lua"] = int(G.g.barn.get("lua", 0)) + 1
 	G.float_text.emit(x + 0.5, y + 0.5, "+1 Lúa")
+	G.vib(8)
 	var w := Vector2(4268.0 + (x - y) * 32.0 + 0.0, 968.0 + (x + y) * 16.0 + 16.0)
 	F.burst(w - Vector2(0, 6), 8, [Color("#e8c84a"), Color("#c9a640"), Color("#8fbf4a")], 70.0, 2.6, 280.0, 2.0, 0.6, 16.0)
 	changed()

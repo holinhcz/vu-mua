@@ -85,11 +85,13 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 	if p == null:
 		return
 	var b := String(p.b)
-	F.P.load_bundle(b)
+	var fr: Array = frames_for(id, seed)
+	if fr.is_empty() or not _op_has(b, String(fr[0])):   # làng có sẵn khung (n/op) thì khỏi tải gói l/ (không có thì 404, chiếm lượt tải)
+		F.P.load_bundle(b)
 	var fx: bool = p.get("fx", false)
 	var sw: bool = p.get("sw", false)
 	var i := 0
-	for k in frames_for(id, seed):
+	for k in fr:
 		var s := _spr(b, String(k), foot, sw, fx)
 		if into_ghost:
 			s.position = Vector2.ZERO
@@ -99,7 +101,8 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 		i += 1
 	if p.has("flag"):
 		var fl: Dictionary = p.flag
-		F.P.load_bundle(String(fl.b))
+		if not _op_has(String(fl.b), "co_d00"):
+			F.P.load_bundle(String(fl.b))
 		var s := _spr(String(fl.b), "co_d00", foot, false, fx)
 		s.set_meta("flag", int(fl.n))
 		if fl.has("tint"):
@@ -164,7 +167,8 @@ func sync() -> void:
 			continue
 		var g = LG.pen_pos(p)
 		var b: String = "g_congtrinh_chuong_" + p
-		F.P.load_bundle(b)
+		if not _op_has(b, "gd"):
+			F.P.load_bundle(b)
 		var base := Vector2(L.en(g.x, g.y), L.nn(g.x, g.y))
 		for e in [["g", -100.0], ["b", 1.15], ["r0", 2.495], ["f0", 2.495], ["r1", 3.495], ["f1", 3.495]]:
 			var s := _spr(b, String(e[0]) + "d", base, false)
@@ -191,6 +195,12 @@ func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), nh
 				if s.has_meta("flag"):
 					s.set_meta("k", "co_d%02d" % fi)
 				_tex(s, scr)
+
+func _op_has(b: String, k: String) -> bool:   # làng có khung này trong n/op
+	if not F.main.has_method("op_box"):
+		return false
+	var a = F.main.op_box(op_name(b, k))
+	return a is Array and a.size() >= 4
 
 static func op_name(b: String, k: String) -> String:   # g_caytrai_xoai + dx01 -> caytrai-xoai-dx01 (tên file n/op của làng)
 	var p := b.substr(2).split("_", true, 1)
