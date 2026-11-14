@@ -510,6 +510,8 @@ func _process(dt: float) -> void:
 			b.queue_redraw()
 	_fell_sync(tt, zz)
 	_vn_sync(dt)
+	_crit_sync()
+	_tree_bub_sync(tt)
 	_parts_step(dt)
 	_jobs(dt)
 	player.step(dt)
@@ -804,6 +806,8 @@ func tap(sp: Vector2) -> void:
 		var key := "fall" + fk
 		if not has_job(key):
 			q.append({"key": key, "kind": "fall", "i": -1, "seed": fk, "pos": G.troi.bao.stand(fk)})
+		return
+	if G.w_all != null and G.w_all.critter_tap(w):   # NTWEB ZP / Iq: chạm bầy chim sáo, gà vịt sổng -> "Xùy xùy!"
 		return
 	if plot_at(w) < 0 and _kho_at(w):   # kho hàng đã xây: chạm mở Kho (web: type "khohang" -> zc("barn"))
 		ui.close_all()
@@ -1287,6 +1291,104 @@ func _vn_sync(dt: float) -> void:
 				if e[0] == anodes[k]:
 					e[1] = dk
 					break
+
+# ------------------------------------------------------------------ con vật đi lạc (gà vịt sổng, chim sáo): luật ở w_ruong.gd
+var cnodes := []   # [con vật (Dictionary của luật), node thu_ve]
+
+func _crit_sync() -> void:
+	var L: Array = G.w_all.WR.critters() if G.w_all != null and G.w_all.WR != null else []
+	for k in range(cnodes.size() - 1, -1, -1):
+		var c: Array = cnodes[k]
+		if L.any(func(x): return is_same(x, c[0])):
+			continue
+		for e in sortables:
+			if e[0] == c[1]:
+				sortables.erase(e)
+				break
+		c[1].queue_free()
+		cnodes.remove_at(k)
+	var WR = G.w_all.WR if G.w_all != null else null
+	for x in L:
+		var dk := nn(float(x.x), float(x.y))
+		# đang đậu / bới trong ô ruộng: vẽ trước cây lúa của ô (Cy: k = gx + gy + 1,06 của ô)
+		var pl := -1
+		if WR.flock != null and int(x.get("st", -1)) == 1:
+			pl = int(WR.flock.plot)
+		elif is_same(x, WR.Y0.a) and int(WR.Y0.st) == 1:
+			pl = int(WR.Y0.plot)
+		if pl >= 0:
+			dk = nn(G.cells[pl].gx + 0.5, G.cells[pl].gy + 0.5) + 15.0
+		var n: Node2D = null
+		for c in cnodes:
+			if is_same(c[0], x):
+				n = c[1]
+				break
+		if n == null:
+			n = Node2D.new()
+			n.set_script(load("res://logic/thu_ve.gd"))
+			n.farm = self
+			n.a = x
+			main.obj_root.add_child(n)
+			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			cnodes.append([x, n])
+			continue
+		for e in sortables:
+			if e[0] == n:
+				e[1] = dk
+				break
+
+# ------------------------------------------------------------------ bong bóng trên cây ăn trái (Ij) và thùng ong (Aq)
+var tbubs := {}    # idx g.objs -> Bubble (dùng chung bong bóng ô ruộng)
+
+func _tree_bub_sync(tt: float) -> void:
+	var want := {}
+	var WR = G.w_all.WR if G.w_all != null else null
+	var off: bool = ui.bdp == null or ui.bdp.mode == "off"
+	if WR != null and lang != null and off:
+		var O: Array = lang.objs()
+		for i in O.size():
+			var o = O[i]
+			if not (o is Dictionary):
+				continue
+			if lang.C.Ei.has(o.id):
+				var t = WR.ql(i)
+				if t == null:
+					continue
+				if WR.wc(t):
+					want[i] = ["ripe", String(lang.C.Ei[o.id].p)]
+				elif float(t.fw) <= 0.0:
+					want[i] = ["drop", ""]
+			elif o.id == "thungong" and WR.hive_h(i) > 0:
+				want[i] = ["ripe", "mat_ong"]
+	for i in tbubs.keys():
+		if not want.has(i):
+			tbubs[i].queue_free()
+			tbubs.erase(i)
+	var still: bool = G.motion_off()
+	for i in want:
+		var b: Bubble = tbubs.get(i)
+		if b == null:
+			b = Bubble.new()
+			b.fnt = fnt
+			b.farm = self
+			b.z_index = 40
+			add_child(b)
+			tbubs[i] = b
+		var o: Dictionary = lang.objs()[i]
+		var tp = lang.Pi.get(o.id)
+		var cx: float = float(o.gx) + (float(tp.fw) if tp != null else 1.0) / 2.0
+		var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
+		var bob := 0.0 if still else sin(tt * 3.0 + i) * 1.2
+		var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
+		b.position = Vector2(en(cx, cy), nn(cx, cy) + top + bob)
+		b.kind = want[i][0]
+		b.id = want[i][1]
+		b.text = ""
+		b.can = true
+		b.visible = true
+		b.k = (1.0 + 0.08 * sin(tt * 5.0 + b.position.x)) * sign_le()
+		b.zoom = main.zoom
+		b.queue_redraw()
 
 func vn_at(w: Vector2):   # chạm trúng bong bóng / thân con vật -> {t, j}; trúng chuồng -> {t, j: -1}
 	var V = G.vn

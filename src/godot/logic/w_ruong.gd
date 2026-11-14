@@ -162,6 +162,8 @@ func frame(dt: float) -> void:   # ui({step}) mỗi khung: man SZ, cau GY, QD Hq
 	sz(dt)
 	gy(dt)
 	hq(dt)
+	vw_birds(dt)
+	mz_gift(dt)
 	qh()
 	KE -= dt
 	if not (KE > 0.0):
@@ -666,6 +668,228 @@ func hq(t: float) -> void:   # Hq
 			_a0(a.x, a.y, ("Vịt" if a.sp == "vit" else "Gà") + " bới hư ruộng! Rào lại nha")
 			G.mark()
 		dx("")
+
+func iq(t: float, a: float) -> bool:   # Iq: chạm trúng gà / vịt sổng (toạ độ làng px)
+	var n = Y0.a
+	if n == null or int(Y0.st) == 2:
+		return false
+	var le: float = G.lang.F.sign_le()
+	var e: float = G.lang.en(float(n.x), float(n.y))
+	var r: float = G.lang.nn(float(n.x), float(n.y), 0.0)
+	return absf(t - e) < 16.0 * le and a > r - 22.0 * le and a < r + 6.0
+
+# ------------------------------------------------------------------ chim sáo ăn lúa (Xo.flock), bù nhìn
+var flock = null           # Xo.flock: {plot, birds, t, eat, fled}
+var _bt := _nn(25.0, 45.0) # Xo.bt: giây tới bầy kế
+
+func bunhin(t: float, a: float) -> bool:   # _P: có bù nhìn trong 3,3 ô
+	m0()
+	for e in _hrl():
+		if e.id == "bunhin" and Vector2(e.gx + 0.5 - t, e.gy + 0.5 - a).length() <= 3.3:
+			return true
+	return false
+
+func lw() -> int:   # lW: ô có cây đang lớn, không có bù nhìn (ô chín nặng gấp 3)
+	var t := []
+	for a in G.B0:
+		var n: Dictionary = G.g.plots[a]
+		if not n.u or n.c == null or n.get("b", 0) or not G.owned(a) or G.stage(n) < 1:
+			continue
+		var e := _pi(a)
+		if bunhin(e.gx + 0.5, e.gy + 0.5):
+			continue
+		t.append(a)
+		if G.ripe(n):
+			t.append_array([a, a])
+	return t[randi() % t.size()] if t.size() else -1
+
+func cw(t: int) -> void:   # cW: 3-4 con bay tới ô t (phần chó Vện không chép)
+	var a := _pi(t)
+	var n := 3 + randi() % 2
+	var e := []
+	var o := randf() * 6.283
+	for r in n:
+		var l: float = a.gx + 0.2 + randf() * 0.6
+		var c: float = a.gy + 0.2 + randf() * 0.6
+		var f := ax("sao", l + cos(o) * 7.0, c + sin(o) * 7.0)
+		f.tx = l
+		f.ty = c
+		f.z = 40.0 + G.CO
+		f.fly = 1
+		f.al = 1.0
+		f.wait = 0.0
+		f.st = 0
+		f.big = 1.45
+		e.append(f)
+	flock = {"plot": t, "birds": e, "t": 0.0, "eat": 14.0, "fled": false}
+
+func ib_bay(t: String) -> void:   # ib: bầy chim bay đi
+	var a = flock
+	if a == null or a.fled:
+		return
+	a.fled = true
+	for e in a.birds:
+		var r := randf() * 6.283
+		e.tx = e.x + cos(r) * 9.0
+		e.ty = e.y + sin(r) * 9.0
+		e.st = 2
+		e.fly = 1
+	var n := _pi(int(a.plot))
+	_a0(n.gx + 0.5, n.gy + 0.5, t if t != "" else "Xùy xùy!")
+
+func fw(t: float) -> void:   # fW: chim bay tới, mổ, ăn mất lúa
+	var a = flock
+	if a == null:
+		return
+	a.t = float(a.t) + t
+	var n: Dictionary = G.g.plots[int(a.plot)]
+	if not a.fled and n.c == null:
+		ib_bay("")
+	var pc := _pi(int(a.plot))
+	if not a.fled and bunhin(pc.gx + 0.5, pc.gy + 0.5):
+		ib_bay("Sợ bù nhìn!")
+	var e := 0
+	for l in a.birds:
+		l.ph = float(l.ph) + t * (14.0 if int(l.fly) else 6.0)
+		if int(l.st) == 0 or int(l.st) == 2:
+			var c: float = l.tx - l.x
+			var f: float = l.ty - l.y
+			var s := Vector2(c, f).length()
+			var h := (5.0 if int(l.st) == 2 else 3.6) * t
+			if s > 0.001 and absf(c - f) > 0.001:
+				l.face = 1 if c - f > 0.0 else -1
+			if s <= h:
+				l.x = l.tx
+				l.y = l.ty
+				if int(l.st) == 0:
+					l.st = 1
+					l.fly = 0
+					l.z = G.CO
+				else:
+					e += 1
+			else:
+				l.x += c / s * h
+				l.y += f / s * h
+				l.z = (G.CO + minf(40.0, s * 7.0)) if int(l.st) == 0 else minf(70.0, float(l.z) + t * 40.0)
+			if int(l.st) == 2:
+				l.al = maxf(0.0, float(l.al) - t * 0.4)
+		elif int(l.st) == 1:
+			l.mv = sin(float(a.t) * 2.0 + float(l.seed) * 9.0) > 0.6
+			l.act = 1
+			if l.mv:
+				l.x += sin(float(a.t) * 3.0 + float(l.seed) * 5.0) * t * 0.12
+			l.z = G.CO
+	if not a.fled and float(a.t) > float(a.eat) + 2.0:
+		if n.c != null:
+			var r := float(G.crop(n.c).time)
+			if G.ripe(n):
+				n.g = r * 0.72
+			else:
+				n.g = maxf(0.0, float(n.g) - r * 0.22)
+			_a0(pc.gx + 0.5, pc.gy + 0.5, "Chim ăn mất lúa!")
+			G.mark()
+		ib_bay("")
+	if a.fled and (e >= a.birds.size() or float(a.t) > float(a.eat) + 12.0):
+		flock = null
+
+func vw_birds(t: float) -> void:   # vW (phần chim sáo): bầy mới mỗi 40-80 giây, ban ngày, không lúc xây
+	fw(t)
+	if G.motion_off() or _mode() != "off":
+		return
+	if not G.night and _perf() >= E5 and flock == null:
+		_bt -= t
+		if _bt <= 0.0:
+			_bt = _nn(40.0, 80.0)
+			var n := lw()
+			if n >= 0:
+				cw(n)
+
+func zp(t: float, a: float) -> bool:   # ZP: chạm trúng bầy chim (toạ độ làng px)
+	var n = flock
+	if n == null or n.fled:
+		return false
+	var le: float = G.lang.F.sign_le()
+	for r in n.birds:
+		var o: float = G.lang.en(float(r.x), float(r.y))
+		var l: float = G.lang.nn(float(r.x), float(r.y), float(r.z))
+		if absf(t - o) < 16.0 * le and a > l - 20.0 * le and a < l + 6.0:
+			return true
+	return false
+
+func critters() -> Array:   # con vật đi lạc cho phần vẽ: gà / vịt sổng + chim sáo
+	var L := []
+	if Y0.a != null:
+		L.append(Y0.a)
+	if flock != null:
+		L.append_array(flock.birds)
+	return L
+
+# ------------------------------------------------------------------ cô Hai cho giống (mZ)
+var _mz_t := 0.0
+
+func mz_gift(t: float) -> void:   # mZ (bước "giong" mỗi 2 giây): hết sạch giống, ruộng trống -> cô Hai cho giống, 1 lần/ngày
+	_mz_t -= t
+	if _mz_t > 0.0:
+		return
+	_mz_t = 2.0
+	if G.w_all == null or G.w_all.WC == null:
+		return
+	var k: Dictionary = G.w_all.WC.Km()
+	if _num(k.get("gift")) and int(k.gift):
+		return
+	for e in G.xo:   # P4: giống thường đã mở
+		if ol.has(e) or int(G.crop(e).get("lv", 1)) > G.lv():
+			continue
+		if int(G.g.barn.get(e, 0)) > 0:
+			return
+	for p in G.g.plots:
+		if p.u and p.c != null:
+			return
+	k.gift = 1
+	G.g.barn.lua = int(G.g.barn.get("lua", 0)) + 4
+	G.g.barn.rau_muong = int(G.g.barn.get("rau_muong", 0)) + 2
+	_ta("Thấy ruộng bỏ trống, cô Hai hàng xóm cho 4 hạt lúa với 2 bó giống rau muống. Lần sau nhớ chừa giống nha!")
+	G.mark()
+
+# ------------------------------------------------------------------ thùng ong: chạm lấy mật (jD + sx)
+func hive_at(t: float, a: float) -> int:   # jD: chạm trúng thùng ong (toạ độ làng px) -> idx g.objs
+	m0()
+	var L := _hrl()
+	for n in range(L.size() - 1, -1, -1):
+		var e: Dictionary = L[n]
+		if e.id != "thungong":
+			continue
+		var sx: float = G.lang.en(e.gx + e.fw / 2.0, e.gy + e.fd / 2.0)
+		var sy: float = G.lang.nn(e.gx + e.fw / 2.0, e.gy + e.fd / 2.0)
+		if absf(t - sx) < 24.0 and a >= sy - 86.0 and a <= sy + 8.0:
+			return int(e.idx)
+	return -1
+
+func hive_h(t: int) -> int:   # số hũ mật đang có (bong bóng mat_ong)
+	var a = _hr_of(t)
+	if a == null:
+		return 0
+	var e = lq(a)
+	return int(e.h) if e != null else 0
+
+func sx(t: int) -> bool:   # sx: lấy mật
+	m0()
+	var a = _hr_of(t)
+	if a == null:
+		return false
+	var e = lq(a)
+	if e == null:
+		return false
+	if not int(e.h):
+		var r := eq(a)
+		_ta(("Ong đang làm mật, đầy " + str(int(round(float(e.t) / ZM * 100.0))) + "%. Cây ăn trái quanh thùng ong (3 ô) được thêm 1 trái mỗi lần hái.") if r >= 0.45 else "Quanh thùng ong chưa có hoa nên ong làm mật rất chậm. Trồng cây ăn trái, hoa giấy, dâm bụt hay hoa cỏ quanh đây nhé.")
+		return true
+	G.g.barn.mat_ong = int(G.g.barn.get("mat_ong", 0)) + int(e.h)
+	_a0(a.gx + 0.5, a.gy + 0.5, "+" + str(int(e.h)) + " hũ mật ong")
+	e.h = 0
+	G.vib(10)
+	G.mark()
+	return true
 
 # ------------------------------------------------------------------ ốc gạo mùa nước nổi
 func qs() -> bool:   # qs: mùa nước nổi (mùa thu, ngày 2..6 trong tuần mùa)
