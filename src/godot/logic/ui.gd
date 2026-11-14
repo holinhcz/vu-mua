@@ -933,6 +933,16 @@ func _rm_ic(k: String, svg: String, big := false) -> void:   # hình trong của
 	if svg != "":
 		_set_svg(b, svg)
 
+func _rm_col(b: Control, col) -> void:   # màu chữ dòng nhỏ của chip (null = màu gốc của bản chụp)
+	if b.texts.is_empty():
+		return
+	if not b.has_meta("c0"):
+		b.set_meta("c0", b.texts[0].col)
+	var c: Color = col if col is Color else b.get_meta("c0")
+	if b.texts[0].col != c:
+		b.texts[0].col = c
+		b.redraw()
+
 func _rm_title(rt: Control, mid: bool) -> void:   # tên trên chip: mid = chỉ có tên thì đưa vào giữa chip
 	var ti: int = rt.get_meta("ti", 0)
 	if rt.texts.size() <= ti:
@@ -944,7 +954,7 @@ func _rm_title(rt: Control, mid: bool) -> void:   # tên trên chip: mid = chỉ
 		rt.texts[ti].rect.position.y = y
 		rt.redraw()
 
-func _rm_note(rt: Control, s: String) -> void:   # dòng chữ nhỏ của chip không có đồng hồ ("" = ẩn dòng, tên vào giữa)
+func _rm_note(rt: Control, s: String, col = null) -> void:   # dòng chữ nhỏ của chip không có đồng hồ ("" = ẩn dòng, tên vào giữa); col: màu chữ
 	_rm_title(rt, s == "")
 	var sm := _q(rt, "", "small")
 	if sm == null:
@@ -959,6 +969,7 @@ func _rm_note(rt: Control, s: String) -> void:   # dòng chữ nhỏ của chip 
 		elif n.get("tag", "") == "b":
 			var w := Box.text_w(s, 12.0, 800) + 2.0
 			_txt(k, s)
+			_rm_col(k, col)
 			k.place(Rect2(Vector2((sm.r.size.x - w) * 0.5, k.r.position.y), Vector2(w, k.r.size.y)))
 			k.texts[0].rect = Rect2(0, k.texts[0].rect.position.y, w, k.texts[0].rect.size.y)
 			k.texts[0].al = "left"
@@ -1129,6 +1140,7 @@ func _rm_small(rt: Control, wet: bool, tm: String) -> void:
 	if clk == null or tb == null:
 		return
 	_txt(tb, tm)
+	_rm_col(tb, null)
 	_rm_title(rt, false)
 	sm.visible = true
 	var w1 := Box.text_w("Đang ướt", 12.0, 600) if wet else 0.0

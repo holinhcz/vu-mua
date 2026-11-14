@@ -132,7 +132,10 @@ func _pen(t: String) -> void:
 	U.rm_gi[".water"].modulate.a = 1.0
 	var rt: Control = U.rm_gi[".rmt"]
 	U._txt(rt, String(G.lang.CO.get(t, "Chuồng")))
-	U._rm_note(rt, ("Mua thêm con · " + G.fmt_n(V.price(t)) + " xu") if L.size() < V.gl() else "")
+	if L.size() < V.gl():
+		U._rm_note(rt, "Mua thêm con · " + G.fmt_n(V.price(t)) + " xu")
+	else:   # đủ con: chữ xanh lá như "Hợp mùa" bên ruộng
+		U._rm_note(rt, "Đợi chút! Tí nữa thu hoạch", Color8(63, 138, 52))
 
 # ------------------------------------------------------------------ chỗ đứng (mỗi khung)
 func pos() -> void:
