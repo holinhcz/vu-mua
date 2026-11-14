@@ -22,7 +22,6 @@ var G
 var WR = null              # w_ruong.gd (bộ ráp gán): gg, td, ct_built, o0, qf, ro, Y0
 var WC = null              # w_cho.gd (bộ ráp gán): ho, s2, v1
 var WS = null              # NTWEB w_sys.gd (bộ ráp gán): htv dùng chung
-var ui = null              # w_lang_ui.gd (tự gán khi tạo)
 # ext: việc của hệ khác (bộ ráp gán Callable theo tên web)
 #   (Uf / CD / SD / bl: làm ngay ở đây, đọc Hr của WR._hrl)
 #   E2(u) -> Dictionary      (E2[u]: người nhà u đang đi chơi {st: "home" | "go" | ...}; null = chưa có)
@@ -2456,6 +2455,7 @@ func step(t: float, offline: bool) -> void:   # wK: than, dam ($K), cuoi (zU), m
 	if offline:
 		return
 	q_d(t)
+	ng_tick(t)
 	than_step(t)
 	dam_tick(t)
 	cuoi_step(t)
@@ -3387,3 +3387,230 @@ func dan_at(w: Vector2, le: float, en: Callable, nn: Callable) -> int:   # DD: n
 		if absf(w.x - r) < 10.0 * le and w.y > o - 34.0 * le and w.y < o + 4.0:
 			return int(float(n))
 	return 0
+
+# ------------------------------------------------------------------ bảng Nghề thủ công: làm, thi sao, nghề chính, đơn làng, thương lái (ngcTab*, ngTick)
+var NGMSG := ""
+var _ngt := 0.0            # NGT: ngTick 2 giây một lần
+const NGDTMS := 3.0 * 864e5   # NGDTMS: đơn đặt thợ hết hạn sau 3 ngày
+
+func ng_kho(t: String) -> int:   # ngKho: chợ trả cho hàng nghề
+	var p := _ai(t)
+	return maxi(1, _rnd(p * maxf(0.6, htv("t_si")))) if ng_base(t) != "" else p
+
+func ng_on() -> bool:   # ngOn
+	return not ng_lock() and ut_houses().size() > 0
+
+func ng_don_ok(d: Dictionary) -> bool:   # ngDonOk
+	return d.it.all(func(z): return ng_has(String(z[0]), int(z[2])) >= int(z[1]))
+
+func ng_red() -> int:   # ngRed: số đơn giao được (chấm trên nút Nghề)
+	return ng_d().l.filter(func(d): return ng_don_ok(d)).size() if ng_on() else 0
+
+func ng_giao(id: String) -> void:   # ngGiao
+	var o := ng_d()
+	var d = null
+	for x in o.l:
+		if x.id == id:
+			d = x
+	if d == null:
+		return
+	if not ng_don_ok(d):
+		_ta("Chưa đủ hàng cho đơn này.")
+		return
+	var xu := _rnd(_n(d.xu) * 0.8 / 10.0) * 10 if ng_xau() else int(d.xu)
+	var hb := htv("t_bao")
+	if hb and WS != null and WS.htS().get("bt") != _vr():
+		WS.htS().bt = _vr()
+		xu = _rnd(xu * hb / 10.0) * 10
+	for z in d.it:
+		ng_take(String(z[0]), int(z[2]), int(z[1]))
+	G.g.coins = _n(G.g.coins) + xu
+	var msg := "Giao đơn \"" + String(d.t) + "\": +" + _sa(xu) + " xu" + (" (đang mang tiếng, bị trả thấp)" if xu < int(d.xu) else "")
+	if _i(d.get("ut")):
+		ut_add(_i(d.ut), "Giao đồ nghề: " + String(d.t).to_lower())
+		msg += ", +" + str(_i(d.ut)) + " uy tín"
+	var f = _fam_of(d.u) if _tr(d.get("u")) else null
+	if f != null and _i(d.get("th")):
+		msg += than_txt(than_add(f, _i(d.th)))
+	o.l.erase(d)
+	ng_s().don = _i(ng_s().get("don")) + 1
+	_ta(msg + ".")
+	_ba()
+
+func ng_dur(gx: Dictionary) -> int:   # ngDur: giây làm một món
+	return maxi(2, _rnd(float(gx.t) * (1.0 - 0.08 * (ng_sao(String(gx.id)) - 1)) * (1.0 - htv("g_nhanh"))))
+
+func ng_made(b: String) -> String:   # ngMade: ra món (thường / khéo / tinh xảo), cộng điểm
+	var o := ng_s()
+	var day := _vr()
+	var r0 := ng_thi_ready(b)
+	if not (o.get("dp") is Dictionary) or o.dp.get("d") != day:
+		o.dp = {"d": day, "n": {}}
+	if _i(o.dp.n.get(b)) < ht_ngay():
+		o.dp.n[b] = _i(o.dp.n.get(b)) + 1
+		o.xp[b] = _n(o.xp.get(b)) + 1
+	o.mk[b] = _i(o.mk.get(b)) + 1
+	var R := ng_rate(b)
+	var r := randf()
+	var h := 2 if r < float(R[1]) else (1 if r < float(R[1]) + float(R[0]) else 0)
+	if h:
+		if not (o.hq.get(b) is Array):
+			o.hq[b] = [0, 0]
+		o.hq[b][h - 1] = int(o.hq[b][h - 1]) + 1
+	if not r0 and ng_thi_ready(b):
+		NGMSG = " Đủ điều kiện thi lên " + str(ng_sao(b) + 1) + "★, mở bảng Nghề để thi với thầy."
+	elif _i(o.dp.n.get(b)) == ht_ngay() and not _tr(o.dp.get("m" + b)):
+		o.dp["m" + b] = 1
+		NGMSG = " Hôm nay đủ " + str(ht_ngay()) + " điểm tay nghề rồi, làm thêm không cộng điểm."
+	else:
+		NGMSG = ""
+	return ng_id(b, h)
+
+func ng_up_msg() -> String:   # ngUpMsg
+	var m := NGMSG
+	NGMSG = ""
+	return m
+
+func tk(id: String) -> void:   # Tk: nhân vật về nhà làm một món nghề
+	var gx = nghe_by_id(id)
+	if gx == null or not _tr(t6().get(id)):
+		return
+	if not q_s(gx):
+		_ta("Kho chưa đủ nguyên liệu.")
+		return
+	var F = G.lang.F if G.lang != null else null
+	if F == null or F.has_job("nghe"):   # l4
+		return
+	var run := func() -> bool:
+		if not q_s(gx):
+			return false
+		for x in gx["in"]:
+			G.g.barn[String(x[0])] = _barn(x[0]) - int(x[1])
+		var oid := ng_made(String(gx.id))
+		G.g.barn[oid] = _barn(oid) + 1
+		G.float_text.emit(F.player.x, F.player.y, "+1 " + String(_ae(oid).get("name", oid)))
+		_ta("Làm xong 1 " + String(_ae(oid).get("name", oid)).to_lower() + ", bán được giá (" + _sa(_ai(oid)) + " xu)." + ng_up_msg())
+		_qi("nghe")
+		_ba()
+		return true
+	F.ext_job("nghe", Vector2(6.25, 4.35), float(ng_dur(gx)), run)   # _T(): góc nhà
+	_ta("Nhân vật về nhà " + String(gx.n).to_lower() + ".")
+
+func ng_thi(b: String) -> void:   # ngThi: thi lên sao với thầy
+	var s := ng_sao(b)
+	var t := s + 1
+	var T = NGTHI[t] if t < NGTHI.size() else null
+	if T == null or s >= ng_max(b):
+		_ta("Chọn làm nghề chính mới thi lên 4★ được." if s >= 3 and not ng_chinh(b) else "Đã lên tới sao cao nhất.")
+		return
+	if not ng_thi_ready(b):
+		_ta("Chưa đủ điều kiện thi.")
+		return
+	var u := ng_thay(b)
+	var f = _fam_of(u)
+	var x = nghe_by_id(b)
+	for z in T.get("nop", []):
+		ng_take(b, int(z[0]), int(z[1]))
+	if _tr(T.get("rot")) and randf() < float(T.rot) and not (WS != null and WS.htBgl()):
+		_ta(String(f.n) + " coi rồi lắc đầu: \"Chưa tới đâu, về làm thêm rồi đem cái khác qua.\" Hàng nộp thầy giữ lại.")
+		_ba()
+		return
+	if _tr(T.get("le")):
+		hn_take(hn_le(u, {"tp": "sd"}))
+	if _tr(T.get("xu")):
+		G.g.coins = _n(G.g.coins) - _n(T.xu)
+	ng_s().sao[b] = t
+	if f != null:
+		than_add(f, 30)
+	ut_add(5 if t >= 4 else 2, "Lên " + str(t) + "★ nghề " + String(x.n).to_lower())
+	_ta((String(f.n) if f != null else "Thầy") + " gật đầu: tay nghề " + String(x.n).to_lower() + " lên " + str(t) + "★" + (", thành thợ cả!" if t == 5 else "!") + " Ra hàng tốt hơn, làm nhanh hơn.")
+	_gr([10, 30, 10])
+	_ba()
+
+func ng_chon_chinh(b: String) -> void:   # ngChonChinh
+	var o := ng_s()
+	var i: int = o.chinh.find(b)
+	if not _tr(t6().get(b)):
+		return
+	if i < 0:
+		if o.chinh.size() >= NGCHINH:
+			_ta("Đã đủ " + str(NGCHINH) + " nghề chính. Bỏ bớt một nghề mới chọn nghề khác.")
+			return
+		o.chinh.append(b)
+		_ta("Chọn " + String(nghe_by_id(b).n).to_lower() + " làm nghề chính: lên được tới 5★.")
+	else:
+		o.chinh.remove_at(i)
+		if ng_sao(b) > 3:
+			o.sao[b] = 3
+		o.xp[b] = minf(_n(o.xp.get(b)), float(NGSAO[2]))
+		_ta("Bỏ nghề chính " + String(nghe_by_id(b).n).to_lower() + ": tay nghề về 3★.")
+	_ba()
+
+func ng_tu_choi(id: String) -> void:   # ngTuChoi
+	var o := ng_d()
+	var d = null
+	for x in o.l:
+		if x.id == id:
+			d = x
+	if d == null:
+		return
+	var sm: bool = int(d.dl) - _vr() >= 1
+	o.l.erase(d)
+	ng_phat(d, 0.5 if sm else 1.0, "Từ chối")
+	_ba()
+
+func ng_lai() -> Dictionary:   # ngLai: thương lái hôm nay
+	var o := ng_t()
+	var day := _vr()
+	if not (o.get("ld") is Dictionary) or o.ld.get("d") != day:
+		o.ld = {"d": day, "n": {}}
+	return o.ld
+
+func ng_lai_mua(b: String) -> void:   # ngLaiMua
+	var L := ng_lai()
+	if ng_base(b) == "":
+		return
+	if _i(L.n.get(b)) >= 1 + htv("t_lai"):
+		_ta("Thương lái hết " + String(_ae(b).get("name", b)).to_lower() + " rồi, mai ghé lại.")
+		return
+	var p := _ai(b) * 3
+	if _n(G.g.coins) < p:
+		_ta("Cần " + _sa(p) + " xu.")
+		return
+	G.g.coins = _n(G.g.coins) - p
+	G.g.barn[b] = _barn(b) + 1
+	L.n[b] = _i(L.n.get(b)) + 1
+	_ta("Mua của thương lái 1 " + String(_ae(b).get("name", b)).to_lower() + " giá " + _sa(p) + " xu.")
+	_ba()
+
+func ng_dt_expire() -> bool:   # ngDtExpire (phần không cần mạng): đơn đặt thợ quá 3 ngày thì hoàn xu
+	var o := ng_t()
+	var now := _now()
+	var ch := false
+	for r in o.get("my", []):
+		if r.get("st") == "mo" and now - _n(r.get("t")) > NGDTMS:
+			r.st = "het"
+			G.g.coins = _n(G.g.coins) + _n(r.xu)
+			ch = true
+			_ta("Đơn đặt " + String(_ae(r.it).get("name", r.it)).to_lower() + " quá 3 ngày chưa ai giao, hoàn " + _sa(r.xu) + " xu.")
+	var gv = o.get("gv")
+	if gv is Dictionary:
+		for k in gv.keys():
+			if gv[k].get("st") != "cho" and now - _n(gv[k].get("t")) > 10 * 864e5:
+				gv.erase(k)
+				ch = true
+	return ch
+
+func ng_tick(dt: float) -> void:   # ngTick: 2 giây một lần (đơn làng mới, đơn đặt thợ hết hạn)
+	_ngt -= dt
+	if _ngt > 0.0:
+		return
+	_ngt = 2.0
+	if _cr():
+		return
+	var ch := false
+	if ng_on():
+		ch = ng_gen()
+	ch = ng_dt_expire() or ch
+	if ch:
+		_ba()

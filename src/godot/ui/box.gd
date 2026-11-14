@@ -346,8 +346,8 @@ static func _runs(s: String) -> Array:
 		var o := ch.unicode_at(0)
 		if o == 0xfe0f:
 			continue
-		if o == 0x25b2 or o == 0x25bc or o == 0x2605 or o == 0x2606 or o == 0x2665 or o == 0x2661 or o == 0x2192 or o == 0x2713:
-			# ▲ ▼ ★ ☆ ♥ ♡ → ✓ are not in Nunito (the browser takes them from a fallback font): drawn as shapes
+		if o == 0x25b2 or o == 0x25bc or o == 0x2605 or o == 0x2606 or o == 0x2665 or o == 0x2661 or o == 0x2192 or o == 0x2713 or o == 0x2717:
+			# ▲ ▼ ★ ☆ ♥ ♡ → ✓ ✗ are not in Nunito (the browser takes them from a fallback font): drawn as shapes
 			if cur != "":
 				out.append(cur)
 				cur = ""
@@ -387,7 +387,7 @@ func _draw_line(f: Font, pos: Vector2, s: String, fs: int, col: Color, shadow: b
 			x += f.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 
 static func _gw(o: int) -> float:   # bề ngang hình vẽ thay chữ (theo cỡ chữ)
-	return 1.0 if o == 0x2665 or o == 0x2661 else 0.95 if o == 0x2192 else 0.8 if o == 0x2713 else 0.77
+	return 1.0 if o == 0x2665 or o == 0x2661 else 0.95 if o == 0x2192 else 0.8 if o == 0x2713 or o == 0x2717 else 0.77
 
 func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
 	if o == 0x2665:   # ♥: hai vòng tròn + mũi nhọn
@@ -412,6 +412,11 @@ func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
 		return
 	if o == 0x2713:   # ✓
 		_fg.draw_polyline(PackedVector2Array([Vector2(x + fs * 0.1, base - fs * 0.36), Vector2(x + fs * 0.32, base - fs * 0.1), Vector2(x + fs * 0.72, base - fs * 0.68)]), col, maxf(1.0, fs * 0.12), true)
+		return
+	if o == 0x2717:   # ✗
+		var w := maxf(1.0, fs * 0.11)
+		_fg.draw_line(Vector2(x + fs * 0.14, base - fs * 0.62), Vector2(x + fs * 0.66, base - fs * 0.08), col, w, true)
+		_fg.draw_line(Vector2(x + fs * 0.66, base - fs * 0.62), Vector2(x + fs * 0.14, base - fs * 0.08), col, w, true)
 		return
 	if o == 0x2192:   # →: thân + đầu mũi tên
 		var ay := base - fs * 0.33

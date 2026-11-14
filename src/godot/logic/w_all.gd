@@ -25,7 +25,6 @@ var WRU = null  # w_ruong_ui.gd
 var WKU = null  # w_kho_ui.gd
 var WCU = null  # w_cho_ui.gd
 var WSU = null  # w_sys_ui.gd
-var WLU = null  # w_lang_ui.gd
 var WHU = null  # w_htx_ui.gd
 var WCAU = null # w_ca_ui.gd
 var pills: VBoxContainer = null   # hàng nút viên HUD (Hs())
@@ -216,7 +215,6 @@ func ui_setup(ui) -> void:
 	WKU = load("res://logic/w_kho_ui.gd").new(U, WK)
 	WCU = load("res://logic/w_cho_ui.gd").new(U, WC)
 	WSU = load("res://logic/w_sys_ui.gd").new(U, WS)
-	WLU = load("res://logic/w_lang_ui.gd").new(U, WL)
 	WHU = load("res://logic/w_htx_ui.gd").new(U, WH)
 	WCAU = load("res://logic/w_ca_ui.gd").new(U, WCA)
 	TIP = load("res://logic/w_tip.gd").new(G, U)   # NTWEB sH/fp: chữ khi trỏ chuột lên bản đồ
