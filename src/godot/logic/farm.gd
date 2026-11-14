@@ -102,6 +102,10 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 		cs.centered = false
 		cs.visible = false
 		cs.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO) + 3.5)
+		var rg := RipeRing.new()   # vòng vàng ô chín: nằm dưới cây trồng của ô (vẽ trước cs), bị cây che như bản web
+		rg.visible = false
+		rg.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO) + 1.0)
+		_add_sorted(rg, nn(c.gx + 0.5, c.gy + 0.5) + 13.99)
 		_add_sorted(cs, nn(c.gx + 0.5, c.gy + 0.5) + 14.0)
 		var b := Bubble.new()
 		b.fnt = fnt
@@ -110,7 +114,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 		b.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO))
 		b.z_index = 40     # bong bóng vẽ sau cùng, đè mọi thứ
 		add_child(b)
-		plots.append({"soil": L, "crop": cs, "bub": b, "key": ""})
+		plots.append({"soil": L, "crop": cs, "bub": b, "ring": rg, "key": ""})
 	# biển Khai hoang (XW/JW bản web): vẽ bằng code, chữ vector, thay ảnh chụp
 	PC = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/parcel_web.json"))
 	for id in PC.x1:
@@ -503,6 +507,12 @@ func _process(dt: float) -> void:
 			if not v.has("k"):
 				v.k = cs.scale
 			cs.scale = v.k * ft
+		var rg: RipeRing = v.ring
+		var a0: Dictionary = G.p(i)
+		rg.visible = G.owned(i) and a0.u and G.ripe(a0)
+		if rg.visible:
+			rg.al = 0.55 + 0.4 * sin(tt * 4.0 + G.cells[i].gx)
+			rg.queue_redraw()
 		var b: Bubble = v.bub
 		if b.visible and b.kind != "lock":
 			# X0: phập phồng 1 + .08 sin(5t + x), nhân le (làng nhỏ lại thì to lên cho dễ đọc)
@@ -1934,15 +1944,13 @@ class FxNode extends Node2D:
 			for s in [[-6, -1, 3.2], [2, 1, 3.4], [7, -2, 3.0]]:
 				_ell(p + Vector2(s[0], s[1]), s[2], s[2] * 0.5, Color(0.42, 0.29, 0.19))
 				_ell(p + Vector2(s[0], s[1] - 1.3), s[2] * 0.42, s[2] * 0.25, Color(0.91, 0.85, 0.66))
-		# ô chín: vòng sáng nhấp nháy
+		# ô chín: 3 sao lấp lánh bay lên (vòng vàng dưới gốc là RipeRing, nằm dưới cây)
 		var tt := Time.get_ticks_msec() / 1000.0
 		for i in G.B0:
 			var a: Dictionary = G.p(i)
 			if G.owned(i) and a.u and G.ripe(a):
 				var c: Dictionary = G.cells[i]
 				var p := Vector2(farm.en(c.gx + 0.5, c.gy + 0.5), farm.nn(c.gx + 0.5, c.gy + 0.5, G.CO) + 1.0)
-				_ring(p, 21.0, 10.5, Color(0.96, 0.74, 0.26, 0.55 + 0.4 * sin(tt * 4.0 + c.gx)), 2.2)
-				# 3 sao lấp lánh bay lên (ô chín)
 				var f0: float = p.y - 1.0
 				for x in 3:
 					var It := fmod(tt * 0.7 + x / 3.0, 1.0)
@@ -2034,6 +2042,15 @@ class FxNode extends Node2D:
 			var t := a / 40.0 * TAU
 			pts.append(c + Vector2(cos(t) * rx, sin(t) * ry))
 		draw_polyline(pts, col, w, true)
+
+class RipeRing extends Node2D:   # ô chín: elip vàng 21 x 10,5, nét 2,2, nhấp nháy (Le.accent), vẽ ngay trước cây của ô
+	var al := 1.0
+	func _draw() -> void:
+		var pts := PackedVector2Array()
+		for a in 41:
+			var t := a / 40.0 * TAU
+			pts.append(Vector2(cos(t) * 21.0, sin(t) * 10.5))
+		draw_polyline(pts, Color(0.96, 0.74, 0.26, al), 2.2, true)
 
 class TagNode extends Node2D:
 	var pl
