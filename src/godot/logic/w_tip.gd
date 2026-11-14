@@ -61,16 +61,24 @@ func _input(e: InputEvent) -> void:
 		if e.button_mask != 0:
 			hide_tip()
 			return
-		_show()
+		_want = true   # chọn lại ở _process, tối đa ~12 lần/giây (chuột rê bắn rất nhiều sự kiện)
 	elif e is InputEventMouseButton and e.pressed:
 		hide_tip()
 	elif e is InputEventScreenTouch:
 		mp = Vector2(-1, -1)
 		hide_tip()
 
+var _want := false
+var _wt := 0.0
 func _process(dt: float) -> void:
 	acc += dt
-	if acc >= 0.25 and box != null and box.visible:   # mH: đứng yên vẫn cập nhật (% lớn, nước)
+	_wt -= dt
+	if _want and _wt <= 0.0:
+		_want = false
+		_wt = 0.08
+		acc = 0.0
+		_show()
+	elif acc >= 0.25 and box != null and box.visible:   # mH: đứng yên vẫn cập nhật (% lớn, nước)
 		acc = 0.0
 		_show()
 

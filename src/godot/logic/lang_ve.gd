@@ -284,6 +284,30 @@ func top_of(o: Dictionary) -> float:   # Jo(...).y: đỉnh hình món o tính t
 			top = minf(top, float(a[1]))
 	return top if top < 0.0 else -60.0
 
+func obj_rect(n: int) -> Rect2:   # khung hình món n (toạ độ làng, gộp mọi lớp) để loại nhanh trước khi xét điểm ảnh
+	var o: Dictionary = LG.objs()[n]
+	var t = LG.Pi.get(o.id)
+	var p = PICS.get(o.id)
+	if t == null or p == null:
+		return Rect2()
+	var cx: float = float(o.gx) + float(t.fw) / 2.0
+	var cy: float = float(o.gy) + float(t.fd) / 2.0
+	var foot := Vector2(L.en(cx, cy), L.nn(cx, cy))
+	var b := String(p.b)
+	var m: Dictionary = F.P.meta(b)
+	var r := Rect2()
+	for k in frames_for(String(o.id), ft_seed(o)):
+		var a = m.get(k)
+		if a == null and F.main.has_method("op_box"):
+			a = F.main.op_box(op_name(b, String(k)))
+		if a is Array and a.size() >= 4:
+			var ox := float(a[0])
+			if p.get("fx", false):
+				ox = -(ox + float(a[2]))
+			var q := Rect2(foot.x + ox, foot.y + float(a[1]), float(a[2]), float(a[3]))
+			r = q if r.size == Vector2.ZERO else r.merge(q)
+	return r
+
 func pick_obj(n: int, w: Vector2) -> bool:   # chạm trúng điểm ảnh của món n (alpha > 40)
 	var o: Dictionary = LG.objs()[n]
 	var t = LG.Pi.get(o.id)

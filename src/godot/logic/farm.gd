@@ -938,7 +938,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var a: Array = PC.G0[t].sign
 		var sgn: String = t
 		var hs := func(p: Vector2) -> bool: return sign_at(p) == sgn
-		if _pk_near(hs, w, PK_RS) < 99.0:
+		if Vector2(en(a[0] + 0.5, a[1] + 0.5), nn(a[0] + 0.5, a[1] + 0.5) - 30.0).distance_to(w) < 140.0:
 			_pk_add(L, {"type": "parcel", "id": t}, 41, nn(a[0] + 0.5, a[1] + 0.5), hs)
 	var V = G.vn   # con vật: bong bóng (bub) + thân (mv); chuồng: nền (gr 3) + khung
 	if V != null and lang != null:
@@ -950,7 +950,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, func(_p: Vector2) -> bool: return true, {"bub": true})
 			var hh: float = float(n.H5[n.t]) * n.scale_f()
 			var hb := func(p: Vector2) -> bool: return absf(p.x - ft.x) < 14.0 and p.y <= ft.y + 3.0 and p.y >= ft.y - hh
-			if _pk_near(hb, w, PK_R) < 99.0:
+			if Rect2(ft.x - 14.0, ft.y - hh, 28.0, hh + 3.0).grow(PK_R / ui.cz()).has_point(w):
 				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, hb, {"mv": true})
 		for t in V.DI:
 			if not lang.pen_built(t):
@@ -996,13 +996,16 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				continue
 			var ix: int = idx
 			var px := func(p: Vector2) -> bool: return lang_ve.pick_obj(ix, p)
-			if lang.C.Ei.has(o.id):
-				if WR != null and WR.ql(idx) != null and _pk_near(px, w, PK_RS) < 99.0:
-					_pk_add(L, {"type": "tree", "i": idx}, 45, sy, px)
-			elif o.id == "kho" or o.id == "kho2":
-				var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
-				if inside or _pk_near(px, w, PK_RS) < 99.0:
-					_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0})
+			var isk: bool = o.id == "kho" or o.id == "kho2"
+			if lang.C.Ei.has(o.id) or isk:
+				var near: bool = lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w)   # loại nhanh theo khung hình
+				if lang.C.Ei.has(o.id):
+					if near and WR != null and WR.ql(idx) != null:
+						_pk_add(L, {"type": "tree", "i": idx}, 45, sy, px)
+				else:
+					var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
+					if inside or near:
+						_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0})
 			elif o.id == "thungong":
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
@@ -1039,26 +1042,28 @@ func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trố
 	var mv = null    # we: đồ đang đi, gần nhất
 	var nr = null    # En: gần hình
 	var gd = null    # He: nền
-	for c in L:
-		if c.hit is Callable:
-			var d := _pk_near(c.hit, w, PK_R)
-			if d <= 0.0:
-				if px == null or c.dep > px.dep or (c.dep == px.dep and c.ord < px.ord):
-					px = c
-			elif c.mv and d <= PK_R:
-				if mv == null or d < mv.d:
-					mv = {"c": c, "d": d}
-			elif d <= PK_RS:
-				if nr == null or d < nr.d:
-					nr = {"c": c, "d": d}
+	for c in L:   # lượt 1: chỉ thử đúng điểm chạm (rẻ)
+		if c.hit is Callable and c.hit.call(w):
+			if px == null or c.dep > px.dep or (c.dep == px.dep and c.ord < px.ord):
+				px = c
 		if c.gr and (gd == null or c.gr > gd.gr or (c.gr == gd.gr and c.ord < gd.ord)):
 			gd = c
 	if px != null:
 		return px.h
+	for c in L:   # lượt 2: đồ đang đi lố tay 12 px
+		if c.mv and c.hit is Callable:
+			var d := _pk_near(c.hit, w, PK_R)
+			if d <= PK_R and (mv == null or d < mv.d):
+				mv = {"c": c, "d": d}
 	if mv != null:
 		return mv.c.h
 	if gd != null and gd.gr > 2:
 		return gd.h
+	for c in L:   # lượt 3: gần hình 8 px
+		if not c.mv and c.hit is Callable:
+			var d := _pk_near(c.hit, w, PK_RS)
+			if d <= PK_RS and (nr == null or d < nr.d):
+				nr = {"c": c, "d": d}
 	if nr != null:
 		return nr.c.h
 	if gd != null:

@@ -30,7 +30,13 @@ func setup(url: String) -> void:
 func meta(b: String) -> Dictionary:
 	return B[b]["meta"] if B.has(b) and B[b]["st"] == 2 else {}
 
-func img(b: String, k: String) -> Image:   # giải mã ngay 1 ảnh của gói đã tải (dữ liệu, không làm texture)
+var _imc := {}     # b/k -> Image đã giải (chạm thử điểm ảnh gọi liên tục: giải lại mỗi lần làm giựt)
+var _imq := []     # thứ tự vào, giữ tối đa 48 ảnh
+
+func img(b: String, k: String) -> Image:   # giải mã 1 ảnh của gói đã tải (dữ liệu, không làm texture), có nhớ
+	var key := b + "/" + k
+	if _imc.has(key):
+		return _imc[key]
 	if not has_bundle(b):
 		load_bundle(b)
 		return null
@@ -42,6 +48,10 @@ func img(b: String, k: String) -> Image:   # giải mã ngay 1 ảnh của gói 
 	if im.load_webp_from_buffer(B[b]["data"].slice(o, o + int(e[1]))) != OK:
 		return null
 	im.convert(Image.FORMAT_RGBA8)
+	_imc[key] = im
+	_imq.append(key)
+	if _imq.size() > 48:
+		_imc.erase(_imq.pop_front())
 	return im
 
 func has_bundle(b: String) -> bool:
