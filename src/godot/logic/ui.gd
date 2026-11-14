@@ -660,7 +660,7 @@ var gv_sig := ""
 var gv_seeds := []
 
 func _build_gv() -> void:
-	var d: Dictionary = Snap.load_snap("gv")
+	var d: Dictionary = Snap.load_snap("gv").duplicate(true)   # sửa bản sao: mẫu chụp dùng chung khi dựng lại giao diện
 	var n0: Dictionary = d[".gv"][0]
 	var bar: Dictionary = Snap.find(n0, "gvbar")
 	var seeds := []
@@ -922,7 +922,7 @@ var dim_mat: ShaderMaterial = null
 var dim_a := 0.0
 
 func _build_rm() -> void:
-	var d: Dictionary = Snap.load_snap("rmg")
+	var d: Dictionary = Snap.load_snap("rmg").duplicate(true)   # sửa bản sao: mẫu chụp dùng chung khi dựng lại giao diện
 	# nút .fast thêm một ô hình trong (chép ô hình của .star, dời sang): con vật / chuồng đặt hình món vào đó
 	var fn := Snap.find(d[".rm"][0], "fast")
 	var sn := Snap.find(d[".rm"][0], "star")
@@ -1485,7 +1485,7 @@ const KH_SORT := [["n", "Nhiều nhất"], ["v", "Đáng giá nhất"], ["p", "G
 func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
-		var n: Dictionary = d["#pov"][0]
+		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
 		if nm == "kho_sel":
 			var g2 := Snap.find(n, "khgrid")
 			for li in g2.get("kids", []):
