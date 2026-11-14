@@ -178,6 +178,12 @@ func _ntc_obj():
 		_ntc = JavaScriptBridge.get_interface("__ntc")
 	return _ntc
 
+func _prog(s: Dictionary) -> float:   # NTCLOUD: độ xa của bản lưu (cấp, kinh nghiệm, xu) để chọn khi chưa có svt
+	var pc = s.get("pc", {})
+	if not (pc is Dictionary):
+		pc = {}
+	return float(pc.get("lv", 1)) * 1e12 + float(pc.get("xp", 0)) * 1e5 + minf(99999.0, float(s.get("coins", 0)))
+
 func _c_out() -> bool:   # NTCLOUD: chưa đăng nhập (chơi chỉ trên máy): lần lưu nào cũng là lưu thật
 	var n = _ntc_obj()
 	return n == null or str(n.st) == "out"
@@ -208,7 +214,11 @@ func _cloud_step(dt: float) -> void:
 	if s is Dictionary and s.has("plots"):
 		# bản máy chưa từng gắn với tài khoản này thì lấy bản mạng; đã gắn thì bản nào lưu sau thì lấy
 		# NTCLOUD: so giờ lưu thật (svt). Lúc mở game, load_game đã lưu một lần với last = bây giờ, nên so last làm bản cũ của máy luôn "mới hơn" bản mạng.
-		take = str(g.get("cuid", "")) != uid or float(s.get("svt", s.get("last", 0.0))) > float(g.get("svt", 0.0))
+		# Bản lưu cũ (trước bản 90) chưa có svt: không tin giờ nữa, lấy bản đi xa hơn (cấp, rồi kinh nghiệm, rồi xu).
+		if s.has("svt") and g.has("svt"):
+			take = str(g.get("cuid", "")) != uid or float(s.svt) > float(g.svt)
+		else:
+			take = _prog(s) > _prog(g)
 	if take:
 		g = _migrate(s)
 		g.cuid = uid
