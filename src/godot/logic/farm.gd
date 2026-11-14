@@ -511,8 +511,8 @@ func _process(dt: float) -> void:
 		var a0: Dictionary = G.p(i)
 		rg.visible = G.owned(i) and a0.u and G.ripe(a0)
 		if rg.visible:
-			rg.al = 0.55 + 0.4 * sin(tt * 4.0 + G.cells[i].gx)
-			rg.queue_redraw()
+			rg.modulate.a = 0.55 + 0.4 * sin(tt * 4.0 + G.cells[i].gx)
+			rg.zoom_to(main.zoom)
 		var b: Bubble = v.bub
 		if b.visible and b.kind != "lock":
 			# X0: phập phồng 1 + .08 sin(5t + x), nhân le (làng nhỏ lại thì to lên cho dễ đọc)
@@ -2043,14 +2043,16 @@ class FxNode extends Node2D:
 			pts.append(c + Vector2(cos(t) * rx, sin(t) * ry))
 		draw_polyline(pts, col, w, true)
 
-class RipeRing extends Node2D:   # ô chín: elip vàng 21 x 10,5, nét 2,2, nhấp nháy (Le.accent), vẽ ngay trước cây của ô
-	var al := 1.0
+class RipeRing extends Node2D:   # ô chín: vòng vàng tươi (ảnh ui/img/bong/vong.png, elip 21 x 10,5), vẽ ngay trước cây của ô
+	var ppu := 0.0   # px màn mỗi đơn vị lúc vẽ: đổi nấc ảnh thì vẽ lại, còn nhấp nháy chỉ đổi modulate
+	func zoom_to(z: float) -> void:
+		if absf(z - ppu) > 0.001:
+			ppu = z
+			queue_redraw()
 	func _draw() -> void:
-		var pts := PackedVector2Array()
-		for a in 41:
-			var t := a / 40.0 * TAU
-			pts.append(Vector2(cos(t) * 21.0, sin(t) * 10.5))
-		draw_polyline(pts, Color(0.96, 0.74, 0.26, al), 2.2, true)
+		var t: Texture2D = Bong.anh("vong", ppu)
+		if t != null:
+			draw_texture_rect(t, Rect2(-24.0, -13.0, 48.0, 26.0), false)
 
 class TagNode extends Node2D:
 	var pl

@@ -1,5 +1,5 @@
 extends RefCounted
-# Bong bóng X0 dùng chung (ô ruộng, cây ăn trái, thùng ong, con vật, xưởng, củi cây đổ): khung ảnh + hình trong.
+# Bong bóng X0 dùng chung (và vòng vàng ô chín) (ô ruộng, cây ăn trái, thùng ong, con vật, xưởng, củi cây đổ): khung ảnh + hình trong.
 # Khung xanh dương = thường (có hàng, có trái, cần tưới), đỏ = sâu bệnh, nguy hại.
 # Ảnh gốc 9 px mỗi đơn vị làng ở res://ui/img/bong/ (vẽ bằng src/tools/bong/lam.py). Làng vẽ lọc LINEAR không mipmap,
 # nên lấy bản thu nhỏ sẵn theo nấc 1/2, 1/4... gần nhất với cỡ trên màn (như P.texz / item_ic): zoom nào cũng nét.
@@ -46,5 +46,5 @@ static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := fa
 		ci.draw_texture_rect(hinh, Rect2(-cao / 2.0, -cao / 2.0, cao, cao), false)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-static func anh(k: String, ppu: float) -> Texture2D:   # hình không phải món: nuoc (cần tưới), gap (!), benh (chữ thập); ppu = px màn mỗi đơn vị
+static func anh(k: String, ppu: float) -> Texture2D:   # ảnh khác trong ui/img/bong: nuoc (cần tưới), gap (!), benh (chữ thập), vong (vòng ô chín); ppu = px màn mỗi đơn vị
 	return _anh(k, ppu)
