@@ -28,7 +28,6 @@ var pn0 := Vector2.ZERO
 var scroll := 0.0
 var drag = null
 var armed := 0.0
-var pop: Control = null
 var _tm := false           # toàn màn hình lúc dựng bảng (Esc / vuốt thoát thì dựng lại)
 var _tm_t := 0.0
 
@@ -43,7 +42,6 @@ func _init(ui) -> void:
 	var pn_0 := _fid(T.pov, "pn-set")
 	T.armed = T.armed.duplicate(true)
 	Snap._move(T.armed, Vector2(0, float(pn_0.r[1]) - float(pn_rs.r[1])))
-	T.pop = Snap.load_snap("set_pop")[".u2pop"][0]
 	# Link 11-13: chuyển động luôn bật trên mọi máy, bỏ mục Chuyển động; các mục dưới dồn lên
 	var d := _drop_qset(T.pov, "mSeg")
 	Snap._move(T.armed, Vector2(0, -d))
@@ -223,63 +221,14 @@ func _sea_now() -> String:   # fE: #seaNow
 
 func help(k: String) -> void:
 	var tx := _help_text(k)
-	var n: Dictionary = T.pop.duplicate(true)
-	var pc := Snap.find(n, "u2pc")
-	var hb: Dictionary = Snap.find(n, "u2ph")
-	for c in hb.kids:
-		if c.tag == "b":
-			c.text = tx[0]
-			c.erase("tr")
-	var bx := Snap.find(n, "u2box")
-	var p: Dictionary = bx.kids[0]
-	var lh := Css.px(p.css.get("line-height", "21px"))
-	var fs: float = U._fsz(p)
-	var fw := int(p.css.get("font-weight", "500"))
-	var l0 := int(round(float(p.r[3]) / lh))
-	var l1: int = U._nlines(tx[1], fs, fw, float(p.r[2]))
-	p.text = tx[1]
-	p.erase("tr")
-	var d := (l1 - l0) * lh
-	p.r = [p.r[0], p.r[1], p.r[2], float(p.r[3]) + d]
-	bx.r = [bx.r[0], bx.r[1], bx.r[2], float(bx.r[3]) + d]
-	pc.r = [pc.r[0], pc.r[1], pc.r[2], float(pc.r[3]) + d]
-	# hộp giữa màn (flex center)
-	var dy := (float(n.r[3]) - float(pc.r[3])) / 2.0 - float(pc.r[1])
-	Snap._move(pc, Vector2(0, dy))
-	# lớp tối thành lớp riêng phủ kín màn thật, hộp nằm giữa
-	var bk: Dictionary = n.duplicate()
-	bk.kids = []
-	bk.css = bk.css.duplicate()
-	bk.css["z-index"] = "auto"
-	bk.css["position"] = "absolute"
-	pc.css["position"] = "relative"   # hộp vẽ sau lớp tối
-	hb.css["border-radius"] = "22px 22px 0px 0px"   # .u2pc overflow hidden bo góc đầu hộp
-	var top := {"tag": "div", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "r": n.r, "kids": [bk, pc]}
-	pop_close()
-	var pid := {}
-	pop = U._build(top, pid)
-	U.root.add_child(pop)
-	U.anchors.append([pop, 0.5, 0.5])
-	U._stop(pop)
-	var bkb = pid.get(".u2pop")
-	if bkb != null:
-		U._stop(bkb)
-		bkb.gui_input.connect(func(e): if U._is_tap_down(e): pop_close())
-	var pcb = pid.get(".u2pc")
-	if pcb != null:
-		U._stop(pcb)
-	U._click(pid.get(".u2px"), pop_close, "scale")
-	U._layout()
+	U.tre_help(tx[0], tx[1])
 
 func pop_close() -> void:
-	if pop != null:
-		U.anchors.erase(U._anchor_of(pop))
-		pop.queue_free()
-		pop = null
+	U.tre_help_close()
 
 # ------------------------------------------------------------------ cuộn, giờ
 func input(e: InputEvent) -> bool:
-	if not on or pn == null or pop != null:
+	if not on or pn == null or U.help_pop != null:
 		return false
 	var pos := Vector2.ZERO
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):

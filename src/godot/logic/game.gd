@@ -753,6 +753,8 @@ func water(i: int) -> bool:   # Wp
 		return false
 	a.w = water_hold(a)
 	nv.S8("water")
+	if g.get("tt") is Dictionary and not g.tt.get("off"):   # lớp bọc Wp: 7 ngày về làng đếm lần tưới
+		g.tt.w = int(g.tt.get("w", 0)) + 1
 	if w_all != null and lang != null:   # NTWEB aO: ô nhiễm mặn tốn nước ngọt
 		w_all.WR.a_o(i)
 	return true
@@ -970,18 +972,23 @@ func _ray_clear(i: int) -> bool:   # VS: ô hết rầy; hết dịch thì 20 ph
 		a.cd = _now_ms() + 20.0 * 60000.0
 	return true
 
+func ray_buy(t := 1) -> bool:   # dR: mua t bình thuốc trừ rầy (150 xu = 5 lần phun)
+	if int(g.coins) < 150 * t:
+		toast.emit("Cần " + fmt_n(150 * t) + " xu mua bình thuốc.")
+		return false
+	g.coins = int(g.coins) - 150 * t
+	g.ray.th = int(g.ray.th) + 5 * t
+	toast.emit("Mua " + str(t) + " bình thuốc trừ rầy (" + str(5 * t) + " lần phun).")
+	mark()
+	return true
+
 func spray(i: int) -> bool:   # QS: bình thuốc 150 xu = 5 lần, sạch luôn ô kề
 	var a: Dictionary = g.ray
 	if not a.p.has(str(i)):
 		toast.emit("Ô này hết rầy rồi.")
 		return false
-	if int(a.th) < 1:
-		if int(g.coins) < 150:
-			toast.emit("Cần 150 xu mua bình thuốc.")
-			return false
-		g.coins = int(g.coins) - 150
-		a.th = int(a.th) + 5
-		toast.emit("Mua 1 bình thuốc trừ rầy (5 lần phun).")
+	if int(a.th) < 1 and not ray_buy(1):
+		return false
 	a.th = int(a.th) - 1
 	var n := 0
 	for r in [i] + near(i):

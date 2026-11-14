@@ -104,6 +104,10 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	b.set_meta("snap", n)
 	if n.has("svg"):
 		_svg(b, n.svg, R, fsh if fsh != null else drop_shadow(c.get("filter", "none"), z))
+	if n.has("pic"):   # hình chụp sẵn (canvas bản web) ở res://ui/img/...
+		var pt: Texture2D = Css.image(String(n.pic))
+		if pt != null:
+			b.pic(pt, Rect2(0, 0, R[2], R[3]))
 	if n.tag == "img":
 		var src: String = n.get("src", "")
 		if src == "pearl":

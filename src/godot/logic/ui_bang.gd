@@ -165,16 +165,29 @@ func _show(n: Dictionary, vt: Dictionary, blocks: Array, top := 7.5) -> void:
 		y += float(b.r[3])
 		kids.append(b)
 		prev = k
-	var ch := y - y0
-	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch + 7.5], "css": {"display": "block", "position": "static"}, "kids": kids}
+	_mount(n, vt, kids, y0, y - y0 + 7.5, top)
+
+static func _ovl(n: Dictionary) -> Dictionary:   # lớp tối .lvov thành lớp riêng (ui._cover phủ kín màn thật), hộp vẽ trên nó
+	var bk := n.duplicate()
+	bk.kids = []
+	bk.css = bk.css.duplicate()
+	bk.css["position"] = "absolute"
+	bk.css["z-index"] = "auto"   # lớp tối vẽ trước hộp
+	return {"tag": "div", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "r": n.r, "kids": [bk] + n.kids}
+
+# gắn khối đã xếp (kids, tọa độ tuyệt đối) vào vùng cuộn vt: phần cuộn bắt đầu ở y0, cao ch; top = lề trên trước y0
+func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, top := 0.0) -> void:
+	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch], "css": {"display": "block", "position": "static"}, "kids": kids}
 	vt.kids = [inn]
 	_area = String(vt.cls).split(" ")[0]
-	hmax = maxf(0.0, ch + top + 7.5 - float(vt.r[3]))
+	hmax = maxf(0.0, ch + top - float(vt.r[3]))
 	scroll = clampf(scroll, 0.0, hmax)
 	var old := box
 	ids = {}
 	box = U._build(n, ids)
 	U.root.add_child(box)
+	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
+		U.root.move_child(U.help_pop, -1)
 	if old != null:
 		U.anchors.erase(U._anchor_of(old))
 		old.queue_free()

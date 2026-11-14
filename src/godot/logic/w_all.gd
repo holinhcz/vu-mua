@@ -20,6 +20,7 @@ var WCA   # w_ca.gd     câu cá, thú nuôi thêm, lờ lọp, diều
 var WD    # w_duong.gd  chuồng, thiên tai, trò chơi nhỏ
 var WDL   # w_dl.gd     du lịch miệt vườn
 var WAU   # w_auto.gd   AUTO: nhân vật tự chơi
+var WEV   # w_ev.gd     cột sự kiện: điểm danh, 7 ngày về làng
 
 var U = null    # ui.gd (ui_setup)
 var TIP = null  # w_tip.gd
@@ -48,6 +49,7 @@ func _init(game) -> void:
 	WD = load("res://logic/w_duong.gd").new(G)
 	WDL = load("res://logic/w_dl.gd").new(G)
 	WAU = load("res://logic/w_auto.gd").new(G)
+	WEV = load("res://logic/w_ev.gd").new(G)
 	# 2. tham chiếu chéo
 	WC.WR = WR
 	WC.CA = WCA            # dedupe: w_cho._Cc -> w_ca.cc (g.pet)
@@ -77,6 +79,10 @@ func _init(game) -> void:
 	WDL.WR = WR
 	WDL.WC = WC
 	WDL.WCA = WCA
+	WEV.WS = WS
+	WEV.WC = WC
+	WEV.WL = WL
+	WEV.WH = WH
 	# 3. ext mà mô-đun khác đáp được (không cần giao diện)
 	var jb := Callable(WH, "jb")
 	WC.ext["o6"] = Callable(WCA, "o6")
@@ -326,6 +332,7 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	_ray_pill()
 	_tn_pill()
 	_hdn_pill()
+	WEV.step()
 
 var pl := {}   # nút viên theo khóa: tn (TNPILL), hdn (HDNPILL)
 func _pill_put(k: String, tx, cb: Callable) -> void:   # tx: [chữ, gấp?] hoặc rỗng = ẩn (ẩn cả lúc đang xây)

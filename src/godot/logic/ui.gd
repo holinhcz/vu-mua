@@ -44,6 +44,10 @@ var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
 var clgp = null              # bảng CHUYỆN LÀNG (ui_clg.gd)
 var sysp = null              # bảng HỆ THỐNG (ui_sys.gd)
 var dlp = null               # bảng DU LỊCH MIỆT VƯỜN (ui_dl.gd)
+var ddp = null               # bảng ĐIỂM DANH (ui_dd.gd)
+var napp = null              # bảng NẠP ĐẦU (ui_nap.gd)
+var ttp = null               # bảng 7 NGÀY VỀ LÀNG (ui_tt.gd)
+var skyp = null              # bảng TRỜI ĐẤT TRONG LÀNG (ui_sky.gd)
 var klp = null               # bảng KỶ LỤC (ui_kl.gd)
 var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
 var gdp = null               # SỔ TAY (ui_gd.gd)
@@ -316,12 +320,162 @@ func _build_hud() -> void:
 	_click(hid.get("#setBtn"), func(): setp.open(), "scale")
 	_click(hid.get("#pcAv"), func(): pcp.open(), "scale")
 	_auto_setup(hid.get(".autob"))
-	for k in [".ngpill", ".hudTab", "#clock", "#coinsPill"]:
+	for k in [".ngpill", ".hudTab", "#coinsPill"]:
 		var b = hid.get(k)
 		if b != null:
 			_click(b, func(): say(SOON))
-	for b in hid.get(".evb*", []):
-		_click(b, func(): say(SOON), "scale")
+	_click(hid.get("#clock"), func(): sky_open())   # RN: Trời đất trong làng
+	rail_sig = ""
+	rail_v = null
+	_rail_sync()
+
+# ------------------------------------------------------------------ hộp giải thích chung (nút ? khung tre)
+var help_pop: Control = null
+static var HELP_T := {}
+
+func tre_help(title: String, text: String) -> void:   # nút ? (treq): hộp giải thích Re.pop trepop
+	var tx := [title, text]
+	if HELP_T.is_empty():
+		HELP_T = Snap.load_snap("set_pop")[".u2pop"][0]
+	var n: Dictionary = HELP_T.duplicate(true)
+	var pc := Snap.find(n, "u2pc")
+	var hb: Dictionary = Snap.find(n, "u2ph")
+	for c in hb.kids:
+		if c.tag == "b":
+			c.text = tx[0]
+			c.erase("tr")
+	var bx := Snap.find(n, "u2box")
+	var p: Dictionary = bx.kids[0]
+	var lh := Css.px(p.css.get("line-height", "21px"))
+	var fs: float = _fsz(p)
+	var fw := int(p.css.get("font-weight", "500"))
+	var l0 := int(round(float(p.r[3]) / lh))
+	var l1: int = _nlines(tx[1], fs, fw, float(p.r[2]))
+	p.text = tx[1]
+	p.erase("tr")
+	var d := (l1 - l0) * lh
+	p.r = [p.r[0], p.r[1], p.r[2], float(p.r[3]) + d]
+	bx.r = [bx.r[0], bx.r[1], bx.r[2], float(bx.r[3]) + d]
+	pc.r = [pc.r[0], pc.r[1], pc.r[2], float(pc.r[3]) + d]
+	# hộp giữa màn (flex center)
+	var dy := (float(n.r[3]) - float(pc.r[3])) / 2.0 - float(pc.r[1])
+	Snap._move(pc, Vector2(0, dy))
+	# lớp tối thành lớp riêng phủ kín màn thật, hộp nằm giữa
+	var bk: Dictionary = n.duplicate()
+	bk.kids = []
+	bk.css = bk.css.duplicate()
+	bk.css["z-index"] = "auto"
+	bk.css["position"] = "absolute"
+	pc.css["position"] = "relative"   # hộp vẽ sau lớp tối
+	hb.css["border-radius"] = "22px 22px 0px 0px"   # .u2pc overflow hidden bo góc đầu hộp
+	var top := {"tag": "div", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "r": n.r, "kids": [bk, pc]}
+	tre_help_close()
+	var pid := {}
+	help_pop = _build(top, pid)
+	root.add_child(help_pop)
+	anchors.append([help_pop, 0.5, 0.5])
+	_stop(help_pop)
+	var bkb = pid.get(".u2pop")
+	if bkb != null:
+		_stop(bkb)
+		bkb.gui_input.connect(func(e): if _is_tap_down(e): tre_help_close())
+	var pcb = pid.get(".u2pc")
+	if pcb != null:
+		_stop(pcb)
+	_click(pid.get(".u2px"), tre_help_close, "scale")
+	_layout()
+
+func tre_help_close() -> void:
+	if help_pop != null:
+		anchors.erase(_anchor_of(help_pop))
+		help_pop.queue_free()
+		help_pop = null
+
+# ------------------------------------------------------------------ cột sự kiện bên phải (WY bản web): Điểm danh, Nạp đầu, 7 ngày
+# Dựng lại theo mẫu .evrail trong hud.json mỗi khi số chấm / nút hiện đổi; bỏ Sự kiện, Luyện võ.
+const RAIL_DY := 45.75   # khoảng cách hai nút trong cột (nút 42,8 + gap)
+var rail_v: Control = null
+var rail_sig := ""
+var rail_auto := false
+static var RAIL := {}
+
+func _pan_on() -> bool:   # đang mở bảng / hộp nào đó (lvov, bảng sổ, kho, lên cấp)
+	for p in _pans():
+		if p != null and p.on:
+			return true
+	return (lvp != null and lvp.on) or help_pop != null or (khp != null and khp.get("on") == true)
+
+func _rail_sync() -> void:
+	var rl = hid.get(".evrail")
+	if rl == null or G.w_all == null or G.w_all.WEV == null:
+		return
+	var E = G.w_all.WEV
+	var dd: int = E.rF()
+	var first := _tr(G.w_all.WH.ng0().get("first"))
+	var tt: bool = E.on()
+	var vi: int = E.VI() if tt else 0
+	var sp: Dictionary = E.Sp()
+	if dd > 0 and not rail_auto and int(sp.get("auto", -1)) != E.z9() and G.lv() >= 3 and not _pan_on():   # RY: tự mở Điểm danh một lần mỗi ngày
+		rail_auto = true
+		sp.auto = E.z9()
+		G.mark()
+		get_tree().create_timer(2.5).timeout.connect(func(): if not _pan_on(): dd_open("7" if E.N8() and E.Cp() else "m"))
+	var sg := JSON.stringify([E.ld(), dd, first, tt, vi])
+	if sg == rail_sig and rail_v != null:
+		return
+	rail_sig = sg
+	if RAIL.is_empty():
+		for n in Snap.load_snap("hud").get(".hudtr", []):
+			var f := Snap.find(n, "evrail")
+			if not f.is_empty():
+				RAIL = f
+	if RAIL.is_empty():
+		return
+	var n: Dictionary = RAIL.duplicate(true)
+	var by := {}
+	for k in n.kids:
+		by[String(k.cls).split(" ")[1]] = k
+	var em0: Dictionary = by["evb-dd"].kids.filter(func(k): return k.tag == "em")[0]
+	var L := [["evb-dd", dd, func(): dd_open("7" if E.N8() and E.Cp() else "m")]]
+	if not first:
+		L.append(["evb-ng", 0, func(): nap_open()])
+	if tt:
+		L.append(["evb-tt", vi, func(): tt_open()])
+	var kids := []
+	var cbs := []
+	var y0 := float(n.r[1])
+	for i in L.size():
+		var b: Dictionary = by[L[i][0]]
+		b.kids = b.kids.filter(func(k): return k.tag != "em")
+		Snap._move(b, Vector2(0, y0 + i * RAIL_DY - float(b.r[1])))
+		if int(L[i][1]) > 0:
+			var em: Dictionary = em0.duplicate(true)
+			Snap._move(em, Vector2(float(b.r[0]) - float(by["evb-dd"].r[0]), float(b.r[1]) - 103.5))
+			em.text = str(L[i][1])
+			b.kids.append(em)
+		if L[i][0] == "evb-dd":   # ngày trên tờ lịch
+			var sv: Dictionary = b.kids[0].kids[0]
+			var re := RegEx.create_from_string(">\\d+</text>")
+			sv.svg = re.sub(String(sv.svg), ">" + str(E.ld()) + "</text>")
+		kids.append(b)
+		cbs.append(L[i][2])
+	n.kids = kids
+	n.r[3] = maxf(0.0, L.size() * RAIL_DY - 3.0)
+	Snap._move(n, Vector2(-float(n.r[0]), -float(n.r[1])))
+	if rail_v != null:
+		rail_v.queue_free()
+	rail_v = _build(n, {})
+	rail_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for k in rl.get_children():
+		if k != rail_v:
+			k.visible = false
+	rl.add_child(rail_v)
+	var bs: Array = rail_v.kids()
+	for i in bs.size():
+		_click(bs[i], cbs[i], "scale")
+
+static func _tr(v) -> bool:
+	return not (v == null or v is bool and not v or (v is float or v is int) and v == 0 or v is String and v == "")
 
 # ------------------------------------------------------------------ nút AUTO (IA bản web): dựng theo mẫu autob.json (tắt / bật + số việc)
 var auto_b: Control = null   # .autob gốc trong HUD (giữ chỗ, ẩn nét vẽ của nó)
@@ -383,6 +537,7 @@ func _set_focus(on: bool) -> void:
 func _sync_hud() -> void:
 	if hid.is_empty():
 		return
+	_rail_sync()
 	_txt(hid.get(".lv"), str(G.lv()))
 	var en = hid.get(".en")
 	if en != null and en.kids().size() > 0:
@@ -3065,7 +3220,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp]
+	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3088,6 +3243,24 @@ func sys_open(t := "") -> void:   # gu("sys"): Menu › Hệ Thống
 	if G.w_all == null:
 		return
 	_pan_open("sysp", "res://logic/ui_sys.gd", [G.w_all.WS]).open(t)
+
+func dd_open(t := "") -> void:   # aA: Điểm danh (cột sự kiện)
+	if G.w_all == null:
+		return
+	_pan_open("ddp", "res://logic/ui_dd.gd", [G.w_all.WEV]).open(t)
+
+func nap_open() -> void:   # o9(0): Nạp đầu
+	_pan_open("napp", "res://logic/ui_nap.gd", []).open()
+
+func tt_open() -> void:   # XI: 7 ngày về làng
+	if G.w_all == null:
+		return
+	_pan_open("ttp", "res://logic/ui_tt.gd", [G.w_all.WEV]).open()
+
+func sky_open() -> void:   # RN: chạm ô giờ / thời tiết -> Trời đất trong làng
+	if G.w_all == null:
+		return
+	_pan_open("skyp", "res://logic/ui_sky.gd", []).open()
 
 func clg_open(t := "") -> void:   # clgOpen: Sổ làng › Chuyện làng
 	if G.w_all == null:

@@ -922,6 +922,22 @@ func e_r() -> bool:   # ER: hôm nay có hội chợ
 	var t = G.g.get("hc")
 	return c_r(_vr()) or (_tr(t) and _eqn(t.get("sp"), _vr()))
 
+func b_() -> void:   # B_: bỏ 2.000 xu tổ chức hội chợ tối nay
+	var t := fm()
+	if _z6() == null:
+		_ta("Cần có đình làng (khai hoang Sân đình) mới tổ chức hội chợ.")
+		return
+	if _eqn(t.get("sp"), _vr()):
+		_ta("Tối nay đã có hội chợ rồi.")
+		return
+	if int(G.g.coins) < 2000:
+		_ta("Cần 2.000 xu.")
+		return
+	G.g.coins = int(G.g.coins) - 2000
+	t.sp = _vr()
+	_ta("Bỏ tiền tổ chức hội chợ tối nay ở sân đình! Từ 18g30 tới 22g30.")
+	G.mark()
+
 func _z6():   # z6
 	var f := _x("z6")
 	var v = f.call() if f.is_valid() else null

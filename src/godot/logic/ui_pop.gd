@@ -32,7 +32,7 @@ func _pop(blocks: Array) -> void:   # dựng hộp: khối xếp dọc trong #hr
 	rb.r[3] = H
 	vt.r[3] = bh
 	rb.kids.append(tre_frame(float(rb.r[0]), float(rb.r[1]), float(rb.r[2]), H))
-	_show(n, vt, blocks, top)
+	_show(_ovl(n), vt, blocks, top)
 	U._click(ids.get(".tre-x"), close, "scale")
 	var ov = ids.get(".raceov")
 	if ov != null:
@@ -59,7 +59,7 @@ func _sec_p(t: String, q := "") -> Dictionary:   # .vl-sec: <b> [+ nút ? (treq)
 	if q != "":
 		var qb: Dictionary = b.kids[0]
 		_mv(qb, float(b.r[0]) + tw + 6.0, float(qb.r[1]))
-		qb.act = U.say.bind(q)
+		qb.act = U.tre_help.bind(t, q)
 	return c
 
 # .tt (.got): bên trái <b> (runs) + <small>, bên phải một nút [chữ, chính?, bật, act] hoặc không

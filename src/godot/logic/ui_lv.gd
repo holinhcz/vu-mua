@@ -207,22 +207,12 @@ func open() -> void:
 	var cc := {"tag": "div", "id": "", "cls": "", "z": 1.0, "css": {}, "kids": cards, "r": [gr.position.x, gr.position.y, gr.size.x, ch]}
 	cont = U._build(cc, {}, gr.position)
 	gifts.add(cont)
-	_pics(cont)
 	U._click(ids.get(".lvbtn"), take, "down")
 	if ids.has(".lvall"):
 		U._click(ids.get(".lvall"), take_all, "down")
 	U._layout()
 	on = true
 	G.vib(120)
-
-func _pics(b: Control) -> void:
-	for k in b.kids():
-		var n: Dictionary = k.get_meta("snap", {})
-		if n.has("pic"):
-			var t: Texture2D = Css.image(n.pic)
-			if t != null:
-				k.pic(t, Rect2(Vector2.ZERO, k.r.size))
-		_pics(k)
 
 func take() -> void:   # TJ: nhận quà 1 cấp
 	var q := _queue()
