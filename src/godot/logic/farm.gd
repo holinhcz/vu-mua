@@ -800,6 +800,8 @@ func tap(sp: Vector2) -> void:
 		stop_jobs()
 		return
 	var h := pick(w)
+	if ui.vlp != null and String(h.get("type", "")) != "sonha":
+		ui.vlp.chip_close()
 	match String(h.get("type", "")):
 		"fall":
 			ui.close_all()
@@ -832,6 +834,8 @@ func tap(sp: Vector2) -> void:
 		"nha":
 			ui.close_all()
 			ui.vl_open(int(h.u))
+		"sonha":
+			ui.vl_chip(h.o)
 		"parcel":
 			ui.pc_open(String(h.id), w)
 		"scnlock":
@@ -1044,6 +1048,16 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
 					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb)
+		if G.w_all != null:   # nhà có sẵn trên làng (vật cảnh, chưa phải nhà ở): chip "Dọn vào ở"
+			for so in lang.SO:
+				if not G.w_all.WL.CX.has(so.id) or so.wild or so.ring or not lang.so_shown(so) or not lang.ci(so.pc):
+					continue
+				var bb: Array = so.bb
+				if w.x < float(bb[0]) - 8.0 or w.x > float(bb[2]) + 8.0 or w.y < float(bb[1]) - 8.0 or w.y > float(bb[3]) + 8.0:
+					continue
+				var ins: bool = tl.x >= so.gx and tl.x < so.gx + so.fw and tl.y >= so.gy and tl.y < so.gy + so.fd
+				var oo: Dictionary = so
+				_pk_add(L, {"type": "sonha", "o": so}, 50, float(so.sy), func(p: Vector2) -> bool: return lang_ve.pick_so(oo, p), {"gr": 3 if ins else 0})
 		var hu = lang.hu_pick(w)   # cây rừng / cỏ hoang (51), ruộng lúa (52, nền gr 1)
 		if hu != null:
 			if hu.type == "paddy" or (hu.type == "scnlock" and not hu.has("o")):

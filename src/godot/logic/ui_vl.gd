@@ -65,6 +65,7 @@ func close() -> void:   # i1
 	inner = null
 
 func step(dt: float) -> void:
+	chip_step()
 	if not on:
 		return
 	_sig_t -= dt
@@ -1166,6 +1167,82 @@ func _give(id: String) -> void:   # data-gv
 func _back() -> void:   # data-back
 	sub = ""
 	cv = null
+
+# ------------------------------------------------------------------ nhà có sẵn trên làng: chip "Dọn vào ở" (nửa giá shop)
+var chip: Control = null
+var chip_o = null           # vật cảnh có sẵn (lang.SO)
+
+func _cost(o: Dictionary) -> int:
+	return int(floor(float(G.lang.Pi[o.id].get("cost", 0)) / 2.0))
+
+func chip_open(o: Dictionary) -> void:
+	chip_close()
+	close()
+	chip_o = o
+	var n := _cl(Snap.find(Snap.load_snap("kho")["#pov"][0], "khchip"))   # chip lọc của kho đang chọn (xanh)
+	n.erase("::before")
+	var sp: Dictionary = n.kids[0]
+	var t: String = "Dọn vào ở · " + G.fmt_n(_cost(o))
+	var z := _z(n)
+	var pl := _px(n, "padding-left")
+	var tw := _tw(sp, t)
+	var cw := 11.25
+	var w := pl + tw + 4.0 + cw + pl
+	var h := float(n.r[3])
+	n.r = [0.0, 0.0, w, h]
+	sp.r = [pl, (h - float(sp.r[3])) * 0.5, tw, sp.r[3]]
+	sp.tr = [pl, (h - float(sp.tr[3])) * 0.5, tw, sp.tr[3]]
+	sp.text = t
+	var img := {"z": z, "tag": "img", "id": "", "cls": "xui", "src": "|xui", "r": [pl + tw + 4.0, (h - cw) * 0.5, cw, cw], "css": {"display": "inline-block", "position": "static"}}
+	n.kids = [sp, img]
+	var ids2 := {}
+	chip = U._build(n, ids2)
+	U.root.add_child(chip)
+	U._click(chip, _chip_go, "scale94")
+	chip_step()
+
+func chip_close() -> void:
+	if chip != null:
+		chip.queue_free()
+		chip = null
+	chip_o = null
+
+func chip_step() -> void:   # chip đứng trên nóc nhà, theo camera
+	if chip == null:
+		return
+	var o: Dictionary = chip_o
+	if not G.lang.so_shown(o):
+		chip_close()
+		return
+	var m = U.main
+	var ra: Vector2 = (Vector2(float(o.sx), float(o.sy)) - m.cam) * m.zoom / Css.K
+	var top := float(o.bb[1]) - float(o.sy)
+	var w: float = chip.r.size.x
+	var h: float = chip.r.size.y
+	var x := clampf(ra.x - w * 0.5, 8.0, U.vw - w - 8.0)
+	var y := clampf(ra.y + (top - 6.0) * U.cz() - h, 8.0, U.vh - h - 8.0)
+	U._move(chip, Vector2(round(x), round(y)))
+
+func _chip_go() -> void:   # trả nửa giá shop: nhà có sẵn thành nhà ở (Hz), sinh gia đình, mở bảng nhà
+	var o: Dictionary = chip_o
+	var c := _cost(o)
+	if W._n(G.g.coins) < c:
+		G.toast.emit("Cần " + G.fmt_n(c) + " xu để dọn vào ở.")
+		return
+	var n: int = G.lang.take_so(o)
+	if n < 0:
+		return
+	G.g.coins = W._n(G.g.coins) - c
+	U.F._xw_sig = ""
+	U.F._xw_sync()
+	chip_close()
+	W.uf()
+	var r: Dictionary = G.lang.objs()[n]
+	var f = W._fam_of(W._i(r.get("u")))
+	if f != null:
+		G.toast.emit("Nhà " + String(f.n) + " dọn vào ở rồi.")
+	G.mark()
+	U.vl_open(W._i(r.get("u")))
 
 # ------------------------------------------------------------------ cuộn
 func _scroll_to(s: float) -> void:
