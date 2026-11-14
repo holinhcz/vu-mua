@@ -918,13 +918,34 @@ func _rm_reset() -> void:   # trả vòng nút về như ô ruộng (hình trong
 	if sm != null:
 		sm.visible = true
 
-func _rm_ic(k: String, svg: String) -> void:   # hình trong của nút k ("" = ẩn)
+func _rm_ic(k: String, svg: String, big := false) -> void:   # hình trong của nút k ("" = ẩn); big: hình món (khung 64 có chừa lề) 40 thay 28
 	var b: Control = rm_gi[k].kids()[-1]
 	b.visible = svg != ""
+	if not b.has_meta("r0"):
+		b.set_meta("r0", b.r)
+	var r0: Rect2 = b.get_meta("r0")
+	var r1 := r0.grow(6.0) if big else r0
+	if b.r != r1:
+		b.place(r1)
+		if not b.pics.is_empty():
+			b.pics[0].rect = Rect2(Vector2.ZERO, r1.size)
+			b.pics[0].tex = null   # vẽ lại svg đúng cỡ mới
 	if svg != "":
 		_set_svg(b, svg)
 
-func _rm_note(rt: Control, s: String) -> void:   # dòng chữ nhỏ của chip không có đồng hồ ("" = ẩn dòng)
+func _rm_title(rt: Control, mid: bool) -> void:   # tên trên chip: mid = chỉ có tên thì đưa vào giữa chip
+	var ti: int = rt.get_meta("ti", 0)
+	if rt.texts.size() <= ti:
+		return
+	if not rt.has_meta("ty0"):
+		rt.set_meta("ty0", rt.texts[ti].rect.position.y)
+	var y: float = (rt.r.size.y - rt.texts[ti].rect.size.y) * 0.5 if mid else float(rt.get_meta("ty0"))
+	if absf(rt.texts[ti].rect.position.y - y) > 0.01:
+		rt.texts[ti].rect.position.y = y
+		rt.redraw()
+
+func _rm_note(rt: Control, s: String) -> void:   # dòng chữ nhỏ của chip không có đồng hồ ("" = ẩn dòng, tên vào giữa)
+	_rm_title(rt, s == "")
 	var sm := _q(rt, "", "small")
 	if sm == null:
 		return
@@ -1108,6 +1129,8 @@ func _rm_small(rt: Control, wet: bool, tm: String) -> void:
 	if clk == null or tb == null:
 		return
 	_txt(tb, tm)
+	_rm_title(rt, false)
+	sm.visible = true
 	var w1 := Box.text_w("Đang ướt", 12.0, 600) if wet else 0.0
 	var w2 := Box.text_w("·", 12.0, 600) if wet else 0.0
 	var wt := Box.text_w(tm, 12.0, 800)

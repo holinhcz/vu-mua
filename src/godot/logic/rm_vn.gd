@@ -21,10 +21,10 @@ func _init(ui) -> void:
 static func _svg(id: String) -> String:   # hình món của bản web (ui/svg/kh)
 	return FileAccess.get_file_as_string("res://ui/svg/kh/" + id + ".svg")
 
-func _put(k: String, svg: String) -> void:
+func _put(k: String, svg: String, big := true) -> void:   # hình món: to (40 trong nút 56)
 	if _ic.get(k, "?") != svg:
 		_ic[k] = svg
-		U._rm_ic(k, svg)
+		U._rm_ic(k, svg, big)
 
 func _ring(k: String, svg: String) -> void:
 	var b: Control = U.rm_gi[k].kids()[0]
@@ -69,7 +69,7 @@ func sync() -> void:
 		return
 	var r: Dictionary = V.Q[t]
 	if e.get("s", 0):   # bệnh: một nút đỏ chữ thập
-		_one("sick", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"28.5\" fill=\"#fff\" stroke=\"#d9443a\" stroke-width=\"5\"/></svg>", CROSS)
+		_one("sick", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"28.5\" fill=\"#fff\" stroke=\"#d9443a\" stroke-width=\"5\"/></svg>", CROSS, false)
 		return
 	if V.ready(t, e):   # có đồ: một nút thu, hình món ra
 		_one("ready", U.rm_in0["rmth_ring"], _svg(String(r.make)))
@@ -88,7 +88,7 @@ func sync() -> void:
 	_ring(".star", U._ring("rmw", "#1e90e8", "rgba(30,144,232,.15)", 0.0 if hun else 1.0))   # vòng xanh: đã no
 	_put(".star", _svg(String(r.feed)))
 	_ring(".water", U._ring("rmw", "#e8475f", "rgba(232,71,95,.15)", 0.0))
-	_put(".water", HEART)
+	_put(".water", HEART, false)
 	var pet_done: bool = int(e.get("pd", -1)) == G.day()
 	U.rm_gi[".water"].modulate.a = 0.5 if pet_done else 1.0
 	var rt: Control = U.rm_gi[".rmt"]
@@ -98,12 +98,12 @@ func sync() -> void:
 	else:
 		U._rm_small(rt, false, U.tfmt(left))
 
-func _one(st: String, ring: String, ic: String) -> void:   # một nút tròn (bản chụp rmr)
+func _one(st: String, ring: String, ic: String, big := true) -> void:   # một nút tròn (bản chụp rmr)
 	_st = st
 	U.rm_g.visible = false
 	U.rm_r.visible = true
 	_ring(".rmth", ring)
-	_put(".rmth", ic)
+	_put(".rmth", ic, big)
 
 func _pen(t: String) -> void:
 	var V = G.vn
@@ -128,7 +128,7 @@ func _pen(t: String) -> void:
 	_put(".star", _svg(String(r.feed)))   # Cho ăn hết
 	U.rm_gi[".star"].modulate.a = 1.0 if hun > 0 else 0.5
 	_ring(".water", U._ring5(V.ps(t) - 1))   # Nâng sao
-	_put(".water", U.rm_in0[".star"])
+	_put(".water", U.rm_in0[".star"], false)
 	U.rm_gi[".water"].modulate.a = 1.0
 	var rt: Control = U.rm_gi[".rmt"]
 	U._txt(rt, String(G.lang.CO.get(t, "Chuồng")))
