@@ -2,7 +2,8 @@ extends RefCounted
 # AUTO (Ur / W$ bản web): nhân vật tự chơi như người chơi, mỗi 1,5 giây xét một lượt. Bật tắt bằng nút AUTO (lưu ở máy).
 # Một lượt (thứ tự như web):
 #  1. Nhận quà lên cấp (KH), quà mục tiêu (#goalGo).
-#  2. Giao đơn có lời nhất đã đủ hàng: đơn hàng (ks), nhà dân đang cần (Gb).
+#  2. Giao hàng: đơn hàng (ks) luôn trước, rồi nhà dân đang cần (Gb). Hàng cho đơn hàng luôn được giữ: việc khác, bán bớt,
+#     cho ăn không đụng tới; gieo cây và xếp món xưởng cho đơn hàng trước (khác bản web: web xếp chung theo lời).
 #  3. Sức dưới 12%: ăn món hồi sức trong kho, không có thì về nhà ngủ (TV). Sức dưới 3 thì nghỉ, không nhận việc.
 #  4. Xếp tối đa 4 việc đi làm: phun rầy, thú y con bệnh, gặt ô chín, thu / cho ăn vật nuôi, thu xưởng, bắt sâu, hái trái,
 #     gieo hạt (z$: giống cần cho đơn trước, không thì giống lời nhất), tưới ô khô, tưới cây.
@@ -50,11 +51,31 @@ func _bn(k: String) -> int:
 func _crop(k: String) -> bool:
 	return G.D.crops.has(k)
 
-func _jf(items: Array) -> bool:   # jF: đủ hàng (giữ lại LP hạt)
+func _jf(items: Array, keep := {}) -> bool:   # jF: đủ hàng (giữ lại LP hạt, và hàng giữ cho đơn hàng nếu có keep)
 	for a in items:
-		if _bn(String(a[0])) - (LP if _crop(String(a[0])) else 0) < int(a[1]):
+		if _bn(String(a[0])) - (LP if _crop(String(a[0])) else 0) - int(keep.get(String(a[0]), 0)) < int(a[1]):
 			return false
 	return true
+
+func _ord() -> Dictionary:   # món cần cho mọi đơn hàng đang có (luôn giữ, làm trước)
+	var a := {}
+	for x in u9():
+		if x.src == "o":
+			for r in x.items:
+				a[String(r[0])] = int(a.get(String(r[0]), 0)) + int(r[1])
+	return a
+
+func _deep(t2: Dictionary) -> Dictionary:   # thêm nguyên liệu xưởng và thức ăn cho món cần
+	for o in G.xw.R:
+		if t2.has(o):
+			for l in G.xw.R[o].in:
+				t2[String(l[0])] = maxi(int(t2.get(String(l[0]), 0)), int(l[1]) * int(t2[o]))
+	for o in G.vn.Q:
+		var mk = G.vn.Q[o].get("make")
+		if mk != null and t2.has(String(mk)) and G.vn.ok(o):
+			var f: String = G.vn.Q[o].feed
+			t2[f] = maxi(int(t2.get(f, 0)), int(t2[String(mk)]))
+	return t2
 
 func _wf(items: Array) -> float:   # WF: thời gian ước để làm cho đủ
 	var a := 0.0
@@ -102,35 +123,44 @@ func u9() -> Array:   # U9: việc giao hàng xếp theo lời / thời gian
 			if r is Dictionary and r.get("id") and float(r.get("q", 0)) > 0:
 				var it: Array = r.it if r.get("it") is Array and r.it.size() else [[r.id, r.q]]
 				a.append({"items": it, "xu": float(r.get("xu", 0)) * 1.2, "go": WL.gb.bind(u), "src": "d"})
+	var od := {}   # hàng đơn hàng: việc khác không được đụng
+	for x in a:
+		if x.src == "o":
+			for r in x.items:
+				od[String(r[0])] = int(od.get(String(r[0]), 0)) + int(r[1])
 	for x in a:
 		x.miss = _wf(x.items)
-		x.sc = x.xu / (1.0 + x.miss / 60.0)
-		x.ok = _jf(x.items)
+		x.sc = x.xu / (1.0 + x.miss / 60.0) + (1e9 if x.src == "o" else 0.0)   # đơn hàng ưu tiên cao nhất
+		x.ok = _jf(x.items) if x.src == "o" else _jf(x.items, od)
 	a.sort_custom(func(p, q): return p.sc > q.sc)
 	_jc = a
 	_jk = tk
 	return a
 
-func _need(all := false) -> Dictionary:   # _8: món cần cho các việc (3 việc đầu)
-	var a := {}
-	var L := u9()
-	for e in (L if all else L.slice(0, 3)):
+func _need(all := false) -> Dictionary:   # _8: món cần: mọi đơn hàng + 2 việc khác đầu bảng (all: tất cả)
+	var a := _ord()
+	var k := 0
+	for e in u9():
+		if e.src == "o" or (not all and k >= 2):
+			continue
+		k += 1
 		for r in e.items:
 			a[String(r[0])] = int(a.get(String(r[0]), 0)) + int(r[1])
 	return a
 
-func _pick_seed() -> String:   # z$: giống để gieo
-	var t2 := _need()
+func _pick_seed() -> String:   # z$: giống để gieo (cây cho đơn hàng trước, rồi việc khác, rồi giống lời nhất)
+	var WC = G.w_all.WC
+	var od := _deep(_ord())
+	var r: Array = G.xo.filter(func(o): return not G.D.crops[o].get("hyb") and not WC.tf(o) and od.has(o) and _bn(o) < int(od[o]) + LP)
+	if r.size():
+		r.sort_custom(func(x, y): return int(od[x]) - _bn(x) > int(od[y]) - _bn(y))
+		return r[0]
+	var t2 := _deep(_need())
 	for o in G.vn.Q:
 		if G.vn.ok(o):
 			var f: String = G.vn.Q[o].feed
 			t2[f] = maxi(int(t2.get(f, 0)), 8)
-	for o in G.xw.R:
-		if t2.has(o):
-			for l in G.xw.R[o].in:
-				t2[String(l[0])] = maxi(int(t2.get(String(l[0]), 0)), int(l[1]) * int(t2[o]))
-	var WC = G.w_all.WC
-	var r: Array = G.xo.filter(func(o): return not G.D.crops[o].get("hyb") and not WC.tf(o) and t2.has(o) and _bn(o) < int(t2[o]) + 2)
+	r = G.xo.filter(func(o): return not G.D.crops[o].get("hyb") and not WC.tf(o) and t2.has(o) and _bn(o) < int(t2[o]) + 2)
 	if r.size():
 		return r[randi() % r.size()]
 	var best := ""
@@ -174,9 +204,9 @@ func _turn() -> void:
 		if r is bool and r or r == null:
 			c += 1
 			_jk = -1
-	var res := {}   # hàng giữ cho việc giao đủ
+	var res := _ord()   # hàng giữ: mọi đơn hàng (luôn giữ) + việc khác đã đủ
 	for x in u9():
-		if x.ok:
+		if x.ok and x.src != "o":
 			for k in x.items:
 				res[String(k[0])] = int(res.get(String(k[0]), 0)) + int(k[1])
 	var o := func(x: String) -> int: return _bn(x) - int(res.get(x, 0))
@@ -273,7 +303,8 @@ func _turn() -> void:
 		if not p.get("u") or p.get("c") or F.has_job("p" + str(a) + "plant") or not G.owned(a):
 			continue
 		var d := _pick_seed()
-		if d == "" or o.call(d) - F.seeds_queued(d) < 1:
+		var odd := _ord()   # cây cho đơn hàng: gieo luôn bằng hạt đang giữ (gieo 1 gặt 2, mau đủ đơn)
+		if d == "" or (odd.has(d) and _bn(d) - F.seeds_queued(d) < 1) or (not odd.has(d) and o.call(d) - F.seeds_queued(d) < 1):
 			var cand: Array = G.xo.filter(func(x): return not G.D.crops[x].get("hyb") and not G.w_all.WC.tf(x) and o.call(x) - F.seeds_queued(x) >= 1)
 			cand.sort_custom(func(x, y): return o.call(x) > o.call(y))
 			d = cand[0] if cand.size() else ""
@@ -302,6 +333,7 @@ func _turn() -> void:
 			c += 1
 	# xếp món xưởng
 	var M := _need()
+	var MO := _deep(_ord())   # món cho đơn hàng: làm trước
 	for x in G.xw.list_built():
 		var w: Dictionary = G.xw.w(x)
 		var tries := 0
@@ -319,7 +351,8 @@ func _turn() -> void:
 				return true)
 			if rec.is_empty():
 				break
-			rec.sort_custom(func(C, Rr): return (1000.0 if M.has(Rr) else 0.0) + float(G.item(Rr).get("sell", 0)) < (1000.0 if M.has(C) else 0.0) + float(G.item(C).get("sell", 0)))
+			var pr := func(C) -> float: return (2000.0 if MO.has(C) and _bn(C) + _queued(C) < int(MO[C]) else 0.0) + (1000.0 if M.has(C) else 0.0) + float(G.item(C).get("sell", 0))
+			rec.sort_custom(func(C, Rr): return pr.call(C) > pr.call(Rr))
 			var E: int = w.q.size()
 			G.xw.make(x, rec[0])
 			if w.q.size() == E:
@@ -378,7 +411,7 @@ func _sell_some(cap: int, res: Dictionary) -> bool:   # H$: bán món rẻ cho k
 	var r := {}
 	var L := u9()
 	for f in L:
-		if f.ok:
+		if f.ok or f.src == "o":   # hàng đơn hàng luôn giữ
 			for s in f.items:
 				e[String(s[0])] = int(e.get(String(s[0]), 0)) + int(s[1])
 	for f in L.filter(func(x): return not x.ok).slice(0, 2):
