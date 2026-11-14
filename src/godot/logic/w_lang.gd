@@ -1556,6 +1556,430 @@ func ct_s() -> Dictionary:   # ctS: g.ct
 	o.ds = o.ds.filter(func(x): return _tr(x) and x is Dictionary and _n(CTB.get(String(x.get("id", "")))) > 1)
 	return o
 
+# ------------------------------------------------------------------ việc xóm, phân xử, họp bầu
+const UTGIAM := [0, 5, 10, 15, 20]   # thuê dân rẻ hơn theo chức (%)
+const UTKEY := {"vlhelp": 3, "vg": 3, "dam": 10, "cuoi": 20, "gop": 2, "fest": 5, "thi": 5, "nghe": 1, "kl": 1}
+const UTWHY := {"vlhelp": "Giúp nhà đang cần", "vg": "Làm việc làng", "dam": "Đi đám", "cuoi": "Cưới hỏi đàng hoàng", "gop": "Góp hợp tác xã", "fest": "Dự lễ hội", "thi": "Dự hội thi", "nghe": "Làm món nghề", "kl": "Trái khủng nổi tiếng"}
+const UTYES := ["Người này lo cho xóm, tui gật.", "Có chuyện gì cũng thấy ghé phụ, tui bầu.", "Ừ, giao cho người trẻ làm đi.", "Tui ưng, khỏi bàn."]
+const UTNO := ["Mới về mấy bữa mà đòi làm lớn hả?", "Ghé nhà tui được mấy lần mà kêu tui bầu?", "Để coi thêm đã, chưa tin được.", "Thôi, tui bỏ phiếu trắng."]
+const UTMOI := ["Cả làng ai cũng nể, bô lão tụi tui tới mời lên đình.", "Con cháu đầy nhà, làng xóm thuận hòa, đình làng cần người đứng chủ lễ.", "Làng mình có được ngày nay là nhờ công người này."]
+# phân xử: {A},{B} là hai nhà; d = cách xử đúng, a/b = bênh một bên; kho = chuyện khó (th = bên chịu thiệt)
+const UTXU := [
+	{"t": "Con gà nhà {A} bay qua mổ lúa phơi của {B}. {B} đòi đền nguyên giạ lúa, {A} nói gà mổ có mấy hột.",
+		"d": "Gà mổ nhiêu đền nhiêu. {A} rào chuồng lại, {B} phơi lúa thì che lưới.", "a": "Gà nó đói thì nó ăn, chuyện nhỏ xíu, bỏ qua đi.", "b": "{A} đền nguyên giạ, nuôi gà thì ráng chịu."},
+	{"t": "{A} trồng hàng chuối lấn qua đất {B} nửa thước. Hai nhà cãi từ sáng tới trưa chưa ai chịu thua.",
+		"d": "Kêu người đo lại ranh. Lấn thì {A} dời, mà buồng chuối đang trổ thì cho cắt xong rồi hẵng dời.", "a": "Có nửa thước, đất làng chớ đất ai, để vậy đi.", "b": "{A} chặt hết hàng chuối ngay bữa nay."},
+	{"t": "Mùa hạn, {A} đắp đập chặn mương lấy nước, ruộng {B} phía dưới khô queo.",
+		"d": "Chia giờ: sáng nước vô ruộng {A}, chiều mở đập cho xuống ruộng {B}.", "a": "Ai lo trước người đó hưởng, {B} tự đào giếng đi.", "b": "Phá đập liền, nước là của chung."},
+	{"t": "Con chó nhà {A} cắn rách quần thằng nhỏ nhà {B}. {B} đòi tiền thuốc với cái quần mới.",
+		"d": "{A} đền tiền thuốc với cái quần, từ nay ban ngày xích chó lại.", "a": "Tại thằng nhỏ chọc chó trước, ráng chịu.", "b": "{A} đem con chó cho người khác nuôi."},
+	{"t": "Nhà {A} hát karaoke tới nửa đêm, {B} bên cạnh có con nhỏ khóc không ngủ được.",
+		"d": "Hát thì hát, mà mười giờ là tắt loa.", "a": "Vui mà, ráng chịu chút đi {B}.", "b": "Cấm hát karaoke trong xóm luôn."},
+	{"t": "Trâu nhà {A} sổng chuồng giẫm nát luống rau nhà {B}, lần thứ ba trong tháng.",
+		"d": "{A} đền rau, sửa chuồng; còn sổng nữa thì đền gấp đôi.", "a": "Trâu mà, nó đâu biết rau nhà ai.", "b": "{A} bán con trâu đi cho xóm yên."},
+	{"t": "Nhà {A} làm đám dựng rạp chắn ngang đường, xe lúa nhà {B} chở đi chợ không qua được.",
+		"d": "Rạp thu bớt một bên chừa lối xe, {B} chở sớm trước giờ đãi khách.", "a": "Đám có một bữa, {B} đi vòng đường ruộng.", "b": "Dỡ rạp ra, đường là của chung."},
+	{"t": "Ống nước nhà {A} bể, nước chảy qua nền nhà {B} ngập tới mắt cá.",
+		"d": "{A} sửa ống, phụ {B} tát nước, đền cái chiếu bị ướt.", "a": "Nước tự chảy chớ {A} đâu có muốn.", "b": "{A} đền nguyên bộ bàn ghế nhà {B}."},
+	{"t": "{B} mượn {A} hai trăm ngàn từ Tết. Giờ {A} đòi thì {B} nói trả rồi, mà hai bên đều hổng có giấy.", "kho": 1, "th": "a",
+		"d": "Không giấy tờ thì chia đôi: {B} trả lại một nửa, hai nhà cùng chịu thiệt.", "a": "{B} trả đủ, mượn thì phải trả.", "b": "Không giấy thì thôi, {A} ráng chịu."},
+	{"t": "{A} làm đầu thảo dây hụi, {B} hốt rồi mà mấy kỳ nay không góp. Cả dây hụi lo bể.", "kho": 1, "th": "b",
+		"d": "Cho {B} góp trễ tới cuối tháng, quá hạn thì xóm lấy đồ nhà {B} trừ nợ.", "a": "Lấy đồ nhà {B} trừ nợ liền bữa nay.", "b": "Nhà {B} kẹt thì thông cảm, để từ từ."},
+	{"t": "Cây xoài nhà {A} trồng sát ranh, trái rớt qua sân {B}. {B} lượm ăn, {A} nói vậy là ăn trộm.", "kho": 1, "th": "a",
+		"d": "Trái rớt bên nào bên đó lượm, mà {B} không được trèo hái.", "a": "Xoài của {A} thì rớt đâu cũng của {A}.", "b": "{A} chặt cành chìa qua nhà {B} đi."},
+	{"t": "Hai nhà {A} với {B} cùng xin mượn đình làm đám đúng một ngày, nhà nào cũng nói coi ngày rồi hổng dời được.", "kho": 1, "th": "b",
+		"d": "Bốc thăm: nhà trúng làm trước, nhà kia dời qua bữa sau, xóm phụ dựng rạp cho đỡ thiệt.", "a": "Nhà {A} xin trước, nhà {A} làm.", "b": "Nhà {B} đông khách hơn, nhà {B} làm."}]
+
+func ut_key(k: String, n: int) -> void:   # S8 bọc: việc nào cũng cộng uy tín, đếm đám
+	var v = UTKEY.get(k)
+	if v != null:
+		ut_add(float(v) * maxi(1, n), String(UTWHY[k]))
+	if k == "dam":
+		var o := ut_s()
+		o.dam = _i(o.dam) + 1
+
+func ut_task(k: String) -> Variant:   # utTask
+	var o := ut_s()
+	if not (o.get("vx") is Dictionary):
+		return null
+	for t in o.vx.t:
+		if t.k == k:
+			return t
+	return null
+
+func ut_done(t: Dictionary) -> void:   # utDone
+	if _tr(t.get("ok")):
+		return
+	t.ok = 1
+	ut_add(10, "Xong việc xóm: " + String(t.n))
+	_ta("Xong việc \"" + String(t.n) + "\", bà con khen.")
+
+func ut_give(k: String) -> void:   # utGive: góp cúng đình, dọn đường
+	var t = ut_task(k)
+	if t == null or _tr(t.get("ok")):
+		return
+	if _tr(t.get("xu")) and _n(G.g.coins) < _n(t.xu):
+		_ta("Cần " + _sa(t.xu) + " xu.")
+		return
+	for x in t.it:
+		if _barn(x[0]) < int(x[1]):
+			_ta("Kho chưa đủ đồ.")
+			return
+	if _tr(t.get("xu")):
+		G.g.coins = _n(G.g.coins) - _n(t.xu)
+	for x in t.it:
+		G.g.barn[String(x[0])] = _barn(x[0]) - int(x[1])
+	ut_done(t)
+	_ba()
+
+func ut_give_ok(t: Dictionary) -> bool:
+	if _tr(t.get("xu")) and _n(G.g.coins) < _n(t.xu):
+		return false
+	for x in t.it:
+		if _barn(x[0]) < int(x[1]):
+			return false
+	return true
+
+func ut_xu_new() -> Variant:   # utXuNew: mở một chuyện mới (2 nhà, xáo 3 cách xử)
+	var o := ut_s()
+	var hs := ut_houses()
+	if hs.size() < 2:
+		return null
+	var pool := []
+	for i in UTXU.size():
+		var kho := _tr(UTXU[i].get("kho"))
+		if int(o.c) == 1 and kho:
+			continue
+		if int(o.c) == 4 and not kho:
+			continue
+		pool.append(i)
+	var a = _t0(hs)
+	var b = _t0(hs.filter(func(u): return u != a))
+	var op := ["d", "a", "b"]
+	op.shuffle()
+	o.vx.xu = {"i": _t0(pool), "a": int(a), "b": int(b), "op": op}
+	return o.vx.xu
+
+func ut_xu_txt(x: Dictionary, s: String) -> String:   # utXuTxt
+	var F: Dictionary = _r0().fam
+	var fa = F.get(_ks(x.a))
+	var fb = F.get(_ks(x.b))
+	return s.replace("{A}", String(fa.n) if fa != null else "nhà kia").replace("{B}", String(fb.n) if fb != null else "nhà kia")
+
+func ut_xu_pick(j: int) -> void:   # utXuPick
+	var o := ut_s()
+	var t = ut_task("xu")
+	var x = o.vx.get("xu") if o.get("vx") is Dictionary else null
+	if t == null or _tr(t.get("ok")) or not (x is Dictionary):
+		return
+	var c: Dictionary = UTXU[int(x.i)]
+	var k: String = x.op[j]
+	var F: Dictionary = _r0().fam
+	var fa = F.get(_ks(x.a))
+	var fb = F.get(_ks(x.b))
+	var msg := ""
+	if k == "d":
+		ut_add(12 if _tr(c.get("kho")) else 8, "Phân xử phải lẽ")
+		if _tr(c.get("kho")) and randf() >= htv("l_hoa"):
+			var fl = fa if c.th == "a" else fb
+			msg = "Xử phải lẽ, cả xóm nể. Mà " + (String(fl.n) if fl != null else "nhà chịu thiệt") + " vẫn phật lòng" + (than_txt(than_add(fl, -20)) if fl != null else "") + "."
+		else:
+			msg = "Xử phải lẽ, hai nhà bắt tay làm hòa."
+	else:
+		var lo = fb if k == "a" else fa
+		ut_add(-5, "Phân xử thiên vị")
+		msg = "Bênh một bên, " + ((String(lo.n) + " giận" + than_txt(than_add(lo, -30))) if lo != null else "bên kia giận") + ". Xóm xầm xì là xử thiên vị."
+	_ta(msg)
+	o.vx.xu = null
+	t.n2 = _i(t.get("n2")) + 1
+	if int(t.n2) >= int(t.need):
+		ut_done(t)
+	_ba()
+
+func ut_bau() -> void:   # utBau: họp bầu (Tổ trưởng: 5 nhà trong tổ; Trưởng xóm, ấp: cả làng; Hương cả: làng mời)
+	var o := ut_s()
+	var c := int(o.c) + 1
+	if c > 4:
+		return
+	for x in ut_cond(c):
+		if not _tr(x[0]):
+			_ta("Chưa đủ điều kiện.")
+			return
+	if _n(o.get("bd", -1)) == float(_vr()):
+		_ta("Bữa nay họp rồi, mai họp lại.")
+		return
+	var F: Dictionary = _r0().fam
+	var hs := ut_to() if c == 1 else ut_houses()
+	var yes := 0
+	var ln := []
+	for u in hs:
+		var f: Dictionary = F[u]
+		var need := (3 if c > 2 else 2) + (1 if f.get("tp") == "kho" else 0) - (1 if f.get("tp") == "vui" else 0)
+		var y := c == 4 or _i(f.get("tim")) >= need
+		if y:
+			yes += 1
+		ln.append([1 if y else 0, f.n, _t0(UTMOI if c == 4 else (UTYES if y else UTNO))])
+	o.bd = _vr()
+	if htv("l_trong") > 0:
+		yes = mini(hs.size(), yes + 2)
+	var won := yes * 2 > hs.size()
+	o.vr = {"c": c, "won": 1 if won else 0, "yes": yes, "n": hs.size(), "ln": ln.slice(0, 4) if c == 4 else ln}
+	if won:
+		o.c = c
+		o.ev[c] = 1
+		o.cw = G.nv.week()
+		o.low = 0
+		o.vx = _ut_new_tasks(c, G.nv.week())
+		ut_add(20, ("Nhận lời làm " if c == 4 else "Đắc cử ") + String(UTCHUC[c]))
+		_ta("Các bô lão rước bạn lên đình. Từ nay bạn là Hương cả của làng!" if c == 4 else ("Họp tổ" if c == 1 else "Họp xóm") + " gật " + str(yes) + "/" + str(hs.size()) + ". Bạn làm " + String(UTCHUC[c]) + "!")
+		_gr([20, 40, 20])
+	else:
+		_ta("Họp chỉ " + str(yes) + "/" + str(hs.size()) + " nhà gật. Ráng thân thêm rồi mai họp lại.")
+	_ba()
+
+# ------------------------------------------------------------------ công trình chung: dân góp xây (bậc ấp, bậc làng)
+const CTCHUC := {"tramyt": 1}
+const CTBN := ["", "bậc xóm", "bậc ấp", "bậc làng"]
+const CTGIO := [0, 0, 4, 12]
+const CTNGAY := [0, 0, 4, 7]
+const CTMAX := 2
+const CTRES := [["xu", "Xu", 1], ["cui", "Củi khô", 8], ["gach", "Gạch nung", 30], ["cong", "Công phụ dựng", 100]]
+const CTSO := {"tk": "cui", "hien": "gach", "cham": "cong"}
+var CTT0 := 0.0
+
+func ct_chuc(b: String) -> int:   # ctChuc: chức tối thiểu để kêu gọi
+	return int(CTCHUC.get(b, CTB.get(b, 0)))
+
+func ct_base(id) -> String:   # ctBase
+	id = String(id)
+	if CTB.has(id):
+		return id
+	var b: String = id.trim_suffix("2")
+	return b if b != id and CTB.has(b) else ""
+
+func ct_rot(b: String) -> String:   # ctRot
+	return b + "2" if _pi().has(b + "2") else ""
+
+func ct_need(b: String) -> Dictionary:   # ctNeed: đồ cần góp theo giá xây
+	var c := _n(_pi()[b].cost)
+	var lang := int(CTB[b]) > 2
+	return {"xu": _rnd(c * 0.6 / 100.0) * 100, "cui": int(ceil(c / 100.0)), "gach": int(ceil(c / (250.0 if lang else 400.0))), "cong": int(ceil(c / 500.0))}
+
+func ct_lock(id) -> String:   # ctLock: chặn mua thẳng bậc ấp, bậc làng
+	var b := ct_base(id)
+	if b == "" or int(CTB[b]) < 2 or _i(ct_s().tok.get(b)) > 0:
+		return ""
+	return String(_pi()[b].n) + " là công trình chung, phải kêu gọi bà con góp xây (Sổ làng › Uy tín làng › Công trình)."
+
+func ct_is(id) -> bool:   # ctIs
+	var b := ct_base(id)
+	return b != "" and int(CTB[b]) > 1
+
+func ct_sync(b: String) -> void:   # ctSync: lượt đặt miễn phí chép sang g.lang.cg (cả bản xoay)
+	var n := _i(ct_s().tok.get(b))
+	var L := _r0()
+	for id in [b, ct_rot(b)]:
+		if id == "":
+			continue
+		if n > 0:
+			L.cg[id] = n
+		else:
+			L.cg.erase(id)
+
+func ct_placed(id) -> void:   # Kq bọc: đặt công trình góp xây thì trừ lượt
+	var b := ct_base(id)
+	var o := ct_s()
+	if b != "" and _i(o.tok.get(b)) > 0:
+		o.tok[b] = _i(o.tok[b]) - 1
+		ct_sync(b)
+
+func ct_can_start(b: String) -> String:   # ctCanStart
+	var c := int(ut_s().c)
+	var o := ct_s()
+	for x in o.ds:
+		if x.id == b:
+			return "Đang góp xây " + String(_pi()[b].n).to_lower() + "."
+	if c < ct_chuc(b):
+		return "Làm " + String(UTCHUC[ct_chuc(b)]) + " mới đứng ra kêu gọi được."
+	if o.ds.size() >= CTMAX:
+		return "Đang góp xây " + str(CTMAX) + " công trình, xong bớt một cái mới kêu gọi tiếp."
+	return ""
+
+func ct_start(b: String) -> void:   # ctStart
+	var why := ct_can_start(b)
+	if why != "":
+		_ta(why)
+		return
+	ct_s().ds.append({"id": b, "need": ct_need(b), "got": {"xu": 0, "cui": 0, "gach": 0, "cong": 0}, "me": {"xu": 0, "cui": 0, "gach": 0, "cong": 0}, "by": {}, "d": _vr(), "st": "gop", "te": 0})
+	_ta("Đứng ra kêu gọi bà con góp xây " + String(_pi()[b].n).to_lower() + ". Mỗi ngày mỗi nhà góp một ít.")
+	_ba()
+
+func ct_full(c: Dictionary) -> bool:   # ctFull
+	for r in CTRES:
+		if _n(c.got[r[0]]) < _n(c.need[r[0]]):
+			return false
+	return true
+
+func _ct_put(c: Dictionary, k: String, res: String, n: float) -> float:   # ctPut: trả giá trị quy ra xu
+	n = maxf(0.0, minf(n, _n(c.need[res]) - _n(c.got[res])))
+	if n <= 0.0:
+		return 0.0
+	c.got[res] = _n(c.got[res]) + n
+	var v := 0.0
+	for r in CTRES:
+		if r[0] == res:
+			v = n * float(r[2])
+	c.by[k] = _n(c.by.get(k)) + v
+	return v
+
+static func _ct_rnd(x: float) -> int:   # ctRnd: làm tròn ngẫu nhiên, giữ đúng kỳ vọng
+	var n := int(floor(x))
+	return n + (1 if randf() < x - n else 0)
+
+func _ct_day(c: Dictionary) -> float:   # ctDay: mỗi ngày mới các nhà góp (bù tối đa 3 ngày)
+	var d := _vr()
+	if c.st != "gop" or int(c.d) == d:
+		return 0.0
+	var F: Dictionary = _r0().fam
+	var hs := ut_houses()
+	var B0 := maxi(5, hs.size())
+	var nd := mini(3, d - int(c.d))
+	var bac := int(CTB.get(c.id, 0))
+	var ng: int = CTNGAY[bac] if bac < CTNGAY.size() and CTNGAY[bac] > 0 else 4
+	var tot := 0.0
+	c.d = d
+	for i in nd:
+		for u in hs:
+			var f: Dictionary = F[u]
+			var t := _i(f.get("tim"))
+			if t < 1:
+				continue
+			var w: float = [0, 0.4, 0.7, 1, 1.3, 1.6][mini(5, t)]
+			if f.get("tp") == "sd":
+				w *= 1.4
+			if f.get("tp") == "kho":
+				w *= 1.2 if _n(f.get("cd", -9)) >= d - 1 else 0.3
+			for r in CTRES:
+				var k: String = r[0]
+				var x := _n(c.need[k]) * 0.6 / ng * w / B0 * (2.0 if CTSO.get(f.get("tp")) == k else 1.0) * (1.0 + htv("l_ho"))
+				tot += _ct_put(c, _ks(u), k, _ct_rnd(x / 10.0) * 10.0 if k == "xu" else float(_ct_rnd(x)))
+	return tot
+
+func ct_me(c: Dictionary, res: String) -> int:   # ctMe: phần mình còn được góp (tối đa nửa mỗi món)
+	if not (c.get("me") is Dictionary):
+		c.me = {"xu": 0, "cui": 0, "gach": 0, "cong": 0}
+	return int(maxf(0.0, minf(_n(c.need[res]) - _n(c.got[res]), ceil(_n(c.need[res]) / 2.0) - _n(c.me.get(res)))))
+
+func ct_give(i: int, res: String) -> void:   # ctGive
+	var ds: Array = ct_s().ds
+	if i < 0 or i >= ds.size() or ds[i].st != "gop":
+		return
+	var c: Dictionary = ds[i]
+	var left := ct_me(c, res)
+	var n := 0
+	if left <= 0:
+		_ta("Mình góp đủ nửa phần rồi, nửa kia để bà con góp.")
+		return
+	if res == "xu":
+		n = mini(left, int(_n(G.g.coins)))
+		G.g.coins = _n(G.g.coins) - n
+	elif res == "cui":
+		n = mini(left, _barn("cui"))
+		G.g.barn.cui = _barn("cui") - n
+	elif res == "gach":
+		var L := _r0()
+		n = mini(left, _i(L.get("gach")))
+		L.gach = _i(L.get("gach")) - n
+	else:
+		n = mini(left, int(floor(_n(G.g.coins) / 100.0)))
+		G.g.coins = _n(G.g.coins) - n * 100
+	if n <= 0:
+		_ta("Hết gạch nung (đổi ở ghe thương hồ)." if res == "gach" else ("Kho hết củi khô." if res == "cui" else "Không đủ xu."))
+		return
+	_ct_put(c, "me", res, n)
+	c.me[res] = _n(c.me.get(res)) + n
+	ut_add(1, "Góp xây công trình chung")
+	_ba()
+
+func ct_go(i: int) -> void:   # ctGo: khởi công
+	var ds: Array = ct_s().ds
+	if i < 0 or i >= ds.size() or ds[i].st != "gop":
+		return
+	var c: Dictionary = ds[i]
+	if not ct_full(c):
+		_ta("Chưa góp đủ.")
+		return
+	c.st = "xay"
+	c.te = _now() + float(CTGIO[int(CTB[c.id])]) * 3600000.0
+	_ta("Khởi công " + String(_pi()[c.id].n).to_lower() + "! " + str(CTGIO[int(CTB[c.id])]) + " tiếng nữa khánh thành.")
+	_ba()
+
+func ct_quit(i: int) -> void:   # ctQuit
+	var o := ct_s()
+	if i < 0 or i >= o.ds.size():
+		return
+	var c: Dictionary = o.ds[i]
+	ut_add(-10, "Bỏ dở công trình chung")
+	_ta("Thôi không xây " + String(_pi()[c.id].n).to_lower() + ", đồ bà con góp coi như mất.")
+	o.ds.remove_at(i)
+	_ba()
+
+func _ct_done(c: Dictionary) -> void:   # ctDone: khánh thành
+	var o := ct_s()
+	var F: Dictionary = _r0().fam
+	var b: String = c.id
+	var top: Array = c.by.keys().filter(func(k): return k != "me" and F.has(k))
+	top.sort_custom(func(x, y): return _n(c.by[x]) > _n(c.by[y]))
+	o.tok[b] = _i(o.tok.get(b)) + 1
+	ct_sync(b)
+	ut_add(60 if int(CTB[b]) > 2 else 30, "Khánh thành " + String(_pi()[b].n).to_lower())
+	for k in top.slice(0, 3):
+		than_add(F[k], 40)
+	o.bia[b] = top.slice(0, 5).map(func(k): return F[k].n)
+	o.n = _i(o.get("n")) + 1
+	_ta("Khánh thành " + String(_pi()[b].n).to_lower() + "! Vào Xây dựng đặt miễn phí. " + (("Bia công đức ghi tên " + ", ".join(PackedStringArray(o.bia[b].slice(0, 3))) + ".") if top.size() else ""))
+	_gr([20, 40, 20])
+
+func ct_tick(dt: float) -> void:   # ctTick (mỗi giây)
+	CTT0 -= dt
+	if CTT0 > 0.0:
+		return
+	CTT0 = 1.0
+	var o := ct_s()
+	if o.ds.is_empty():
+		return
+	var tot := 0.0
+	var xong := false
+	var keep := []
+	for c in o.ds:
+		if c.st == "gop":
+			tot += _ct_day(c)
+			keep.append(c)
+		elif _now() < _n(c.te):
+			keep.append(c)
+		else:
+			_ct_done(c)
+			xong = true
+	o.ds = keep
+	if tot > 0.0:
+		var nm := []
+		for c in o.ds:
+			if c.st == "gop":
+				nm.append(String(_pi()[c.id].n).to_lower())
+		_ta("Bà con góp xây " + ", ".join(PackedStringArray(nm)) + " thêm khoảng " + _sa(tot) + " xu tiền của, tiền công.")
+	if tot > 0.0 or xong:
+		_ba()
+
+func ct_red() -> bool:   # ctRed
+	var o := ct_s()
+	for c in o.ds:
+		if c.st == "gop" and ct_full(c):
+			return true
+	for b in o.tok:
+		if _i(o.tok[b]) > 0:
+			return true
+	return false
+
 func tn_s() -> Dictionary:   # tnS: g.tn
 	var o = G.g.get("tn")
 	if not (o is Dictionary):
@@ -2155,7 +2579,9 @@ func nq() -> bool:   # Nq: có ai đang làm thuê
 func wage(t: Dictionary) -> int:   # $5: công mỗi phút
 	var j = t.get("job")
 	var a := 10 if j == "ruong" else (12 if j == "vuon" or j == "chan" else 14)
-	return maxi(3, _rnd(a * (1 + 0.5 * _v1()) * (1 - 0.08 * _n(t.get("tim"))) * (0.85 if t.get("tp") == "cham" else 1.0)))
+	var w := maxi(3, _rnd(a * (1 + 0.5 * _v1()) * (1 - 0.08 * _n(t.get("tim"))) * (0.85 if t.get("tp") == "cham" else 1.0)))
+	var c := _i(G.g.ut.get("c")) if G.g.get("ut") is Dictionary else 0   # $5 bọc: có chức thì thuê rẻ hơn
+	return maxi(3, _rnd(w * (1.0 - UTGIAM[c] / 100.0))) if c > 0 else w
 
 func om(t: Dictionary, a) -> int:   # om: công nếu làm việc a
 	var n = t.get("job")
@@ -2544,6 +2970,7 @@ func step(t: float, offline: bool) -> void:   # wK: than, dam ($K), cuoi (zU), m
 		return
 	q_d(t)
 	ng_tick(t)
+	ct_tick(t)
 	than_step(t)
 	dam_tick(t)
 	cuoi_step(t)
@@ -2736,6 +3163,23 @@ func jq(t, a: String) -> void:   # Jq: giống nhà t gieo
 		return
 	n.crop = a if a != "" and G.D.crops.has(a) else ""
 	_ta(String(n.n) + " sẽ gieo " + String(G.D.crops[n.crop].name).to_lower() + " ở các ô mình phụ trách." if n.crop != "" else String(n.n) + " gieo lại giống cũ của từng ô.")
+	_ba()
+
+func xd(t, a: String) -> void:   # XD: ô "Làm món" ở bảng Người làm thuê
+	var n = _fam_of(t)
+	if n == null or _ae(a).is_empty():
+		return
+	n.jr = a
+	_ta(String(n.n) + " chuyển qua làm " + String(_ae(a).name).to_lower() + ".")
+	_ba()
+
+func hr_off() -> void:   # data-hr="off": cho nghỉ hết
+	var e: Dictionary = _r0().fam
+	for r in e:
+		if _tr(e[r].get("job")):
+			e[r].job = null
+			ac.erase(_ks(r))
+	_ta("Cho mọi người nghỉ hết.")
 	_ba()
 
 func set_jr(t, r: String) -> void:   # data-jr

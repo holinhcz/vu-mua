@@ -87,28 +87,6 @@ func _lock(s: String) -> Dictionary:   # p.note.lockline
 	n.r[3] = _px(n, "padding-top") + h + _px(n, "padding-bottom")
 	return n
 
-func _nvsh(n: Dictionary, left: String, right: Array, x: float, y: float, W0: float) -> float:   # .nvsh: <b>trái</b><span>phải (có <b>)</span>
-	var b: Dictionary = n.kids[0]
-	var sp: Dictionary = n.kids[1]
-	var sb: Dictionary = sp.kids[0] if sp.get("kids", []).size() else b
-	var rr := right.map(func(z): return _r(String(z[0]), sb if z[1] else sp))
-	var rw := 0.0
-	for z in rr:
-		rw += _dw(z[1], String(z[0]))
-	var fr := _flow(rr, x + W0 - rw, y, rw + 1.0, maxf(_lh(sp), 16.2))
-	sp.r = [x + W0 - rw, y, rw, fr.h]
-	sp.erase("text")
-	sp.erase("tr")
-	sp.kids = fr.kids
-	var fl := _flow([_r(left, b)], x, y, W0 - rw - 6.0, _lh(b) * 0.75)
-	b.r = [x, y, W0 - rw - 6.0, fl.h]
-	b.erase("text")
-	b.erase("tr")
-	b.kids = fl.kids
-	var h := maxf(fl.h, fr.h)
-	n.r = [x, y, W0, h]
-	return h
-
 func _jobs(tpl: Dictionary, bt: Array, x: float, y: float, W0: float) -> Dictionary:   # .vl-jobs: nút xếp hàng, giãn đều cho kín dòng
 	# bt: [chữ, kiểu ("primary" | "plain"), bật, act]
 	var g := _cl(tpl)

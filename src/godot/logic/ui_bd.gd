@@ -304,7 +304,7 @@ func _cards() -> Array:   # [{name, pr, r (0 mở / 1 khoá / 2 đủ), lv, i, a
 			if gt.get("fest", ""):
 				add.call({"name": gt.n, "pr": ["t", "Quà lễ ×" + str(A), "ok"] if A > 0 else ["t", "Lộc lễ", "lk"], "act": ["id", gt.id], "ic": ["id", gt.id]}, 0 if A > 0 else 1, 10000)
 				continue
-			add.call({"name": gt.n, "pr": ["t", "Cấp " + str(at), "lk"] if at > 0 else (["t", str(A) + " cây giống", "ok"] if A > 0 else ["c", int(gt.cost), ""]),
+			add.call({"name": gt.n, "pr": ["t", "Cấp " + str(at), "lk"] if at > 0 else ((["t", "Góp xong", "ok"] if _ct_is(gt.id) else ["t", str(A) + " cây giống", "ok"]) if A > 0 else (["t", "Dân góp", "lk"] if _ct_lock(gt.id) != "" else ["c", int(gt.cost), ""])),
 				"act": ["id", gt.id], "ic": ["id", gt.id]}, 1 if at > 0 else 0, at)
 	out.sort_custom(func(p, q): return p.r < q.r if p.r != q.r else ((p.lv < q.lv) if (p.r == 1 and p.lv != q.lv) else p.i < q.i))
 	return out
@@ -949,7 +949,7 @@ func _build_sheet() -> void:
 		if why != "" or poor:
 			h.css = bad.css.duplicate()
 		var B := []
-		var pt := "Dời đến đây" if mv else ("Đặt · quà lễ hội" if L.pg(id) > 0 and Wt.get("fest", "") else ("Trồng · cây giống quý" if L.pg(id) > 0 else "Đặt · "))
+		var pt := "Dời đến đây" if mv else ("Đặt · quà lễ hội" if L.pg(id) > 0 and Wt.get("fest", "") else (("Đặt · dân góp xây" if _ct_is(id) else "Trồng · cây giống quý") if L.pg(id) > 0 else "Đặt · "))
 		var pb := {"t": pt, "k": "primary", "id": "bpPut", "off": why != "" or poor}
 		if not mv and L.pg(id) == 0:
 			pb.price = int(Wt.cost)
@@ -1117,11 +1117,20 @@ func _price_btn(b: Dictionary, s: String) -> void:   # "Xây ở đây · 300 [x
 		img.r = [x + w + gap, img.r[1], img.r[2], img.r[3]]
 
 # ------------------------------------------------------------------ đặt món (Qy, K5, mM, bM, mj, bj, Iz)
+func _ct_lock(t: String) -> String:   # ctLock: công trình bậc ấp, bậc làng phải dân góp xây
+	return G.w_all.WL.ct_lock(t) if G.w_all != null else ""
+
+func _ct_is(t: String) -> bool:   # ctIs
+	return G.w_all != null and G.w_all.WL.ct_is(t)
+
 func qy(t: String) -> void:   # Qy: chọn món trong cửa hàng
 	var L = lg()
 	var a: Dictionary = L.Pi[t]
 	if L.cm(a) > 0:
 		G.toast.emit("Lên cấp " + str(int(a.lv)) + " mới mua được cây " + String(a.n).to_lower() + ".")
+		return
+	if L.pg(t) == 0 and _ct_lock(t) != "":
+		G.toast.emit(_ct_lock(t))
 		return
 	if int(G.g.coins) < int(a.cost) and L.pg(t) == 0:
 		G.toast.emit("Cần " + G.fmt_n(int(a.cost)) + " xu để mua " + String(a.n).to_lower() + ".")
@@ -1207,6 +1216,9 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 	if L.cm(t0) > 0:
 		G.toast.emit("Lên cấp " + str(int(t0.lv)) + " mới mua được cây " + String(t0.n).to_lower() + ".")
 		return
+	if r == 0 and _ct_lock(id) != "":
+		G.toast.emit(_ct_lock(id))
+		return
 	if r == 0 and int(G.g.coins) < int(t0.cost):
 		G.toast.emit("Cần " + G.fmt_n(int(t0.cost)) + " xu để mua " + String(t0.n).to_lower() + ".")
 		return
@@ -1214,7 +1226,11 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		G.g.lang.cg[id] = int(G.g.lang.cg[id]) - 1
 		if int(G.g.lang.cg[id]) <= 0:
 			G.g.lang.cg.erase(id)
-		G.toast.emit("Đã trồng cây giống quý từ ghe thương hồ.")
+		if _ct_is(id):
+			G.toast.emit("Đặt " + String(t0.n).to_lower() + " do bà con góp xây.")
+			G.w_all.WL.ct_placed(id)   # Kq bọc: trừ lượt góp xây
+		else:
+			G.toast.emit("Đã trồng cây giống quý từ ghe thương hồ.")
 	else:
 		G.g.coins = int(G.g.coins) - int(t0.cost)
 	L.objs().append({"id": id, "gx": gx, "gy": gy, "seed": seed, "t": Time.get_unix_time_from_system() * 1000.0})

@@ -409,6 +409,64 @@ func _ok_chip(no: Dictionary) -> Dictionary:   # .chip.ok: lấy màu ô đủ �
 func _csm() -> Dictionary:   # kiểu chữ small trong .vlcard
 	return _tag_kids(_find(T.x_su.kids[4], "vlcl"), "small")[0]
 
+func _nvsh(n: Dictionary, left: String, right: Array, x: float, y: float, W0: float) -> float:   # .nvsh: <b>trái</b><span>phải (có <b>)</span>
+	var b: Dictionary = n.kids[0]
+	var sp: Dictionary = n.kids[1]
+	var sb: Dictionary = sp.kids[0] if sp.get("kids", []).size() else b
+	var rr := right.map(func(z): return _r(String(z[0]), sb if z[1] else sp))
+	var rw := 0.0
+	for z in rr:
+		rw += _dw(z[1], String(z[0]))
+	var fr := _flow(rr, x + W0 - rw, y, rw + 1.0, maxf(_lh(sp), 16.2))
+	sp.r = [x + W0 - rw, y, rw, fr.h]
+	sp.erase("text")
+	sp.erase("tr")
+	sp.kids = fr.kids
+	var fl := _flow([_r(left, b)], x, y, W0 - rw - 6.0, _lh(b) * 0.75)
+	b.r = [x, y, W0 - rw - 6.0, fl.h]
+	b.erase("text")
+	b.erase("tr")
+	b.kids = fl.kids
+	var h := maxf(fl.h, fr.h)
+	n.r = [x, y, W0, h]
+	return h
+
+static var _TRE := {}
+
+# khung tre của hộp nổi (.u2tre, mẫu trong sp_ok): nẹp trên/dưới/trái/phải + 4 góc bọc quanh hộp (x, y, w, h)
+static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:
+	if _TRE.is_empty():
+		var p: Dictionary = Snap.load_snap("sp_ok")[".u2pop"][0]
+		_TRE = {"tre": Snap.find(p, "u2tre"), "box": Snap.find(p, "u2pc")}
+	var src: Dictionary = _TRE.tre
+	var o: Dictionary = src.duplicate(true)
+	var r0: Array = _TRE.box.r
+	var sx: float = x - float(r0[0])
+	var sy: float = y - float(r0[1])
+	o.r = [x, y, w, h]
+	for k in o.kids:
+		var c := String(k.cls)
+		var kr: Array = k.r
+		if c == "t":
+			k.r = [x + 24.0, y - 6.0, w - 48.0, kr[3]]
+		elif c == "b":
+			k.r = [x + 24.0, y + h - 4.0, w - 48.0, kr[3]]
+		elif c == "l":
+			k.r = [x - 6.0, y + 24.0, kr[2], h - 48.0]
+		elif c == "r":
+			k.r = [x + w - 3.0, y + 24.0, kr[2], h - 48.0]
+		elif c.find("c1") >= 0:
+			k.r = [x - 6.0, y - 6.0, kr[2], kr[3]]
+		elif c.find("c2") >= 0:
+			k.r = [x + w - 24.0, y - 6.0, kr[2], kr[3]]
+		elif c.find("c3") >= 0:
+			k.r = [x - 6.0, y + h - 25.0, kr[2], kr[3]]
+		elif c.find("c4") >= 0:
+			k.r = [x + w - 24.0, y + h - 25.0, kr[2], kr[3]]
+		else:
+			Snap._move(k, Vector2(sx, sy))
+	return o
+
 # ------------------------------------------------------------------ cuộn
 func _redo() -> void:
 	sig = ""

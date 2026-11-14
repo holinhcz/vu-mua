@@ -185,6 +185,7 @@ func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn
 	v.wk.c[k] = int(v.wk.c.get(k, 0)) + n
 	if G.w_all != null:   # NTWEB S8 bọc: đếm việc cho Hệ Thống
 		G.w_all.WS.htC(k, n)
+		G.w_all.WL.ut_key(k, n)   # S8 bọc: uy tín theo việc
 
 func Xs(k: String) -> int:
 	return int(Pl().c.get(k, 0))

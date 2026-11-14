@@ -1,4 +1,5 @@
 extends RefCounted
+const BANG = preload("res://logic/ui_bang.gd")
 # BẢNG NHÂN VẬT bản web (ST/ec: .raceov.pcov > .rbox.pcbox, tab Nhân vật / Đồ nghề, xe / ...), mở khi bấm hình đại diện #pcAv.
 # Mỗi trạng thái một bản chụp từ web:
 #   ns_nv (3 món ăn), ns_nv0 (kho không có gì ăn), ns_nv2 (5 món ăn, cấp 6)
@@ -33,8 +34,6 @@ func _init(ui) -> void:
 	T.row_got = d2[0]            # đã có, tối đa / xe đã sắm: không nút
 	var bt: Dictionary = Snap.find(d1[1], "btn")
 	pad_btn = float(bt.r[2]) - U._tw(bt, String(bt.text))
-	T.tre = Snap.find(Snap.load_snap("sp_ok")[".u2pop"][0], "u2tre")
-	T.tre_box = Snap.find(Snap.load_snap("sp_ok")[".u2pop"][0], "u2pc")
 
 static func _body(n: Dictionary) -> Dictionary:
 	return n.kids[0].kids[2]
@@ -338,35 +337,8 @@ func _wbody(body: Dictionary) -> float:   # NTWEB: thân trống cho tab w_ca_ui
 	body.cls = "pcwbody"
 	return 420.0
 
-func _tre(x: float, y: float, w: float, h: float) -> Dictionary:
-	var src: Dictionary = T.tre
-	var o: Dictionary = src.duplicate(true)
-	var r0: Array = T.tre_box.r
-	var sx: float = x - float(r0[0])
-	var sy: float = y - float(r0[1])
-	o.r = [x, y, w, h]
-	for k in o.kids:
-		var c := String(k.cls)
-		var kr: Array = k.r
-		if c == "t":
-			k.r = [x + 24.0, y - 6.0, w - 48.0, kr[3]]
-		elif c == "b":
-			k.r = [x + 24.0, y + h - 4.0, w - 48.0, kr[3]]
-		elif c == "l":
-			k.r = [x - 6.0, y + 24.0, kr[2], h - 48.0]
-		elif c == "r":
-			k.r = [x + w - 3.0, y + 24.0, kr[2], h - 48.0]
-		elif c.find("c1") >= 0:
-			k.r = [x - 6.0, y - 6.0, kr[2], kr[3]]
-		elif c.find("c2") >= 0:
-			k.r = [x + w - 24.0, y - 6.0, kr[2], kr[3]]
-		elif c.find("c3") >= 0:
-			k.r = [x - 6.0, y + h - 25.0, kr[2], kr[3]]
-		elif c.find("c4") >= 0:
-			k.r = [x + w - 24.0, y + h - 25.0, kr[2], kr[3]]
-		else:
-			Snap._move(k, Vector2(sx, sy))
-	return o
+func _tre(x: float, y: float, w: float, h: float) -> Dictionary:   # khung tre chung (ui_bang.tre_frame)
+	return BANG.tre_frame(x, y, w, h)
 
 func _tab(tk: String) -> void:
 	if tk == "nv" or tk == "dn" or (WTABS.has(tk) and G.w_all != null and G.w_all.WCAU != null):   # NTWEB

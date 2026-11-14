@@ -35,6 +35,8 @@ var vlp = null               # bảng NHÀ DÂN (ui_vl.gd)
 var ngp = null               # bảng NGHỀ THỦ CÔNG (ui_ng.gd)
 var ng_bdg: Control = null   # số đơn làng giao được trên nút Nghề (ngBdg)
 var slp = null               # bảng SỔ LÀNG (ui_sl.gd)
+var utp = null               # bảng UY TÍN LÀNG (ui_ut.gd)
+var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
 var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
@@ -1499,8 +1501,9 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
-	if slp != null:
-		slp.close()
+	for p in [slp, utp, hrp]:
+		if p != null:
+			p.close()
 	if vlp != null:
 		vlp.close()
 	if ngp != null:
@@ -2941,9 +2944,28 @@ func sl_open() -> void:   # Al("book"): nút Sổ làng trong Menu
 	kho_close()
 	slp.open()
 
+func ut_open(t := "") -> void:   # utOpen: Sổ làng › Uy tín làng
+	if G.w_all == null:
+		return
+	if utp == null:
+		utp = load("res://logic/ui_ut.gd").new(self, G.w_all.WL)
+	close_all()
+	kho_close()
+	utp.open(t)
+
+func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
+	if G.w_all == null:
+		return
+	if hrp == null:
+		hrp = load("res://logic/ui_hr.gd").new(self, G.w_all.WL)
+	close_all()
+	kho_close()
+	hrp.open()
+
 func close_all() -> void:
-	if slp != null and slp.on:
-		slp.close()
+	for p in [slp, utp, hrp]:
+		if p != null and p.on:
+			p.close()
 	if ngp != null and ngp.on:
 		ngp.close()
 	if vlp != null:
@@ -3019,8 +3041,9 @@ func _process(dt: float) -> void:
 		vlp.step(dt)
 	if ngp != null:
 		ngp.step(dt)
-	if slp != null:
-		slp.step(dt)
+	for p in [slp, utp, hrp]:
+		if p != null:
+			p.step(dt)
 	_ng_bdg()
 	if xfp != null:
 		xfp.step(dt)
@@ -3086,7 +3109,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -3101,7 +3124,8 @@ func _input(e: InputEvent) -> void:
 		vlp.input(e)
 	if ngp != null:
 		ngp.input(e)
-	if slp != null:
-		slp.input(e)
+	for p in [slp, utp, hrp]:
+		if p != null:
+			p.input(e)
 	if xfp != null:
 		xfp.input(e)

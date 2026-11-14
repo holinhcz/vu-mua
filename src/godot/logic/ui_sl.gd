@@ -215,8 +215,14 @@ func _link(g: String, r: Array) -> Dictionary:   # li.khit.g-* > button.bk2l
 	bt.r[3] = h
 	return li
 
-func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...: bảng con chưa chuyển
-	U.say(SOON)
+func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
+	match k:
+		"ut":
+			U.ut_open()
+		"hr":
+			U.hr_open()
+		_:
+			U.say(SOON)
 
 # ------------------------------------------------------------------ tab Danh hiệu
 func _dh(M: Dictionary) -> Array:
