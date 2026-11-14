@@ -1179,9 +1179,14 @@ func chip_open(o: Dictionary) -> void:
 	chip_close()
 	close()
 	chip_o = o
-	var n := _cl(Snap.find(Snap.load_snap("kho")["#pov"][0], "khchip"))   # chip lọc của kho đang chọn (xanh)
+	var n := _cl(Snap.find(Snap.load_snap("kho")["#pov"][0], "khchip"))   # dáng chip lọc của kho, tô đỏ cho nổi trên cỏ
 	n.erase("::before")
+	n.css["background-image"] = "linear-gradient(rgb(239, 106, 82) 0%, rgb(226, 69, 58) 50%, rgb(201, 53, 44) 100%)"
+	n.css["box-shadow"] = "rgb(158, 42, 32) 0px 0px 0px 1px inset, rgba(255, 200, 190, 0.55) 0px 2px 0px 0px inset, rgba(90, 20, 0, 0.35) 0px 1px 2px 0px"
 	var sp: Dictionary = n.kids[0]
+	sp.css["color"] = "rgb(255, 255, 255)"
+	sp.css["text-shadow"] = "rgba(120, 20, 10, 0.5) 0px 1px 0px"
+
 	var t: String = "Dọn vào ở · " + G.fmt_n(_cost(o))
 	var z := _z(n)
 	var pl := _px(n, "padding-left")
