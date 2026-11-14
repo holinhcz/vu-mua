@@ -1,17 +1,18 @@
 extends RefCounted
 # Bảng CÀI ĐẶT chép từ bản web (#pn-set trong #pov, "Cài đặt và hướng dẫn"; nút ? là dt()/K() mở Re.pop trepop).
 # Số đo lấy từ chính bản web: res://ui/snap/set.json (bảng), set_rs.json (nút Chơi lại đã bấm 1 lần),
-# set_pop.json (hộp giải thích). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới;
-# bỏ cả mục Toàn màn hình (bật lên bị mờ trên máy tính).
+# set_pop.json (hộp giải thích). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới.
+# Toàn màn hình: toan_man.gd (cả trang lên toàn màn, không dùng toàn màn của Godot).
 # Giá trị lưu theo máy ở G.cfg (user://caidat.json), như localStorage nong-trai-* của web.
 
 const Snap = preload("res://ui/snap.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
+const TM = preload("res://logic/toan_man.gd")
 
 var HMAX := 281.0          # .pbody scrollHeight - clientHeight của web (trừ mục Chuyển động đã bỏ)
 # nút trong từng nhóm, theo thứ tự trái qua phải: [khoá G.cfg, các giá trị]
-const SEGS := {"#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
+const SEGS := {"#fsSeg": ["fs", [1, 0]], "#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
 	"#dSeg": ["d", ["real", "fast", "day", "night"]], "#sSeg": ["s", ["auto", "0", "1", "2", "3"]]}
 const HINT := "Chạm ô đất trống để chọn giống gieo, ô khô để tưới, ô chín để thu hoạch, hoặc vuốt qua nhiều ô để làm cả loạt. Nông sản trong kho cũng là hạt giống: nhớ chừa lại để gieo tiếp. Lên cấp mở thêm giống mới. Con giống mua ở Chợ phiên, chợ nổi sáng sớm. Chạm nút Xây dựng để mua cây, nhà, đồ trang trí."
 const T_SEA := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
@@ -28,6 +29,8 @@ var scroll := 0.0
 var drag = null
 var armed := 0.0
 var pop: Control = null
+var _tm := false           # toàn màn hình lúc dựng bảng (Esc / vuốt thoát thì dựng lại)
+var _tm_t := 0.0
 
 func _init(ui) -> void:
 	U = ui
@@ -49,10 +52,6 @@ func _init(ui) -> void:
 	var fs := _fid(T.pov, "fsSeg")
 	T.off = fs.kids[0].css
 	T.on = fs.kids[1].css
-	# bỏ mục Toàn màn hình (bật lên bị mờ trên máy tính); các mục dưới dồn lên
-	var d2 := _drop_qset(T.pov, "fsSeg")
-	Snap._move(T.armed, Vector2(0, -d2))
-	HMAX -= d2
 
 static func _drop_qset(root: Dictionary, seg: String) -> float:
 	var pn := _fid(root, "pn-set")
@@ -79,6 +78,8 @@ static func _fid(n: Dictionary, id: String) -> Dictionary:
 	return {}
 
 func _val(k: String):
+	if k == "fs":
+		return 1 if _tm else 0
 	return G.cfg[k]
 
 # ------------------------------------------------------------------ mở / dựng
@@ -89,6 +90,7 @@ func open() -> void:   # zc("set") -> Al("set")
 	_build()
 
 func _build() -> void:
+	_tm = TM.dang_bat()
 	var n: Dictionary = T.pov.duplicate(true)
 	for sid in SEGS:
 		var sg := _fid(n, sid.substr(1))
@@ -139,9 +141,9 @@ func _build() -> void:
 			var k: String = SEGS[sid][0]
 			var v = vals[j]
 			U._click(L[j], func(): pick(k, v), "scale94")
-	# nút ? theo thứ tự: Tài khoản, Chất lượng hình, Ngày và đêm, Mùa, Cách chơi nhanh
+	# nút ? theo thứ tự: Tài khoản, Toàn màn hình, Chất lượng hình, Ngày và đêm, Mùa, Cách chơi nhanh
 	var qs: Array = U._qall(box, "treq", [])
-	var keys := ["acct", "q", "d", "s", "hint"]
+	var keys := ["acct", "fs", "q", "d", "s", "hint"]
 	for j in mini(qs.size(), keys.size()):
 		var kk: String = keys[j]
 		U._click(qs[j], func(): help(kk), "scale")
@@ -165,6 +167,14 @@ func _scroll_to(s: float) -> void:
 
 # ------------------------------------------------------------------ chọn
 func pick(k: String, v) -> void:
+	if k == "fs":   # bật / tắt ngay lúc bấm; trình duyệt đổi xong thì step thấy và dựng lại
+		if int(v) == 1 and not _tm:
+			if not TM.bat():
+				G.toast.emit("Trình duyệt này không cho bật toàn màn hình. Mở trang game bằng Chrome rồi bấm lại.")
+			_tm_t = 1.0
+		elif int(v) == 0 and _tm:
+			TM.tat()
+		return
 	if str(G.cfg[k]) == str(v):
 		return
 	G.cfg_set(k, v)
@@ -189,6 +199,8 @@ func _help_text(k: String) -> Array:
 	match k:
 		"acct":
 			return ["Tài khoản", "Mở game trong ứng dụng Claude (đã đăng nhập) để lưu tiến trình theo tài khoản và chơi tiếp trên máy khác. Hiện chỉ lưu trên máy này."]
+		"fs":
+			return ["Toàn màn hình", "Ẩn thanh trình duyệt cho cảnh rộng hơn. Bấm Esc hoặc chọn Tắt để thoát."]
 		"q":
 			return ["Chất lượng hình", "Nếu máy nóng hoặc nhanh hết pin thì chọn Tiết kiệm. Máy mạnh thì chọn Nét."]
 		"d":
@@ -293,6 +305,13 @@ func input(e: InputEvent) -> bool:
 	return false
 
 func step(dt: float) -> void:
+	if on:
+		if _tm_t > 0.0:
+			_tm_t -= dt
+			if _tm_t <= 0.0 and TM.bi_tu_choi():
+				G.toast.emit("Trình duyệt không cho bật toàn màn hình lúc này. Bấm lại nút Bật thử lần nữa.")
+		if TM.dang_bat() != _tm:
+			_build()
 	if armed > 0.0:
 		armed -= dt
 		if armed <= 0.0:
