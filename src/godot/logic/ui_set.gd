@@ -1,7 +1,8 @@
 extends RefCounted
 # Bảng CÀI ĐẶT chép từ bản web (#pn-set trong #pov, "Cài đặt và hướng dẫn"; nút ? là dt()/K() mở Re.pop trepop).
 # Số đo lấy từ chính bản web: res://ui/snap/set.json (bảng), set_rs.json (nút Chơi lại đã bấm 1 lần),
-# set_pop.json (hộp giải thích). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới.
+# set_pop.json (hộp giải thích). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới;
+# bỏ cả mục Toàn màn hình (bật lên bị mờ trên máy tính).
 # Giá trị lưu theo máy ở G.cfg (user://caidat.json), như localStorage nong-trai-* của web.
 
 const Snap = preload("res://ui/snap.gd")
@@ -10,7 +11,7 @@ const Css = preload("res://ui/css.gd")
 
 var HMAX := 281.0          # .pbody scrollHeight - clientHeight của web (trừ mục Chuyển động đã bỏ)
 # nút trong từng nhóm, theo thứ tự trái qua phải: [khoá G.cfg, các giá trị]
-const SEGS := {"#fsSeg": ["fs", [1, 0]], "#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
+const SEGS := {"#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
 	"#dSeg": ["d", ["real", "fast", "day", "night"]], "#sSeg": ["s", ["auto", "0", "1", "2", "3"]]}
 const HINT := "Chạm ô đất trống để chọn giống gieo, ô khô để tưới, ô chín để thu hoạch, hoặc vuốt qua nhiều ô để làm cả loạt. Nông sản trong kho cũng là hạt giống: nhớ chừa lại để gieo tiếp. Lên cấp mở thêm giống mới. Con giống mua ở Chợ phiên, chợ nổi sáng sớm. Chạm nút Xây dựng để mua cây, nhà, đồ trang trí."
 const T_SEA := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
@@ -27,8 +28,6 @@ var scroll := 0.0
 var drag = null
 var armed := 0.0
 var pop: Control = null
-var _fs_want := -1
-var _fs_t := 0.0
 
 func _init(ui) -> void:
 	U = ui
@@ -50,6 +49,10 @@ func _init(ui) -> void:
 	var fs := _fid(T.pov, "fsSeg")
 	T.off = fs.kids[0].css
 	T.on = fs.kids[1].css
+	# bỏ mục Toàn màn hình (bật lên bị mờ trên máy tính); các mục dưới dồn lên
+	var d2 := _drop_qset(T.pov, "fsSeg")
+	Snap._move(T.armed, Vector2(0, -d2))
+	HMAX -= d2
 
 static func _drop_qset(root: Dictionary, seg: String) -> float:
 	var pn := _fid(root, "pn-set")
@@ -75,13 +78,7 @@ static func _fid(n: Dictionary, id: String) -> Dictionary:
 			return f
 	return {}
 
-func _fs_on() -> bool:
-	var m := DisplayServer.window_get_mode()
-	return m == DisplayServer.WINDOW_MODE_FULLSCREEN or m == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
-
 func _val(k: String):
-	if k == "fs":
-		return 1 if _fs_on() else 0
 	return G.cfg[k]
 
 # ------------------------------------------------------------------ mở / dựng
@@ -142,9 +139,9 @@ func _build() -> void:
 			var k: String = SEGS[sid][0]
 			var v = vals[j]
 			U._click(L[j], func(): pick(k, v), "scale94")
-	# nút ? theo thứ tự: Tài khoản, Toàn màn hình, Chất lượng hình, Ngày và đêm, Chuyển động, Mùa, Cách chơi nhanh
+	# nút ? theo thứ tự: Tài khoản, Chất lượng hình, Ngày và đêm, Mùa, Cách chơi nhanh
 	var qs: Array = U._qall(box, "treq", [])
-	var keys := ["acct", "fs", "q", "d", "s", "hint"]
+	var keys := ["acct", "q", "d", "s", "hint"]
 	for j in mini(qs.size(), keys.size()):
 		var kk: String = keys[j]
 		U._click(qs[j], func(): help(kk), "scale")
@@ -168,13 +165,6 @@ func _scroll_to(s: float) -> void:
 
 # ------------------------------------------------------------------ chọn
 func pick(k: String, v) -> void:
-	if k == "fs":   # #fsSeg -> #fsBtn
-		if (int(v) == 1) != _fs_on():
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if int(v) == 1 else DisplayServer.WINDOW_MODE_WINDOWED)
-			_fs_want = int(v)
-			_fs_t = 0.4
-		_build()
-		return
 	if str(G.cfg[k]) == str(v):
 		return
 	G.cfg_set(k, v)
@@ -199,8 +189,6 @@ func _help_text(k: String) -> Array:
 	match k:
 		"acct":
 			return ["Tài khoản", "Mở game trong ứng dụng Claude (đã đăng nhập) để lưu tiến trình theo tài khoản và chơi tiếp trên máy khác. Hiện chỉ lưu trên máy này."]
-		"fs":
-			return ["Toàn màn hình", "Ẩn thanh trình duyệt cho cảnh rộng hơn."]
 		"q":
 			return ["Chất lượng hình", "Nếu máy nóng hoặc nhanh hết pin thì chọn Tiết kiệm. Máy mạnh thì chọn Nét."]
 		"d":
@@ -309,13 +297,5 @@ func step(dt: float) -> void:
 		armed -= dt
 		if armed <= 0.0:
 			armed = 0.0
-			if on:
-				_build()
-	if _fs_t > 0.0:
-		_fs_t -= dt
-		if _fs_t <= 0.0:
-			if _fs_want == 1 and not _fs_on():   # cw()
-				G.toast.emit("Ứng dụng đang mở game không cho bật toàn màn hình. Mở trang game bằng trình duyệt (Chrome) rồi bấm nút này, hoặc xoay ngang điện thoại.")
-			_fs_want = -1
 			if on:
 				_build()

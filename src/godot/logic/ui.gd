@@ -3185,46 +3185,9 @@ func icon(id: String, px: float) -> Texture2D:
 	return _icons[key]
 
 # ------------------------------------------------------------------ frame
-# ------------------------------------------------------------------ toàn màn hình mờ: khung vẽ canvas lệch chỗ hiện trên màn
-# (trình duyệt phóng ảnh nhỏ lên cho đầy chỗ hiện -> nhòe). Thấy lệch thì báo trình duyệt đổi cỡ để Godot dựng lại khung
-# vẽ đúng cỡ, và hiện một dòng chữ đỏ dưới đồng hồ đo (số khung vẽ / chỗ hiện) để biết máy nào bị.
-var _fs_t := 0.0
-var _fs_bad := 0
-var _fs_lb: Label = null
-func _fs_check(dt: float) -> void:
-	if not OS.has_feature("web"):
-		return
-	_fs_t -= dt
-	if _fs_t > 0.0:
-		return
-	_fs_t = 0.5
-	var cm = JavaScriptBridge.eval("(function(){var c=document.getElementById('canvas');if(!c)return '';var r=c.getBoundingClientRect(),d=devicePixelRatio||1;return [c.width,c.height,Math.round(r.width*d),Math.round(r.height*d),document.fullscreenElement?1:0,innerWidth,innerHeight,d].join(',')})()")
-	var q: PackedStringArray = str(cm).split(",") if cm != null else PackedStringArray()
-	var bad: bool = q.size() >= 8 and (absi(int(q[0]) - int(q[2])) > 2 or absi(int(q[1]) - int(q[3])) > 2)
-	if not bad:
-		_fs_bad = 0
-		if _fs_lb != null:
-			_fs_lb.visible = false
-		return
-	_fs_bad += 1
-	if _fs_bad == 2 or _fs_bad % 6 == 0:
-		JavaScriptBridge.eval("window.dispatchEvent(new Event('resize'))")
-	if _fs_lb == null:
-		_fs_lb = Label.new()
-		_fs_lb.add_theme_color_override("font_color", Color("#ff5a4a"))
-		_fs_lb.add_theme_color_override("font_outline_color", Color.BLACK)
-		_fs_lb.add_theme_constant_override("outline_size", 4)
-		_fs_lb.add_theme_font_size_override("font_size", int(13 * dpr_v))
-		_fs_lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(_fs_lb)
-	_fs_lb.position = Vector2(8, 180) * dpr_v
-	_fs_lb.visible = true
-	_fs_lb.text = "khung vẽ %sx%s · chỗ hiện %sx%s · toàn màn %s · trang %sx%s · dpr %s" % [q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7]]
-
 func _process(dt: float) -> void:
 	if root == null:
 		return
-	_fs_check(dt)
 	if vsize() != _vs:
 		var vs := get_viewport().get_visible_rect().size / dpr_v
 		var k2 := Khuon.tinh(vs.x, vs.y)
