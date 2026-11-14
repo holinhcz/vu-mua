@@ -1,15 +1,12 @@
 extends RefCounted
 # HỤI, LỄ HỘI (giao diện): phần bảng bản web còn thiếu ở bản Godot. Luật ở w_htx.gd.
-#  - x6 / x4: bảng "Hụi làng" (.raceov.pcov .rbox.pcbox.xbox, #huiBody): ghi chú, dây đang chơi (.tt.got) + nút "Hốt hụi",
-#    dây đã mãn / bể + "Chơi dây mới", hoặc chọn mức góp (.vl-jobs, aria-pressed = wS) và chủ hụi (♥, nguy cơ bể, "Vô hụi");
-#    "Sổ hụi" (ul.kh-gb). MS: đóng.
+#  - bảng "Hụi làng" dựng từ mẫu chụp ở ui_hui.gd.
 #  - QT: bảng lễ hội ($r.mode === "hoi": #vlName = tên lễ, #vlBody): ghi chú, danh sách lễ vật (.ws-rec li.rec + .tbar, nút Góp),
 #    nút "Nhận lộc lễ hội" (data-fest = claim). Dựng lại khi chữ ký $r.sig đổi (JSON [h4, số trong kho, ngày còn]).
 #  - bQ: nút viên lễ hội (.ghepill.festpill, .hurry), chạm -> gu("hoi") = open_fest().
 # Dựng bằng Control thường của Godot như w_cho_ui.gd; chỉ dựng lại khi đổi, không vẽ mỗi khung.
 
 const Css = preload("res://ui/css.gd")
-const VNV = preload("res://logic/vatnuoi.gd")   # CC = eT (♥♡)
 
 var U          # ui.gd
 var G          # game.gd
@@ -18,8 +15,6 @@ var W          # w_htx.gd
 #   Ai(id) -> Texture2D    (thiếu thì U.item_ic)
 var ext := {}
 
-var hui: Control = null     # Ih
-var w_s := 1                # wS: mức góp đang chọn
 var fest: Control = null    # bảng lễ hội ($r.mode === "hoi")
 var fest_sig := ""          # $r.sig
 var pill: Button = null     # k2
@@ -38,9 +33,7 @@ func _x(k: String) -> Callable:
 static func _k(v: float) -> float:
 	return v * Css.K
 
-func _on_render() -> void:   # kn / x4
-	if hui != null:
-		x4()
+func _on_render() -> void:   # kn
 	if fest != null:
 		sync_fest()
 
@@ -138,13 +131,6 @@ func _ic(id: String, px: float) -> TextureRect:   # Ai(id)
 	t.custom_minimum_size = Vector2(_k(px), _k(px))
 	return t
 
-func _sec(b: String, small: String) -> Control:   # .vl-sec: <b> + <small>
-	var v := VBoxContainer.new()
-	v.add_child(_lbl(b, 14, 800, Color8(0x3a, 0x2a, 0x1a)))
-	if small != "":
-		v.add_child(_lbl(small, 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-	return v
-
 func _note(b: String, rest: String) -> Control:   # p.note (<b> đầu dòng + chữ thường)
 	var v := VBoxContainer.new()
 	if b != "":
@@ -152,18 +138,6 @@ func _note(b: String, rest: String) -> Control:   # p.note (<b> đầu dòng + c
 	if rest != "":
 		v.add_child(_lbl(rest, 12, 400, Color8(0x8a, 0x7a, 0x6a)))
 	return v
-
-func _tt(b: String, small: String, btn: Button = null, got := false) -> Control:   # .tt (.got): <div><b><small></div> [nút]
-	var h := HBoxContainer.new()
-	var v := VBoxContainer.new()
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(_lbl(b, 13.5, 700, Color8(0x2f, 0x7a, 0x2a) if got else Color8(0x3a, 0x2a, 0x1a)))
-	v.add_child(_lbl(small, 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-	h.add_child(v)
-	if btn != null:
-		btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(btn)
-	return h
 
 func _jobs(btns: Array) -> Control:   # .vl-jobs
 	var f := HFlowContainer.new()
@@ -185,87 +159,6 @@ func _bar(r: float) -> Control:   # .tbar > i (width %)
 static func _clear(n: Control) -> void:
 	for c in n.get_children():
 		c.queue_free()
-
-# ------------------------------------------------------------------ bảng hụi (x6, x4, MS)
-func x6() -> void:   # x6
-	if hui != null:
-		x4()
-		return
-	var p := _panel("Hụi làng", ms)
-	hui = p[0]
-	x4()
-
-func ms() -> void:   # MS
-	if hui != null:
-		hui.queue_free()
-		hui = null
-
-func _hot() -> void:   # data-hui="hot"
-	W.jk()
-
-func _new() -> void:   # data-hui="new"
-	W.hui_new()
-	x4()
-
-func _pick_c(p: int) -> void:   # data-huic
-	w_s = p
-	x4()
-
-func _vo(h: String) -> void:   # data-huiu
-	W.mk(h, int(W.u_n()[w_s]))
-
-func x4() -> void:   # x4: nội dung #huiBody
-	if hui == null:
-		return
-	var t: VBoxContainer = hui.get_meta("body")
-	_clear(t)
-	var a = G.g.get("hui")
-	t.add_child(_note("", "Dây hụi 6 phần: bạn và 5 nhà trong xóm. Cứ 12 tiếng là một kỳ, ai cũng góp một phần. Mỗi kỳ được bỏ thăm hốt một lần: hốt sớm có tiền xài liền mà chịu lãi, hốt chót được lời. Chủ hụi càng thân (♥) càng ít sợ bể hụi."))
-	if W._tr(a) and not W._tr(a.get("done")):
-		var e: int = W.y6()
-		var r: float = W._vr() * 24 + W._d0()
-		var o: float = (float(a.k0) + float(a.paid)) * W.VN - r
-		var l: int = W.vk(maxi(1, e), float(a.c))
-		var c := float(a.c)
-		var no: float = W._n(a.get("no"))
-		t.add_child(_tt("Hụi của " + String(a.n) + " · mỗi phần " + W._sa(c) + " xu",
-			"Kỳ " + str(e) + "/" + str(W._D) + " · đã góp " + W._sa(float(a.paid) * c) + " xu" + (" · nợ " + W._sa(no) if no else "") + " · kỳ tới sau " + str(maxi(0, int(floor(o)))) + " giờ " + str(maxi(0, W._rnd(fmod(o, 1.0) * 60))) + " phút · nguy cơ bể hụi " + W._ns(W._rnd(float(W.WL.k_s(a.u)) * 1e3) / 10.0) + "% mỗi kỳ", null, true))
-		if W._tr(a.get("hot")):
-			t.add_child(_note("", "Bạn đã hốt kỳ " + str(a.hot) + ", nhận " + W._sa(a.got) + " xu. Tiếp tục góp tới mãn hụi nha."))
-		else:
-			t.add_child(_tt("Hốt hụi kỳ này: " + W._sa(l - no) + " xu", "Hốt chót (kỳ 6) được " + W._sa(W.vk(W._D, c)) + " xu. Tổng góp cả dây: " + W._sa(W._D * c) + " xu.", _btn("Hốt hụi", true, true, _hot)))
-	elif W._tr(a) and W._tr(a.get("done")):
-		var pd := float(a.paid) * float(a.c)
-		var gt: float = W._n(a.get("got"))
-		t.add_child(_tt(("Dây hụi " + String(a.n) + " đã bể") if W._tr(a.get("be")) else ("Dây hụi " + String(a.n) + " đã mãn"),
-			"Góp " + W._sa(pd) + " xu, nhận " + W._sa(gt) + " xu (" + ("lời " if gt - pd >= 0 else "lỗ ") + W._sa(absf(gt - pd)) + " xu).",
-			_btn("Chơi dây mới", false, true, _new), not W._tr(a.get("be"))))
-	else:
-		var c = W._lang()
-		var f: Array = W._okeys(c.fam) if c != null and W._tr(c.get("fam")) else []
-		if f.size() < 1:
-			t.add_child(_note("", "Xóm chưa có ai ở để rủ chơi hụi. Xây nhà cho dân về ở trước đã."))
-		else:
-			var s: Array = W.u_n()
-			t.add_child(_sec("Mức góp mỗi kỳ", ""))
-			var bs := []
-			for p in s.size():
-				var pi: int = p
-				var b := _btn(W._sa(s[p]) + " xu", false, true, func(): _pick_c(pi))
-				b.toggle_mode = true
-				b.button_pressed = w_s == p   # aria-pressed
-				bs.append(b)
-			t.add_child(_jobs(bs))
-			t.add_child(_sec("Chọn chủ hụi", "Thân càng nhiều ♥ càng đáng tin."))
-			W._stable_sort(f, func(h, p): return int(W._n(c.fam[p].get("tim")) - W._n(c.fam[h].get("tim"))))
-			for h in f:
-				var p: Dictionary = c.fam[h]
-				var hk: String = h
-				t.add_child(_tt(String(p.n) + " " + VNV.hearts(W._n(p.get("tim"))), "Nguy cơ bể hụi " + W._ns(W._rnd(float(W.WL.k_s(h)) * 1e3) / 10.0) + "% mỗi kỳ", _btn("Vô hụi", true, true, func(): _vo(hk))))
-	if W._tr(a) and W._tr(a.get("log")) and a.log.size():
-		t.add_child(_sec("Sổ hụi", ""))
-		for h in a.log:
-			t.add_child(_lbl("• " + String(h), 12, 500, Color8(0x5a, 0x4a, 0x3a)))
 
 # ------------------------------------------------------------------ bảng lễ hội (gu("hoi") -> QT)
 func open_fest() -> void:   # gu("hoi")

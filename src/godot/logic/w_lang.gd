@@ -2069,14 +2069,8 @@ func tn_bk_sub() -> String:   # tnBkSub
 		return String(TNK.get(ev.k, {}).get("w", ""))
 	return str(nn) + " nhà gặp nạn" if nn else "Xóm bình yên"
 
-func tn_red() -> int:   # tnRed (phần chuẩn bị trước nạn; phần cứu nhà gặp nạn chờ bảng Thiên tai)
-	if not tn_ok():
-		return 0
-	var o := tn_s()
-	var ev = tn_on(_vr() + 1)
-	if ev != null and (_n(o.p.get("d", -1)) != float(ev.d) or not _tr(o.p.get("b"))):
-		return 1
-	return 0
+func tn_red() -> int:   # tnRed (luật ở w_duong.gd)
+	return WD.tn_red() if WD != null else 0
 
 func clg_red() -> int:   # clgRed
 	var o := clg_s()

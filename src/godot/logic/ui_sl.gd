@@ -9,8 +9,6 @@ var W          # w_lang.gd (dòng phụ, chấm đỏ)
 var WH         # w_htx.gd (Lf: sạp quê)
 var tab := "lang"        # t
 var bs := "ns"           # a: chip bộ sưu tập
-var chx := 0.0           # khchips.scrollLeft
-var hd = null            # kéo ngang hàng chip
 var SB := {}             # #pov Sổ làng
 var ST := {}             # khối mẫu
 const SOON := "Phần này đang chuyển qua bản Godot."
@@ -221,6 +219,12 @@ func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
 			U.ut_open()
 		"hr":
 			U.hr_open()
+		"hui":
+			U.hui_open()
+		"gp":
+			U.gp_open()
+		"tn":
+			U.tn_open()
 		_:
 			U.say(SOON)
 
@@ -329,15 +333,7 @@ func _bst(M: Dictionary, bb: Dictionary, vt: Dictionary) -> Array:
 			onr = [x, x + w]
 		chips.append(c)
 		x += w + 4.5
-	# giữ chip đang chọn trong khung (như web: scrollLeft += lố + 8)
-	var vw := [16.5 + chx, 321.5 + chx]
-	if onr[1] > vw[1]:
-		chx += onr[1] - vw[1] + 6.0
-	elif onr[0] < vw[0]:
-		chx -= vw[0] - onr[0] + 6.0
-	chx = clampf(chx, 0.0, maxf(0.0, x - 4.5 - 321.5))
-	for c in chips:
-		Snap._move(c, Vector2(-chx, 0))
+	_chips_keep(chips, onr, x - 4.5)
 	row.kids = chips
 	row.cls = "khchips"
 	var ks: Array = bb.kids
@@ -401,32 +397,6 @@ func _wire_extra(b: Control) -> void:
 
 # ------------------------------------------------------------------ kéo ngang hàng chip
 func input(e: InputEvent) -> bool:
-	if on and tab == "bst" and box != null:
-		var row = ids.get(".khchips")
-		if (e is InputEventScreenTouch or e is InputEventMouseButton) and row != null:
-			if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-				return super(e)
-			var p: Vector2 = e.position / Css.K
-			if e.pressed:
-				var gr := Rect2(row.get_global_rect().position / Css.K, row.r.size)
-				hd = {"x0": p.x, "s0": chx, "moved": false} if gr.has_point(p) else null
-			elif hd != null:
-				if hd.moved:
-					sig = ""
-				hd = null
-		elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and hd != null:
-			var p: Vector2 = e.position / Css.K
-			var d: float = p.x - hd.x0
-			if absf(d) > 6.0:
-				hd.moved = true
-				moved_t = true
-			if hd.moved and row != null:
-				var mx := 0.0
-				for c in row.kids():
-					mx = maxf(mx, c.r.end.x + chx)
-				var nx := clampf(hd.s0 - d, 0.0, maxf(0.0, mx - row.r.size.x))
-				for c in row.kids():
-					U._move(c, c.r.position - Vector2(nx - chx, 0))
-				chx = nx
-			return true
+	if on and tab == "bst" and _chips_drag(e):
+		return true
 	return super(e)

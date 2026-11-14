@@ -1,22 +1,17 @@
-extends "res://logic/ui_bang.gd"
+extends "res://logic/ui_pop.gd"
 # NGƯỜI LÀM THUÊ (ZD / sm bản web, Sổ làng › Làm thuê): hộp .raceov.pcov > .rbox, mỗi nhà một thẻ .tt (.got khi đang làm):
 # tên + tim, việc đang làm, ô chọn việc (select.hrsel), ô chọn giống / món (label.hrlab), nút Ghé nhà; cuối là Cho nghỉ hết.
 # Ô chọn của trình duyệt: bấm vô thì xổ danh sách ngay dưới ô (mỗi dòng một lựa chọn), chọn xong thì gập lại.
 # Mẫu: ui/snap/hr.json (hộp), hr_tab.json (thẻ). Luật ở w_lang.gd (n4, jq, xd, lm, vg, yx, om, wage).
 
 var W          # w_lang.gd
-var HB := {}                # .raceov
 var HT := {}                # thẻ mẫu
 var dd := ""                # ô chọn đang xổ: "<nhà>|job" / "<nhà>|crop" / "<nhà>|jr"
-const BODY_TOP := 39.0      # từ mép trên .rbox tới #hrBody
-const BODY_BOT := 16.5
-const BOX_MAX := 530.0      # .rbox cao tối đa, còn lại cuộn trong #hrBody
 const CHEV := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M5 9l7 7 7-7\" fill=\"none\" stroke=\"#5a3e14\" stroke-width=\"3.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
 
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
-	HB = Snap.load_snap("hr")["#pov"][0]
 	HT = Snap.load_snap("hr_tab")
 
 func open() -> void:   # ZD
@@ -43,37 +38,7 @@ func _sig() -> String:
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
-	var n := _cl(HB)
-	var rb := _find(n, "rbox")
-	var vt := _find(n, "hrbody")
-	var blocks := _body()
-	var ch := 0.0
-	for i in blocks.size():
-		if i:
-			ch += float(blocks[i].get("gap", 6.0))
-		ch += float(blocks[i].r[3])
-		blocks[i].dx = 25.0
-	var bh := minf(7.5 + ch, BOX_MAX - BODY_TOP - BODY_BOT)
-	var H := BODY_TOP + bh + BODY_BOT
-	_mv(rb, float(rb.r[0]), (610.0 - H) * 0.5)
-	rb.r[3] = H
-	vt.r[3] = bh
-	rb.kids.append(tre_frame(float(rb.r[0]), float(rb.r[1]), float(rb.r[2]), H))
-	_show(n, vt, blocks, 7.5)
-	U._click(ids.get(".tre-x"), close, "scale")
-	var ov = ids.get(".raceov")
-	if ov != null:
-		U._stop(ov)
-		ov.gui_input.connect(_ov_tap.bind(ov))
-	var bx = ids.get(".rbox")
-	if bx != null:
-		U._stop(bx)
-	U._layout()
-
-func _ov_tap(e: InputEvent, ov: Control) -> void:   # bấm ra ngoài hộp thì đóng (kx)
-	var bx = ids.get(".rbox")
-	if U._is_tap_down(e) and bx != null and not bx.get_global_rect().has_point(ov.global_position + e.position):
-		close()
+	_pop(_body())
 
 func _body() -> Array:   # sm
 	var out := []
@@ -87,7 +52,9 @@ func _body() -> Array:   # sm
 		if W._tr(F[u].get("job")):
 			r += 1
 	for u in ks:
-		out.append(_tt(u, F[u]))
+		var c := _tt(u, F[u])
+		c.gap = 6.0 if out.size() else 7.5
+		out.append(c)
 	if r:
 		var j := _cl(HT.jobs)
 		var b: Dictionary = j.kids[0]

@@ -357,7 +357,7 @@ func _body(f: Dictionary) -> Array:
 	return _viec(f)
 
 func _viec(f: Dictionary) -> Array:   # _vT.viec
-	var L := []
+	var L := _nan()
 	if W._tr(f.get("pq")):
 		L.append(_sec("Việc riêng"))
 		L.append(_vlod(String(f.pq.t), f.pq.it, int(f.pq.xu), "Giao", func(): W.iv(u)))
@@ -401,6 +401,23 @@ func _cuoi(a: Dictionary) -> Array:   # AU: dạm hỏi
 	var e: Dictionary = W.b_s()
 	return [_sec("Dạm hỏi " + String(n.n)), _card([_r("Bưng mâm quả qua: đu đủ, trứng, 2 bánh phu thê và " + W._sa(e.xu) + " xu tiền dẫn cưới.", _csm())],
 		e.it.map(func(o): return [o[0], o[1]]), [["Xin cưới · " + W._sa(e.xu) + " xu", true, W.n_s(), func(): W.sk(u)]])]
+
+func _nan() -> Array:   # aU bọc: nhà đang gặp nạn (thiên tai)
+	var tn = G.g.get("tn")
+	var nn = tn.nan.get(str(u)) if tn is Dictionary and tn.get("nan") is Dictionary else null
+	if not (nn is Dictionary) or W._tr(nn.get("x")):
+		return []
+	var WD = W.WD
+	var ch := []
+	var tx := []
+	for k in nn.need:
+		if k == "xu" or k == "gach":
+			var hv: int = WD._tn_hv(k)
+			tx.append(W._sa(mini(hv, int(nn.need[k]))) + "/" + W._sa(nn.need[k]) + " " + String(WD.TNRES[k]))
+		else:
+			ch.append([String(k), int(nn.need[k])])
+	return [_sec("Gặp nạn: " + String(W.TNNAN.get(nn.k, "")).to_lower() + " sau " + String(WD.TNK[nn.k].n).to_lower(), "Còn " + str(int(nn.d) + 3 - W._vr()) + " ngày. Giúp thì +60 thân, +8 uy tín."),
+		_card([_r("Cần " + ", ".join(PackedStringArray(tx)) + ".", _csm())] if tx.size() else [], ch, [["Giúp nhà này", true, true, func(): WD.tn_help(u)]])]
 
 func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var L := [_sec("Thuê làm phụ", "Trả công mỗi phút. Càng thân thiết công càng rẻ. Hết tiền thì họ nghỉ. Xem hết mọi người ở Sổ làng › Người làm thuê.")]

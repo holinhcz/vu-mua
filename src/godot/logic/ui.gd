@@ -37,6 +37,9 @@ var ng_bdg: Control = null   # số đơn làng giao được trên nút Nghề 
 var slp = null               # bảng SỔ LÀNG (ui_sl.gd)
 var utp = null               # bảng UY TÍN LÀNG (ui_ut.gd)
 var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
+var huip = null              # bảng HỤI LÀNG (ui_hui.gd)
+var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
+var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
 var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
@@ -1501,7 +1504,7 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
-	for p in [slp, utp, hrp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp]:
 		if p != null:
 			p.close()
 	if vlp != null:
@@ -2953,6 +2956,33 @@ func ut_open(t := "") -> void:   # utOpen: Sổ làng › Uy tín làng
 	kho_close()
 	utp.open(t)
 
+func tn_open(t := "") -> void:   # tnOpen: Sổ làng › Thiên tai, hoạn nạn
+	if G.w_all == null:
+		return
+	if tnp == null:
+		tnp = load("res://logic/ui_tn.gd").new(self, G.w_all.WL, G.w_all.WD)
+	close_all()
+	kho_close()
+	tnp.open(t)
+
+func gp_open(u = null) -> void:   # gpOpen: Sổ làng › Gia phả
+	if G.w_all == null:
+		return
+	if gpp == null:
+		gpp = load("res://logic/ui_gp.gd").new(self, G.w_all.WL)
+	close_all()
+	kho_close()
+	gpp.open(u)
+
+func hui_open() -> void:   # x6: Sổ làng › Hụi làng (Jg("hui"): chưa tới cấp thì báo)
+	if G.w_all == null or not G.w_all.WL._jg("hui"):
+		return
+	if huip == null:
+		huip = load("res://logic/ui_hui.gd").new(self, G.w_all.WH)
+	close_all()
+	kho_close()
+	huip.open()
+
 func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	if G.w_all == null:
 		return
@@ -2963,7 +2993,7 @@ func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	hrp.open()
 
 func close_all() -> void:
-	for p in [slp, utp, hrp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp]:
 		if p != null and p.on:
 			p.close()
 	if ngp != null and ngp.on:
@@ -3041,7 +3071,7 @@ func _process(dt: float) -> void:
 		vlp.step(dt)
 	if ngp != null:
 		ngp.step(dt)
-	for p in [slp, utp, hrp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp]:
 		if p != null:
 			p.step(dt)
 	_ng_bdg()
@@ -3109,7 +3139,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or (huip != null and huip.on) or (gpp != null and gpp.on) or (tnp != null and tnp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -3124,7 +3154,7 @@ func _input(e: InputEvent) -> void:
 		vlp.input(e)
 	if ngp != null:
 		ngp.input(e)
-	for p in [slp, utp, hrp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp]:
 		if p != null:
 			p.input(e)
 	if xfp != null:

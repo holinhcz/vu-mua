@@ -142,6 +142,7 @@ func d4() -> Variant:   # d4: đình làng (món đặt dinh / dinh2, hoặc v�
 func step(t: float, offline: bool) -> void:   # $q (phần eV(t) thuộc hệ khác)
 	if offline:
 		return
+	tn_tick(t)
 	uT -= t
 	if uT <= 0.0:
 		uT = 1.0
@@ -475,6 +476,152 @@ func tn_hit(ev: Dictionary, late: bool) -> void:   # tnHit
 		_gr([20, 60, 20])   # Jt("err"): âm thanh, không chép
 	_later(3.0 if late else 1.5, tell)
 	_ba()   # kn
+
+# ------------------------------------------------------------------ thiên tai: phòng trước, giúp nhà gặp nạn, qua ngày
+# việc phòng: [giữ ruộng, giữ làng] = [tên, tác dụng, đồ] (cháy nhà chỉ có giữ làng)
+const TNPREP := {
+	"bao": [["Cắm cọc chằng cây trồng", "Cây ngoài ruộng hư ít hẳn.", {"cui": 20}], ["Chằng chống nhà cho bà con", "Bớt 2 nhà bị sập.", {"xu": 400, "cui": 15}]],
+	"lu": [["Đắp bờ bao quanh ruộng", "Ruộng ngập ít hẳn.", {"xu": 600, "cui": 10}], ["Kê cao đồ đạc giúp bà con", "Bớt 1 nhà bị ngập.", {"xu": 300}]],
+	"han": [["Trữ nước vô lu, khạp", "Ruộng khô chết ít hẳn.", {"xu": 400}], ["Đào giếng tạm cho xóm", "Bớt 1 nhà mất mùa.", {"xu": 500, "cui": 10}]],
+	"dich": [["Rắc vôi chuồng trại", "Vật nuôi ít bệnh hẳn.", {"xu": 300}], ["Phát thuốc phòng cho bà con", "Bớt 1 nhà đau ốm.", {"xu": 600}]],
+	"chay": [null, ["Đặt lu nước, cử người canh lửa", "Lửa dập kịp, không nhà nào cháy.", {"xu": 300}]]}
+const TNRES := {"xu": "xu", "cui": "củi", "gach": "gạch", "lua": "giạ lúa", "chieu": "chiếu", "gio_lb": "giỏ", "nhang": "nhang"}
+var TNT := 0.0
+
+func _tn_hv(k: String) -> int:
+	if k == "xu":
+		return int(_n(G.g.coins))
+	if k == "gach":
+		return int(_n(WL._r0().get("gach")))
+	return int(_n(G.g.barn.get(k, 0)))
+
+func tn_have(q: Dictionary) -> bool:   # tnHave
+	for k in q:
+		if _tn_hv(k) < int(q[k]):
+			return false
+	return true
+
+func tn_miss(q: Dictionary) -> String:   # tnMiss
+	var ms := []
+	for k in q:
+		var hv := _tn_hv(k)
+		if hv < int(q[k]):
+			ms.append(WL._sa(int(q[k]) - hv) + " " + String(TNRES.get(k, k)))
+	return ", ".join(PackedStringArray(ms))
+
+func tn_take(q: Dictionary) -> void:   # tnTake
+	for k in q:
+		if k == "xu":
+			G.g.coins = _n(G.g.coins) - int(q[k])
+		elif k == "gach":
+			var lg: Dictionary = WL._r0()
+			lg.gach = int(_n(lg.get("gach"))) - int(q[k])
+		else:
+			G.g.barn[k] = int(_n(G.g.barn.get(k, 0))) - int(q[k])
+
+func tn_help(uu) -> void:   # tnHelp: giúp nhà gặp nạn
+	var o: Dictionary = WL.tn_s()
+	var k := str(uu)
+	var nn = o.nan.get(k)
+	var ff = WL._r0().fam.get(k)
+	if not _tr(nn) or ff == null or _tr(nn.get("x")):
+		return
+	if not tn_have(nn.need):
+		_ta("Còn thiếu " + tn_miss(nn.need) + ".")
+		return
+	tn_take(nn.need)
+	o.nan.erase(k)
+	if _tr(o.get("lo")) and o.lo.u.map(func(x): return str(x)).has(k):
+		o.lo.hp = int(_n(o.lo.hp)) + 1
+	WL.than_add(ff, 60)
+	WL.ut_add(8, "Giúp nhà " + String(ff.n) + " qua cơn " + String(WL.TNNAN.get(nn.k, "")).to_lower())
+	_ta("Nhà " + String(ff.n) + " cảm ơn rối rít, mai mốt có gì cứ kêu một tiếng.")
+	_ba()
+
+func tn_prep(which: String) -> void:   # tnPrep: việc phòng hôm báo tin
+	var ev = WL.tn_on(_vr() + 1)
+	var o: Dictionary = WL.tn_s()
+	if ev == null or not WL.tn_ok():
+		return
+	var P = TNPREP[ev.k][0 if which == "a" else 1]
+	if P == null:
+		return
+	if not (_num(o.p.get("d")) and int(o.p.d) == int(ev.d)):
+		o.p = {"d": ev.d}
+	if _tr(o.p.get(which)):
+		return
+	var q := tn_scale(P[2])
+	if not tn_have(q):
+		_ta("Còn thiếu " + tn_miss(q) + ".")
+		return
+	tn_take(q)
+	o.p[which] = 1
+	if which == "b":
+		WL.ut_add(3, "Phòng " + String(TNK[ev.k].n).to_lower() + " cho xóm")
+	_ta(String(P[0]) + " xong. " + String(P[1]))
+	_ba()
+
+func tn_days(day: int) -> bool:   # tnDays: hết hạn giúp, tự gượng dậy, chấm việc lo cho bà con
+	var o: Dictionary = WL.tn_s()
+	var F: Dictionary = WL._r0().fam
+	var ch := false
+	for uu in o.nan.keys():
+		var nn: Dictionary = o.nan[uu]
+		var ff = F.get(uu)
+		if ff == null or WL.r1(uu) == null:
+			o.nan.erase(uu)
+			ch = true
+			continue
+		if not _tr(nn.get("x")) and day >= int(nn.d) + 3:
+			nn.x = 1
+			WL.than_add(ff, -20)
+			ch = true
+		if day >= int(nn.d) + maxi(1, (3 if WR.tn_has("chua") else 5) - int(WL.htv("l_xa"))):
+			o.nan.erase(uu)
+			ch = true
+	if _tr(o.get("lo")) and day >= int(o.lo.d) + 3:
+		tn_lo_end()
+		ch = true
+	return ch
+
+func tn_tick(dt: float) -> void:   # tnTick (2 giây một lần)
+	TNT -= dt
+	if TNT > 0.0:
+		return
+	TNT = 2.0
+	if WL == null:
+		return
+	var o: Dictionary = WL.tn_s()
+	var day := _vr()
+	var ch := false
+	if day > int(o.last):
+		for x in range(maxi(int(o.last) + 1, day - 2), day + 1):
+			var ev = WL.tn_on(x)
+			if ev != null and WL.tn_ok():
+				tn_hit(ev, x < day)
+		o.last = day
+		ch = true
+	if tn_days(day):
+		ch = true
+	for ix in G.B0:
+		var pl = G.g.plots[ix] if ix < G.g.plots.size() else null
+		if _tr(pl) and _tr(pl.get("hu")) and (_tr(pl.get("c")) or day - int(pl.hu) > 2):
+			pl.erase("hu")
+			ch = true
+	if ch:
+		_ba()
+
+func tn_red() -> int:   # tnRed
+	if not WL.tn_ok():
+		return 0
+	var o: Dictionary = WL.tn_s()
+	var ev = WL.tn_on(_vr() + 1)
+	if ev != null and (not (_num(o.p.get("d")) and int(o.p.d) == int(ev.d)) or not _tr(o.p.get("b")) or (TNPREP[ev.k][0] != null and not _tr(o.p.get("a")))):
+		return 1
+	for uu in o.nan:
+		if not _tr(o.nan[uu].get("x")) and tn_have(o.nan[uu].need):
+			return 1
+	return 0
 
 # ------------------------------------------------------------------ thưởng trò chơi nhỏ (lúc trò chơi báo "end")
 static func _today() -> String:   # day(): "năm-tháng-ngày" theo giờ máy

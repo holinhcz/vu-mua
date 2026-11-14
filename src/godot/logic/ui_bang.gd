@@ -467,6 +467,51 @@ static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:
 			Snap._move(k, Vector2(sx, sy))
 	return o
 
+# ------------------------------------------------------------------ hàng chip .khchips cuộn ngang (scrollLeft)
+var chx := 0.0              # khchips.scrollLeft
+var hd = null               # đang kéo ngang hàng chip
+
+func _chips_keep(chips: Array, onr: Array, x_end: float, x0 := 16.5, x1 := 321.5) -> void:   # giữ chip đang chọn trong khung (web: scrollLeft += lố + 8)
+	if onr[1] > x1 + chx:
+		chx += onr[1] - x1 - chx + 6.0
+	elif onr[0] < x0 + chx:
+		chx -= x0 + chx - onr[0] + 6.0
+	chx = clampf(chx, 0.0, maxf(0.0, x_end - x1))
+	for c in chips:
+		Snap._move(c, Vector2(-chx, 0))
+
+func _chips_drag(e: InputEvent) -> bool:   # kéo ngang .khchips; true = đã dùng sự kiện
+	var row = ids.get(".khchips") if box != null else null
+	if row == null:
+		return false
+	if e is InputEventScreenTouch or e is InputEventMouseButton:
+		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
+			return false
+		var p: Vector2 = e.position / Css.K
+		if e.pressed:
+			var gr := Rect2(row.get_global_rect().position / Css.K, row.r.size)
+			hd = {"x0": p.x, "s0": chx, "moved": false} if gr.has_point(p) else null
+		elif hd != null:
+			if hd.moved:
+				sig = ""
+			hd = null
+	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and hd != null:
+		var p: Vector2 = e.position / Css.K
+		var d: float = p.x - hd.x0
+		if absf(d) > 6.0:
+			hd.moved = true
+			moved_t = true
+		if hd.moved:
+			var mx := 0.0
+			for c in row.kids():
+				mx = maxf(mx, c.r.end.x + chx)
+			var nx := clampf(hd.s0 - d, 0.0, maxf(0.0, mx - row.r.size.x))
+			for c in row.kids():
+				U._move(c, c.r.position - Vector2(nx - chx, 0))
+			chx = nx
+		return true
+	return false
+
 # ------------------------------------------------------------------ cuộn
 func _redo() -> void:
 	sig = ""
