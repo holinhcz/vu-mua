@@ -25,7 +25,7 @@ func _pop(blocks: Array) -> void:   # dựng hộp: khối xếp dọc trong #hr
 		if i:
 			ch += float(blocks[i].get("gap", 6.0))
 		ch += float(blocks[i].r[3])
-		blocks[i].dx = 25.0
+		blocks[i].dx = 25.0 + float(blocks[i].get("ddx", 0.0))   # ddx: khối lệch khỏi lề (hàng tab tre)
 	var bh := minf(top + ch, BOX_MAX - BODY_TOP - BODY_BOT)
 	var H := BODY_TOP + bh + BODY_BOT
 	_mv(rb, float(rb.r[0]), (610.0 - H) * 0.5)

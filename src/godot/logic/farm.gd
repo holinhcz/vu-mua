@@ -864,6 +864,9 @@ func tap(sp: Vector2) -> void:
 			ui.vl_open(int(h.u))
 		"sonha":
 			ui.vl_chip(h.o)
+		"dl":   # chạm khách du lịch: bảng Du lịch miệt vườn
+			ui.close_all()
+			ui.dl_open()
 		"dan":   # chạm người dân: mở bảng nhà
 			ui.close_all()
 			ui.vl_open(int(h.u))
@@ -1050,7 +1053,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 			var fx := en(float(x.x), float(x.y))
 			var fy := nn(float(x.x), float(x.y))
 			var hb := func(p: Vector2) -> bool: return absf(p.x - fx) < 10.0 * le and p.y > fy - 34.0 * le and p.y < fy + 4.0
-			_pk_add(L, {"type": "dan", "u": int(x.u)}, 48, fy, hb, {"mv": true})
+			_pk_add(L, {"type": "dl"} if x.get("dl", false) else {"type": "dan", "u": int(x.u)}, 48, fy, hb, {"mv": true})
 	if lang != null:   # cây ăn trái (hình), kho (hình + nền), thùng ong
 		var O: Array = lang.objs()
 		if G.w_all != null:
@@ -1661,6 +1664,15 @@ func _dan_list(tt: float) -> Array:
 			var p: Vector2 = WL._home(h.u)
 			out.append({"key": "h" + str(h.u), "u": int(h.u), "n": String(f.n), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
 				"face": 1 if String(h.r.id).ends_with("2") else -1, "wave": WL._tr(f.get("req")) and sin(tt * 0.8 + float(h.u)) > 0.6, "carry": null, "bob": false})
+	for e in G.w_all.WDL.Jc:   # khách du lịch (Y_ / J_): vẫy tay, tim khi vui
+		if e.st == "rest":
+			continue
+		var busy: bool = e.act != "" and e.act != "nha"
+		for j in e.m.size():
+			var o: Dictionary = e.m[j]
+			out.append({"key": "k" + str(e.id) + "_" + str(j), "u": 0, "n": "", "x": o.x, "y": o.y, "lk": 0, "mv": bool(o.get("mv", false)), "ph": o.ph,
+				"face": o.face, "wave": busy and sin(tt * 1.3 + j) > 0.5, "carry": null, "bob": false, "dl": true, "heart": busy and float(e.happy) > 1.0,
+				"img": "res://ui/img/khach/" + String(e.k) + str(o.j) + ("n" if o.non else "") + ".webp"})
 	return out
 
 func _dan_sync(tt: float) -> void:

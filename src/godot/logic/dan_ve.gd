@@ -31,7 +31,7 @@ func _draw() -> void:
 		var a := k * TAU / 24.0
 		pts.append(foot + Vector2(cos(a) * 6.0 * r, 1.0 + sin(a) * 2.0 * r))
 	draw_colored_polygon(pts, Color(0, 0, 0, 0.2))
-	var tex: Texture2D = Css.image("res://ui/img/dan/" + str(clampi(int(d.get("lk", 0)), 0, 7)) + ".webp")
+	var tex: Texture2D = Css.image(String(d.img) if d.has("img") else "res://ui/img/dan/" + str(clampi(int(d.get("lk", 0)), 0, 7)) + ".webp")
 	if tex == null:
 		return
 	var fi := 0
@@ -55,6 +55,12 @@ func _draw() -> void:
 		if it != null:
 			draw_texture_rect(it, Rect2(-9.0 * r, (-21.0 - f) * r, 8.0 * r, 8.0 * r), false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# khách du lịch vui: tim đỏ bay lên trên đầu (J_: r - 40o - (Ke·12 + n·7) % 14)
+	if bool(d.get("heart", false)) and not farm.G.motion_off():
+		var hy := foot.y - 40.0 * r - fposmod(tt * 12.0 + float(d.get("ph", 0.0)) * 7.0, 14.0)
+		var hf: Font = Css.font(700)
+		var hw := hf.get_string_size("♥", HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+		draw_string(hf, Vector2(foot.x - hw / 2.0, hy), "♥", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#e2453a"))
 	# tên trên đầu khi zoom gần (Lh: ba.z >= 1,05): viên trắng .88, chữ 700 9px nâu, nhân le
 	var z: float = farm.main.zoom
 	if farm.ui != null and farm.ui.cz() >= 1.05 and String(d.get("n", "")) != "":

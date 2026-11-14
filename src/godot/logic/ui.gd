@@ -43,6 +43,7 @@ var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
 var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
 var clgp = null              # bảng CHUYỆN LÀNG (ui_clg.gd)
 var sysp = null              # bảng HỆ THỐNG (ui_sys.gd)
+var dlp = null               # bảng DU LỊCH MIỆT VƯỜN (ui_dl.gd)
 var klp = null               # bảng KỶ LỤC (ui_kl.gd)
 var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
 var gdp = null               # SỔ TAY (ui_gd.gd)
@@ -3001,7 +3002,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, klp, klcp, gdp, rkp]
+	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3014,6 +3015,11 @@ func hdn_open(t := "") -> void:   # hdnOpen: Sổ làng › Hội đình
 	if G.w_all == null:
 		return
 	_pan_open("hdnp", "res://logic/ui_hdn.gd", [G.w_all.WH]).open(t)
+
+func dl_open() -> void:   # O6: Du lịch miệt vườn (Jg("dulich"): chưa tới cấp thì báo)
+	if G.w_all == null or not G.w_all.WL._jg("dulich"):
+		return
+	_pan_open("dlp", "res://logic/ui_dl.gd", [G.w_all.WDL]).open()
 
 func sys_open(t := "") -> void:   # gu("sys"): Menu › Hệ Thống
 	if G.w_all == null:

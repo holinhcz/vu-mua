@@ -18,6 +18,7 @@ var WL    # w_lang.gd   dân làng, nghề, cưới, chuyện làng
 var WH    # w_htx.gd    hợp tác xã, hụi, lễ hội, nhịp Hay Day
 var WCA   # w_ca.gd     câu cá, thú nuôi thêm, lờ lọp, diều
 var WD    # w_duong.gd  chuồng, thiên tai, trò chơi nhỏ
+var WDL   # w_dl.gd     du lịch miệt vườn
 
 var U = null    # ui.gd (ui_setup)
 var TIP = null  # w_tip.gd
@@ -44,6 +45,7 @@ func _init(game) -> void:
 	WH = load("res://logic/w_htx.gd").new(G)
 	WCA = load("res://logic/w_ca.gd").new(G)
 	WD = load("res://logic/w_duong.gd").new(G)
+	WDL = load("res://logic/w_dl.gd").new(G)
 	# 2. tham chiếu chéo
 	WC.WR = WR
 	WC.CA = WCA            # dedupe: w_cho._Cc -> w_ca.cc (g.pet)
@@ -68,6 +70,11 @@ func _init(game) -> void:
 	WD.WL = WL
 	WD.WC = WC
 	WD.WH = WH
+	WDL.WL = WL
+	WDL.WH = WH
+	WDL.WR = WR
+	WDL.WC = WC
+	WDL.WCA = WCA
 	# 3. ext mà mô-đun khác đáp được (không cần giao diện)
 	var jb := Callable(WH, "jb")
 	WC.ext["o6"] = Callable(WCA, "o6")
@@ -161,6 +168,7 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 	WH.step(dt, false)
 	WCA.step(dt, false)
 	WD.step(dt, false)
+	WDL.step(dt)
 
 # ------------------------------------------------------------------ móc vào luật game.gd
 func boost_add() -> float:   # tw: jH() + (gB() - 1) + (Dx() > 1 ? .04 : 0)

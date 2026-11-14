@@ -74,6 +74,12 @@ static func color(s: String) -> Color:
 		if a.size() > 3:
 			r.a = float(a[3])
 		return r
+	if s.begins_with("color(srgb"):   # color(srgb r g b / a), số 0..1 (Chrome ghi màu color-mix kiểu này)
+		var b := s.substr(10).trim_suffix(")").replace("/", " ").split(" ", false)
+		var c := Color(float(b[0]), float(b[1]), float(b[2]), 1.0)
+		if b.size() > 3:
+			c.a = float(b[3])
+		return c
 	return Color.from_string(s, Color(0, 0, 0, 0))
 
 static func split_top(s: String, sep := ",") -> PackedStringArray:

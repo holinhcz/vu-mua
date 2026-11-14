@@ -62,7 +62,7 @@ func _links() -> Array:   # [[tên nhóm, lớp, [[khóa, tên, hình, dòng ph�
 			["rk", "Xếp hạng", "hang", "Bảng tuần này", 0]]],
 		["Vui chơi, sự kiện", "vc", [["kl", "Kỷ lục", "kyluc", W.kl_bk_sub(), 0],
 			["cp", "Sạp quê", "cho", "Đang bày " + str(cp) + " món" if cp else "Mua bán với bạn bè", 0],
-			["dl", "Du lịch", "dulich", "Chưa mở", 0]]]]
+			["dl", "Du lịch", "dulich", G.w_all.WDL.bk_sub(), 0]]]]
 
 func _cols() -> Array:   # c(): [khóa, tên, danh sách, là công trình, data-f]
 	return [["ns", "Nông sản", WCA.book_ns(), false], ["tc", "Trái cây", WCA.book_tc(), false],
@@ -233,6 +233,8 @@ func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
 			U.rk_open()
 		"hdn":
 			U.hdn_open()
+		"dl":
+			U.dl_open()
 		"st":
 			U.clg_open()
 		_:
