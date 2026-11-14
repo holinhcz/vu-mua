@@ -107,6 +107,12 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 		rg.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO) + 1.0)
 		_add_sorted(rg, nn(c.gx + 0.5, c.gy + 0.5) + 13.99)
 		_add_sorted(cs, nn(c.gx + 0.5, c.gy + 0.5) + 14.0)
+		var rn := RayNode.new()   # rầy nâu bu trên ô (o_): vẽ sau cây của ô
+		rn.visible = false
+		rn.farm = self
+		rn.i = i
+		rn.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO))
+		_add_sorted(rn, nn(c.gx + 0.5, c.gy + 0.5) + 14.5)
 		var b := Bubble.new()
 		b.fnt = fnt
 		b.farm = self
@@ -114,7 +120,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 		b.position = Vector2(en(c.gx + 0.5, c.gy + 0.5), nn(c.gx + 0.5, c.gy + 0.5, G.CO))
 		b.z_index = 40     # bong bóng vẽ sau cùng, đè mọi thứ
 		add_child(b)
-		plots.append({"soil": L, "crop": cs, "bub": b, "ring": rg, "key": ""})
+		plots.append({"soil": L, "crop": cs, "bub": b, "ring": rg, "ray": rn, "key": ""})
 	# biển Khai hoang (XW/JW bản web): vẽ bằng code, chữ vector, thay ảnh chụp
 	PC = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/parcel_web.json"))
 	for id in PC.x1:
@@ -517,6 +523,11 @@ func _process(dt: float) -> void:
 		if rg.visible:
 			rg.modulate.a = 0.55 + 0.4 * sin(tt * 4.0 + G.cells[i].gx)
 			rg.zoom_to(main.zoom)
+		var rn: RayNode = v.ray
+		rn.visible = G.owned(i) and G.has_ray(i)
+		if rn.visible:
+			rn.tt = tt
+			rn.queue_redraw()
 		var b: Bubble = v.bub
 		if b.visible and b.kind != "lock":
 			# X0: phập phồng 1 + .08 sin(5t + x), nhân le (làng nhỏ lại thì to lên cho dễ đọc)
@@ -831,6 +842,9 @@ func tap(sp: Vector2) -> void:
 			if not has_job(key):
 				var sp2: Vector2 = Vector2(h.o.gx + h.o.fw / 2.0, h.o.gy + h.o.fd + 0.3) if h.type == "scn" else Vector2(h.gx + 0.5, h.gy + 1.3)
 				q.append({"key": key, "kind": h.type, "i": -1, "seed": "", "h": h, "pos": sp2})
+		"ray":   # QS: đi tới ô phun thuốc
+			ui.close_all()
+			queue_job(int(h.i), "spray")
 		"plot":
 			if _now() < i7:
 				return
@@ -880,7 +894,7 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 	for i in G.B0:   # ô ruộng
 		var b: Bubble = plots[i].bub
 		if b.visible and b.kind != "lock" and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
-			return {"type": "plot", "i": i}
+			return {"type": "ray", "i": i} if G.has_ray(i) else {"type": "plot", "i": i}   # bong bóng của ô: rầy (ord 10) trước ô (44)
 	for i in tbubs:   # cây ăn trái / thùng ong
 		var b: Bubble = tbubs[i]
 		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
@@ -966,6 +980,17 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 			var y1 := nn(pp.x + pw, pp.y + ph) + 6.0
 			if inside or (w.x >= x0 and w.x <= x1 and w.y >= y0 and w.y <= y1):
 				_pk_add(L, {"type": "pen", "k": t, "j": -1}, 43, nn(pp.x + pw / 2.0, pp.y + ph / 2.0), null, {"gr": 3 if inside else 0})
+	# rầy nâu trên ô (r_, mô-đun "ray" ord 10): trong hình thoi (gr 4) hoặc thân cây
+	for i in G.B0:
+		if not G.owned(i) or not G.has_ray(i):
+			continue
+		var c: Dictionary = G.cells[i]
+		var l := en(c.gx + 0.5, c.gy + 0.5)
+		var cc := nn(c.gx + 0.5, c.gy + 0.5, G.CO)
+		var dia: bool = absf(w.x - l) / 32.0 + absf(w.y - cc) / 16.0 <= 1.0
+		var rh := func(p: Vector2) -> bool: return absf(p.x - l) < 14.0 and p.y > cc - 40.0 and p.y < cc
+		if dia or rh.call(w):
+			_pk_add(L, {"type": "ray", "i": i}, 10, nn(c.gx + 0.5, c.gy + 0.5) + 14.5, rh, {"gr": 4 if dia else 0})
 	# ô ruộng: trong hình thoi mặt ô (gr 4), cây trên ô (hình)
 	for i in G.B0:
 		if not G.owned(i):
@@ -1194,6 +1219,11 @@ func _jobs(dt: float) -> void:
 					G.after_harvest(j.i, String(c))   # EV
 					G.add_xp(int(G.crop(c).get("xp", 1)), "harvest")
 			"bug": ok = G.catch_bug(j.i)
+			"spray":   # QS: phun thuốc rầy (sạch luôn ô kề), sương thuốc bay lên
+				ok = G.spray(j.i)
+				if ok:
+					var sc: Dictionary = G.cells[j.i]
+					burst(Vector2(en(sc.gx + 0.5, sc.gy + 0.5), nn(sc.gx + 0.5, sc.gy + 0.5, G.CO + 10.0)), 14, ["#e8f2f4", "#cfe6ea", "#ffffff"], 60.0, 3.0, 40.0, 2.4, 0.9, 30.0)
 			"cook": ok = G.cook_done(j.seed)
 			"sleep":
 				G.g.pc.en = G.en_max()
@@ -2190,6 +2220,27 @@ class FxNode extends Node2D:
 			var t := a / 40.0 * TAU
 			pts.append(c + Vector2(cos(t) * rx, sin(t) * ry))
 		draw_polyline(pts, col, w, true)
+
+class RayNode extends Node2D:   # o_: nền nâu mờ trên ô + 9 con rầy nhảy (ảnh ui/img/bong/raynen, raycon; bản đêm _dem)
+	var farm
+	var i := 0
+	var tt := 0.0
+	func _draw() -> void:
+		var G = farm.G
+		var z: float = farm.main.zoom
+		var dem: String = "_dem" if G.night else ""
+		var nen: Texture2D = Bong.anh("raynen" + dem, z)
+		if nen != null:
+			draw_texture_rect(nen, Rect2(-30.0, -15.0, 60.0, 30.0), false)
+		var con: Texture2D = Bong.anh("raycon" + dem, z)
+		if con == null:
+			return
+		var still: bool = G.motion_off()
+		for s in 9:
+			var h: float = G.nv.Me(i * 7 + s, s * 3) * 6.28
+			var p: float = 4.0 + G.nv.Me(s, i) * 18.0
+			var d := 0.0 if still else maxf(0.0, sin(tt * 6.0 + s * 1.7)) * 5.0
+			draw_texture_rect(con, Rect2(cos(h) * p - 2.0, sin(h) * p * 0.5 - d - 3.0 - 1.5, 4.0, 3.0), false)
 
 class RipeRing extends Node2D:   # ô chín: vòng vàng tươi (ảnh ui/img/bong/vong.png, elip 21 x 10,5), vẽ ngay trước cây của ô
 	var ppu := 0.0   # px màn mỗi đơn vị lúc vẽ: đổi nấc ảnh thì vẽ lại, còn nhấp nháy chỉ đổi modulate

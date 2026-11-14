@@ -1,4 +1,4 @@
-# Vẽ ảnh bong bóng (khung + hình trong), vòng ô chín, hạt vừa gieo ra PNG nền trong, 9 px mỗi đơn vị làng -> godot/ui/img/bong/
+# Vẽ ảnh bong bóng (khung + hình trong), vòng ô chín, hạt vừa gieo, rầy nâu trên ô ra PNG nền trong, 9 px mỗi đơn vị làng -> godot/ui/img/bong/
 # Chạy: python3 lam.py  (cần playwright)
 import os
 from playwright.sync_api import sync_playwright
@@ -21,11 +21,19 @@ def hat():   # 3 hạt giống trên ô vừa gieo (wG giai đoạn 0 bản web)
     b=e(-6,-1,3.2,1.6,'#6a4a30')+e(2,1,3.4,1.7,'#6a4a30')+e(7,-2,3,1.5,'#6a4a30')
     b+=e(-6,-2.3,1.4,.8,'#e8d9a8')+e(2,-.3,1.4,.8,'#e8d9a8')+e(7,-3.3,1.2,.7,'#e8d9a8')
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10.5 -4.5 21 8" width="189" height="72">{b}</svg>'
+def raynen(c):   # nền ô có rầy (o_): hình thoi 60 x 30 phủ nâu .32; khung -30..30 x -15..15
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-30 -15 60 30" width="540" height="270"><path d="M0 -15 L30 0 L0 15 L-30 0 Z" fill="{c}" opacity=".32"/></svg>'
+def raycon(c):   # một con rầy: elip 1,6 x 1,1; khung -2..2 x -1,5..1,5
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -1.5 4 3" width="36" height="27"><ellipse rx="1.6" ry="1.1" fill="{c}"/></svg>'
 def hinh(body):   # ô hình 13,6 x 13,6 đơn vị (-6,8..6,8) -> 128 px
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6.8 -6.8 13.6 13.6" width="128" height="128">{body}</svg>'
 F={
  'vong': vong(),
  'hat': hat(),
+ 'raynen': raynen('#a8742a'),
+ 'raynen_dem': raynen('#4a3418'),
+ 'raycon': raycon('#6a3e1a'),
+ 'raycon_dem': raycon('#2a1a0e'),
  'xanh': khung('#2f86d6'),
  'do': khung('#d9443a'),
  'nuoc': hinh('<path d="M0 -6 C2.2 -2.6 4.6 0 4.6 2.4 C4.6 5 2.5 6.4 0 6.4 C-2.5 6.4 -4.6 5 -4.6 2.4 C-4.6 0 -2.2 -2.6 0 -6 Z" fill="#3a8fd6" stroke="#2a6fb0" stroke-width=".5"/><path d="M-2.4 2 C-2.4 3.6 -1.4 4.6 -0.2 4.8" fill="none" stroke="#ffffff" stroke-width=".9" stroke-linecap="round" opacity=".85"/>'),

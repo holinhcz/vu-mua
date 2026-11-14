@@ -126,6 +126,9 @@ func fp(t: Dictionary) -> String:   # fp
 	if ty == "":
 		return ""
 	var WR = G.w_all.WR if G.w_all != null else null
+	if ty == "ray":   # mô-đun ray tip
+		var th := int(G.g.ray.get("th", 0))
+		return "[b]Ruộng bị rầy nâu[/b]\nCây đang teo dần. Chạm để phun thuốc (sạch luôn mấy ô quanh đó). Còn " + str(th) + " lần phun" + ("" if th else ", tự mua bình 150 xu") + "."
 	if ty == "tree":
 		if WR == null:
 			return ""

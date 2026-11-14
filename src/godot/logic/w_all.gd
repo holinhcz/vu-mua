@@ -303,6 +303,34 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	WCU.pill_sync(pills)
 	WHU.sync_fest()
 	WHU.pill_sync(pills)
+	_ray_pill()
+
+var rpill: Button = null   # Lg: nút viên "Rầy nâu: N ô · phun thuốc"
+func _ray_pill() -> void:   # l_
+	var t: int = G.ray_n()
+	if t == 0:
+		if rpill != null:
+			rpill.visible = false
+		return
+	if rpill == null:
+		rpill = WHU._btn("", false, true, func() -> void:   # tới ô rầy đầu tiên rồi đi phun
+			var k = G.g.ray.p.keys()
+			if k.is_empty():
+				return
+			var i := int(k[0])
+			var c: Dictionary = G.cells[i]
+			var M = U.main
+			M.cam = Vector2(U.F.en(c.gx + 0.5, c.gy + 0.5), U.F.nn(c.gx + 0.5, c.gy + 0.5)) - U.get_viewport().get_visible_rect().size / M.zoom * 0.5
+			if M.has_method("_clamp_cam"):
+				M._clamp_cam()
+			U.close_all()
+			U.F.queue_job(i, "spray"))
+		rpill.modulate = Color(1, 0.85, 0.8)   # .hurry
+		pills.add_child(rpill)
+	rpill.visible = true
+	var tx := "Rầy nâu: " + str(t) + " ô · phun thuốc"
+	if rpill.text != tx:
+		rpill.text = tx
 
 func close_all() -> void:   # ui.close_all
 	if WRU == null:

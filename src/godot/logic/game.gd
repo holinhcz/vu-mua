@@ -869,8 +869,15 @@ func ray_n() -> int:
 func has_ray(i: int) -> bool:
 	return g.ray.p.has(str(i))
 
+func ray_safe(i: int) -> bool:   # uR: có đèn bẫy rầy trong 6 ô
+	var a: Dictionary = cells[i]
+	for o in g.objs:
+		if o is Dictionary and o.get("id", "") == "denbay" and Vector2(float(o.gx) - float(a.gx), float(o.gy) - float(a.gy)).length() <= 6.0:
+			return true
+	return false
+
 func _ray_start(t: int) -> void:   # e_
-	var a := _ray_cells()
+	var a := _ray_cells().filter(func(f): return not ray_safe(f))
 	if a.is_empty():
 		return
 	var lua := a.filter(func(f): return g.plots[f].c == "lua")
@@ -897,7 +904,7 @@ func _ray_step(t: float) -> void:
 		_ray_t = 60.0
 		if ray_n() == 0 and n > float(a.cd):
 			if _ray_cells().size() >= 6:
-				var o: float = 0.016 * RAY_MUA[season()]   # x1,5 khi mưa, giông (thời tiết: đợt sau)
+				var o: float = 0.016 * RAY_MUA[season()] * (1.5 if troi != null and (troi.cur == "mua" or troi.cur == "giong") else 1.0)
 				if randf() < o:
 					_ray_start(2 + randi() % 3)
 	if ray_n() == 0:
@@ -920,12 +927,46 @@ func _ray_step(t: float) -> void:
 		for k in a.p.keys():
 			if randf() > 0.3:
 				continue
-			var E := near(int(k)).filter(func(R): return g.plots[R].c != null and not a.p.has(str(R)) and owned(R))
+			var E := near(int(k)).filter(func(R): return g.plots[R].c != null and not a.p.has(str(R)) and not ray_safe(R) and owned(R))
 			if E.size() > 0:
 				a.p[str(E[randi() % E.size()])] = {"at": n}
 		if ray_n() == 0:
 			a.cd = n + 20.0 * 60000.0
 		mark()
+	_ray_d -= t   # DS: mỗi 25 giây vịt nhà ăn rầy, hoặc người làm ruộng thuê phun thuốc (tốn thuốc của mình)
+	if _ray_d > 0.0:
+		return
+	_ray_d = 25.0
+	if ray_n() == 0:
+		return
+	var s0 := int(a.p.keys()[0])
+	var vit = g.get("pet", {}).get("vit") if g.get("pet") is Dictionary else null
+	if vit is Dictionary and int(vit.get("n", 0)) > 0:
+		_ray_clear(s0)
+		float_text.emit(cells[s0].gx + 0.5, cells[s0].gy + 0.5, "Vịt ăn sạch rầy")
+		mark()
+		return
+	var x = null
+	var fam = g.get("lang", {}).get("fam") if g.get("lang") is Dictionary else null
+	if fam is Dictionary:
+		for k in fam:
+			if fam[k] is Dictionary and fam[k].get("job") == "ruong":
+				x = fam[k]
+	if x != null and int(a.th) > 0:
+		a.th = int(a.th) - 1
+		for r in [s0] + near(s0):
+			_ray_clear(r)
+		float_text.emit(cells[s0].gx + 0.5, cells[s0].gy + 0.5, String(x.get("n", "")) + " phun thuốc")
+		mark()
+
+func _ray_clear(i: int) -> bool:   # VS: ô hết rầy; hết dịch thì 20 phút sau mới có thể có lại
+	var a: Dictionary = g.ray
+	if not a.p.has(str(i)):
+		return false
+	a.p.erase(str(i))
+	if ray_n() == 0:
+		a.cd = _now_ms() + 20.0 * 60000.0
+	return true
 
 func spray(i: int) -> bool:   # QS: bình thuốc 150 xu = 5 lần, sạch luôn ô kề
 	var a: Dictionary = g.ray
@@ -942,13 +983,14 @@ func spray(i: int) -> bool:   # QS: bình thuốc 150 xu = 5 lần, sạch luôn
 	a.th = int(a.th) - 1
 	var n := 0
 	for r in [i] + near(i):
-		if a.p.has(str(r)):
-			a.p.erase(str(r))
+		if _ray_clear(r):
 			n += 1
-	if ray_n() == 0:
-		a.cd = _now_ms() + 20.0 * 60000.0
-		toast.emit("Hết dịch rầy rồi!")
 	float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.5, "Sạch rầy " + str(n) + " ô")
+	if ray_n() == 0:
+		toast.emit("Hết dịch rầy rồi! Đèn bẫy rầy giúp ruộng đỡ bị lại.")
+	if nv != null:
+		nv.qi("phun")
+	mark()
 	return true
 
 # ------------------------------------------------------------------ chợ: giá bán trong Kho ($i, ngKho, B3, mk* bản web)
