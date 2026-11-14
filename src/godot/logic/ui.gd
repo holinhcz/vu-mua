@@ -50,6 +50,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	layer = 10
 	root = Control.new()
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)   # NTWEB: gốc phủ cả màn hình, bảng neo đáy/giữa (cây ăn trái, chợ nổi, lễ hội) mới nằm trong màn
 	add_child(root)
 	_build_dim()
 	_build_hud()

@@ -1,4 +1,5 @@
 extends RefCounted
+const Css = preload("res://ui/css.gd")
 # Giao diện của hệ ruộng / cây ăn trái / hạn mặn, chép nội dung và nút từ bản web:
 #   bảng "Hạn mặn" (eO dựng, U6 điền #manBody, rO đóng; nút data-man buy -> EZ, cong -> LZ, x -> rO),
 #   nút viên "Hạn mặn · ..." trên HUD (CZ, .ghepill.manpill), thẻ trời "Hạn mặn" (ui({id:"man"}).sky / skyclick),
@@ -32,6 +33,7 @@ func _lbl(s: String, px: float, bold := false, wrap := true) -> Label:   # <b>/<
 	var l := Label.new()
 	l.text = s
 	l.add_theme_font_size_override("font_size", int(round(px * _k())))
+	l.add_theme_font_override("font", Css.font(800 if bold else 600))   # NTWEB: Nunito như cả giao diện
 	if bold:
 		l.add_theme_color_override("font_color", Color(0.17, 0.12, 0.08))
 	else:

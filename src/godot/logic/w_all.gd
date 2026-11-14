@@ -20,6 +20,7 @@ var WCA   # w_ca.gd     câu cá, thú nuôi thêm, lờ lọp, diều
 var WD    # w_duong.gd  chuồng, thiên tai, trò chơi nhỏ
 
 var U = null    # ui.gd (ui_setup)
+var TIP = null  # w_tip.gd
 var WRU = null  # w_ruong_ui.gd
 var WKU = null  # w_kho_ui.gd
 var WCU = null  # w_cho_ui.gd
@@ -216,6 +217,9 @@ func ui_setup(ui) -> void:
 	WLU = load("res://logic/w_lang_ui.gd").new(U, WL)
 	WHU = load("res://logic/w_htx_ui.gd").new(U, WH)
 	WCAU = load("res://logic/w_ca_ui.gd").new(U, WCA)
+	TIP = load("res://logic/w_tip.gd").new(G, U)   # NTWEB sH/fp: chữ khi trỏ chuột lên bản đồ
+	TIP.name = "WebTip"
+	U.add_child(TIP)
 	# hàng nút viên HUD (Hs()): dưới cụm trên bên trái
 	pills = VBoxContainer.new()
 	pills.mouse_filter = Control.MOUSE_FILTER_IGNORE
