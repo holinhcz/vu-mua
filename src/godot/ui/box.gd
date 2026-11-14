@@ -346,8 +346,8 @@ static func _runs(s: String) -> Array:
 		var o := ch.unicode_at(0)
 		if o == 0xfe0f:
 			continue
-		if o == 0x25b2 or o == 0x25bc or o == 0x2605 or o == 0x2665 or o == 0x2192:
-			# ▲ ▼ ★ ♥ → are not in Nunito (the browser takes them from a fallback font): drawn as shapes
+		if o == 0x25b2 or o == 0x25bc or o == 0x2605 or o == 0x2606 or o == 0x2665 or o == 0x2661 or o == 0x2192 or o == 0x2713:
+			# ▲ ▼ ★ ☆ ♥ ♡ → ✓ are not in Nunito (the browser takes them from a fallback font): drawn as shapes
 			if cur != "":
 				out.append(cur)
 				cur = ""
@@ -387,7 +387,7 @@ func _draw_line(f: Font, pos: Vector2, s: String, fs: int, col: Color, shadow: b
 			x += f.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 
 static func _gw(o: int) -> float:   # bề ngang hình vẽ thay chữ (theo cỡ chữ)
-	return 1.0 if o == 0x2665 else 0.95 if o == 0x2192 else 0.77
+	return 1.0 if o == 0x2665 or o == 0x2661 else 0.95 if o == 0x2192 else 0.8 if o == 0x2713 else 0.77
 
 func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
 	if o == 0x2665:   # ♥: hai vòng tròn + mũi nhọn
@@ -397,6 +397,21 @@ func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
 		_fg.draw_circle(Vector2(hx - hr * 0.95, hy), hr, col, true, -1.0, true)
 		_fg.draw_circle(Vector2(hx + hr * 0.95, hy), hr, col, true, -1.0, true)
 		_fg.draw_colored_polygon(PackedVector2Array([Vector2(hx - hr * 1.9, hy + hr * 0.25), Vector2(hx + hr * 1.9, hy + hr * 0.25), Vector2(hx, base - fs * 0.04)]), col)
+		return
+	if o == 0x2661:   # ♡: viền tim cùng cỡ ♥
+		var pts2 := PackedVector2Array()
+		var sx := fs * 0.836 / 32.0
+		var sy := fs * 0.70 / 29.0
+		var tp := base - fs * 0.74
+		for k in 41:
+			var t := k * TAU / 40.0
+			var X := 16.0 * pow(sin(t), 3)
+			var Y := 13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t)
+			pts2.append(Vector2(x + fs * 0.5 + X * sx, tp + (12.0 - Y) * sy))
+		_fg.draw_polyline(pts2, col, maxf(1.0, fs * 0.075), true)
+		return
+	if o == 0x2713:   # ✓
+		_fg.draw_polyline(PackedVector2Array([Vector2(x + fs * 0.1, base - fs * 0.36), Vector2(x + fs * 0.32, base - fs * 0.1), Vector2(x + fs * 0.72, base - fs * 0.68)]), col, maxf(1.0, fs * 0.12), true)
 		return
 	if o == 0x2192:   # →: thân + đầu mũi tên
 		var ay := base - fs * 0.33
@@ -420,6 +435,10 @@ func _shape(o: int, x: float, base: float, fs: float, col: Color) -> void:
 			var a := -PI / 2 + k * PI / 5
 			var r := w * (1.05 if k % 2 == 0 else 0.42)
 			pts.append(c + Vector2(cos(a), sin(a)) * r)
+	if o == 0x2606:   # ☆: chỉ viền
+		pts.append(pts[0])
+		_fg.draw_polyline(pts, col, maxf(1.0, fs * 0.07), true)
+		return
 	_fg.draw_colored_polygon(pts, col)
 	pts.append(pts[0])
 	_fg.draw_polyline(pts, col, 1.0, true)

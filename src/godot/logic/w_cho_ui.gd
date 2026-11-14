@@ -5,7 +5,6 @@ extends RefCounted
 #    Dựng lại chỉ khi chữ ký $r.sig đổi (web: JSON [ghe, g.cho, số trong kho, xu/10, phút còn/10]), không vẽ mỗi khung.
 #  - mQ: nút viên "Chợ nổi đang họp · tan lúc 9:00" (.ghepill.chopill, .hurry khi còn < 0,4 giờ).
 #  - MU / tR: bảng "Đài phát thanh huyện" (#rdBody).
-#  - jR: mục "Giống nhà … để dư" trong bảng nhà dân (tab Mua giống của a4).
 # Dựng bằng Control thường của Godot (bản web không có bản chụp cho các bảng này), cỡ theo Css.K như các bảng khác.
 
 const Css = preload("res://ui/css.gd")
@@ -133,13 +132,6 @@ func _ic(id: String, px: float) -> TextureRect:   # Ai(id)
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	t.custom_minimum_size = Vector2(_k(px), _k(px))
 	return t
-
-func _sec(b: String, small: String) -> Control:   # .vl-sec: <b> + <small>
-	var v := VBoxContainer.new()
-	v.add_child(_lbl(b, 14, 800, Color8(0x3a, 0x2a, 0x1a)))
-	if small != "":
-		v.add_child(_lbl(small, 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-	return v
 
 func _note(b: String, rest: String) -> Control:   # .note (<b> đầu dòng + chữ thường)
 	var v := VBoxContainer.new()
@@ -273,11 +265,6 @@ func _deal(a: int, f: int) -> void:   # data-cho = "a:f" -> Dd
 	cho_sig = ""
 	sync_cho()
 
-func _um(code: String, on_buy: Callable) -> void:   # data-gi -> Um
-	W.Um(code)
-	if on_buy.is_valid():
-		on_buy.call()
-
 func tip(k: int) -> String:   # BN "cho": chữ nhắc khi giữ tay trên ghe
 	var a: Array = W.tip(k)
 	return String(a[0]) + "\n" + String(a[1])
@@ -382,19 +369,3 @@ func _rd_cl() -> void:   # data-rd="cl": Cf.cl = !Cf.cl, tR() (nhạc: ext cl)
 	if f.is_valid():
 		f.call(rd_cl)
 	tR()
-
-# ------------------------------------------------------------------ giống nhà hàng xóm (jR)
-func jR(t, a: Dictionary, on_buy: Callable) -> Control:   # jR(t = mã nhà, a = nhà {n}); on_buy: dựng lại bảng nhà (kn)
-	var v := VBoxContainer.new()
-	v.add_child(_sec("Giống nhà " + String(a.n) + " để dư", "Mua lại giống của hàng xóm. Mỗi ngày mỗi thứ chỉ có chừng 6 hạt."))
-	for e in W.bZ(t):
-		var r := "h" + str(t) + "_" + String(e)
-		var o: int = W.G6(r, 6)
-		var l: int = W.F6(e)
-		var c: bool = o > 0 and int(G.g.coins) >= l
-		var btns := [_btn("Mua 1", c, c, _um.bind(r + "|" + String(e) + "|1|" + str(l) + "|6", on_buy))]
-		if o >= 3:
-			btns.append(_btn("Mua 3", false, int(G.g.coins) >= l * 3, _um.bind(r + "|" + String(e) + "|3|" + str(l) + "|6", on_buy)))
-		v.add_child(_rec(String(e), "Giống " + String(G.crop(e).name).to_lower(),
-			G.fmt_n(l) + " xu một hạt · còn " + str(o) + " hạt · kho có " + str(int(G.g.barn.get(e, 0))), [], btns))
-	return v

@@ -1,7 +1,5 @@
 extends RefCounted
 # DÂN LÀNG (giao diện): phần bảng bản web còn thiếu ở bản Godot.
-#  - AU: mục "Dạm hỏi …" trong bảng nhà dân (a4, $r.mode === "vl"): ghi chú sui gia / chưa đủ thân,
-#    hoặc khối _vCH (tên, chữ nhỏ, ô cần .need, nút "Xin cưới · … xu" data-cuoi -> Sk).
 #  - ngcTabNghe: tab "Nghề" của bảng Nghề thủ công: thẻ nghề chính, thẻ từng nghề đã học (sao, điểm, nguyên liệu, điều kiện thi,
 #    nút Làm / Thi lên / Chọn - Bỏ nghề chính: data-ngc -> ngcClick của hệ khác), danh sách "Nghề chưa học".
 # Dựng bằng Control thường của Godot như w_cho_ui.gd; người gọi dựng lại khi chữ ký đổi, không vẽ mỗi khung.
@@ -14,7 +12,6 @@ var W          # w_lang.gd
 # ext: việc của hệ khác (bộ ráp gán)
 #   ngcClick(act: String, b: String)   (nút data-ngc="lam|thi|chinh" data-v=b của bảng Nghề)
 #   arm() -> String                    (NGCV.arm: nghề đang chờ bấm lần nữa để bỏ nghề chính)
-#   a4()                               ($r.sig = "", a4(): dựng lại bảng nhà dân sau khi bấm)
 var ext := {}
 
 func _init(ui, wl) -> void:
@@ -121,10 +118,6 @@ func _chip_row(id: String, have: int, q: int, tail: String) -> Control:   # .chi
 func _nc(t: String, a: int) -> Control:   # nc
 	return _chip_row(t, int(G.g.barn.get(t, 0)), a, "")
 
-func _ng_chip(b: String, h: int, q: int) -> Control:   # ngChip
-	var id: String = W.ng_id(b, h)
-	return _chip_row(id, W.ng_has(b, h), q, " trở lên" if h == 1 else "")
-
 func _need(chips: Array) -> Control:   # .need
 	var f := HFlowContainer.new()
 	f.add_theme_constant_override("h_separation", int(_k(8)))
@@ -132,54 +125,6 @@ func _need(chips: Array) -> Control:   # .need
 		f.add_child(c)
 	return f
 
-func _v_ch(t: String, sub: String, mid: Control, btns: Array) -> Array:   # _vCH: .vl-sec + .vlcard (.vlcl | .vlcr)
-	var out := [_sec(t, "")]
-	var c := _card()
-	var h := HBoxContainer.new()
-	var l := VBoxContainer.new()
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if sub != "":
-		l.add_child(_lbl(sub, 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-	if mid != null:
-		l.add_child(mid)
-	h.add_child(l)
-	if btns.size():
-		var r := VBoxContainer.new()
-		for b in btns:
-			r.add_child(b)
-		h.add_child(r)
-	c.add_child(h)
-	out.append(c.get_meta("box"))
-	return out
-
-func _after() -> void:   # $r.sig = "", a4()
-	var f := _x("a4")
-	if f.is_valid():
-		f.call()
-
-# ------------------------------------------------------------------ AU: dạm hỏi trong bảng nhà dân
-func build_cuoi(box: Container, t, a: Dictionary) -> void:   # AU(t, a)
-	var c = G.g.get("cuoi")
-	if W._tr(c):
-		if W._n(c.get("u")) == float(W._ks(t)):
-			box.add_child(_note("Nhà sui gia! " + String(c.n) + " về làm " + ("vợ" if c.get("g") == "nu" else "chồng") + " bạn rồi."))
-		return
-	var n: Dictionary = W.n_r(t)
-	if W._n(a.get("tim")) < 5:
-		if W._n(a.get("tim")) >= 3:
-			box.add_child(_note("Nhà " + String(a.n) + " có " + String(n.n) + " chưa có gia đình. Thân đủ 5 ♥ thì có thể dạm hỏi."))
-		return
-	var e: Dictionary = W.b_s()
-	var chips := []
-	for o in e.it:
-		chips.append(_ng_chip("banh_pt", 0, int(o[1])) if o[0] == "banh_pt" else _nc(String(o[0]), int(o[1])))
-	var bt := _btn("Xin cưới · " + G.fmt_n(float(e.xu)) + " xu", true, W.n_s(), func():
-		W.sk(t)   # data-cuoi -> Sk(+t)
-		_after())
-	for x in _v_ch("Dạm hỏi " + String(n.n), "Bưng mâm quả qua: đu đủ, trứng, 2 bánh phu thê và " + G.fmt_n(float(e.xu)) + " xu tiền dẫn cưới.", _need(chips), [bt]):
-		box.add_child(x)
-
-# ------------------------------------------------------------------ ngcTabNghe: tab Nghề
 func _ngc(act: String, b: String) -> void:   # data-ngc
 	var f := _x("ngcClick")
 	if f.is_valid():

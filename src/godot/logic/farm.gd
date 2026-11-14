@@ -829,6 +829,9 @@ func tap(sp: Vector2) -> void:
 		"khohang":
 			ui.close_all()
 			ui.kho_open()
+		"nha":
+			ui.close_all()
+			ui.vl_open(int(h.u))
 		"parcel":
 			ui.pc_open(String(h.id), w)
 		"scnlock":
@@ -1006,6 +1009,8 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		_pk_add(L, {"type": "plot", "i": i}, 44, nn(c.gx + 0.5, c.gy + 0.5) + 14.0, cr, {"gr": 4 if dia else 0})
 	if lang != null:   # cây ăn trái (hình), kho (hình + nền), thùng ong
 		var O: Array = lang.objs()
+		if G.w_all != null:
+			G.w_all.WL.uf()   # Uf: số nhà u cho nhà mới đặt
 		for idx in O.size():
 			var o = O[idx]
 			if not (o is Dictionary):
@@ -1031,6 +1036,10 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 					var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 					if inside or near:
 						_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0})
+			elif G.w_all != null and G.w_all.WL.CX.has(o.id) and int(o.get("u", 0)) > 0:   # nhà dân (ord 50)
+				var inside2: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
+				if inside2 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
+					_pk_add(L, {"type": "nha", "u": int(o.u)}, 50, sy, px, {"gr": 3 if inside2 else 0})
 			elif o.id == "thungong":
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):

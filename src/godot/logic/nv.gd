@@ -204,11 +204,12 @@ func qi(k: String, n := 1) -> void:
 		if G.w_all != null:   # NTWEB qi bọc: thi đua tuần của xã (m9)
 			G.w_all.qi(k)
 
-# điều kiện mở việc: bản Godot chưa có vật nuôi, xưởng, cây trái, dân làng, hợp tác xã
-func has_fam() -> bool: return false
+# điều kiện mở việc
+func has_fam() -> bool:   # nvHasFam: có nhà dân đang đứng trên làng
+	return G.w_all != null and G.w_all.WL.bl().size() > 0
 func has_pen() -> bool: return G.vn != null and G.vn.has_any()   # nvHasPen
-func has_work() -> bool: return false
-func has_tree() -> bool: return false
+func has_work() -> bool: return G.xw != null and not G.xw.list_built().is_empty()   # nvHasWork
+func has_tree() -> bool: return G.w_all != null and G.w_all.WR.nv_has_tree()   # nvHasTree
 func has_hx() -> bool: return G.w_all != null and G.w_all.WH.nv_has_hx()   # NTWEB nvHasHx
 
 # ------------------------------------------------------------------ 1. hằng ngày

@@ -31,6 +31,7 @@ var _vs := Vector2.ZERO
 var nvp = null               # bảng Sổ nhiệm vụ (ui_nv.gd)
 var bdp = null               # bảng XÂY DỰNG (ui_bd.gd)
 var setp = null              # bảng CÀI ĐẶT (ui_set.gd)
+var vlp = null               # bảng NHÀ DÂN (ui_vl.gd)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
@@ -1451,6 +1452,8 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
+	if vlp != null:
+		vlp.close()
 	if nvp != null:
 		nvp.close()
 	pc_close()
@@ -2851,7 +2854,18 @@ var xfp = null               # vòng xưởng (ui_xf.gd)
 func xf_open(k: String) -> void:
 	xfp.open(k)
 
+func vl_open(u: int) -> void:   # gu("nha", u): chạm nhà dân
+	if G.w_all == null:
+		return
+	if vlp == null:
+		vlp = load("res://logic/ui_vl.gd").new(self, G.w_all.WL, G.w_all.WC)
+	close_all()
+	kho_close()
+	vlp.open(u)
+
 func close_all() -> void:
+	if vlp != null and vlp.on:
+		vlp.close()
 	if pcp != null and pcp.on:
 		pcp.close()
 	if xfp != null:
@@ -2918,6 +2932,8 @@ func _process(dt: float) -> void:
 		lvp.step(dt)
 	if setp != null:
 		setp.step(dt)
+	if vlp != null:
+		vlp.step(dt)
 	if xfp != null:
 		xfp.step(dt)
 	if bdp != null:
@@ -2982,7 +2998,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -2993,5 +3009,7 @@ func _input(e: InputEvent) -> void:
 		lvp.input(e)
 	if setp != null:
 		setp.input(e)
+	if vlp != null:
+		vlp.input(e)
 	if xfp != null:
 		xfp.input(e)

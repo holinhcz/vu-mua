@@ -24,8 +24,7 @@ var WC = null              # w_cho.gd (bộ ráp gán): ho, s2, v1
 var WS = null              # NTWEB w_sys.gd (bộ ráp gán): htv dùng chung
 var ui = null              # w_lang_ui.gd (tự gán khi tạo)
 # ext: việc của hệ khác (bộ ráp gán Callable theo tên web)
-#   Uf()                     (Uf -> CD: dựng bl, thêm / bớt g.lang.fam theo nhà, gọi than_init)
-#   bl() -> Array            (bl: [{u: int, o: {gx, gy, fw, fd, idx}, r: món trong g.objs}])
+#   (Uf / CD / SD / bl: làm ngay ở đây, đọc Hr của WR._hrl)
 #   E2(u) -> Dictionary      (E2[u]: người nhà u đang đi chơi {st: "home" | "go" | ...}; null = chưa có)
 #   Bf(id) -> int            (Bf: cấp mở món)
 #   Jb() -> Dictionary       (lễ gần nhất trong 29 ngày {f: {id, sh}, d, k})
@@ -345,18 +344,83 @@ func _fam_of(u) -> Variant:   # g.lang && g.lang.fam[u]
 	var f = L.fam.get(_ks(u))
 	return f if f is Dictionary else null
 
-func uf() -> void:   # Uf
-	var f := _x("Uf")
-	if f.is_valid():
-		f.call()
+var _bl := []              # bl
+var _pq := ""              # Pq (+ zq): dấu Hr lúc dựng bl
+var _zq = null
 
-func bl() -> Array:   # bl
-	var f := _x("bl")
-	if f.is_valid():
-		var a = f.call()
-		if a is Array:
-			return a
-	return []
+func uf() -> void:   # Uf: m0 (Hr đổi thì dựng lại) -> CD khi Hr hoặc g đổi
+	if WR == null:
+		return
+	var H: Array = WR._hrl()
+	if WR._hr_sig != _pq or not is_same(_zq, G.g):
+		_cd(H)
+
+func _cd(H: Array) -> void:   # CD: bl = nhà đặt trên làng (cx), mỗi nhà một gia đình g.lang.fam[u]
+	var t := _r0()
+	var O: Array = G.g.get("objs", [])
+	var a := {}
+	var l := 0
+	_bl = []
+	for r in O:
+		if r is Dictionary and _i(r.get("u")) > l:
+			l = _i(r.get("u"))
+	if _i(t.get("seq")) <= l:
+		t.seq = l + 1
+	for e in H:
+		var r = O[int(e.idx)] if int(e.idx) < O.size() else null
+		if not (r is Dictionary) or not CX.has(String(r.get("id", ""))):
+			continue
+		if _i(r.get("u")) > 0 and a.has(_i(r.u)):
+			r.u = 0
+		if not (_i(r.get("u")) > 0):   # Sq
+			r.u = _i(t.seq)
+			t.seq = _i(t.seq) + 1
+		var o := _i(r.u)
+		a[o] = 1
+		_bl.append({"u": o, "o": e, "r": r})
+	for c in t.fam.keys():
+		if not a.has(int(float(String(c)))):
+			t.fam.erase(c)
+	var ZS := _ja("dan_lang/trang_phuc_dan").size()
+	for f in _bl:
+		var k := _ks(f.u)
+		var s = t.fam.get(k)
+		if not (s is Dictionary) or not (s.get("n") is String):
+			s = {"n": _sd(t, int(f.u)), "lk": int(f.u) % ZS, "tim": 0, "req": null, "job": null, "jr": null, "wt": 0}
+			t.fam[k] = s
+		s.tim = clampi(_i(s.get("tim")), 0, 5)
+		if not _num(s.get("wt")):
+			s.wt = 0
+		if not (_i(s.get("lk")) >= 0 and _i(s.get("lk")) < ZS):
+			s.lk = 0
+		var q = s.get("req")
+		if _tr(q) and not (q is Dictionary and _tr(q.get("id")) and not _ae(q.id).is_empty() and _n(q.get("q")) > 0 and _n(q.get("xu")) > 0 \
+				and (q.it if q.get("it") is Array and q.it.size() else [[q.id, q.q]]).all(func(x): return not _ae(x[0]).is_empty() and _n(x[1]) > 0)):
+			s.req = null
+		var j = s.get("job")
+		if _tr(j) and j != "ruong" and not (j in ["vuon", "chan"]) and not (G.xw.sr.has(j) and G.xw.built(j)):
+			s.job = null
+		if _tr(s.get("jr")) and not G.xw.R.has(String(s.jr)):
+			s.jr = null
+		than_init(f.u, s)
+	_pq = WR._hr_sig
+	_zq = G.g
+
+func _sd(t: Dictionary, a: int) -> String:   # SD: tên gia đình chưa ai dùng
+	var RB := _ja("khac/Rb")
+	var n := {}
+	for e in t.fam:
+		if t.fam[e] is Dictionary and _tr(t.fam[e].get("n")):
+			n[String(t.fam[e].n)] = 1
+	for r in RB.size():
+		var o := String(RB[(r + a * 7) % RB.size()])
+		if not n.has(o):
+			return o
+	return String(RB[a % RB.size()]) + " " + str(2 + a % 9)
+
+func bl() -> Array:   # bl (dựng lại khi nhà đổi)
+	uf()
+	return _bl
 
 func r1(t) -> Variant:   # r1
 	for h in bl():
@@ -2400,3 +2464,531 @@ func step(t: float, offline: bool) -> void:   # wK: than, dam ($K), cuoi (zU), m
 	if not _qf("ma"):   # k6 bọc: if (!qf("ma"))
 		k6(t)
 	clg_tick(t)
+
+# ------------------------------------------------------------------ bảng nhà dân (a4): việc nhà, thuê làm, trò chuyện, tặng quà, sở trường
+const NGHEWHY := {"gio_lb": ["đan giỏ bán chợ phiên", "làm giỏ đựng trái cây"], "chieu": ["dệt chiếu cưới", "dệt chiếu bán Tết"], "nhang": ["se nhang cúng rằm", "se nhang bỏ mối"],
+	"banh_pt": ["gói bánh đám cưới", "làm mâm quả"], "choi_rom": ["bó chổi bán chợ", "bó chổi quét sân đình"], "ruou_nep": ["nấu rượu đãi khách", "nấu rượu cúng đình"],
+	"khan_theu": ["thêu khăn làm quà cưới", "thêu khăn bán chợ huyện"], "mut_gung": ["sên mứt Tết", "sên mứt biếu sui gia"], "chao": ["làm chao ăn chay rằm", "làm chao bỏ mối chợ"],
+	"long_den": ["làm lồng đèn Trung thu", "làm lồng đèn cho con nít trong xóm"]}
+const E4 := {"vuon": 1, "chan": 1}   # e4
+var THOAI := []            # THOAI (dan_lang/cay_thoai)
+var XD := []               # xD (dan_lang/ly_do_nho)
+var NVT := []              # NV (dan_lang/viec_nho)
+
+func _vl_data() -> void:
+	if THOAI.is_empty():
+		THOAI = _ja("dan_lang/cay_thoai")
+		XD = _ja("dan_lang/ly_do_nho")
+		NVT = _ja("dan_lang/viec_nho")
+
+static func _r_it(r: Dictionary) -> Array:   # _rIt
+	return r.it if r.get("it") is Array and r.it.size() else [[r.get("id"), r.get("q")]]
+
+func r_ok(r: Dictionary) -> bool:   # _rOk
+	return _r_it(r).all(func(x): return _barn(x[0]) >= _i(x[1]))
+
+func _sday() -> int:   # t3().day
+	return posmod(_vr(), 28) % 7 + 1
+
+func is_ngay_rieng(u) -> bool:   # isNgayRieng
+	return _sday() == int(fam_likes(u).ngay)
+
+static func e_t(t: int) -> String:   # eT
+	var a := ""
+	for n in 5:
+		a += "♥" if n < t else "♡"
+	return a
+
+static func n_y(t: int) -> String:   # nY
+	var a := ""
+	for n in range(1, 6):
+		a += "★" if n <= t else "☆"
+	return a
+
+func talk_line(f: Dictionary) -> String:   # talkLine
+	var t: Array = tinh_of(f).talk[mini(3, int(floor(_n(f.get("tim")) / 1.5)))]
+	return xung(f, String(t[(_vr() + _i(f.get("lk"))) % t.size()]))
+
+func than_bonus(f: Dictionary) -> String:   # thanBonus
+	if not _tr(tinh_of(f).get("gift")):
+		return ""
+	var id = _t0(_s2())
+	if id == null:
+		return ""
+	var q := maxi(1, _rnd(30.0 / _sell(id)))
+	G.g.barn[String(id)] = _barn(id) + q
+	return " Cho thêm " + _ho(String(id), q) + "."
+
+func _sell(id) -> float:   # ae(id).sell || 10
+	var s := _n(_ae(id).get("sell"))
+	return s if s != 0.0 else 10.0
+
+func _s2() -> Array:   # s2
+	if WC != null:
+		return WC.s2()
+	var f := _x("s2")
+	return f.call() if f.is_valid() else []
+
+func fam_know(f: Dictionary, k: String) -> bool:   # famKnow
+	if not (f.get("bk") is Dictionary):
+		f.bk = {}
+	var n := not _tr(f.bk.get(k))
+	f.bk[k] = 1
+	return n
+
+func vg(t: String) -> String:   # vg: tên nhà đang làm việc t
+	var a = _lang()
+	if a == null or not (a.get("fam") is Dictionary):
+		return ""
+	for n in a.fam:
+		if a.fam[n].get("job") == t:
+			return String(a.fam[n].n)
+	return ""
+
+func yx(t: String) -> bool:   # yx
+	if t == "vuon":
+		return WR != null and WR.uq()
+	if t == "chan":
+		return G.vn != null and G.vn.has_any()
+	return false
+
+func ux(t) -> Array:   # ux: ô ruộng nhà t phụ trách
+	var n := lm().find(int(float(_ks(t))))
+	return [] if n < 0 else _gg().slice(n * 12, n * 12 + 12)
+
+func xq(_f: Dictionary) -> Array:   # Xq + _vCS: [[id, chữ]], ô "Giữ giống cũ" đầu, còn giống trước, hợp mùa trước
+	var a := []
+	var k := 0
+	for n in XO:
+		var e: Dictionary = G.D.crops.get(n, {})
+		if e.is_empty() or (WC != null and WC.tf(n)):
+			continue
+		var c := _barn(n)
+		var h: bool = G.in_season(n)
+		a.append({"id": n, "t": String(e.name) + (" (hợp mùa)" if h else "") + " · còn " + str(c) + " giống", "n": c, "h": 1 if h else 0, "i": k, "z": c == 0})
+		k += 1
+	a.sort_custom(func(p, q): return (p.n > 0 and q.n == 0) or ((p.n > 0) == (q.n > 0) and (p.h > q.h or (p.h == q.h and p.i < q.i))))
+	return [{"id": "", "t": "Giữ giống cũ", "z": false}] + a
+
+func gb(t) -> bool:   # Gb: đưa đồ nhà đang cần
+	var n = _fam_of(t)
+	if n == null or not _tr(n.get("req")):
+		return false
+	var e: Dictionary = n.req
+	var m := _r_it(e).filter(func(x): return _barn(x[0]) < _i(x[1]))
+	if m.size():
+		_ta("Kho chưa đủ " + _r_tx({"it": m}) + ".")
+		return false
+	for x in _r_it(e):
+		G.g.barn[String(x[0])] = _barn(x[0]) - _i(x[1])
+	G.g.coins = _n(G.g.coins) + _n(e.xu)
+	var dh := than_add(n, 35)
+	var bn := than_bonus(n)
+	than_seen(n)
+	var no := _x("No")
+	if no.is_valid():
+		no.call("help")
+	n.req = null
+	_qi("vlhelp")
+	var r = r1(t)
+	if r != null:
+		G.float_text.emit(float(r.o.gx) + float(r.o.fw) / 2.0, float(r.o.gy) + float(r.o.fd) / 2.0, String(n.n) + " cảm ơn! +" + _sa(e.xu) + " xu")
+	_ta(String(n.n) + " cảm ơn nhiều nha! Nhận " + _sa(e.xu) + " xu." + bn + than_txt(dh) + (" Nhà " + String(n.n) + " giờ thân như ruột thịt." if dh > 0 and _i(n.tim) >= 5 else ""))
+	_gr([10, 30, 14])
+	_ba()
+	return true
+
+func iv(t) -> void:   # IV: giao việc riêng
+	var a = _fam_of(t)
+	if a == null or not _tr(a.get("pq")):
+		return
+	if not a.pq.it.all(func(e): return _barn(e[0]) >= _i(e[1])):
+		_ta("Kho chưa đủ đồ.")
+		return
+	for e in a.pq.it:
+		G.g.barn[String(e[0])] = _barn(e[0]) - _i(e[1])
+	G.g.coins = _n(G.g.coins) + _n(a.pq.xu)
+	ut_add(5, "Xong việc riêng")
+	var dh := than_add(a, 50)
+	var bn := than_bonus(a)
+	than_seen(a)
+	G.add_xp(10, "pq")
+	_ta("Xong việc \"" + String(a.pq.t) + "\" cho " + String(a.n) + ": +" + _sa(a.pq.xu) + " xu." + bn + than_txt(dh))
+	a.pq = null
+	_ba()
+
+func n4(t, a: String) -> void:   # n4: thuê nhà t làm việc a ("" = nghỉ)
+	var e = _fam_of(t)
+	if e == null:
+		return
+	if a != "" and a != "ruong" and not E4.has(a) and not (G.xw.sr.has(a) and G.xw.built(a)):
+		return
+	if E4.has(a) and not yx(a):
+		_ta("Chưa có cây ăn trái nào để chăm." if a == "vuon" else "Chuồng trại chưa có con nào.")
+		return
+	if a != "" and _n(G.g.coins) < om(e, a):
+		_ta("Cần ít nhất " + str(om(e, a)) + " xu để trả công phút đầu.")
+		return
+	if a != "" and a != "ruong":
+		var r := vg(a)
+		if r != "" and r != String(e.n):
+			_ta(r + " đang làm ở đây rồi.")
+			return
+	e.job = a if a != "" else null
+	e.wt = 0
+	if a != "" and a != "ruong" and G.xw.sr.has(a):
+		var o: Dictionary = G.xw.sr[a]
+		var q: Array = G.g.work[a].get("q", [])
+		var ok: Array = o.rec.filter(func(x): return G.xw.has_in(String(x)))
+		e.jr = q[0] if q.size() else (ok[0] if ok.size() else o.rec[0])
+	_ta(String(e.n) + " ra ruộng phụ bạn: tự gieo lại giống cũ, tưới và gặt." if a == "ruong" else (String(e.n) + " ra vườn phụ bạn: tưới cây, hái trái chín cất vào kho." if a == "vuon" else (String(e.n) + " ra chuồng phụ bạn: cho gà, cừu, bò, heo ăn (lấy thức ăn trong kho) và lượm sản phẩm." if a == "chan" else (String(e.n) + " tới " + String(CO.get(a, a)).to_lower() + " làm phụ." if a != "" else String(e.n) + " về nhà nghỉ."))))
+	_ba()
+
+func jq(t, a: String) -> void:   # Jq: giống nhà t gieo
+	var n = _fam_of(t)
+	if n == null:
+		return
+	n.crop = a if a != "" and G.D.crops.has(a) else ""
+	_ta(String(n.n) + " sẽ gieo " + String(G.D.crops[n.crop].name).to_lower() + " ở các ô mình phụ trách." if n.crop != "" else String(n.n) + " gieo lại giống cũ của từng ô.")
+	_ba()
+
+func set_jr(t, r: String) -> void:   # data-jr
+	var n = _fam_of(t)
+	if n != null:
+		n.jr = r
+		_ba()
+
+# trò chuyện ($r.cv): {u, inv, t, st, sum, node, lines: [[n|m|s, chữ]], opts: [{k, i, t, tone}], out}
+func chat_ctx(u, f: Dictionary, inv: bool) -> String:   # chatCtx
+	var d := _vr()
+	var c := []
+	var e = tg().get("ev")
+	var wx: String = "lu" if (WR != null and WR.qs()) else String(G.nv.Wd())
+	if _tr(f.get("req")) and randf() < 0.5:
+		c.append("nho")
+	if e is Dictionary and _i(e.get("u")) == int(float(_ks(u))):
+		c.append("dam")
+	if c.is_empty() and _num(f.get("cd")) and int(f.cd) == d and _i(f.get("cn")) > 0:
+		c.append("lai")
+	if c.is_empty() and d - _i(f.get("lg")) >= 3:
+		c.append("lau")
+	if c.is_empty() and _i(f.get("tim")) >= 3 and randf() < (0.6 if inv else 0.3):
+		c.append("than")
+	if c.is_empty() and wx in ["lu", "mua", "han", "giong"] and randf() < 0.45:
+		c.append(wx)
+	if c.is_empty() and randf() < 0.2:
+		c.append(["xuan", "he", "thu", "dong"][G.season()])
+	return String(c[0]) if c.size() else "chao"
+
+func chat_tree(u, f: Dictionary, inv: bool) -> int:   # chatTree
+	var k := chat_ctx(u, f, inv)
+	var L := []
+	for i in THOAI.size():
+		if THOAI[i].c == k and i != _i(f.get("ml", -1)):
+			L.append(i)
+	if L.is_empty():
+		for i in THOAI.size():
+			if THOAI[i].c == "chao" and i != _i(f.get("ml", -1)):
+				L.append(i)
+	var i: int = _t0(L)
+	f.ml = i
+	return i
+
+func chat_opts(L: Array, f: Dictionary) -> Array:   # chatOpts (+ xung)
+	var o := []
+	for i in L.size():
+		o.append({"k": "r", "i": i, "t": xung(f, String(L[i][1])), "tone": L[i][0]})
+	o.shuffle()
+	return o
+
+func chat_score(f: Dictionary, tone) -> int:   # chatScore
+	var T := tinh_of(f)
+	return 12 if tone == T.ton else (-12 if tone == T.ghet else 4)
+
+func chat_start(u) -> Variant:   # chatStart -> cv (null = không nói được)
+	_vl_data()
+	var f = _fam_of(u)
+	if f == null:
+		return null
+	if not chat_left(f):
+		_ta(String(f.n) + " nói chuyện với bạn đủ rồi, mai ghé tiếp nha.")
+		return null
+	var inv := _i(f.get("mo")) == 1
+	var ti := chat_tree(u, f, inv)
+	var t: Dictionary = THOAI[ti]
+	return {"u": int(float(_ks(u))), "inv": inv, "t": ti, "st": 1, "sum": 0, "node": t.r, "lines": [["n", xung(f, String(t.mo))]], "opts": chat_opts(t.r, f), "out": null}
+
+func chat_pick(c: Dictionary, i: int) -> bool:   # chatPick; true = xong cuộc trò chuyện
+	var f = _fam_of(c.u)
+	if f == null:
+		return true
+	if c.out != null:
+		chat_end(c, f, i)
+		return true
+	if i >= c.opts.size():
+		return false
+	var o: Dictionary = c.opts[i]
+	var d := _vr()
+	if c.st == 1:
+		if not (_num(f.get("cd")) and int(f.cd) == d):
+			f.cd = d
+			f.cn = 0
+		if not chat_left(f):
+			return false
+		f.cn = _i(f.get("cn")) + 1
+		G.nv.S8("chat")
+		than_seen(f)
+		if c.inv:
+			f.mo = 0
+		_ut_chat(c.u)
+	var T := tinh_of(f)
+	var node: Array = c.node[int(o.i)]
+	var sc := chat_score(f, o.tone)
+	var ghet: bool = o.tone == T.ghet
+	var mul: float = [1.0, 0.6, 0.4][mini(2, _i(f.cn) - 1)]
+	c.sum += sc
+	c.lines.append(["m", o.t])
+	var dh := than_add(f, _rnd(sc * mul) + (10 if c.inv and c.st == 1 else 0))
+	if c.st == 1:
+		c.lines.append(["n", xung(f, String(node[3] if ghet and node.size() > 3 and _tr(node[3]) else node[2]))])
+		if ghet:
+			c.lines.append(["s", String(f.n) + " hổng ưa kiểu nói đó"])
+		_hn_chat(c, f)
+		c.st = 2
+		c.node = node[4]
+		c.opts = chat_opts(node[4], f)
+	else:
+		c.lines.append(["n", xung(f, String(node[2]))])
+		if ghet:
+			c.lines.append(["s", String(f.n) + " hổng ưa kiểu nói đó"])
+		c.out = chat_out(c.u, f, String(node[3]) if node.size() > 3 and node[3] != null else "") if not ghet and (c.sum > 0 or c.inv) else {"k": "", "opts": [{"k": "xong", "t": "Dạ, {c} về nha."}]}
+		if _tr(c.out.get("say")):
+			c.lines.append(["n", xung(f, String(c.out.say))])
+		c.opts = c.out.opts.map(func(x): return {"k": x.k, "t": xung(f, String(x.t))})
+	if dh > 0:
+		c.lines.append(["s", "Thân thiết thêm ♥"])
+	elif dh < 0:
+		c.lines.append(["s", "Bớt thân ♥"])
+	_ba()
+	return false
+
+func chat_out(u, f: Dictionary, k: String) -> Dictionary:   # chatOut
+	var L := fam_likes(u)
+	var day := _vr()
+	var ok := [{"k": "xong", "t": "Dạ, {c} về nha."}]
+	if k == "pq" and (_tr(f.get("pq")) or _i(f.get("tim")) < 2 or _i(f.get("pqd", -1)) == day):
+		k = "nho"
+	if k == "nho" and not _tr(f.get("req")):
+		var q := make_req(u, f)
+		return {"k": k, "v": q, "say": "Nhà đang cần " + _r_tx(q) + " để " + String(q.why) + ". {C} kiếm giùm được hông?", "opts": [{"k": "nhan", "t": "Dạ, để {c} lo."}, {"k": "xong", "t": "Dạ, bữa khác nha."}]}
+	if k == "pq":
+		var p := make_pq(f)
+		return {"k": k, "v": p, "say": "Việc này {x} nhờ riêng {c}: " + String(p.t).to_lower() + ", cần " + _r_tx(p) + ". Giúp {x} nha?", "opts": [{"k": "nhan", "t": "Dạ, {c} giúp liền."}, {"k": "xong", "t": "Dạ, để bữa khác."}]}
+	var unk := ["a", "b", "x", "d"].filter(func(x): return not (f.get("bk") is Dictionary and _tr(f.bk.get(x))))
+	if k == "ke" and unk.size():
+		var kk: String = _t0(unk)
+		fam_know(f, kk)
+		var say := ""
+		if kk == "x":
+			say = "Nói nhỏ nghe, cả đời {x} ghét nhất là " + String(_ae(L.gh).get("name", "")).to_lower() + ", ai đem tới {x} cũng hổng ưng."
+		elif kk == "d":
+			say = "Ngày " + str(L.ngay) + " mỗi mùa là " + String(L.ly) + " nhà {x}, {c} nhớ ghé nha."
+		else:
+			say = "{X} mê " + String(_ae(L.th[0 if kk == "a" else 1]).get("name", "")).to_lower() + " lắm đó, {c} nhớ giùm."
+		return {"k": k, "say": say, "opts": ok}
+	if k == "tang" and _i(f.get("tgd", -1)) != day:
+		f.tgd = day
+		var id = _t0(_s2())
+		if id != null:
+			var n := maxi(1, _rnd(_nn(30, 60) / _sell(id)))
+			G.g.barn[String(id)] = _barn(id) + n
+			return {"k": k, "say": "Cầm " + _ho(String(id), n) + " về ăn lấy thảo nè.", "opts": [{"k": "xong", "t": "Dạ, {c} cảm ơn."}]}
+	if k == "moi":
+		bk(int(float(_ks(u))))
+		var e = tg().get("ev")
+		if e is Dictionary and _i(e.get("u")) == int(float(_ks(u))):
+			return {"k": k, "say": "Mấy bữa nữa nhà {x} có " + ("đám cưới" if e.get("k") == "cuoi" else "đám giỗ") + ", nhớ qua nghen.", "opts": ok}
+	return {"k": "", "opts": ok}
+
+func chat_end(c: Dictionary, f: Dictionary, i: int) -> void:   # chatEnd
+	if i >= c.opts.size():
+		return
+	var o: Dictionary = c.opts[i]
+	if o.k == "nhan" and c.out.k == "nho" and not _tr(f.get("req")):
+		f.req = c.out.v
+		_ta(String(f.n) + " cần " + _r_tx(f.req) + ". Xem ở Việc nhà.")
+	if o.k == "nhan" and c.out.k == "pq" and not _tr(f.get("pq")):
+		f.pq = c.out.v
+		f.pqd = _vr()
+		_ta("Nhận Việc riêng \"" + String(f.pq.t) + "\" của " + String(f.n) + ".")
+	_ba()
+
+func make_req(u, f: Dictionary) -> Dictionary:   # makeReq
+	_vl_data()
+	var pool := _s2()
+	var have := pool.filter(func(id): return _barn(id) > 0)
+	var gn := a_r(u)
+	var it := []
+	var v := 0.0
+	var by_ng := false
+	var ng: Array = gn.get("in", []).map(func(x): return x[0]).filter(func(id): return pool.has(id))
+	while it.size() < 2:
+		var src: Array
+		if it.is_empty() and ng.size() and randf() < 0.6:
+			by_ng = true
+			src = ng
+		else:
+			src = pool.filter(func(id): return not it.any(func(x): return x[0] == id))
+		if src.is_empty():
+			break
+		var h2 := have.filter(func(id): return src.has(id))
+		var id = _t0(h2) if h2.size() and randf() < 0.55 else _t0(src)
+		var sell := _sell(id)
+		var q := maxi(1, mini(8, _rnd(_nn(50, 140) * (1.0 + 0.5 * _v1()) / sell)))
+		it.append([id, q])
+		v += q * sell
+	var why = _t0(NGHEWHY[gn.id]) if by_ng and NGHEWHY.has(gn.get("id", "")) else _t0(XD)
+	if it.is_empty():
+		it = [["lua", 2]]
+		v = 2 * _sell("lua")
+	return {"id": it[0][0], "q": it[0][1], "it": it, "xu": maxi(10, _rnd(v * _nn(1.5, 1.8) * float(tinh_of(f).xu))), "why": why, "t": 0}
+
+func make_pq(f: Dictionary) -> Dictionary:   # makePQ
+	_vl_data()
+	var pool := _s2().duplicate()
+	var t := _v1()
+	var n := 2 if randf() < 0.5 else 3
+	var it := []
+	var v := 0.0
+	while it.size() < n and pool.size():
+		var id = pool.pop_at(int(floor(randf() * pool.size())))
+		if it.any(func(x): return x[0] == id):
+			continue
+		it.append([id, maxi(1, mini(10, _rnd(_nn(90, 200) * (1.0 + 0.5 * t) / _sell(id))))])
+	for x in it:
+		v += x[1] * _sell(x[0])
+	return {"t": _t0(NVT), "it": it, "xu": _rnd(v * 2.2 * float(tinh_of(f).xu)), "d": _vr()}
+
+func _hn_chat(c: Dictionary, f: Dictionary) -> void:   # hnChat
+	var x := a_r(c.u)
+	var p = hn_of(c.u)
+	var day := _vr()
+	if not (p is Dictionary) or _i(p.get("st")) != 2 or hn_s().get("a") != x.id or _i(p.get("dl", -1)) == day:
+		return
+	p.dl = day
+	p.n = _i(p.get("n")) + 1
+	var need := hn_days(f)
+	c.lines.append(["n", xung(f, String(x.tip[mini(x.tip.size(), int(p.n)) - 1]))])
+	c.lines.append(["s", "Buổi chỉ nghề " + str(p.n) + "/" + str(need)])
+	if int(p.n) >= need:
+		p.st = 3
+		c.lines.append(["s", "Thầy cho làm thử rồi đó. Vô tab Sở trường để làm thử."])
+
+static func hn_days(f: Dictionary) -> int:   # hnDays
+	return 1 if f.get("tp") == "hien" else 2
+
+func _ut_chat(u) -> void:   # utChat
+	var o := ut_s()
+	if not _tr(o.get("vx")):
+		return
+	for t in o.vx.t:
+		if t.k == "hop" and not _tr(t.get("ok")):
+			o.vx.hop[_ks(u)] = 1
+			if o.vx.hop.size() >= int(t.need):
+				t.ok = 1
+				ut_add(10, "Xong việc xóm: " + String(t.n))
+				_ta("Xong việc \"" + String(t.n) + "\", bà con khen.")
+			return
+
+func gift_give(u, id: String) -> void:   # giftGive
+	var f = _fam_of(u)
+	if f == null or _i(f.get("gq", -1)) == _vr() or not (_barn(id) > 0) or _ae(id).is_empty():
+		return
+	var L := fam_likes(u)
+	var like: int = L.th.find(id)
+	var hate: bool = L.gh == id
+	var x2 := is_ngay_rieng(u)
+	var v := 40 if like >= 0 else (-25 if hate else 10)
+	if x2 and v > 0:
+		v *= 2
+	G.g.barn[id] = _barn(id) - 1
+	f.gq = _vr()
+	G.nv.S8("gift")
+	than_seen(f)
+	var dh := than_add(f, _rnd(v * (1.0 + htv("l_qua"))) if v > 0 else v)
+	var msg := ""
+	var nm := String(_ae(id).name).to_lower()
+	if like >= 0:
+		fam_know(f, "b" if like else "a")
+		msg = String(f.n) + " mê " + nm + xung(f, " lắm, cảm ơn {c}!")
+	elif hate:
+		fam_know(f, "x")
+		msg = String(f.n) + " nhăn mặt: món này hổng ưng chút nào."
+	else:
+		msg = String(f.n) + xung(f, " cảm ơn {c} nha.")
+	if x2:
+		fam_know(f, "d")
+		if v > 0:
+			msg += " Đúng " + String(L.ly) + ", quý gấp đôi."
+	_ta(msg + than_txt(dh))
+	_ba()
+
+func gift_ids(u) -> Array:   # giftHtml: món tặng được, thích trước, ghét sau, giá cao trước
+	var f = _fam_of(u)
+	var L := fam_likes(u)
+	var k: Dictionary = f.get("bk") if f != null and f.get("bk") is Dictionary else {}
+	var ids := []
+	for id in G.g.barn:
+		if _barn(id) > 0 and not _ae(id).is_empty() and _n(_ae(id).get("sell")) > 0:
+			ids.append(String(id))
+	var tag := func(id) -> int:
+		var i: int = L.th.find(id)
+		return 1 if i >= 0 and _tr(k.get("b" if i else "a")) else (-1 if id == L.gh and _tr(k.get("x")) else 0)
+	ids.sort_custom(func(a, b): return tag.call(a) > tag.call(b) or (tag.call(a) == tag.call(b) and _n(_ae(a).get("sell")) > _n(_ae(b).get("sell"))))
+	return ids.map(func(id): return [id, tag.call(id)])
+
+# sở trường làm thuê (TALH, bI)
+static func q_l(t: int) -> int:   # qL
+	return 5 * t
+
+static func b_l(t: int) -> int:   # BL
+	return 4 * t
+
+func m_i(t: int) -> int:   # mI
+	return G.nv.v0(200.0 * t * t)
+
+static func n_l(t: int) -> int:   # NL
+	return 1800 * t
+
+func v_i(t: String, a: int) -> String:   # vI
+	if t == "xuong":
+		return "Đứng xưởng: công rẻ hơn " + str(q_l(a)) + "%, xưởng nhanh hơn " + str(4 * a) + "%"
+	return "Khi " + String(W3[t].job) + ": công rẻ hơn " + str(q_l(a)) + "%, " + str(b_l(a)) + "% " + String(W3[t].d)
+
+func k9(t: Dictionary) -> bool:   # k9: đang làm đúng nghề
+	if not _tr(t.get("job")) or not _tr(t.get("tal")):
+		return false
+	return G.xw.sr.has(t.job) if t.tal == "xuong" else t.tal == t.job
+
+func b_i(t) -> void:   # bI: gửi đi học nghề
+	var a = _fam_of(t)
+	if a == null:
+		return
+	x9(t, a)
+	var n := _i(a.ts)
+	if n >= 5 or _tr(a.get("tt")):
+		return
+	if _i(a.get("tim")) < n:
+		_ta("Thân thiết " + str(n) + " ♥ với " + String(a.n) + " mới gửi đi học nghề được.")
+		return
+	var e := m_i(n)
+	if _n(G.g.coins) < e:
+		_ta("Cần " + _sa(e) + " xu.")
+		return
+	G.g.coins = _n(G.g.coins) - e
+	a.tt = _now() + n_l(n) * 1000.0
+	if _tr(a.get("job")):
+		a.job = null
+		a.wt = 0
+	_ta(String(a.n) + " lên chợ huyện học nghề, " + G.ao(n_l(n)) + " nữa về. Trong lúc học thì nghỉ làm thuê.")
+	_ba()
