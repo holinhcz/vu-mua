@@ -56,21 +56,52 @@ func _rtl(bb: String, px: float) -> RichTextLabel:   # p.note
 	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return r
 
-func _btn(s: String, primary: bool, disabled := false) -> Button:   # button.btn
+func _btn(s: String, primary: bool, disabled := false) -> Button:   # button.btn (.btn.primary .ppbig / .btn.ppng)
 	var b := Button.new()
 	b.text = s
 	b.disabled = disabled
-	b.add_theme_font_size_override("font_size", int(round(13.0 * _k())))
-	if primary:
-		b.add_theme_color_override("font_color", Color(1, 1, 1))
+	b.add_theme_font_override("font", Css.font(700))
+	b.add_theme_font_size_override("font_size", int(round((15.0 if primary else 14.0) * _k())))
+	b.custom_minimum_size.y = (50.0 if primary else 44.0) * _k()
+	var fg := Color(1, 1, 1) if primary else Color("#2b2a24")
+	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(st, fg)
+	b.add_theme_color_override("font_disabled_color", Color(fg, 0.55))
+	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color("#3a9a4a")
+		sb.bg_color = Color("#3a9a4a") if primary else Color("#ffffff")
+		if st == "disabled":
+			sb.bg_color = Color(sb.bg_color, 0.55)
+		if st == "focus":
+			sb.draw_center = false
+		if not primary:
+			sb.set_border_width_all(int(round(1.5 * _k())))
+			sb.border_color = Color("#d8ccb2")
 		sb.set_corner_radius_all(int(10 * _k()))
-		sb.content_margin_left = 10 * _k()
-		sb.content_margin_right = 10 * _k()
+		sb.content_margin_left = 14 * _k()
+		sb.content_margin_right = 14 * _k()
 		sb.content_margin_top = 6 * _k()
 		sb.content_margin_bottom = 6 * _k()
-		b.add_theme_stylebox_override("normal", sb)
+		b.add_theme_stylebox_override(st, sb)
+	return b
+
+func _xbtn() -> Button:   # .ppx: 30x30, bo 10px, viền 1.5px --u-line, nền --u-card, chữ 17px
+	var b := Button.new()
+	b.text = "×"
+	b.custom_minimum_size = Vector2(30, 30) * _k()
+	b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	b.add_theme_font_override("font", Css.font(700))
+	b.add_theme_font_size_override("font_size", int(round(17.0 * _k())))
+	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(st, Color("#2b2a24"))
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color("#ffffff")
+		sb.draw_center = st != "focus"
+		sb.set_border_width_all(int(round(1.5 * _k())))
+		sb.border_color = Color("#ebe3d1")
+		sb.set_corner_radius_all(int(10 * _k()))
+		b.add_theme_stylebox_override(st, sb)
 	return b
 
 func _box_style() -> StyleBoxFlat:   # .rbox / #pp
@@ -291,7 +322,7 @@ func _rj() -> void:   # Rj
 		var hv := VBoxContainer.new()   # .pph
 		hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(hv)
-		var x := _btn("×", false)   # .ppx data-pp="close"
+		var x := _xbtn()   # .ppx data-pp="close"
 		x.tooltip_text = "Đóng"
 		x.pressed.connect(close_tree)
 		h.add_child(x)
@@ -310,7 +341,7 @@ func _rj() -> void:   # Rj
 			_tr.info = _lbl("", 11.5)   # #ppInfo
 			hv.add_child(_tr.info)
 			_tr.g = _bar(v, "Trái")     # .ppbar #ppG
-			_tr.w = _bar(v, "Nước")     # .ppbar.w #ppW
+			_tr.w = _bar(v, "Nước", Color("#2e8b57"))     # .ppbar.w #ppW
 			var bw := _btn("Tưới nước", true)   # data-pp="twater" #ppWater
 			bw.pressed.connect(func() -> void:
 				_px(idx, "twater")
@@ -345,10 +376,13 @@ func _rj() -> void:   # Rj
 			(_tr.water as Button).disabled = d
 			(_tr.water as Button).text = "Đất còn ướt" if d else "Tưới nước"
 
-func _bar(v: VBoxContainer, s: String) -> ProgressBar:   # <div class="ppbar"><span>s</span><i><b></b></i></div>
+func _bar(v: VBoxContainer, s: String, fill := Color("#23a04a")) -> ProgressBar:   # .ppbar: cột 44px chữ 12px --u-mute, rãnh 8px bo 4 --u-trk
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", int(6 * _k()))
-	h.add_child(_lbl(s, 11.5, false, false))
+	h.add_theme_constant_override("separation", int(8 * _k()))
+	var l := _lbl(s, 12.0, false, false)
+	l.custom_minimum_size.x = 44 * _k()
+	l.size_flags_horizontal = Control.SIZE_FILL
+	h.add_child(l)
 	var p := ProgressBar.new()
 	p.min_value = 0
 	p.max_value = 100
@@ -356,6 +390,14 @@ func _bar(v: VBoxContainer, s: String) -> ProgressBar:   # <div class="ppbar"><s
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.custom_minimum_size = Vector2(0, 8) * _k()
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color("#eee6d4")
+	bg.set_corner_radius_all(int(round(4 * _k())))
+	var fg := StyleBoxFlat.new()
+	fg.bg_color = fill
+	fg.set_corner_radius_all(int(round(4 * _k())))
+	p.add_theme_stylebox_override("background", bg)
+	p.add_theme_stylebox_override("fill", fg)
 	h.add_child(p)
 	v.add_child(h)
 	return p

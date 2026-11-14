@@ -155,6 +155,8 @@ func catch_up(off: float) -> void:
 
 func save_game() -> void:
 	g.last = _now_ms()
+	if _c_rev != 0 or _c_out():   # NTCLOUD: giờ lưu "thật" = chỉ những lần lưu sau khi đã đọc bản trên mạng (lần lưu lúc mở game không tính)
+		g.svt = g.last
 	var txt := JSON.stringify(g)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
@@ -175,6 +177,10 @@ func _ntc_obj():
 	if _ntc == null and bool(JavaScriptBridge.eval("!!window.__ntc", true)):
 		_ntc = JavaScriptBridge.get_interface("__ntc")
 	return _ntc
+
+func _c_out() -> bool:   # NTCLOUD: chưa đăng nhập (chơi chỉ trên máy): lần lưu nào cũng là lưu thật
+	var n = _ntc_obj()
+	return n == null or str(n.st) == "out"
 
 func _cloud_save(txt: String) -> void:
 	# chỉ đẩy lên sau khi đã đọc bản trên mạng của tài khoản này (khỏi đè làng trên mạng bằng làng mới tinh của máy lạ)
@@ -201,7 +207,8 @@ func _cloud_step(dt: float) -> void:
 	var take := false
 	if s is Dictionary and s.has("plots"):
 		# bản máy chưa từng gắn với tài khoản này thì lấy bản mạng; đã gắn thì bản nào lưu sau thì lấy
-		take = str(g.get("cuid", "")) != uid or float(s.get("last", 0.0)) > float(g.get("last", 0.0))
+		# NTCLOUD: so giờ lưu thật (svt). Lúc mở game, load_game đã lưu một lần với last = bây giờ, nên so last làm bản cũ của máy luôn "mới hơn" bản mạng.
+		take = str(g.get("cuid", "")) != uid or float(s.get("svt", s.get("last", 0.0))) > float(g.get("svt", 0.0))
 	if take:
 		g = _migrate(s)
 		g.cuid = uid
