@@ -910,6 +910,8 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 		var b: Bubble = tbubs[i]
 		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
 			var o: Dictionary = lang.objs()[i]
+			if b.kind == "chat" or (G.w_all != null and G.w_all.WL.CX.has(o.id)):   # bong bóng nhà dân (FD): mở bảng nhà
+				return {"type": "nha", "u": int(o.get("u", 0))}
 			return {"type": "hive" if o.id == "thungong" else "tree", "i": i}
 	var le := sign_le()
 	for k in anodes:   # con vật
@@ -1622,7 +1624,7 @@ func _dan_list(tt: float) -> Array:
 		if WL.tu(n) or not fam.has(n):
 			continue
 		var r: Dictionary = WL.ac[n]
-		out.append({"key": "a" + str(n), "u": int(r.u), "x": r.x, "y": r.y, "lk": int(fam[n].get("lk", 0)), "mv": int(r.st) == 1 or int(r.st) == 2,
+		out.append({"key": "a" + str(n), "u": int(r.u), "n": String(fam[n].n), "x": r.x, "y": r.y, "lk": int(fam[n].get("lk", 0)), "mv": int(r.st) == 1 or int(r.st) == 2,
 			"ph": r.ph, "face": r.face, "carry": r.carry, "bob": int(r.st) == 2})
 	if not G.night and not (ui.bdp != null and ui.bdp.mode == "place"):
 		for h in WL.bl():
@@ -1630,7 +1632,7 @@ func _dan_list(tt: float) -> Array:
 			if f == null or WL._tr(f.get("job")) or WL.zk(h.u):
 				continue
 			var p: Vector2 = WL._home(h.u)
-			out.append({"key": "h" + str(h.u), "u": int(h.u), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
+			out.append({"key": "h" + str(h.u), "u": int(h.u), "n": String(f.n), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
 				"face": 1 if String(h.r.id).ends_with("2") else -1, "wave": WL._tr(f.get("req")) and sin(tt * 0.8 + float(h.u)) > 0.6, "carry": null, "bob": false})
 	return out
 
@@ -1689,6 +1691,12 @@ func _tree_bub_sync(tt: float) -> void:
 					want[i] = ["drop", ""]
 			elif o.id == "thungong" and WR.hive_h(i) > 0:
 				want[i] = ["ripe", "mat_ong"]
+			elif G.w_all.WL.CX.has(o.id) and int(o.get("u", 0)) > 0:   # FD: nhà đang cần đồ (hình món) / mời trò chuyện (...)
+				var f = G.w_all.WL._fam_of(int(o.u))
+				if f != null and G.w_all.WL._tr(f.get("req")):
+					want[i] = ["ripe", String(f.req.id)]
+				elif f != null and int(f.get("mo", 0)) == 1 and G.w_all.WL.chat_left(f) > 0:
+					want[i] = ["chat", ""]
 	for i in tbubs.keys():
 		if not want.has(i):
 			tbubs[i].queue_free()
@@ -1709,6 +1717,8 @@ func _tree_bub_sync(tt: float) -> void:
 		var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
 		var bob := 0.0 if still else sin(tt * 3.0 + i) * 1.2
 		var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
+		if G.w_all.WL.CX.has(o.id):
+			top = lang_ve.top_of(o) + 18.0   # FD: sy + Jo().y + 18
 		b.position = Vector2(en(cx, cy), nn(cx, cy) + top + bob)
 		b.kind = want[i][0]
 		b.id = want[i][1]
@@ -2208,6 +2218,8 @@ class Bubble extends Node2D:
 			"ray":
 				hinh = Bong.anh("gap", k * zoom)
 				red = true
+			"chat":
+				hinh = Bong.anh("chat", k * zoom)
 			"sau":
 				hinh = farm.ui.icon("sau", px)
 				red = true

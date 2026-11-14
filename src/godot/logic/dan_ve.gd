@@ -55,3 +55,24 @@ func _draw() -> void:
 		if it != null:
 			draw_texture_rect(it, Rect2(-9.0 * r, (-21.0 - f) * r, 8.0 * r, 8.0 * r), false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# tên trên đầu khi zoom gần (Lh: ba.z >= 1,05): viên trắng .88, chữ 700 9px nâu, nhân le
+	var z: float = farm.main.zoom
+	if farm.ui != null and farm.ui.cz() >= 1.05 and String(d.get("n", "")) != "":
+		var nm := String(d.n)
+		var fnt: Font = Css.font(700)
+		var fs := 9.0 * le * z   # vẽ chữ ở cỡ px màn hình cho nét, rồi thu về toạ độ làng
+		var q := maxi(1, int(round(fs)))
+		var tw := fnt.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, q).x / z
+		var w := tw + 10.0 * le
+		var c0 := foot + Vector2(0, -36.0 * r)
+		var rr := Rect2(c0.x - w / 2.0, c0.y - 7.0 * le, w, 14.0 * le)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(1, 1, 1, 0.88)
+		sb.set_corner_radius_all(int(round(7.0 * le * z)))
+		sb.anti_aliasing = true
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0 / z, 1.0 / z))
+		draw_style_box(sb, Rect2(rr.position * z, rr.size * z))
+		var asc := fnt.get_ascent(q)
+		var hh := fnt.get_height(q)
+		draw_string(fnt, Vector2(c0.x * z - tw * z / 2.0, c0.y * z + 0.5 * le * z - hh / 2.0 + asc), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, q, Color("#4a3420"))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

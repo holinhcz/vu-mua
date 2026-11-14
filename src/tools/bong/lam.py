@@ -37,6 +37,7 @@ F={
  'xanh': khung('#2f86d6'),
  'do': khung('#d9443a'),
  'nuoc': hinh('<path d="M0 -6 C2.2 -2.6 4.6 0 4.6 2.4 C4.6 5 2.5 6.4 0 6.4 C-2.5 6.4 -4.6 5 -4.6 2.4 C-4.6 0 -2.2 -2.6 0 -6 Z" fill="#3a8fd6" stroke="#2a6fb0" stroke-width=".5"/><path d="M-2.4 2 C-2.4 3.6 -1.4 4.6 -0.2 4.8" fill="none" stroke="#ffffff" stroke-width=".9" stroke-linecap="round" opacity=".85"/>'),
+ 'chat': hinh('<circle cx="-4.5" cy="0" r="1.6" fill="#6a4a1a"/><circle cx="0" cy="0" r="1.6" fill="#6a4a1a"/><circle cx="4.5" cy="0" r="1.6" fill="#6a4a1a"/>'),   # chatBubble: nhà mời trò chuyện
  'gap': hinh('<path d="M-1.35 -5.6 L1.35 -5.6 L0.9 2 L-0.9 2 Z" fill="#d9443a" stroke="#d9443a" stroke-width=".6" stroke-linejoin="round"/><circle cx="0" cy="4.4" r="1.45" fill="#d9443a"/>'),
  'benh': hinh('<rect x="-1.5" y="-5" width="3" height="10" rx=".6" fill="#d9443a"/><rect x="-5" y="-1.5" width="10" height="3" rx=".6" fill="#d9443a"/>'),
 }
