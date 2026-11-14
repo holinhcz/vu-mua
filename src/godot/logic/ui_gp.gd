@@ -14,7 +14,6 @@ var ex := {}                # GPS.ex: bung / thu
 var more := {}              # GPS.more: hiện hết con
 var GB := {}
 var GT := {}
-var qe: LineEdit = null     # ô tìm (Danh bạ) nằm đè lên input.gpq
 var _lk := ""               # khóa danh sách: đổi tab / họ / lọc thì cuộn về đầu
 const ROW := 39.0           # GPROW 52px
 const LOCS := [["all", "Tất cả"], ["mo", "Muốn nói chuyện"], ["nho", "Đang nhờ"], ["than", "Thân nhất"], ["lau", "Lâu chưa ghé"], ["ngay", "Ngày riêng"]]
@@ -43,17 +42,10 @@ func open(u = null) -> void:   # gpOpen(u)
 	sig = ""
 	_build()
 
-func close() -> void:
-	super()
-	if qe != null:
-		qe.queue_free()
-		qe = null
-
 func step(dt: float) -> void:   # gpRender mỗi giây
 	if not on:
 		return
-	if qe != null and box != null:
-		_qe_place()
+	_qe_place()
 	_sig_t -= dt
 	if _sig_t > 0.0:
 		return
@@ -227,10 +219,9 @@ func _build() -> void:
 	if cr != null:
 		cr._kids.clip_contents = true
 	if tab == "db":
-		_qe_make()
-	elif qe != null:
-		qe.queue_free()
-		qe = null
+		_qe_make(".gpq", "Tìm tên, họ…", q, _q_changed)
+	else:
+		_qe_drop()
 	U._layout()
 
 func _tab_go(k: String) -> void:   # data-gt
@@ -423,38 +414,9 @@ func _toi() -> void:   # data-ga="toi": gpGo
 	G.float_text.emit(x, y, "Nhà " + String(W.gp_fam()[str(sel)].n))
 
 # ------------------------------------------------------------------ ô tìm (input.gpq)
-func _qe_make() -> void:
-	if qe == null:
-		qe = LineEdit.new()
-		qe.placeholder_text = "Tìm tên, họ…"
-		qe.flat = true
-		qe.text = q
-		qe.add_theme_font_override("font", Css.font(500))
-		qe.add_theme_font_size_override("font_size", int(round(12.0 * 0.75 * Css.K)))
-		qe.add_theme_color_override("font_color", Color8(58, 42, 16))
-		qe.add_theme_color_override("font_placeholder_color", Color8(138, 120, 96))
-		var sb := StyleBoxEmpty.new()
-		for s in ["normal", "focus", "read_only"]:
-			qe.add_theme_stylebox_override(s, sb)
-		qe.text_changed.connect(_q_changed)
-		U.root.add_child(qe)
-	_qe_place()
-
-func _qe_place() -> void:
-	var inp = ids.get(".gpq")
-	if inp == null or qe == null:
-		return
-	var r: Rect2 = inp.get_global_rect()
-	var pad := 9.0 * Css.K
-	qe.position = r.position + Vector2(pad, 0)
-	qe.size = Vector2(r.size.x - pad * 2.0, r.size.y)
-	qe.move_to_front()
-
 func _q_changed(t: String) -> void:   # input .gpq
 	q = t
 	_redo()
-	if qe != null:
-		qe.grab_focus()
 
 func input(e: InputEvent) -> bool:
 	if on and tab != "qh" and _chips_drag(e):

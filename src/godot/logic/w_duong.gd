@@ -611,6 +611,19 @@ func tn_tick(dt: float) -> void:   # tnTick (2 giây một lần)
 	if ch:
 		_ba()
 
+func tn_pill_txt() -> Array:   # tnPillTxt: [chữ, gấp] hoặc []
+	if WL == null or not WL.tn_ok():
+		return []
+	var o: Dictionary = WL.tn_s()
+	var ev = WL.tn_on(_vr() + 1)
+	if ev != null:
+		return [String(TNK[ev.k].w) + " · phòng chống", true]
+	var nn := 0
+	for uu in o.nan:
+		if not _tr(o.nan[uu].get("x")):
+			nn += 1
+	return [str(nn) + " nhà gặp nạn · giúp bà con", false] if nn else []
+
 func tn_red() -> int:   # tnRed
 	if not WL.tn_ok():
 		return 0

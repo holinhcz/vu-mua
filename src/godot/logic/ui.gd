@@ -40,6 +40,10 @@ var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
 var huip = null              # bảng HỤI LÀNG (ui_hui.gd)
 var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
 var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
+var klp = null               # bảng KỶ LỤC (ui_kl.gd)
+var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
+var gdp = null               # SỔ TAY (ui_gd.gd)
+var rkp = null               # BẢNG XẾP HẠNG (ui_rk.gd)
 var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
@@ -1504,7 +1508,7 @@ func _kho_sort() -> void:
 	_kho_sync()
 
 func kho_open() -> void:
-	for p in [slp, utp, hrp, huip, gpp, tnp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
 		if p != null:
 			p.close()
 	if vlp != null:
@@ -2956,6 +2960,38 @@ func ut_open(t := "") -> void:   # utOpen: Sổ làng › Uy tín làng
 	kho_close()
 	utp.open(t)
 
+func kl_open(t := "") -> void:   # klOpen: Sổ làng › Kỷ lục
+	if G.w_all == null:
+		return
+	if klp == null:
+		klp = load("res://logic/ui_kl.gd").new(self, G.w_all.WCA)
+	close_all()
+	kho_close()
+	klp.open(t)
+
+func kl_show() -> void:   # klShow: thẻ trái khủng (người chơi gặt)
+	if G.w_all == null:
+		return
+	if klcp == null:
+		klcp = load("res://logic/ui_klc.gd").new(self, G.w_all.WCA)
+	klcp.show_next()
+
+func gd_open(t := "") -> void:   # ZC: Sổ làng › Sổ tay
+	if gdp == null:
+		gdp = load("res://logic/ui_gd.gd").new(self)
+	close_all()
+	kho_close()
+	gdp.open(t)
+
+func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
+	if G.w_all == null or not G.w_all.WL._jg("xephang"):
+		return
+	if rkp == null:
+		rkp = load("res://logic/ui_rk.gd").new(self)
+	close_all()
+	kho_close()
+	rkp.open()
+
 func tn_open(t := "") -> void:   # tnOpen: Sổ làng › Thiên tai, hoạn nạn
 	if G.w_all == null:
 		return
@@ -2993,7 +3029,7 @@ func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	hrp.open()
 
 func close_all() -> void:
-	for p in [slp, utp, hrp, huip, gpp, tnp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
 		if p != null and p.on:
 			p.close()
 	if ngp != null and ngp.on:
@@ -3071,7 +3107,7 @@ func _process(dt: float) -> void:
 		vlp.step(dt)
 	if ngp != null:
 		ngp.step(dt)
-	for p in [slp, utp, hrp, huip, gpp, tnp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
 		if p != null:
 			p.step(dt)
 	_ng_bdg()
@@ -3139,7 +3175,7 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or (huip != null and huip.on) or (gpp != null and gpp.on) or (tnp != null and tnp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
+	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or (slp != null and slp.on) or (utp != null and utp.on) or (hrp != null and hrp.on) or (huip != null and huip.on) or (gpp != null and gpp.on) or (tnp != null and tnp.on) or (klp != null and klp.on) or (klcp != null and klcp.on) or (gdp != null and gdp.on) or (rkp != null and rkp.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
@@ -3154,7 +3190,7 @@ func _input(e: InputEvent) -> void:
 		vlp.input(e)
 	if ngp != null:
 		ngp.input(e)
-	for p in [slp, utp, hrp, huip, gpp, tnp]:
+	for p in [slp, utp, hrp, huip, gpp, tnp, klp, klcp, gdp, rkp]:
 		if p != null:
 			p.input(e)
 	if xfp != null:

@@ -3564,6 +3564,7 @@ func t4(t: int, a: String, n: bool) -> bool:   # t4: làm việc a ở ô t (n =
 		if r.begins_with("lua") or r.begins_with("nep"):
 			G._drop("rice", t)
 		WR.z4(t, r, false)
+		G.w_all.WCA.kl_harvest("crop", r, {"p": e, "id": r})   # klHarvest (người làm thuê gặt: KLW)
 		G.g.harvested = _i(G.g.get("harvested")) + 1
 		_qi("harvest")
 		e.lc = r
@@ -3644,6 +3645,7 @@ func xx(t: Dictionary, a: bool) -> Variant:   # xx: làm việc vườn / chuồ
 			return o.p if WR.x5(int(t.i)) else null
 		var tb: int = WR.ib(int(t.i))
 		G.g.barn[String(o.p)] = _barn(o.p) + int(o.yield) + tb
+		G.w_all.WCA.kl_harvest("tree", String(o.p), {"r": r, "bee": tb > 0})   # klHarvest
 		r.fp = 0
 		_qi("harvest")
 		return o.p
@@ -3750,7 +3752,10 @@ func q_d(t: float) -> void:   # qD: mỗi khung
 					r.st = 0
 					if l != null and xm(int(l.i)) == l.t:
 						var c = G.p(int(l.i)).get("c")
-						if t4(int(l.i), String(l.t), o):
+						G.w_all.WCA.klw = e   # KLW
+						var dn := t4(int(l.i), String(l.t), o)
+						G.w_all.WCA.klw = null
+						if dn:
 							jb = 1
 							if l.t == "harvest":
 								r.carry = c
@@ -3828,7 +3833,9 @@ func i_t(t, a: Dictionary, n: Dictionary, e: float, r: bool) -> void:   # iT: l�
 			n.task = null
 			n.st = 0
 			if l != null:
+				G.w_all.WCA.klw = a   # KLW
 				var c = xx(l, false)
+				G.w_all.WCA.klw = null
 				if c != null:
 					jb = 1
 					if c != "w" and c != "f":
@@ -3887,6 +3894,7 @@ func a_d(t: float) -> void:   # AD: lúc tắt game / ẩn trang: làm thẳng k
 		var e: Dictionary = a.fam[n]
 		if not _tr(e.get("job")):
 			continue
+		G.w_all.WCA.klw = e   # KLW
 		if e.job == "ruong":
 			for r in ux(n):
 				var o := 0
@@ -3902,6 +3910,7 @@ func a_d(t: float) -> void:   # AD: lúc tắt game / ẩn trang: làm thẳng k
 					m += 1
 		else:
 			fb(e.job, e, false)
+		G.w_all.WCA.klw = null
 
 func dan_at(w: Vector2, le: float, en: Callable, nn: Callable) -> int:   # DD: người làm thuê bị chạm (0 = không)
 	for n in ac:

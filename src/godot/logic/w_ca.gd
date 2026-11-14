@@ -924,6 +924,233 @@ func ab() -> Variant:   # aB: danh hiệu đang mang
 				a = n
 	return a
 
+# ------------------------------------------------------------------ kỷ lục nông sản (g.kl): trái khủng, tủ kỷ lục, hội thi tuần
+# KLD[id] = [đơn vị, nặng thường (g), kỷ lục (g), gọi là, đo gì, cỡ thường (cm), độ ngọt thường] (ui/snap/kld.json: KLD bản web lúc chạy, đã tính giống lai)
+const KLHANG := ["Ngon", "Hảo hạng", "Thượng hạng", "Kỷ lục"]
+const KLPRIZE := [[3000, 5], [2000, 3], [1200, 1]]
+static var KLD := {}
+var klq := []              # KLQ: trái khủng chờ hiện thẻ
+var klw = null             # KLW: nhà làm thuê đang gặt
+
+static func kld() -> Dictionary:
+	if KLD.is_empty():
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/kld.json"))
+		KLD = d if d is Dictionary else {}
+	return KLD
+
+func m_r() -> int:   # mR: tuần theo giờ thật
+	return int(floor((_now() / 864e5 + 3.0) / 7.0))
+
+func kl_st() -> Dictionary:   # klSt
+	var k = G.g.get("kl")
+	if not (k is Dictionary):
+		k = {}
+		G.g.kl = k
+	if not (k.get("b") is Dictionary):
+		k.b = {}
+	if not (k.get("r") is Array):
+		k.r = []
+	if not (k.get("got") is Dictionary):
+		k.got = {}
+	if not (k.get("tt") is Array):
+		k.tt = []
+	var w := m_r()
+	if not (k.get("wk") is Dictionary) or int(k.wk.get("w", -1)) != w:
+		if k.get("wk") is Dictionary and int(k.wk.w) == w - 1:
+			k.pw = k.wk
+		elif not (k.get("pw") is Dictionary) or int(k.pw.w) < w - 1:
+			k.pw = null
+		k.wk = {"w": w, "b": {}}
+	return k
+
+func kl_name(id: String) -> String:   # klName
+	return G.item_name(id)
+
+static func vi_num(v: float, dec := 3) -> String:   # toLocaleString("vi-VN"): 1.234,5
+	var neg := v < 0.0
+	v = absf(v)
+	var ip := int(floor(v + 1e-9))
+	var fr := snappedf(v - ip, pow(10.0, -dec))
+	if fr >= 1.0:
+		ip += 1
+		fr = 0.0
+	var s := str(ip)
+	var o := ""
+	while s.length() > 3:
+		o = "." + s.substr(s.length() - 3) + o
+		s = s.substr(0, s.length() - 3)
+	o = s + o
+	if fr > 0.0:
+		var f := ("%." + str(dec) + "f") % fr
+		f = f.substr(2).rstrip("0")
+		if f != "":
+			o += "," + f
+	return ("-" if neg else "") + o
+
+static func _js(v: float) -> String:   # String(number) của JS
+	return str(int(v)) if v == floor(v) else str(v)
+
+func kl_kg(g: float, id: String) -> String:   # klKg
+	var d = kld().get(id)
+	if d != null and d[0] == "g":
+		return (_js(round(g * 10.0) / 10.0) if g < 100.0 else str(int(round(g)))) + " g"
+	return vi_num(round(g / 10.0) / 100.0) + " kg"
+
+func kl_num(v: float) -> String:   # klNum
+	return vi_num(round(v * 10.0) / 10.0)
+
+func lai_la(id: String) -> bool:   # laiLa
+	return bool(G.crop(id).get("hyb", false))
+
+func kl_care(kind: String, o: Dictionary) -> float:   # klCare: mức chăm 0..1
+	var c := 0.0
+	var w: String = G.nv.Wd()
+	if kind == "crop":
+		var p: Dictionary = o.p
+		c += 0.3 * clampf((float(p.get("st", 1)) - 1.0) / 4.0, 0.0, 1.0)
+		if _num(p.get("w")) and float(p.w) > 0.0:
+			c += 0.15
+		if G.in_season(String(o.id)):
+			c += 0.2
+		if lai_la(String(o.id)):
+			c += 0.1
+	else:
+		if o.get("r") is Dictionary and _num(o.r.get("fw")) and float(o.r.fw) > 0.0:
+			c += 0.25
+		if _tr(o.get("bee")):
+			c += 0.25
+		c += 0.15
+	if w == "nang" or w == "mua":
+		c += 0.1
+	if _tr(o.get("tal")):
+		c += 0.1
+	return minf(1.0, c)
+
+func kl_roll(kind: String, id: String, o: Dictionary) -> Variant:   # klRoll: 1% + 2% × mức chăm (giống lai gấp 3)
+	var lai := lai_la(id)
+	var D = kld().get(id)
+	if D == null or randf() >= (0.01 + 0.02 * kl_care(kind, o)) * (3.0 if lai else 1.0):
+		return null
+	var c := kl_care(kind, o)
+	var x := pow(randf(), (4.0 if lai else 6.0) - 3.0 * c)
+	var d1 := float(D[1])
+	var g := d1 * (1.25 + (float(D[2]) / d1 - 1.25) * x)
+	var h := 3 if x >= 0.92 else (2 if x >= 0.55 else (1 if x >= 0.2 else 0))
+	var sz: float = round(float(D[5]) * pow(g / d1, 1.0 / 3.0) * 10.0) / 10.0
+	var br: float = round((float(D[6]) * (0.95 + 0.25 * c) + randf() * 2.0) * 10.0) / 10.0 if float(D[6]) else 0.0
+	var day: int = G.day()
+	var f := {"id": id, "g": round(g * 10.0) / 10.0, "h": h, "s": sz, "br": br, "t": _now(), "d": day, "sea": G.season(), "day": posmod(day, 28) % 7 + 1,
+		"wx": G.nv.Wd(), "st": int(o.p.get("st", 1)) if kind == "crop" and o.get("p") is Dictionary else 0, "who": String(o.get("who", "")), "c": int(round(c * 100.0))}
+	return kl_keep(f)
+
+func kl_keep(f: Dictionary) -> Dictionary:   # klKeep: cất vô tủ
+	var k := kl_st()
+	var old = k.b.get(f.id)
+	f.rec = old == null or float(f.g) > float(old.g)
+	if f.rec:
+		k.b[f.id] = f
+	k.r.push_front(f)
+	if k.r.size() > 20:
+		k.r.resize(20)
+	k.n = int(k.get("n", 0)) + 1
+	if not (float(k.wk.b.get(f.id, -1.0)) >= float(f.g)):
+		k.wk.b[f.id] = f.g
+	_ba()
+	return f
+
+func kl_harvest(kind: String, id: String, o: Dictionary) -> void:   # klHarvest: người chơi gặt thì hiện thẻ, người làm thuê gặt thì báo
+	if klw is Dictionary:
+		o.who = klw.n
+		o.tal = String(klw.get("tal", "")) == ("ruong" if kind == "crop" else "vuon")
+	var f = kl_roll(kind, id, o)
+	if f == null:
+		return
+	G.nv.S8("kl")
+	if String(f.who) != "":
+		_ta(String(f.who) + " gặt được " + kl_name(id).to_lower() + " khủng " + kl_kg(f.g, id) + (", kỷ lục mới!" if f.rec else "!") + " Xem ở Tủ kỷ lục.")
+	else:
+		klq.append(f)
+		var sh := _x("klShow")
+		if sh.is_valid():
+			sh.call()
+
+func kl_info(f: Dictionary) -> Array:   # klInfo: [[nhãn, giá trị]]
+	var D: Array = kld().get(f.id, ["g", 1, 1, "", "Cỡ", 1, 0])
+	var se: String = (["Xuân", "Hạ", "Thu", "Đông"][int(f.sea)] if _num(f.get("sea")) and int(f.sea) >= 0 and int(f.sea) < 4 else "")
+	var wx: String = {"nang": "nắng", "mua": "mưa", "giong": "giông", "han": "hạn"}.get(String(f.get("wx", "")), String(f.get("wx", "")))
+	var out := [["Cân nặng", kl_kg(f.g, f.id)], [String(D[4]), (str(int(round(float(f.s)))) + " củ") if D[4] == "Số củ" else kl_num(float(f.s)) + " cm"]]
+	if _tr(f.get("br")):
+		out.append(["Độ ngọt", kl_num(float(f.br)) + " °Bx"])
+	out.append(["Thu ngày", ((se + " " + _js(float(f.day))) if se != "" else "") + ((" · trời " + wx) if wx != "" else "")])
+	if _tr(f.get("st")):
+		out.append(["Ô ruộng", _js(float(f.st)) + "★"])
+	out.append(["Mức chăm", _js(float(f.c)) + "%"])
+	if String(f.get("who", "")) != "":
+		out.append(["Người gặt", String(f.who)])
+	return out
+
+func kl_price(f: Dictionary) -> int:   # klPrice
+	var D: Array = kld().get(f.id, ["g", 1])
+	return int(round(G.price(String(f.id)) * maxf(3.0, float(f.g) / float(D[1]) * 2.0)))
+
+func kl_sell(i: int) -> void:   # klSell
+	var k := kl_st()
+	if i < 0 or i >= k.r.size():
+		return
+	var f: Dictionary = k.r[i]
+	var xu := kl_price(f)
+	G.g.coins = float(G.g.coins) + xu
+	k.r.remove_at(i)
+	_ta("Bán " + kl_name(f.id).to_lower() + " khủng " + kl_kg(f.g, f.id) + ": +" + _sa(xu) + " xu.")
+	_ba()
+
+func kl_pub() -> Dictionary:   # klPub
+	var k := kl_st()
+	var b := {}
+	for id in k.b:
+		b[id] = k.b[id].g
+	return {"b": b, "wk": k.wk, "pw": k.get("pw")}
+
+static func yu(t: int) -> Callable:   # yu: số ngẫu nhiên có hạt (mulberry32 kiểu web)
+	var st := [t & 0xffffffff]
+	return func() -> float:
+		var a: int = (st[0] + 1831565813) & 0xffffffff
+		st[0] = a
+		var n: int = _imul(a ^ (a >> 15), 1 | a)
+		n = ((n + _imul(n ^ (n >> 7), 61 | n)) & 0xffffffff) ^ n
+		return float((n ^ (n >> 14)) & 0xffffffff) / 4294967296.0
+
+static func _imul(a: int, b: int) -> int:   # Math.imul, giữ 32 bit không dấu
+	return ((a & 0xffffffff) * (b & 0xffffffff)) & 0xffffffff
+
+func kl_thi(w: int) -> Array:   # klThi: 4 loại thi tuần w
+	var R: Callable = yu(w * 7919 + 13)
+	var A := []
+	var B := []
+	var C := []
+	var H := []
+	for id in kld():
+		if id.begins_with("qua_"):
+			C.append(id)
+		elif not G.crop(id).is_empty() and int(G.crop(id).get("lv", 1)) <= 15 and not lai_la(id):
+			A.append(id)
+		else:
+			B.append(id)
+		if lai_la(id):
+			H.append(id)
+	return [A, B, C, H].map(func(a): return a[int(floor(R.call() * a.size()))] if a.size() else "")
+
+func kl_thi_rank(w: int, id: String) -> Array:   # klThiRank (chưa có bạn bè: chỉ làng mình)
+	var k := kl_pub()
+	var s = k.wk if int(k.wk.w) == w else (k.pw if k.pw is Dictionary and int(k.pw.w) == w else null)
+	if s is Dictionary and float(s.b.get(id, 0)) > 0.0:
+		return [{"n": os_name(), "me": true, "g": float(s.b[id])}]
+	return []
+
+func os_name() -> String:   # Os: tên làng / người chơi
+	var p = G.g.get("pc")
+	return String(p.get("name", "Bạn")).substr(0, 16) if p is Dictionary and String(p.get("name", "")) != "" else "Bạn"
+
 func _ov(t: String) -> String:   # oV: món ẩn -> món đang hiện cùng vòng xoay
 	var P: Dictionary = G.lang.Pi if G.lang != null else {}
 	var a = P.get(t)

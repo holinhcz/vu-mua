@@ -1,5 +1,6 @@
 extends Node2D
 const Css = preload("res://ui/css.gd")
+const NV = preload("res://logic/nv.gd")
 const Bong = preload("res://logic/bong.gd")   # bong bóng X0 dùng chung
 # Vẽ ruộng + nhân vật lên làng Godot (main.gd của thread nền, không sửa gì bên đó).
 # Ô đất nằm sát nền (z -5); cây, bong bóng, nhân vật chen vào obj_root của làng theo độ sâu,
@@ -170,6 +171,7 @@ func _add_sorted(n: Node2D, dk: float) -> void:
 var badges: Node2D = null
 var _bz := false
 func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngôi ở góc dưới ô
+	_draw_hu()
 	var zz: float = main.zoom / maxf(1.0, main.dpr)
 	_bz = zz > 0.55
 	if not _bz:
@@ -195,6 +197,23 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 			badges.draw_colored_polygon(pts, fc)
 			pts.append(pts[0])
 			badges.draw_polyline(pts, lc, 0.7, true)
+
+var _hu_sig := 0
+func _draw_hu() -> void:   # tnHu: gốc rạ khô trên ô cây bị thiên tai làm hư (g.plots[i].hu, ô chưa gieo lại)
+	var col := Color("#8a7040") if G.night else Color("#d8b468")
+	for i in G.B0:
+		var a: Dictionary = G.p(i)
+		if a.get("c") or not a.get("hu"):
+			continue
+		var c: Dictionary = G.cells[i]
+		var cx := en(c.gx + 0.5, c.gy + 0.5)
+		var cy := nn(c.gx + 0.5, c.gy + 0.5, G.CO)
+		var seed := int(c.gx) * 7 + int(c.gy)
+		for ix in 10:
+			var ax := cx + (NV.Me(ix, seed) - 0.5) * 28.0
+			var ay := cy - 2.0 + (NV.Me(ix + 9, seed) - 0.5) * 11.0
+			var lean := (NV.Me(ix + 3, seed) - 0.5) * 9.0
+			badges.draw_line(Vector2(ax, ay), Vector2(ax + lean, ay - 7.0 - NV.Me(ix + 5, seed) * 6.0), col, 2.0, true)
 
 func refresh() -> void:
 	var nt := is_night()
@@ -488,6 +507,14 @@ func _process(dt: float) -> void:
 		lang_ve.step()
 	_lp_step()
 	if (zz > 0.55) != _bz and badges != null:
+		badges.queue_redraw()
+	var hs := 0   # gốc rạ (g.plots[i].hu) đổi: vẽ lại lớp sát đất
+	for i in G.B0:
+		var pa: Dictionary = G.p(i)
+		if pa.get("hu") and not pa.get("c"):
+			hs = hs * 31 + i + 1
+	if hs != _hu_sig and badges != null:
+		_hu_sig = hs
 		badges.queue_redraw()
 	var lz: int = P.level(PPU, main.zoom)
 	if lz != _lz:
@@ -2229,9 +2256,35 @@ class Bubble extends Node2D:
 
 class FxNode extends Node2D:
 	var farm
+	# tnItems: dấu "!" trên nhà gặp nạn (đỏ: còn giúp được, nâu: quá hạn), không hiện lúc đang xây
+	func _tn_marks(G) -> void:
+		var tn = G.g.get("tn")
+		if not (tn is Dictionary) or not (tn.get("nan") is Dictionary) or tn.nan.is_empty() or G.w_all == null:
+			return
+		if farm.ui != null and farm.ui.bdp != null and String(farm.ui.bdp.mode) != "off":
+			return
+		var tt := Time.get_ticks_msec() / 1000.0
+		var still: bool = G.motion_off()
+		var f: Font = farm.fnt7
+		for uu in tn.nan:
+			var hh = G.w_all.WL.r1(uu)
+			if hh == null:
+				continue
+			var ob = hh.o
+			var cx: float = float(ob.gx) + float(ob.fw) / 2.0
+			var cy: float = float(ob.gy) + float(ob.fd) / 2.0
+			var bx: float = farm.en(cx, cy) + 18.0
+			var by: float = farm.nn(cx, cy) - 80.0 + (0.0 if still else sin(tt * 4.0 + float(uu)) * 1.5)
+			var red: bool = not tn.nan[uu].get("x")
+			draw_circle(Vector2(bx, by), 9.0, Color("#d8402a") if red else Color("#8a6a4a"), true, -1.0, true)
+			draw_arc(Vector2(bx, by), 9.0, 0.0, TAU, 32, Color.WHITE, 2.0, true)
+			var fs := 13
+			var w := f.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			draw_string(f, Vector2(bx - w / 2.0, by + 0.5 + (f.get_ascent(fs) - f.get_descent(fs)) / 2.0), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 	func _draw() -> void:
 		var G = farm.G
 		var f: Font = farm.fnt
+		_tn_marks(G)
 		# ô chín: 3 sao lấp lánh bay lên (vòng vàng dưới gốc là RipeRing, nằm dưới cây)
 		var tt := Time.get_ticks_msec() / 1000.0
 		for i in G.B0:

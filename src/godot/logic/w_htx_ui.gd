@@ -17,7 +17,8 @@ var ext := {}
 
 var fest: Control = null    # bảng lễ hội ($r.mode === "hoi")
 var fest_sig := ""          # $r.sig
-var pill: Button = null     # k2
+const PILL = preload("res://logic/pill.gd")
+var pill: Control = null    # k2
 
 func _init(ui, wh) -> void:
 	U = ui
@@ -234,9 +235,10 @@ func pill_sync(parent: Control) -> void:   # bQ (gọi mỗi khung hoặc mỗi 
 			pill.visible = false
 		return
 	if pill == null:
-		pill = _btn("", false, true, open_fest)
+		pill = PILL.new(U)
+		pill.pressed.connect(open_fest)
 		parent.add_child(pill)
 	pill.visible = true
 	if pill.text != String(d.text):
 		pill.text = String(d.text)
-	pill.modulate = Color(1, 0.85, 0.8) if d.hurry else Color.WHITE   # .hurry
+	pill.hurry = bool(d.hurry)   # .hurry

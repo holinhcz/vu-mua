@@ -8,7 +8,7 @@ var PB := {}                # .raceov
 var PT := {}                # khối mẫu chung
 const BODY_TOP := 39.0      # từ mép trên .rbox tới thân
 const BODY_BOT := 16.5
-const BOX_MAX := 530.0
+const BOX_MAX := 592.0      # .rbox cao tối đa (màn 610, chừa 9 trên dưới)
 
 func _init(ui) -> void:
 	super(ui)

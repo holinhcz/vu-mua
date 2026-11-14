@@ -225,6 +225,12 @@ func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
 			U.gp_open()
 		"tn":
 			U.tn_open()
+		"kl":
+			U.kl_open()
+		"gd":
+			U.gd_open()
+		"rk":
+			U.rk_open()
 		_:
 			U.say(SOON)
 

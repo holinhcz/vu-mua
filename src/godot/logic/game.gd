@@ -771,6 +771,8 @@ func harvest(i: int) -> bool:   # Xu
 	if c.begins_with("lua") or c.begins_with("nep"):
 		_drop("rice", i)
 	g.harvested = int(g.harvested) + 1
+	if w_all != null:   # klHarvest: lâu lâu ra trái khủng
+		w_all.WCA.kl_harvest("crop", c, {"p": a, "id": c})
 	if w_all != null and lang != null:   # NTWEB z4: lai giống
 		w_all.WR.z4(i, c, true)
 	nv.qi("harvest")

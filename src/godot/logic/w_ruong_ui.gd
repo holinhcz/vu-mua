@@ -13,7 +13,8 @@ var man: Control = null    # Hg
 var _man_box: PanelContainer = null
 var _man_body: VBoxContainer = null
 var _man_sig := ""
-var pill: Button = null    # Og (người ghép đặt chỗ trong hàng nút viên HUD)
+const PILL = preload("res://logic/pill.gd")
+var pill: Control = null   # Og (người ghép đặt chỗ trong hàng nút viên HUD)
 var job: Callable = Callable()   # Px: xếp việc nhân vật đi tới cây (idx, "twater" | "tharvest"); trống thì làm ngay
 
 func _init(ui, rules) -> void:
@@ -221,8 +222,7 @@ func cz() -> void:   # CZ
 	if pill == null:
 		if not t:
 			return
-		pill = Button.new()   # button.ghepill.manpill
-		pill.add_theme_font_size_override("font_size", int(round(12.0 * _k())))
+		pill = PILL.new(U)   # button.ghepill.manpill
 		pill.pressed.connect(open_man)   # eO
 		U.root.add_child(pill)
 	pill.visible = t and R._mode() == "off"

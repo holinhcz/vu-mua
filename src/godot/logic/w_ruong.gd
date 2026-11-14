@@ -440,6 +440,8 @@ func x5(t: int) -> bool:   # X5 (+ lớp bọc g8: kho phải đủ chỗ)
 	var e: int = int(n.yield) + ib(t)
 	var p: String = String(n.p)
 	G.g.barn[p] = int(G.g.barn.get(p, 0)) + e
+	if G.w_all != null:   # klHarvest: trái khủng
+		G.w_all.WCA.kl_harvest("tree", p, {"r": a, "bee": e > int(n.yield)})
 	a.fp = 0.0
 	var r = _hr_of(t)
 	if r != null:

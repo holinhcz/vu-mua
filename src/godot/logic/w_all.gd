@@ -27,6 +27,7 @@ var WCU = null  # w_cho_ui.gd
 var WSU = null  # w_sys_ui.gd
 var WHU = null  # w_htx_ui.gd
 var WCAU = null # w_ca_ui.gd
+const PILL = preload("res://logic/pill.gd")
 var pills: VBoxContainer = null   # hàng nút viên HUD (Hs())
 
 var pend := 0.0   # giây bù offline chưa chạy vì G.lang chưa có
@@ -223,8 +224,8 @@ func ui_setup(ui) -> void:
 	# hàng nút viên HUD (Hs()): dưới cụm trên bên trái
 	pills = VBoxContainer.new()
 	pills.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pills.position = Vector2(8.0, 132.0) * Css.K
-	pills.add_theme_constant_override("separation", int(4.0 * Css.K))
+	pills.position = Vector2(21.0, 325.44) * Css.K   # .xpills: dưới thẻ mục tiêu bên trái
+	pills.add_theme_constant_override("separation", int(round(4.5 * Css.K)))
 	U.root.add_child(pills)
 	# Mt.mode / qc / bận
 	var mt := func() -> String: return String(U.bdp.mode) if U.bdp != null else "off"
@@ -268,6 +269,7 @@ func ui_setup(ui) -> void:
 		if U.pcp != null and U.pcp.on:
 			U.pcp.close()
 	WCA.ext["ec"] = ec
+	WCA.ext["klShow"] = func() -> void: U.kl_show()   # thẻ trái khủng
 	WCA.ext["g2"] = g2
 	WCAU.ext["ec"] = ec
 	WCAU.ext["g2"] = g2
@@ -296,6 +298,10 @@ func _job(key: String, pos, dur: float, run) -> void:   # Gl / Ns / Px: xếp vi
 func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	if WRU == null or not _ok():
 		return
+	var gb = U.hid.get("#goal") if U.hid is Dictionary else null   # .xpills nằm ngay dưới thẻ mục tiêu
+	if gb != null and pills != null:
+		var gr: Rect2 = gb.get_global_rect()
+		pills.position = Vector2(gr.position.x, (gr.end.y if gb.is_visible_in_tree() else gr.position.y) + 4.5 * Css.K)
 	WRU.cz()
 	if WRU.pill != null and WRU.pill.get_parent() != pills:
 		WRU.pill.reparent(pills, false)
@@ -304,8 +310,25 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	WHU.sync_fest()
 	WHU.pill_sync(pills)
 	_ray_pill()
+	_tn_pill()
 
-var rpill: Button = null   # Lg: nút viên "Rầy nâu: N ô · phun thuốc"
+var tpill: Control = null   # TNPILL: "Đêm nay bão lớn về · phòng chống" / "N nhà gặp nạn · giúp bà con"
+func _tn_pill() -> void:   # tnPill
+	var tx: Array = WD.tn_pill_txt()
+	var show: bool = not tx.is_empty() and (U.bdp == null or String(U.bdp.mode) == "off")
+	if not show:
+		if tpill != null:
+			tpill.visible = false
+		return
+	if tpill == null:
+		tpill = PILL.new(U)
+		tpill.pressed.connect(func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"))
+		pills.add_child(tpill)
+	tpill.visible = true
+	tpill.text = String(tx[0])
+	tpill.hurry = bool(tx[1])
+
+var rpill: Control = null   # Lg: nút viên "Rầy nâu: N ô · phun thuốc"
 func _ray_pill() -> void:   # l_
 	var t: int = G.ray_n()
 	if t == 0:
@@ -313,7 +336,8 @@ func _ray_pill() -> void:   # l_
 			rpill.visible = false
 		return
 	if rpill == null:
-		rpill = WHU._btn("", false, true, func() -> void:   # tới ô rầy đầu tiên rồi đi phun
+		rpill = PILL.new(U)
+		rpill.pressed.connect(func() -> void:   # tới ô rầy đầu tiên rồi đi phun
 			var k = G.g.ray.p.keys()
 			if k.is_empty():
 				return
@@ -325,7 +349,7 @@ func _ray_pill() -> void:   # l_
 				M._clamp_cam()
 			U.close_all()
 			U.F.queue_job(i, "spray"))
-		rpill.modulate = Color(1, 0.85, 0.8)   # .hurry
+		rpill.hurry = true   # .hurry
 		pills.add_child(rpill)
 	rpill.visible = true
 	var tx := "Rầy nâu: " + str(t) + " ô · phun thuốc"

@@ -32,6 +32,7 @@ func _init(ui) -> void:
 	T = Snap.load_snap("vl_tab")
 
 func close() -> void:
+	_qe_drop()
 	on = false
 	if box != null:
 		U.anchors.erase(U._anchor_of(box))
@@ -40,6 +41,9 @@ func close() -> void:
 	inner = null
 
 func _build() -> void:   # bảng con dựng lại
+	pass
+
+func step(_dt: float) -> void:   # bảng con: dựng lại khi đổi
 	pass
 
 func _barn(id) -> int:   # g.barn[id] || 0
@@ -480,8 +484,8 @@ func _chips_keep(chips: Array, onr: Array, x_end: float, x0 := 16.5, x1 := 321.5
 	for c in chips:
 		Snap._move(c, Vector2(-chx, 0))
 
-func _chips_drag(e: InputEvent) -> bool:   # kéo ngang .khchips; true = đã dùng sự kiện
-	var row = ids.get(".khchips") if box != null else null
+func _chips_drag(e: InputEvent, sel := ".khchips") -> bool:   # kéo ngang hàng chip / tab cuộn; true = đã dùng sự kiện
+	var row = ids.get(sel) if box != null else null
 	if row == null:
 		return false
 	if e is InputEventScreenTouch or e is InputEventMouseButton:
@@ -511,6 +515,50 @@ func _chips_drag(e: InputEvent) -> bool:   # kéo ngang .khchips; true = đã d�
 			chx = nx
 		return true
 	return false
+
+# ------------------------------------------------------------------ ô tìm (input[type=search]): LineEdit nằm đè lên ô chụp, giữ qua các lần dựng lại
+var qe: LineEdit = null
+var _qe_sel := ""
+
+func _qe_make(sel: String, ph: String, txt: String, cb: Callable) -> void:
+	_qe_sel = sel
+	if qe == null:
+		qe = LineEdit.new()
+		qe.placeholder_text = ph
+		qe.flat = true
+		qe.text = txt
+		qe.add_theme_font_override("font", Css.font(500))
+		qe.add_theme_font_size_override("font_size", int(round(12.0 * 0.75 * Css.K)))
+		qe.add_theme_color_override("font_color", Color8(58, 42, 16))
+		qe.add_theme_color_override("font_placeholder_color", Color8(138, 120, 96))
+		var sb := StyleBoxEmpty.new()
+		for s in ["normal", "focus", "read_only"]:
+			qe.add_theme_stylebox_override(s, sb)
+		qe.text_changed.connect(func(t: String) -> void:
+			cb.call(t)
+			if qe != null:
+				qe.grab_focus())
+		U.root.add_child(qe)
+	_qe_place()
+
+func _qe_place() -> void:   # gọi mỗi khung lúc bảng mở (ô có thể cuộn theo thân)
+	if qe == null or box == null:
+		return
+	var inp = ids.get(_qe_sel)
+	if inp == null:
+		return
+	var r: Rect2 = inp.get_global_rect()
+	var pad := 9.0 * Css.K
+	qe.position = r.position + Vector2(pad, 0)
+	qe.size = Vector2(r.size.x - pad * 2.0, r.size.y)
+	var vb = ids.get("." + _area) if _area != "" else null
+	qe.visible = inp.is_visible_in_tree() and (vb == null or vb.get_global_rect().grow(1.0).encloses(r))
+	qe.move_to_front()
+
+func _qe_drop() -> void:
+	if qe != null:
+		qe.queue_free()
+		qe = null
 
 # ------------------------------------------------------------------ cuộn
 func _redo() -> void:

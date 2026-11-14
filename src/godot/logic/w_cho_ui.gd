@@ -22,7 +22,8 @@ var cho: Control = null     # bảng chợ nổi
 var cho_sig := ""           # $r.sig
 var rd: Control = null      # bảng radio (Cf)
 var rd_cl := false          # Cf.cl
-var pill: Button = null     # y2
+const PILL = preload("res://logic/pill.gd")
+var pill: Control = null    # y2
 
 func _init(ui, wc) -> void:
 	U = ui
@@ -277,14 +278,15 @@ func pill_sync(parent: Control) -> void:   # mQ (gọi mỗi khung; parent = Hs(
 			pill.visible = false
 		return
 	if pill == null:
-		pill = _btn("", false, true, _pill_go)
+		pill = PILL.new(U)
+		pill.pressed.connect(_pill_go)
 		parent.add_child(pill)
 	pill.visible = true
 	var a := maxf(0.0, W.wm() - G.nv.hour())
 	var s := "Chợ nổi đang họp · tan lúc " + str(W.wm()) + ":00"
 	if pill.text != s:
 		pill.text = s
-	pill.modulate = Color(1, 0.85, 0.8) if a < 0.4 else Color.WHITE   # .hurry
+	pill.hurry = a < 0.4   # .hurry
 
 func _pill_go() -> void:   # y2 click: aN(), Ui.pos && Ns({type: "cho", k: 1})
 	var an := _x("aN")
