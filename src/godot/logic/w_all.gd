@@ -305,15 +305,12 @@ func tree_tap(w: Vector2) -> bool:   # farm.tap: chạm cây ăn trái (g.objs[i
 		return false
 	if WR.ql(idx) == null:
 		return false
-	U.close_all()
-	WRU.open_tree(idx)
+	U.rm_tree(idx)
 	return true
 
 func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	if WRU == null or not _ok():
 		return
-	if WRU.tree_i >= 0:
-		WRU.update()
 	WRU.cz()
 	if WRU.pill != null and WRU.pill.get_parent() != pills:
 		WRU.pill.reparent(pills, false)
@@ -325,7 +322,6 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 func close_all() -> void:   # ui.close_all
 	if WRU == null:
 		return
-	WRU.close_tree()
 	WRU.close_man()
 	WCU.close_cho()
 	WCU.close_rd()

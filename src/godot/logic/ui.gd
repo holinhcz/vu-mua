@@ -796,6 +796,8 @@ var rm_g: Control = null      # đang lớn: chín ngay / sao / tưới + nhãn 
 var rm_r: Control = null      # chín: nút liềm
 var rm_gi := {}
 var rm_i := -1
+var rm_t := -1               # cây ăn trái đang mở (g.objs idx): xài chung vòng nút ô ruộng, không có nút sao
+var rm_x0 := {}              # chỗ gốc của .fast / .water
 var rm_sig := ""
 var dim: Control = null
 var dim_mat: ShaderMaterial = null
@@ -811,6 +813,8 @@ func _build_rm() -> void:
 	rm_r = _build(d2[".rm"][0], ids2)
 	rm_r.visible = false
 	root.add_child(rm_r)
+	for k in [".fast", ".water"]:
+		rm_x0[k] = rm_gi[k].r.position
 	_click(rm_gi.get(".fast"), func(): _rm_do("fast"))
 	_click(rm_gi.get(".star"), func(): _rm_do("star"))
 	_click(rm_gi.get(".water"), func(): _rm_do("water"))
@@ -836,7 +840,9 @@ func rm_open(i: int) -> void:
 	dock_open(false)
 	_cam_open()
 	rm_i = i
+	rm_t = -1
 	rm_sig = ""
+	_rm_kind(false)
 	_set_focus(true)
 	_rm_sync()
 	_rm_pos()
@@ -858,14 +864,121 @@ func _rm_in() -> Control:
 	var top := rm_r if (not a.is_empty() and G.ripe(a)) else rm_g
 	return top.kids()[0] if top.kids().size() > 0 else null
 
+func rm_on() -> bool:
+	return rm_i >= 0 or rm_t >= 0
+
 func rm_close() -> void:
-	if rm_i < 0:
+	if not rm_on():
 		return
+	var plot := rm_i >= 0
 	rm_i = -1
+	rm_t = -1
 	rm_g.visible = false
 	rm_r.visible = false
 	_set_focus(false)
-	_cam_close()
+	if plot:
+		_cam_close()
+
+func _rm_kind(tree: bool) -> void:   # cây ăn trái: ẩn nút sao, dồn chín ngay / tưới vào giữa
+	var st = rm_gi.get(".star")
+	if st != null:
+		st.visible = not tree
+	var d := 32.0 if tree else 0.0
+	for k in rm_x0:
+		_move(rm_gi[k], rm_x0[k] + Vector2(d if k == ".fast" else -d, 0.0))
+	rm_gi[".water"].modulate.a = 1.0
+
+func rm_tree(t: int) -> void:   # hg: chạm cây ăn trái
+	close_all()
+	if G.w_all.WR.ql(t) == null:
+		return
+	rm_t = t
+	rm_sig = ""
+	_rm_kind(true)
+	_set_focus(true)
+	_rm_sync()
+	_rm_pos()
+
+func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòng nước, nhãn tên + giờ còn lại
+	var R = G.w_all.WR
+	var t = R.ql(rm_t)
+	if t == null:
+		rm_close()
+		return
+	var ripe: bool = R.wc(t)
+	rm_g.visible = not ripe
+	rm_r.visible = ripe
+	if ripe:
+		return
+	var e: Dictionary = R._ei()[t.id]
+	var fw := float(t.fw)
+	var c: float = R.tree_left(rm_t)
+	var fast = rm_gi.get(".fast")
+	if fast != null:
+		_set_svg(fast.kids()[0], _ring("rmf", "#e8324a", "rgba(232,50,74,.16)", round(minf(1.0, float(t.fp) / float(e.time)) * 1000.0) / 1000.0))
+		_txt(_q(fast, "", "b"), str(R.ro(c)))
+	var wat = rm_gi.get(".water")
+	if wat != null:
+		_set_svg(wat.kids()[0], _ring("rmw", "#1e90e8", "rgba(30,144,232,.15)", round(clampf(fw / R.f2(), 0.0, 1.0) * 1000.0) / 1000.0))
+		wat.modulate.a = 0.5 if fw >= R.f2() * 0.85 else 1.0   # "Đất còn ướt"
+	var rt = rm_gi.get(".rmt")
+	if rt != null:
+		_txt(rt, String(G.lang.Pi[t.id].n))
+		_rm_small(rt, fw > 0.0, tfmt((c - minf(c, fw) * 0.09) if fw > 0.0 else c))
+
+func _rm_tree_pos() -> void:   # am (fi.t): vòng nút đứng trên ngọn cây
+	var L = G.lang
+	var o: Dictionary = L.objs()[rm_t]
+	var tp: Dictionary = L.Pi[o.id]
+	var fw := float(tp.fw)
+	var fd := float(tp.fd)
+	var gx := float(o.gx)
+	var gy := float(o.gy)
+	var foot := Vector2(F.en(gx + fw / 2.0, gy + fd / 2.0), F.nn(gx + fw / 2.0, gy + fd / 2.0))
+	var top: float = L.F.lang_ve.top_of(o)
+	var tb := rm_r if G.w_all.WR.wc(o) else rm_g
+	var box: Control = tb.kids()[0]
+	var w = box.r.size.x
+	var h = box.r.size.y
+	var ra: Vector2 = (foot - main.cam) * main.zoom / Css.K
+	var x := clampf(ra.x, w / 2.0 + 8.0, vw - w / 2.0 - 8.0)
+	var y := clampf(ra.y + (top - 6.0) * cz(), h + 8.0, vh - 8.0)
+	_move(tb, Vector2(round(x), round(y)))
+	_move(box, Vector2(-w / 2.0, -h))
+	# vignette quanh gốc cây + ngọn
+	var mn := Vector2(INF, INF)
+	var mx := -mn
+	for p in [[0, 0], [fw, 0], [fw, fd], [0, fd]]:
+		var q: Vector2 = (Vector2(F.en(gx + p[0], gy + p[1]), F.nn(gx + p[0], gy + p[1])) - main.cam) * main.zoom
+		mn = mn.min(q)
+		mx = mx.max(q)
+	mn.y = minf(mn.y, (foot.y + top - main.cam.y) * main.zoom)
+	dim_mat.set_shader_parameter("c", (mn + mx) * 0.5)
+	dim_mat.set_shader_parameter("r", Vector2((mx.x - mn.x) / 2.0 * 1.3 + 16.0 * Css.K, (mx.y - mn.y) / 2.0 * 1.3 + 16.0 * Css.K))
+
+func _rm_tree_do(k: String) -> void:
+	var t := rm_t
+	var R = G.w_all.WR
+	var o = R.ql(t)
+	if o == null:
+		return
+	var WRU = G.w_all.WRU
+	if k == "harvest":
+		if R.wc(o):
+			rm_close()
+			WRU.px(t, "tharvest")
+	elif k == "water":
+		if float(o.fw) >= R.f2() * 0.85:
+			G.toast.emit("Đất còn ướt.")
+			return
+		rm_close()
+		WRU.px(t, "twater")
+	elif k == "fast" and not R.wc(o):
+		var pa := func():
+			if rm_t == t and R.tree_now(t):
+				rm_close()
+				WRU.px(t, "tharvest")
+		xfp._ask(rm_gi.get(".fast"), R.ro(R.tree_left(t)), "Ra trái ngay cây " + String(G.lang.Pi[o.id].n).to_lower() + "?", "", pa)
 
 func _ring(cls: String, col: String, bg: String, fr: float) -> String:
 	# s(): vòng tiến độ (lớn: đỏ, nước: xanh), bắt đầu từ đỉnh
@@ -880,6 +993,9 @@ static func tfmt(t: float) -> String:   # o(): 1g 5p / 3p 20s / 40s
 	return (str(h) + "g " + str(m) + "p") if h else ((str(m) + "p " + str(x) + "s") if m else (str(x) + "s"))
 
 func _rm_sync() -> void:
+	if rm_t >= 0:
+		_rm_tree_sync()
+		return
 	var i := rm_i
 	if i < 0:
 		return
@@ -962,6 +1078,9 @@ func _rm_small(rt: Control, wet: bool, tm: String) -> void:
 
 func _rm_pos() -> void:
 	# rt(): vòng nút đứng trên ngọn cây
+	if rm_t >= 0:
+		_rm_tree_pos()
+		return
 	if rm_i < 0:
 		return
 	var a: Dictionary = G.p(rm_i)
@@ -991,6 +1110,9 @@ func _rm_pos() -> void:
 	dim_mat.set_shader_parameter("r", rr)
 
 func _rm_do(k: String) -> void:
+	if rm_t >= 0:
+		_rm_tree_do(k)
+		return
 	var i := rm_i
 	if i < 0:
 		return
@@ -2716,7 +2838,7 @@ func _process(dt: float) -> void:
 				gv_close()
 			else:
 				_gv_sync()
-		if rm_i >= 0:
+		if rm_on():
 			_rm_sync()
 		if lk_i >= 0:
 			if G.p(lk_i).u:
@@ -2735,11 +2857,11 @@ func _process(dt: float) -> void:
 		vnp.step(dt)
 	if gv_i >= 0:
 		_gv_pos()
-	if rm_i >= 0:
+	if rm_on():
 		_rm_pos()
 	if lk_i >= 0:
 		_lock_pos()
-	var want := 1.0 if rm_i >= 0 or (xfp != null and xfp.is_open()) else 0.0
+	var want := 1.0 if rm_on() or (xfp != null and xfp.is_open()) else 0.0
 	dim_a = move_toward(dim_a, want, dt / 0.2)
 	dim.visible = dim_a > 0.001
 	if dim.visible:

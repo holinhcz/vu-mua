@@ -3,7 +3,7 @@ const Css = preload("res://ui/css.gd")
 # Giao diện của hệ ruộng / cây ăn trái / hạn mặn, chép nội dung và nút từ bản web:
 #   bảng "Hạn mặn" (eO dựng, U6 điền #manBody, rO đóng; nút data-man buy -> EZ, cong -> LZ, x -> rO),
 #   nút viên "Hạn mặn · ..." trên HUD (CZ, .ghepill.manpill), thẻ trời "Hạn mặn" (ui({id:"man"}).sky / skyclick),
-#   bảng chạm cây ăn trái (hg mở, Rj điền #pp; nút data-pp tharvest / twater / ngtree / close).
+#   việc đi tới cây ăn trái (Px). Vòng nút khi chạm cây xài chung vòng nút ô ruộng: ui.gd rm_tree.
 # Chưa có bản chụp số đo của web cho mấy bảng này: dựng bằng Control thường, cỡ chữ theo css px x (dpr x U).
 
 var U                      # ui.gd
@@ -14,10 +14,6 @@ var _man_box: PanelContainer = null
 var _man_body: VBoxContainer = null
 var _man_sig := ""
 var pill: Button = null    # Og (người ghép đặt chỗ trong hàng nút viên HUD)
-var tree: Control = null   # uo khi fi.t >= 0
-var tree_i := -1           # fi.t
-var _tree_sig := ""
-var _tr := {}              # #ppG, #ppW, #ppInfo, #ppWater
 var job: Callable = Callable()   # Px: xếp việc nhân vật đi tới cây (idx, "twater" | "tharvest"); trống thì làm ngay
 
 func _init(ui, rules) -> void:
@@ -82,25 +78,6 @@ func _btn(s: String, primary: bool, disabled := false) -> Button:   # button.btn
 		sb.content_margin_right = 14 * _k()
 		sb.content_margin_top = 6 * _k()
 		sb.content_margin_bottom = 6 * _k()
-		b.add_theme_stylebox_override(st, sb)
-	return b
-
-func _xbtn() -> Button:   # .ppx: 30x30, bo 10px, viền 1.5px --u-line, nền --u-card, chữ 17px
-	var b := Button.new()
-	b.text = "×"
-	b.custom_minimum_size = Vector2(30, 30) * _k()
-	b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	b.add_theme_font_override("font", Css.font(700))
-	b.add_theme_font_size_override("font_size", int(round(17.0 * _k())))
-	for st in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		b.add_theme_color_override(st, Color("#2b2a24"))
-	for st in ["normal", "hover", "pressed", "focus"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color("#ffffff")
-		sb.draw_center = st != "focus"
-		sb.set_border_width_all(int(round(1.5 * _k())))
-		sb.border_color = Color("#ebe3d1")
-		sb.set_corner_radius_all(int(10 * _k()))
 		b.add_theme_stylebox_override(st, sb)
 	return b
 
@@ -268,136 +245,9 @@ func sky_click(t: String) -> void:   # skyclick: $f() đóng các bảng rồi e
 		U.close_all()
 		open_man()
 
-# ------------------------------------------------------------------ bảng cây ăn trái
-func open_tree(t: int) -> void:   # hg
-	if R._mode() != "off" or R.ql(t) == null:
-		return
-	tree_i = t
-	_tree_sig = ""
-	_rj()
-
-func close_tree() -> void:   # Eo
-	if tree != null:
-		tree.queue_free()
-	tree = null
-	tree_i = -1
-	_tr = {}
-
-func update() -> void:   # G1 lúc bảng cây đang mở (gọi mỗi lượt luật / mỗi khung)
-	if tree_i >= 0:
-		_rj()
-
-func _px(t: int, a: String) -> void:   # Px: việc đi tới cây
+# ------------------------------------------------------------------ cây ăn trái
+func px(t: int, a: String) -> void:   # Px: việc đi tới cây ("twater" | "tharvest")
 	if job.is_valid():
 		job.call(t, a)
 	else:
 		R.tree_run(t, a)
-
-func _rj() -> void:   # Rj
-	var t = R.ql(tree_i)
-	if t == null:
-		close_tree()
-		return
-	var a: Dictionary = R._ei()[t.id]
-	var n: String = String(G.lang.Pi[t.id].n)
-	var e: bool = R.wc(t)
-	var r := "t|" + String(t.id) + "|" + str(e)
-	var idx := tree_i
-	if r != _tree_sig:
-		_tree_sig = r
-		if tree != null:
-			tree.queue_free()
-		_tr = {}
-		var bx := PanelContainer.new()   # #pp
-		bx.add_theme_stylebox_override("panel", _box_style())
-		bx.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-		bx.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		bx.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		bx.custom_minimum_size = Vector2(300, 0) * _k()
-		bx.position.y -= 90.0 * _k()
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", int(8 * _k()))
-		bx.add_child(v)
-		var h := HBoxContainer.new()
-		var hv := VBoxContainer.new()   # .pph
-		hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(hv)
-		var x := _xbtn()   # .ppx data-pp="close"
-		x.tooltip_text = "Đóng"
-		x.pressed.connect(close_tree)
-		h.add_child(x)
-		v.add_child(h)
-		if e:
-			hv.add_child(_lbl("Cây " + n.to_lower() + " đã có trái", 15.0, true))
-			hv.add_child(_lbl("Hái được " + str(int(a.yield)) + " " + String(G.item_name(String(a.p))).to_lower() + ", bán khoảng " + str(G.price(String(a.p))) + " xu mỗi trái", 11.5))
-			var b := _btn("Thu hoạch", true)   # data-pp="tharvest"
-			b.pressed.connect(func() -> void:
-				_px(idx, "tharvest")
-				close_tree()
-			)
-			v.add_child(b)
-		else:
-			hv.add_child(_lbl("Cây " + n.to_lower(), 15.0, true))
-			_tr.info = _lbl("", 11.5)   # #ppInfo
-			hv.add_child(_tr.info)
-			_tr.g = _bar(v, "Trái")     # .ppbar #ppG
-			_tr.w = _bar(v, "Nước", Color("#2e8b57"))     # .ppbar.w #ppW
-			var bw := _btn("Tưới nước", true)   # data-pp="twater" #ppWater
-			bw.pressed.connect(func() -> void:
-				_px(idx, "twater")
-				close_tree()
-			)
-			v.add_child(bw)
-			_tr.water = bw
-			var ng := _btn("Ra trái ngay " + str(R.ro(R.tree_left(idx))), false)   # data-pp="ngtree" #ppNg: Hi(ji.pearl) + Ro(...)
-			var pt = U.item_ic("pearl", 16.0 * _k())
-			if pt != null:
-				ng.icon = pt
-				ng.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-			ng.pressed.connect(func() -> void:
-				if R.tree_now(idx):
-					_tree_sig = ""
-					_rj()
-			)
-			v.add_child(ng)
-		U.root.add_child(bx)
-		tree = bx
-	if not e:
-		var l: float = R.f2()
-		var c: float = R.tree_left(idx)
-		if _tr.has("g"):
-			(_tr.g as ProgressBar).value = round(float(t.fp) / float(a.time) * 100.0)
-		if _tr.has("w"):
-			(_tr.w as ProgressBar).value = round(minf(1.0, float(t.fw) / l) * 100.0)
-		if _tr.has("info"):
-			(_tr.info as Label).text = ("Còn khoảng " + G.ao(c) + " là có trái. Tưới nước để cây ra trái nhanh hơn 10%.") if float(t.fw) <= 0.0 else ("Đang được tưới, ra trái nhanh hơn 10%. Còn chừng " + G.ao(c - minf(c, float(t.fw)) * 0.09) + ".")
-		if _tr.has("water"):
-			var d: bool = float(t.fw) >= l * 0.85
-			(_tr.water as Button).disabled = d
-			(_tr.water as Button).text = "Đất còn ướt" if d else "Tưới nước"
-
-func _bar(v: VBoxContainer, s: String, fill := Color("#23a04a")) -> ProgressBar:   # .ppbar: cột 44px chữ 12px --u-mute, rãnh 8px bo 4 --u-trk
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", int(8 * _k()))
-	var l := _lbl(s, 12.0, false, false)
-	l.custom_minimum_size.x = 44 * _k()
-	l.size_flags_horizontal = Control.SIZE_FILL
-	h.add_child(l)
-	var p := ProgressBar.new()
-	p.min_value = 0
-	p.max_value = 100
-	p.show_percentage = false
-	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	p.custom_minimum_size = Vector2(0, 8) * _k()
-	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color("#eee6d4")
-	bg.set_corner_radius_all(int(round(4 * _k())))
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = fill
-	fg.set_corner_radius_all(int(round(4 * _k())))
-	p.add_theme_stylebox_override("background", bg)
-	p.add_theme_stylebox_override("fill", fg)
-	h.add_child(p)
-	v.add_child(h)
-	return p
