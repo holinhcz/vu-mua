@@ -493,6 +493,41 @@ func _web_prune() -> void:
 			n += 1
 	print("web_prune: giấu ", n, " hình cảnh không có trong web")
 
+# sân đất quanh nhà, chòi, đình, miếu, giếng, đống rơm (NEN2 put()/YD): nền vẽ theo lot_info.yd. Bản nền là danh sách cố định
+# theo vật cảnh có sẵn, dời / bán nhà thì sân ở lại. Giờ tính lại theo món đang đứng: vật cảnh có sẵn chưa dời + đồ mình đặt.
+const YARD := {"hut": 1, "hut2": 1, "hutnho": 1, "hutnho2": 1, "house": 1, "house2": 1, "bagian": 1, "bagian2": 1,
+	"pavilion": 1, "dinh": 1, "shrine": 1, "well": 0, "haystack": 0}   # id -> số ô sân lấn ra quanh món
+var _yd0 = null   # sân ngoài làng của nền (pc rỗng), giữ nguyên
+var _yd_sig := ""
+var _yd_t := 0.0
+
+func _yard_step(dt: float) -> void:
+	_yd_t -= dt
+	if _yd_t > 0.0 or lang == null or not ("lot_info" in main) or main.lot_info.is_empty() or not main.lot_info.has("yd"):
+		return
+	_yd_t = 0.5
+	if _yd0 == null:
+		_yd0 = main.lot_info["yd"].filter(func(e): return String(e[6]) == "")
+	var L := []
+	for o in lang.SO:
+		if YARD.has(o.id) and not o.wild and lang.so_shown(o):
+			L.append([o.gx, o.gy, o.fw, o.fd, YARD[o.id], 0, String(o.pc)])
+	var moving: int = ui.bdp.move_idx if ui != null and ui.bdp != null else -1
+	var O: Array = lang.objs()
+	for n in O.size():
+		var o = O[n]
+		if n == moving or not (o is Dictionary) or not YARD.has(String(o.get("id", ""))):
+			continue
+		var t = lang.Pi.get(o.id)
+		if t != null:
+			L.append([int(o.gx), int(o.gy), int(t.fw), int(t.fd), YARD[o.id], 0, ""])
+	var sg := str(L)
+	if sg == _yd_sig:
+		return
+	_yd_sig = sg
+	main.lot_info["yd"] = _yd0 + L
+	main._lot_apply()
+
 # cây lay (sprite_sway.gdshader): mỗi cây một pha cố định (như t.ph bản web) ghi vào kênh xanh dương của màu,
 # shader đọc pha đó, nên kéo map cây vẫn lay đều như lúc đứng yên (pha cũ tính theo tọa độ trên WebGL đổi theo camera -> giựt)
 const SWAY_A := 254.0 / 255.0
@@ -551,6 +586,7 @@ func _process(dt: float) -> void:
 	var tt := Time.get_ticks_msec() / 1000.0
 	var zz: float = main.zoom / maxf(1.0, main.dpr)
 	_sway_step(dt)
+	_yard_step(dt)
 	if lang_ve != null:
 		lang_ve.step()
 	_lp_step()
