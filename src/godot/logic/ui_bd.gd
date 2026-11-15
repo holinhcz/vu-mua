@@ -1557,16 +1557,56 @@ func _spots() -> void:   # mọi chỗ đặt được + ô tô xanh
 				for o in e.y:
 					ftiles[str(x + r) + "," + str(y + o)] = 1
 
-func _yb(k: String, x: int, y: int) -> void:   # yb: dời chỗ vẽ
+func _yb(k: String, x: int, y: int, full := true) -> void:   # yb: dời chỗ. full = false khi đang kéo: chỉ đổi số, hình dời bằng _flift
 	if is_pen(k):
 		G.g.fac[k] = [x, y]
-		lg().changed()
-		U.F.lang_ve.sync()
 	else:
 		var s: Dictionary = G.xw.sr[k]
 		s.gx = x
 		s.gy = y
-		U.F._xw_sync()
+	if full:
+		_fsync(k)
+
+func _fsync(k: String) -> void:   # dựng lại chỗ vẽ thật (nền dọn cây dưới xưởng, lớp vẽ): chỉ lúc thả tay / đặt / hủy, không theo từng ô kéo
+	if is_pen(k):
+		lg().changed()
+		U.F.lang_ve.sync()
+	U.F._xw_sync()
+
+# Xưởng / chuồng đang dời: nhấc lên + nhún (như món), kéo thì dời hình theo ngón tay, không dựng lại làng mỗi ô.
+var _fl_nodes := {}      # node đã dời -> chỗ gốc
+func _flift() -> void:
+	var on := mode == "fmove" and fac != "" and fmv == fac
+	var want := {}
+	if on:
+		var p := fpos(fac)
+		var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
+		var up := Vector2(0, -(LIFT + b))
+		if is_pen(fac):   # hình chuồng dựng ở chỗ cũ (khóa theo chỗ): dời theo chênh lệch tới chỗ đang chọn
+			var V = U.F.lang_ve
+			for key in V.cache:
+				if not String(key).begins_with("pen|" + fac + "|"):
+					continue
+				var q: PackedStringArray = String(key).trim_prefix("pen|" + fac + "|").trim_prefix("(").trim_suffix(")").split(",")
+				var d := Vector2(LN.en(p.x, p.y) - LN.en(float(q[0]), float(q[1])), LN.nn(p.x, p.y) - LN.nn(float(q[0]), float(q[1])))
+				for grp in V.cache[key]:
+					for sp in grp:
+						if is_instance_valid(sp):
+							want[sp] = d + (up if sp.z_index != -5 else Vector2.ZERO)   # nền chuồng nằm đất, chỉ dời
+		else:   # xưởng vẽ theo số chỗ (s.gx) nên chỉ cần nhấc
+			var xn = U.F.xnodes.get(fac)
+			if xn != null and is_instance_valid(xn):
+				want[xn] = up
+	for nd in _fl_nodes.keys():
+		if not is_instance_valid(nd):
+			_fl_nodes.erase(nd)
+		elif not want.has(nd):
+			nd.position = _fl_nodes[nd]
+			_fl_nodes.erase(nd)
+	for nd in want:
+		if not _fl_nodes.has(nd):
+			_fl_nodes[nd] = nd.position
+		nd.position = _fl_nodes[nd] + want[nd]
 
 func _y(w: Vector2, snap: bool) -> void:   # _y: theo ngón tay; chạm thì hút về chỗ xanh gần nhất (<= 3 ô)
 	if fac == "" or fmv != fac:
@@ -1586,7 +1626,8 @@ func _y(w: Vector2, snap: bool) -> void:   # _y: theo ngón tay; chạm thì hú
 		if best != null and bd <= 3.0:
 			r = Vector2i(best[0], best[1])
 			o = ""
-	_yb(fac, r.x, r.y)
+	if r != fpos(fac):
+		_yb(fac, r.x, r.y, gdrag == null)   # đang kéo: chỉ đổi số, thả tay mới dựng lại
 	if o != fwhy:
 		fwhy = o
 		_ps()
@@ -1702,6 +1743,8 @@ func world_up() -> bool:   # true = vừa kéo, bỏ chạm
 	gdrag = null
 	if mv and mode == "place":
 		_ps()
+	elif mv and mode == "fmove" and fac != "":
+		_fsync(fac)
 	return mv
 
 func _paint(w: Vector2, quiet: bool) -> bool:   # CM / EM / PM theo ô dưới ngón tay
@@ -1958,6 +2001,8 @@ func _draw_lo() -> void:
 				continue
 			_poly(ov_lo, _dia(x, y, 3.0), fill, line, 0.8)
 		_foot(fp.x, fp.y, fz.x, fz.y, FT_BAD if fwhy != "" else FT_OK)
+		if fmv == fac:
+			_shadow(fp.x, fp.y, fz.x, fz.y)
 	elif mode == "fsel" and fac != "":
 		var fp2 := fpos(fac)
 		var fz2 := fsize(fac)
@@ -2009,6 +2054,8 @@ func step(dt: float) -> void:
 	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
 		_lift()
+	if mode == "fmove" or not _fl_nodes.is_empty():
+		_flift()
 	_warm(dt)
 	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
