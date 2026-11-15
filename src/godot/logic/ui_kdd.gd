@@ -1,14 +1,12 @@
 extends "res://logic/ui_bang.gd"
-# KHO › ĐỒ DÙNG bản web (l() + f() trong .u2vw) và chip HUD bùa EXP (AF: .ddchips dưới hàng đầu bên trái).
+# KHO › ĐỒ DÙNG bản web (l() + f() trong .u2vw). Chip HUD bùa EXP (AF) thay bằng vòng hiệu ứng ui_bf.gd (bản 173).
 # Lưới thẻ .u2vg (bùa +50% EXP theo L3, thẻ "đang chạy" khi chỉ còn giờ, phần cơm hồi sức), khung chi tiết .u2vd ở đáy bảng
-# (Dùng / Ăn). Chip: "XP +50% h:mm:ss" (bấm mở Kho › Đồ dùng). Mẫu: ui/snap/kdd.json.
+# (Dùng / Ăn). Mẫu: ui/snap/kdd.json.
 
 var K := {}
 var sel := ""
 var dsig := ""
 var built := []
-var csig := ""
-var chips: Control = null
 
 const COL_DX := 61.9   # bước cột lưới (gap 6px ở zoom .75 + thẻ 57.4)
 const ROW_GAP := 4.5
@@ -199,39 +197,5 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 				G.nv.LF(eh)
 			G.mark()
 			dsig = ""
-			csig = ""
 			sync(ids)
-			chips_sync(), "scale")
-
-func chips_sync() -> void:   # AF: chip HUD "XP +50% h:mm:ss" (bấm mở Kho › Đồ dùng); chip phần cơm bỏ ở bản 172
-	var hl = U.hud_roots.get(".hudtl")
-	if hl == null or G.nv == null:
-		return
-	var n: float = G.nv.Fu()
-	var off: bool = G.w_all == null or G.w_all.WC._mode() == "off"
-	var sg := (PF(n) if n > 0.0 else "") + "|" + str(off)
-	if sg == csig and (chips == null or is_instance_valid(chips)):
-		return
-	csig = sg
-	if chips != null and is_instance_valid(chips):
-		chips.queue_free()
-	chips = null
-	if not off or n <= 0.0:
-		return
-	var d := _cl(K.chips)
-	var xp: Dictionary = d.kids[0]
-	var k := _kid(xp, "ddk")
-	var s := PF(n)
-	var dw := _tw(k, s) - _tw(k, String(k.text))
-	k.text = s
-	k.r[2] = float(k.r[2]) + dw
-	if k.has("tr"):
-		k.tr[2] = float(k.tr[2]) + dw
-	xp.r[2] = float(xp.r[2]) + dw
-	d.kids = [xp]
-	chips = U._build(d, {}, hl.r.position)
-	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hl.add(chips)
-	U._click(chips.kids()[0], func():
-		U.kho_open()
-		U._kho_tab(2), "scale")
+			U.bfp.sync(true), "scale")

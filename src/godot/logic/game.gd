@@ -505,7 +505,7 @@ func cook_done(t: String) -> bool:   # Ux job run
 	var n: Dictionary = g.pc
 	n.en = minf(en_max(), float(n.en) + int(a[3]))
 	if a[4] != null:
-		n.bf = {"k": a[4], "u": _now_ms() + int(a[5]) * 60000.0}
+		n.bf = {"k": a[4], "u": _now_ms() + int(a[5]) * 60000.0, "s": _now_ms()}   # s: lúc ăn (vòng hiệu ứng chạy hết dần)
 	n.ck = int(n.get("ck", 0)) + 1
 	if not (n.get("cks") is Dictionary):
 		n.cks = {}

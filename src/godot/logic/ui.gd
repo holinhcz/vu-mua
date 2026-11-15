@@ -30,7 +30,8 @@ var _t := 0.0
 var _vs := Vector2.ZERO
 var nvp = null               # bảng Sổ nhiệm vụ (ui_nv.gd)
 var bdp = null               # bảng XÂY DỰNG (ui_bd.gd)
-var kdp = null               # Kho › Đồ dùng, chip HUD (ui_kdd.gd)
+var kdp = null               # Kho › Đồ dùng (ui_kdd.gd)
+var bfp = null               # vòng hiệu ứng dưới ô giờ (ui_bf.gd)
 var setp = null              # bảng CÀI ĐẶT (ui_set.gd)
 var vlp = null               # bảng NHÀ DÂN (ui_vl.gd)
 var ngp = null               # bảng NGHỀ THỦ CÔNG (ui_ng.gd)
@@ -92,6 +93,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	bdp = load("res://logic/ui_bd.gd").new(self)
 	khp = load("res://logic/ui_kho.gd").new(self)
 	kdp = load("res://logic/ui_kdd.gd").new(self)
+	bfp = load("res://logic/ui_bf.gd").new(self)
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
 	G.kho_full.connect(_kho_full)
@@ -3585,8 +3587,8 @@ func _process(dt: float) -> void:
 				_lock_sync()
 		if kho_on:
 			_kho_sync()
-		if kdp != null:
-			kdp.chips_sync()
+		if bfp != null:
+			bfp.sync()
 		_hm_badge()
 		if od_on:
 			_ord_sync()
