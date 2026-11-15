@@ -527,6 +527,61 @@ func _yard_step(dt: float) -> void:
 	_yd_sig = sg
 	main.lot_info["yd"] = _yd0 + L
 	main._lot_apply()
+	_tracks_apply()
+
+# đường mòn đất (main._load_tracks, n/tr.json): mỗi đường đi từ sân một nhà có sẵn ra đường lớn (hoặc nối tiếp đường khác).
+# Nhà có sẵn dời / dọn đi thì bỏ đường mòn của nó và các đường nối tiếp.
+var _tr := []   # [{L: [Line2D x3], a: điểm đầu, pts, so: chỉ số lang.SO của nhà (-1: nối tiếp đường khác)}]
+
+func _tracks_apply() -> void:
+	if _tr.is_empty():
+		var root: Node = null
+		for c in main.get_children():
+			if c is Node2D and "track_mat" in main and c.material == main.track_mat and c.get_child_count() > 0:
+				root = c
+		if root == null:
+			_yd_sig = ""   # đường chưa tải xong: lần sau làm lại
+			return
+		var ls: Array = root.get_children()
+		for i in range(0, ls.size() - 2, 3):
+			var P: PackedVector2Array = ls[i].points
+			var a: Vector2 = P[0]
+			var t: Vector2 = to_tile(a)
+			var best := -1
+			var bd := 2.6
+			for j in lang.SO.size():
+				var o: Dictionary = lang.SO[j]
+				if o.wild or not YARD.has(o.id):
+					continue
+				var dx := maxf(0.0, maxf(float(o.gx) - t.x, t.x - float(o.gx + o.fw)))
+				var dy := maxf(0.0, maxf(float(o.gy) - t.y, t.y - float(o.gy + o.fd)))
+				var d := maxf(dx, dy)
+				if d < bd:
+					bd = d
+					best = j
+			_tr.append({"L": [ls[i], ls[i + 1], ls[i + 2]], "a": a, "pts": P, "so": best})
+	var off := {}
+	for k in _tr.size():
+		var e: Dictionary = _tr[k]
+		if e.so >= 0 and not lang.so_shown(lang.SO[e.so]):
+			off[k] = true
+	var more := true
+	while more:   # đường nối tiếp từ một đường đã bỏ
+		more = false
+		for k in _tr.size():
+			if off.has(k) or _tr[k].so >= 0:
+				continue
+			for q in off:
+				for p in _tr[q].pts:
+					if p.distance_to(_tr[k].a) < 4.0:
+						off[k] = true
+						more = true
+						break
+				if off.has(k):
+					break
+	for k in _tr.size():
+		for l in _tr[k].L:
+			l.visible = not off.has(k)
 
 # cây lay (sprite_sway.gdshader): mỗi cây một pha cố định (như t.ph bản web) ghi vào kênh xanh dương của màu,
 # shader đọc pha đó, nên kéo map cây vẫn lay đều như lúc đứng yên (pha cũ tính theo tọa độ trên WebGL đổi theo camera -> giựt)

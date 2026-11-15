@@ -129,9 +129,52 @@ func fg(x: int, y: int) -> String:   # loại đường trên ô ("" = không c�
 	var k := str(x) + "," + str(y)
 	if G.g.road.has(k):
 		return String(G.g.road[k])
-	if G.g.unroad.has(k):
+	if G.g.unroad.has(k) or dead_roads().has(k):
 		return ""
 	return uz(x, y)
+
+# đường cụt của làng dẫn vô nhà, chòi, đình, miếu có sẵn: dời món đó đi thì đường cụt cũng bỏ (từ ô cụt sát món, men theo
+# tới chỗ giao đường thì thôi)
+const HOUSE := {"hut": 1, "hutnho": 1, "pavilion": 1, "dinh": 1, "shrine": 1, "well": 1, "haystack": 1}
+var _dead := {}
+var _dead_sig := "-"
+
+func _deg(x: int, y: int) -> int:
+	var n := 0
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if uz(x + d.x, y + d.y) != "":
+			n += 1
+	return n
+
+func dead_roads() -> Dictionary:
+	var sig := str(G.g.mv.size())
+	if sig == _dead_sig:
+		return _dead
+	_dead_sig = sig
+	_dead = {}
+	for o in SO:
+		if o.wild or not HOUSE.has(o.id) or not G.g.mv.has(o.sk):
+			continue
+		var st := []
+		for a in range(-1, o.fw + 1):
+			for b in range(-1, o.fd + 1):
+				var inn: bool = a >= 0 and b >= 0 and a < o.fw and b < o.fd
+				var corner: bool = (a < 0 or a >= o.fw) and (b < 0 or b >= o.fd)
+				if inn or corner:
+					continue
+				var x: int = o.gx + a
+				var y: int = o.gy + b
+				if uz(x, y) != "" and _deg(x, y) == 1:
+					st.append(Vector2i(x, y))
+		while st.size():
+			var t: Vector2i = st.pop_back()
+			var k := str(t.x) + "," + str(t.y)
+			if _dead.has(k) or uz(t.x, t.y) == "" or _deg(t.x, t.y) >= 3:
+				continue
+			_dead[k] = 1
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				st.append(t + d)
+	return _dead
 
 func o2(x: int, y: int) -> bool:
 	return fg(x, y) != ""

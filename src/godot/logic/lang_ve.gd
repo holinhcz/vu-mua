@@ -446,10 +446,11 @@ class TileLayer extends Node2D:
 		var g: Dictionary = LG.G.g
 		var M = v.F.main
 		if M.has_method("road_set"):   # đường người chơi: bên nền vẽ bằng DUONG (ảnh dg2 9 px + viền + cỏ mép) như web
-			var sig := JSON.stringify([g.road, g.unroad])
+			var dead: Dictionary = LG.dead_roads()
+			var sig := JSON.stringify([g.road, g.unroad, dead])
 			if sig != _road_sig:
 				_road_sig = sig
-				M.road_set(g.road.duplicate(), g.unroad.keys())
+				M.road_set(g.road.duplicate(), g.unroad.keys() + dead.keys())
 		else:
 			_draw_roads(g)
 		for k in g.gt:
