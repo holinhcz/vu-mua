@@ -3289,7 +3289,7 @@ func chat_ctx(u, f: Dictionary, inv: bool) -> String:   # chatCtx
 		c.append("lau")
 	if c.is_empty() and _i(f.get("tim")) >= 3 and randf() < (0.6 if inv else 0.3):
 		c.append("than")
-	if c.is_empty() and wx in ["lu", "mua", "han", "giong"] and randf() < 0.45:
+	if c.is_empty() and wx in ["lu", "mua", "han"] and randf() < 0.45:
 		c.append(wx)
 	if c.is_empty() and randf() < 0.2:
 		c.append(["xuan", "he", "thu", "dong"][G.season()])

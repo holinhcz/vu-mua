@@ -14,7 +14,7 @@ var HMAX := 281.0          # .pbody scrollHeight - clientHeight của web (trừ
 # nút trong từng nhóm, theo thứ tự trái qua phải: [khoá G.cfg, các giá trị]
 const SEGS := {"#fsSeg": ["fs", [1, 0]], "#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
 	"#dSeg": ["d", ["real", "fast"]], "#xSeg": ["d", ["sang", "trua", "chieu", "dem"]], "#sSeg": ["s", ["auto", "0", "1", "2", "3"]],
-	"#wSeg": ["w", ["auto", "nang", "mua", "rao", "giong", "han"]]}
+	"#wSeg": ["w", ["auto", "nang", "mua", "rao", "han"]]}
 const HINT := "Chạm ô đất trống để chọn giống gieo, ô khô để tưới, ô chín để thu hoạch, hoặc vuốt qua nhiều ô để làm cả loạt. Nông sản trong kho cũng là hạt giống: nhớ chừa lại để gieo tiếp. Lên cấp mở thêm giống mới. Con giống mua ở Chợ phiên, chợ nổi sáng sớm. Chạm nút Xây dựng để mua cây, nhà, đồ trang trí."
 const T_SEA := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
 
@@ -90,31 +90,17 @@ func _init(ui) -> void:
 	Snap._move(wrow, Vector2(0, st))
 	var wS := _fid(wrow, "sSeg")
 	wS.id = "wSeg"
-	# 6 nút (thêm Mưa rào): 2 hàng 3 nút, rộng bằng nhau trong khung nhóm
-	var WL := ["Tự động", "Nắng đẹp", "Mưa dầm", "Mưa rào", "Giông bão", "Nắng hạn"]
-	var b0: Dictionary = wS.kids[0]
-	var bh := float(b0.r[3])
-	var bw := (float(wS.r[2]) - 2.0 * 4.5) / 3.0
-	var wk := []
-	for j in WL.size():
-		var bb: Dictionary = b0.duplicate(true)
-		Snap._move(bb, Vector2(float(wS.r[0]) + (j % 3) * (bw + 4.5) - float(bb.r[0]), float(wS.r[1]) + (j / 3) * (bh + 4.5) - float(bb.r[1])))
-		bb.r[2] = bw
-		_lbl(bb, WL[j])
-		wk.append(bb)
-	wS.kids = wk
-	var wex := bh + 4.5   # hàng nút thứ hai
-	wS.r[3] = float(wS.r[3]) + wex
-	wrow.r[3] = float(wrow.r[3]) + wex
+	for j in wS.kids.size():
+		_lbl(wS.kids[j], ["Tự động", "Nắng đẹp", "Mưa dầm", "Mưa rào", "Nắng hạn"][j])
 	_title(wrow, "Thời tiết")
 	var y0 := float(srow.r[1])
 	for k in pnd.kids:
 		if float(k.r[1]) > y0:
-			Snap._move(k, Vector2(0, st + wex))
+			Snap._move(k, Vector2(0, st))
 	pnd.kids.insert(pnd.kids.find(srow) + 1, wrow)
-	pnd.r[3] = float(pnd.r[3]) + st + wex
-	Snap._move(T.armed, Vector2(0, st + wex))
-	HMAX += st + wex
+	pnd.r[3] = float(pnd.r[3]) + st
+	Snap._move(T.armed, Vector2(0, st))
+	HMAX += st
 	# nút đang chọn / chưa chọn: lấy css từ nhóm Toàn màn hình (Bật chưa chọn, Tắt đang chọn)
 	var fs := _fid(T.pov, "fsSeg")
 	T.off = fs.kids[0].css
@@ -152,6 +138,8 @@ static func _fid(n: Dictionary, id: String) -> Dictionary:
 func _val(k: String):
 	if k == "fs":
 		return 1 if _tm else 0
+	if k == "w" and G.cfg[k] == "giong":   # cài đặt cũ: giông gộp vô mưa dầm
+		return "mua"
 	return G.cfg[k]
 
 # ------------------------------------------------------------------ mở / dựng

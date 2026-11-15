@@ -645,19 +645,7 @@ class TroiFX extends Node2D:
 		if tint is Array and tint.size() >= 4:
 			draw_rect(R, Color(tint[0] / 255.0, tint[1] / 255.0, tint[2] / 255.0, float(tint[3])))
 		var wx: String = str(st.get("wx", ""))
-		if wx == "giong":
-			draw_rect(R, Color(20 / 255.0, 30 / 255.0, 50 / 255.0, 0.2))
-			var c := Color(200 / 255.0, 225 / 255.0, 1.0, 0.55)
-			for i in 120:
-				var x := fmod(main.me_hash(i, 5) * (W + 120.0) + t * 140.0, W + 120.0) - 60.0
-				var y := fmod(main.me_hash(i, 6) * H + t * 560.0, H)
-				draw_line(Vector2(x, y), Vector2(x - 9.0, y + 15.0), c, 1.3, true)
-			var fl: float = float(st.get("flash", 0.0))
-			if fl > 0.0:
-				draw_rect(R, Color(235 / 255.0, 240 / 255.0, 1.0, 0.55 * fl * fl))
-			if fl > 0.7 and bolt.size() > 1:
-				draw_polyline(bolt, Color(1, 1, 1, 0.9), 2.0, true)
-		elif wx == "mua":   # (logic b165) mưa dầm: trời xám, mù xa, hạt mảnh rơi đều, hơi xiên
+		if wx == "mua":   # (logic b165) mưa dầm: trời xám, mù xa, hạt mảnh rơi đều, hơi xiên
 			var I := clampf(float(main.rain_rr) / 0.55, 0.0, 1.0)
 			draw_rect(R, Color(0.42, 0.47, 0.53, 0.16 * I))
 			for q in 6:
@@ -668,6 +656,12 @@ class TroiFX extends Node2D:
 				var x: float = fmod(main.me_hash(i, 5) * (W + 40.0) + t * 40.0, W + 40.0) - 20.0
 				var y: float = fmod(main.me_hash(i, 6) * (H + 20.0) + t * sp, H + 20.0) - 10.0
 				draw_line(Vector2(x, y), Vector2(x - 2.0, y + 9.0), cm, 0.8, true)
+			# (logic b167) giông bỏ: sấm chớp, tia sét về mưa dầm
+			var fl: float = float(st.get("flash", 0.0))
+			if fl > 0.0:
+				draw_rect(R, Color(235 / 255.0, 240 / 255.0, 1.0, 0.55 * fl * fl))
+			if fl > 0.7 and bolt.size() > 1:
+				draw_polyline(bolt, Color(1, 1, 1, 0.9), 2.0, true)
 		elif wx == "rao":   # (logic b165) mưa rào: tối hơn, hạt dày to rơi nhanh, nước bắn tung trên đất
 			var I := clampf(float(main.rain_rr), 0.0, 1.0)
 			draw_rect(R, Color(0.1, 0.14, 0.2, 0.2 * I))

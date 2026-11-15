@@ -1336,8 +1336,8 @@ func _jg_c(id: String) -> bool:   # jg[i].c() (bọc _Z: lỗi = false)
 		return bool(f.call())
 	var g: Dictionary = G.g
 	match id:
-		"wx": return G.troi != null and (G.troi.cur == "mua" or G.troi.cur == "giong")
-		"giong": return G.troi != null and G.troi.cur == "giong"
+		"wx": return G.troi != null and (G.troi.cur == "mua" or G.troi.cur == "rao")
+		"giong": return G.troi != null and G.troi.cur == "mua" and G.troi.flash > 0.0
 		"han": return G.troi != null and G.troi.cur == "han"
 		"met": return float(g.pc.en) < G.en_max() * 0.2
 		"buff": return G.bh() != ""

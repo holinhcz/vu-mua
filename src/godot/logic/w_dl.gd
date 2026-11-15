@@ -180,7 +180,7 @@ func z5() -> Array:   # z5: món bày sạp (có trong kho, nhiều trước, t�
 func __(t: Dictionary) -> void:   # __: tới một chỗ ghé
 	var a: Dictionary = t.cur
 	var n: int = t.m.size()
-	var e: bool = G.troi != null and (G.troi.cur == "mua" or G.troi.cur == "giong")
+	var e: bool = G.troi != null and (G.troi.cur == "mua" or G.troi.cur == "rao")
 	var r: Dictionary = t.m[0]
 	t.act = a.k
 	t.t = 14.0 if a.k == "ben" else 9.0 + randf() * 4.0

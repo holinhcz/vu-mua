@@ -18,9 +18,8 @@ var hh := -1.0         # web hh: đè giờ (thử)
 var force := ""        # đè thời tiết (thử)
 
 const BAO := {"nang": "Trời tạnh, nắng đẹp trở lại.",
-	"mua": "Mưa dầm rả rích cả buổi: ruộng vườn thấm nước dần, khỏi tưới. Đi lại chậm hơn, mặc Áo mưa (Tủ đồ) để đi nhanh.",
+	"mua": "Mưa dầm rả rích cả buổi, có sấm sét: ruộng vườn thấm nước dần, khỏi tưới. Gió có thể quật ngã cây, nhớ ra dọn.",
 	"rao": "Mưa rào ào xuống! Ruộng vườn no nước ngay. Mưa mau tạnh thôi.",
-	"giong": "Giông bão kéo tới! Ruộng được tưới no nước nhưng gió quật ngã cây, nhớ ra dọn.",
 	"han": "Nắng hạn gắt: ruộng khô nhanh gấp rưỡi, nhớ tưới thường xuyên. Đặt lu nước, giếng gần ruộng cho đỡ."}
 # kX: hình đồng hồ theo buổi
 const KX := {
@@ -28,7 +27,7 @@ const KX := {
 	"dawn": '<svg viewBox="0 0 24 24"><path d="M5 16a7 7 0 0 1 14 0z" fill="#ffb347" stroke="#d9822b" stroke-width="1.2"/><path d="M2.5 19.5h19" stroke="#8a6a4a" stroke-width="2" stroke-linecap="round"/><path d="M12 4.5v3M4.8 8.3l2 2M19.2 8.3l-2 2" stroke="#f0a060" stroke-width="2" stroke-linecap="round"/></svg>',
 	"dusk": '<svg viewBox="0 0 24 24"><path d="M5 16a7 7 0 0 1 14 0z" fill="#ff8a4c" stroke="#c4562a" stroke-width="1.2"/><path d="M2.5 19.5h19" stroke="#7a5a4a" stroke-width="2" stroke-linecap="round"/><path d="M8 21.5h8" stroke="#c4562a" stroke-width="1.6" stroke-linecap="round"/></svg>',
 	"night": '<svg viewBox="0 0 24 24"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" fill="#f2e6a8" stroke="#bfae5a" stroke-width="1.2" stroke-linejoin="round"/><circle cx="17.6" cy="6" r="1" fill="#f2e6a8"/><circle cx="20.4" cy="9.4" r="0.7" fill="#f2e6a8"/></svg>'}
-const TEN := {"nang": "Nắng đẹp", "mua": "Mưa dầm", "rao": "Mưa rào", "giong": "Giông bão", "han": "Nắng hạn"}
+const TEN := {"nang": "Nắng đẹp", "mua": "Mưa dầm", "rao": "Mưa rào", "han": "Nắng hạn"}
 
 # mG(night): bảng màu ngày / đêm; gX[mùa] đè lên một số màu
 const MG := {"skyA": ["#8fd0f5", "#07122a"], "skyB": ["#eaf6e4", "#1a3a3d"], "grassA": ["#99cc56", "#2f6e44"], "grassB": ["#92c752", "#2a653d"],
@@ -95,22 +94,24 @@ func wx() -> String:
 
 func rainy() -> bool:   # DB
 	var t := wx()
-	return t == "mua" or t == "giong" or t == "rao"
+	return t == "mua" or t == "rao"
 
 func dry_k() -> float:   # VB: hạn thì đất khô nhanh gấp rưỡi (1,6)
 	return 1.6 if wx() == "han" else 1.0
 
 func walk_k() -> float:   # KB: mưa dầm x0,85, mưa rào / giông x0,7 (chưa có áo mưa ở bản Godot)
-	return 0.7 if cur == "giong" or cur == "rao" else (0.85 if cur == "mua" else 1.0)
+	return 0.7 if cur == "rao" else (0.85 if cur == "mua" else 1.0)
 
 func rain() -> float:   # oj: lượng mưa cho shader nền
 	return _rain_of(vwx())
 
 static func _rain_of(w: String) -> float:
-	return 1.0 if w == "giong" or w == "rao" else (0.55 if w == "mua" else 0.0)
+	return 1.0 if w == "rao" else (0.55 if w == "mua" else 0.0)
 
 func vwx() -> String:   # thời tiết để VẼ: Cài đặt › Thời tiết (xem thử) đè lên, luật vẫn theo cur
 	var w := String(G.cfg.get("w", "auto"))
+	if w == "giong":   # cài đặt cũ (trước bản 167)
+		w = "mua"
 	return cur if w == "auto" else w
 
 func step(dt: float) -> void:
@@ -122,7 +123,7 @@ func step(dt: float) -> void:
 	bao.step(dt)
 	_it -= dt
 	if _it > 0.0:
-		if vwx() == "giong":
+		if vwx() == "mua":
 			_iq(dt)
 	else:
 		_it = 1.0
@@ -137,10 +138,13 @@ func step(dt: float) -> void:
 				G.toast.emit(BAO[n])
 			G.changed.emit()
 		var w: Dictionary = bao.wx()
-		if n == "giong" and int(w.fs) != a:
+		if a != slot:
+			slot = a
+			struck = false   # mỗi buổi mưa dầm sét đánh cây tối đa 1 lần
+		if n == "mua" and int(w.fs) != a:
 			w.fs = a
 			bao.storm(first)
-		if n == "mua" or n == "giong" or n == "rao":
+		if n == "mua" or n == "rao":
 			var ch := false
 			for f in G.g.plots:
 				if f.c != null and not G.ripe(f) and float(f.w) < G.water_hold(f) * 0.9:
@@ -160,11 +164,11 @@ func step(dt: float) -> void:
 		"flash": flash, "bolt": bao.bolt, "season": sea, "pal": pal(d.night, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
 
 func _iq(dt: float) -> void:
-	# giông: chớp mỗi 5–13 giây, sấm sau 0,4–1,6 giây
+	# mưa dầm: chớp mỗi 20–45 giây, sấm sau 0,4–1,6 giây
 	fT -= dt
 	if fT > 0.0:
 		return
-	fT = randf_range(5.0, 13.0)
+	fT = randf_range(20.0, 45.0)
 	flash = 1.0
 	thT = randf_range(0.4, 1.6)
 	if not struck and randf() < 0.12:

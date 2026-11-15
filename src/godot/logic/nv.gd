@@ -113,7 +113,7 @@ func jr() -> int:
 
 # ------------------------------------------------------------------ thời tiết (Wd) và lễ (Mm)
 const WB := [[0.68, 0.2, 0.05, 0.07], [0.42, 0.16, 0.16, 0.26], [0.32, 0.4, 0.22, 0.06], [0.66, 0.12, 0.04, 0.18]]
-const TQ := ["nang", "mua", "giong", "han"]
+const TQ := ["nang", "mua", "mua", "han"]   # giông bỏ (bản 167): phần của giông gộp vô mưa dầm
 const FEST := [[0, 1], [1, 6], [2, 7], [3, 4]]   # Tết, Vu Lan, Trung Thu, Kỳ Yên: [mùa, ngày]
 
 static func fest_day(a: int) -> bool:   # nN(a)
@@ -140,7 +140,7 @@ static func Hx(t: int) -> String:
 			return TQ[l]
 	return "nang"
 
-# Mưa dầm: rả rích cả buổi 6 tiếng. Giông: 2 tiếng đầu buổi. Mưa rào (rao): buổi nắng (không phải hạn) có khi đổ một trận
+# Mưa dầm: rả rích cả buổi 6 tiếng, có sấm chớp, sét đánh / gió quật ngã cây. Mưa rào (rao): buổi nắng (không phải hạn) có khi đổ một trận
 # ngắn 20-40 phút, giờ nào trong buổi theo số cố định của buổi (mọi máy như nhau); trưa chiều mùa hạ, mùa thu hay gặp.
 const RAO_P := [0.12, 0.3, 0.24, 0.05]
 
@@ -148,8 +148,6 @@ func Wd() -> String:
 	var h := hour()
 	var sl: int = G.day() * 4 + int(floor(h / 6.0))
 	var k := Hx(sl)
-	if k == "giong" and fposmod(h, 6.0) >= 2.0:
-		return "nang"
 	if k == "nang" and rao_in(sl, fposmod(h, 6.0)):
 		return "rao"
 	return k
@@ -278,13 +276,13 @@ func _ok(id: String) -> bool:
 
 func _w(id: String, x: Dictionary) -> float:
 	match id:
-		"water": return 4.0 if x.wx == "han" else (0.0 if x.wx == "mua" or x.wx == "giong" or x.wx == "rao" else 1.0)
+		"water": return 4.0 if x.wx == "han" else (0.0 if x.wx == "mua" or x.wx == "rao" else 1.0)
 		"fish": return 3.0 if x.wx == "mua" else 1.0
 		"tharvest": return 3.0 if x.sea == 1 else 1.0
 		"scn": return 2.0 if x.sea == 0 else 1.0
 		"dd": return 4.0
 		"bun": return 3.0 if x.wx == "mua" else 1.0
-		"lo": return 3.0 if x.wx == "mua" or x.wx == "giong" else 1.0
+		"lo": return 3.0 if x.wx == "mua" else 1.0
 	return 1.0
 
 func task_f(t: Dictionary) -> int:   # t.f()
