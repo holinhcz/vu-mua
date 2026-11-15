@@ -55,6 +55,7 @@ var hov = null           # Mt.rg / Mt.ng / Mt.mq: ô đang chỉ
 var last_k := ""         # wb / Sb / Ab: ô vừa tô khi kéo
 var paint = null         # đang giữ kéo để lát / tô / trồng
 var tier_i := -1         # Mt.tier
+var bd_focus := false
 var gdrag = null         # kéo xưởng / chuồng / món bằng ngón tay
 var T := {}
 var pov: Control = null
@@ -247,6 +248,10 @@ func _ps() -> void:
 	else:
 		tier_i = st
 	_ov()
+	var fo := mode != "off" and mode != "shop"   # đang đặt / dời / chọn món: giấu nút HUD dưới đáy (bảng dưới không bị lòi nút)
+	if fo != bd_focus:
+		bd_focus = fo
+		U._set_focus(fo)
 	if mode == "shop":
 		var sg := _shop_sig()
 		var c = shop_c.get(cat)
@@ -1006,7 +1011,7 @@ func _build_sheet() -> void:
 		var poor: bool = not mv and int(G.g.coins) < int(Wt.cost) and L.pg(id) == 0
 		var h := _small(bi, 1)
 		var bad: Dictionary = _small(Snap.find(T.bpl_bad, "bi"), 1)
-		h.text = why if why != "" else ("Cần " + G.fmt_n(int(Wt.cost)) + " xu" if poor else ("Chạm đất để đổi chỗ, rồi bấm Dời." if mv else "Chạm đất để chọn chỗ."))
+		h.text = why if why != "" else ("Cần " + G.fmt_n(int(Wt.cost)) + " xu" if poor else ("Kéo món hoặc chạm đất để đổi chỗ." if mv else "Kéo món hoặc chạm đất để chọn chỗ."))
 		h.erase("tr")
 		if why != "" or poor:
 			h.css = bad.css.duplicate()
@@ -1023,8 +1028,9 @@ func _build_sheet() -> void:
 		if Wt.get("rot", ""):
 			B.append({"t": "Xoay"})
 			acts.append(func(): id = String(L.Pi[id].rot); k5(gx, gy); _ps())
-		B.append({"t": "Hủy dời" if mv else "Món khác"})
-		acts.append(iz)
+		if not mv:   # đang dời: nút X đóng là hủy dời rồi, khỏi thêm nút trùng
+			B.append({"t": "Món khác"})
+			acts.append(iz)
 		_btns(n, B)
 		icon = ["id", id, seed]
 	elif mode == "sel":
@@ -1095,9 +1101,12 @@ func _build_sheet() -> void:
 			var hs: Dictionary = _fid(T.bdm if fwhy != "" else T.bdf, "fHint")
 			h.css = hs.css.duplicate()
 			h.cls = "bad" if fwhy != "" else ""
-			h.text = fwhy if fwhy != "" else "Chạm hoặc kéo tới chỗ tô xanh, rồi bấm Dời đến đây."
+			h.text = fwhy if fwhy != "" else ("Kéo hoặc chạm tới chỗ tô xanh, rồi bấm Xây." if buy else "Kéo hoặc chạm tới chỗ tô xanh để đổi chỗ.")
 			h.erase("tr")
 			acts = [mm if fwhy == "" else Callable(), zy]
+			if not buy:   # dời: X là hủy dời, chỉ giữ nút Dời đến đây
+				_btns(n, [{"t": "Dời đến đây", "k": "primary", "id": "fPut", "off": fwhy != ""}])
+				acts = [mm if fwhy == "" else Callable()]
 			if buy:
 				icon = ["pen", fac] if is_pen(fac) else ["wt", String(G.xw.sr[fac].type)]
 		else:
@@ -1846,6 +1855,12 @@ func _view_rect() -> Rect2:
 	var vp: Vector2 = U.get_viewport().get_visible_rect().size
 	return Rect2(U.main.cam - Vector2(40, 30), vp / U.main.zoom + Vector2(80, 60))
 
+const GR_R := 5.0   # lưới chỗ đặt: chỉ hiện quanh món đang đặt / dời, mờ dần ra ngoài (không phủ trắng cả làng)
+
+static func _gr_fade(dx: float, dy: float) -> float:
+	var d := sqrt(dx * dx + dy * dy)
+	return clampf((GR_R - d) / (GR_R - 2.0), 0.0, 1.0)
+
 func _draw_lo() -> void:
 	var L = lg()
 	var vr := _view_rect()
@@ -1859,9 +1874,13 @@ func _draw_lo() -> void:
 		var x1 := int(ceil(maxf(maxf(t0.x, t1.x), maxf(t2.x, t3.x))))
 		var y0 := int(floor(minf(minf(t0.y, t1.y), minf(t2.y, t3.y))))
 		var y1 := int(ceil(maxf(maxf(t0.y, t1.y), maxf(t2.y, t3.y))))
-		if (x1 - x0) * (y1 - y0) < 20000:
-			var fill := Color(1, 1, 1, 0.13)
-			var line := Color(1, 1, 1, 0.4)
+		var cx := gx + float(a.fw) / 2.0
+		var cy := gy + float(a.fd) / 2.0
+		x0 = maxi(x0, int(floor(cx - GR_R)))
+		x1 = mini(x1, int(ceil(cx + GR_R)))
+		y0 = maxi(y0, int(floor(cy - GR_R)))
+		y1 = mini(y1, int(ceil(cy + GR_R)))
+		if x1 >= x0 and y1 >= y0:
 			var wt := str(a.get("water", ""))
 			for e in range(y0, y1 + 1):
 				for n in range(x0, x1 + 1):
@@ -1869,6 +1888,11 @@ func _draw_lo() -> void:
 					var o := 968.0 + (n + e) * 16.0
 					if r + 34 < vr.position.x or r - 34 > vr.end.x or o + 34 < vr.position.y or o - 2 > vr.end.y:
 						continue
+					var gf := _gr_fade(n + 0.5 - cx, e + 0.5 - cy)
+					if gf <= 0.0:
+						continue
+					var fill := Color(1, 1, 1, 0.07 * gf)
+					var line := Color(1, 1, 1, 0.26 * gf)
 					var l: String = L.zv(n, e, move_idx)
 					if l == "" and a.get("onroad", 0) and L.lz(n, e, move_idx):
 						l = "land"
@@ -1895,12 +1919,19 @@ func _draw_lo() -> void:
 		var q := PackedVector2Array([Vector2(LN.en(E, C2), LN.nn(E, C2)), Vector2(LN.en(E + 0.5, C2), LN.nn(E + 0.5, C2)), Vector2(LN.en(E + 0.5, C2 + 0.5), LN.nn(E + 0.5, C2 + 0.5)), Vector2(LN.en(E, C2 + 0.5), LN.nn(E, C2 + 0.5))])
 		_poly(ov_lo, q, Color(226 / 255.0, 70 / 255.0, 56 / 255.0, 0.5) if w != "" else Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.5), Color.WHITE, 1.4)
 	elif mode == "fmove":
-		var fill := Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.30)
-		var line := Color(1, 1, 1, 0.55)
+		var fp := fpos(fac)
+		var fz := fsize(fac)
+		var cx := fp.x + fz.x / 2.0
+		var cy := fp.y + fz.y / 2.0
 		for key in ftiles:
 			var p: PackedStringArray = String(key).split(",")
 			var x := float(p[0])
 			var y := float(p[1])
+			var gf := _gr_fade(x + 0.5 - cx, y + 0.5 - cy)
+			if gf <= 0.0:
+				continue
+			var fill := Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.22 * gf)
+			var line := Color(1, 1, 1, 0.4 * gf)
 			var e := 4268.0 + (x - y) * 32.0
 			var r := 968.0 + (x + y) * 16.0
 			if e + 34 < vr.position.x or e - 34 > vr.end.x or r + 34 < vr.position.y or r - 2 > vr.end.y:
@@ -1959,18 +1990,14 @@ func _draw_hi() -> void:   # Mj: khung ô + mũi tên nhún
 			var q := _dia(n + o, e + l, 1.0)
 			q.append(q[0])
 			ov_hi.draw_polyline(q, Color(0, 0, 0, 0.35), 4.0, true)
-			ov_hi.draw_polyline(q, Color("#ffd9d4") if r else Color.WHITE, 2.0, true)
+			ov_hi.draw_polyline(q, f if mode == "place" or mode == "fmove" else Color.WHITE, 2.0, true)   # đang đặt / dời: viền xanh đặt được, đỏ bị vướng
 	var x := LN.en(n + fw / 2.0, e + fd / 2.0)
 	var k := LN.nn(n + fw / 2.0, e + fd / 2.0)
 	var c := k - 22.0
 	if top == null:
 		c = k - 70.0
 	elif top[0] != "pond":
-		var V = U.F.lang_ve
-		var m: Dictionary = U.F.P.meta(V.bundle(top[0]))
-		var rr = m.get(V.key_for(top[0], top[1]))
-		if rr != null:
-			c = minf(c, k + float(rr[1]) - 4.0)
+		c = minf(c, k + U.F.lang_ve.top_of({"id": top[0], "seed": top[1]}) - 6.0)   # mũi tên nằm trên đỉnh món, không đè lên món
 	var bob := 0.0 if G.motion_off() else sin(t * 5.0) * 3.0
 	var le: float = U.F.sign_le()
 	ov_hi.draw_set_transform(Vector2(x, c + bob), 0.0, Vector2(le, le))
