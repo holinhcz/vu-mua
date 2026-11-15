@@ -39,6 +39,12 @@ func close() -> void:
 		box.queue_free()
 		box = null
 	inner = null
+	_shell_key = ""
+	for k in _pool:
+		var c0 = _pool[k][0]
+		if is_instance_valid(c0):
+			c0.queue_free()
+	_pool = {}
 
 func _build() -> void:   # bảng con dựng lại
 	pass
@@ -158,6 +164,7 @@ func _show(n: Dictionary, vt: Dictionary, blocks: Array, top := 7.5) -> void:
 	var prev := ""
 	var kids := []
 	for b in blocks:
+		b.key = JSON.stringify(b)   # khoá giữ khối (_mount): lấy lúc khối còn ở chỗ mẫu, dời chỗ không làm đổi khoá
 		var k := String(b.cls).split(" ")[0]
 		if kids.size():
 			y += float(b.get("gap", 4.5 if prev == "vl-sec" else (12.0 if k == "vl-sec" else 6.0)))
@@ -175,38 +182,107 @@ static func _ovl(n: Dictionary) -> Dictionary:   # lớp tối .lvov thành lớ
 	bk.css["z-index"] = "auto"   # lớp tối vẽ trước hộp
 	return {"tag": "div", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "r": n.r, "kids": [bk] + n.kids}
 
-# gắn khối đã xếp (kids, tọa độ tuyệt đối) vào vùng cuộn vt: phần cuộn bắt đầu ở y0, cao ch; top = lề trên trước y0
+# gắn khối đã xếp (kids, tọa độ tuyệt đối) vào vùng cuộn vt: phần cuộn bắt đầu ở y0, cao ch; top = lề trên trước y0.
+# GIỮ ĐỒ ĐÃ DỰNG: khung bảng (mọi thứ trừ khối trong thân) chỉ dựng lại khi nó đổi (_shell_key); mỗi khối giữ theo khoá nội
+# dung (_pool, khoá lấy lúc khối còn ở chỗ mẫu: "key" do _show đặt), khối không đổi thì gắn lại nút cũ, chỉ dời chỗ. Nút bấm
+# đọc việc cần làm lúc bấm (meta "snap".act), nên khối dùng lại vẫn làm đúng việc mới. Trước đây đổi gì cũng xoá cả bảng
+# rồi dựng lại hết.
+var shell_new := true      # lần _mount vừa rồi có dựng lại khung không (bảng con nối nút khung chỉ khi true)
+var _shell_key := ""
+var _pool := {}            # khoá khối -> [Control, ids của khối]
+
 func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, top := 0.0) -> void:
-	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch], "css": {"display": "block", "position": "static"}, "kids": kids}
+	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch], "css": {"display": "block", "position": "static"}, "kids": []}
 	vt.kids = [inn]
 	_area = String(vt.cls).split(" ")[0]
 	hmax = maxf(0.0, ch + top - float(vt.r[3]))
 	scroll = clampf(scroll, 0.0, hmax)
-	var old := box
-	ids = {}
-	box = U._build(n, ids)
-	U.root.add_child(box)
+	var sk := JSON.stringify(n)
+	shell_new = box == null or not is_instance_valid(box) or sk != _shell_key
+	if shell_new:
+		for k in _pool:   # khối giữ lại: gỡ khỏi khung cũ trước khi bỏ khung
+			var c0 = _pool[k][0]
+			if is_instance_valid(c0) and c0.get_parent() != null:
+				c0.get_parent().remove_child(c0)
+		_shell_key = sk
+		var old := box
+		ids = {}
+		box = U._build(n, ids)
+		U.root.add_child(box)
+		if old != null and is_instance_valid(old):
+			U.anchors.erase(U._anchor_of(old))
+			old.queue_free()
+		U.anchors.append([box, 0.5, 0.5])
+		U._click(ids.get("#pClose"), close, "scale")
+		var bk = ids.get(".pbk")
+		if bk != null:
+			U._stop(bk)
+			bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
+		var win = ids.get(".pwin")
+		if win != null:
+			U._stop(win)
+		var vb: Control = ids.get("." + _area)
+		if vb != null:
+			vb._kids.clip_contents = true
+		_wire(box)
 	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
 		U.root.move_child(U.help_pop, -1)
-	if old != null:
-		U.anchors.erase(U._anchor_of(old))
-		old.queue_free()
-	U.anchors.append([box, 0.5, 0.5])
-	U._click(ids.get("#pClose"), close, "scale")
-	var bk = ids.get(".pbk")
-	if bk != null:
-		U._stop(bk)
-		bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
-	var win = ids.get(".pwin")
-	if win != null:
-		U._stop(win)
-	var vb: Control = ids.get("." + _area)
-	if vb != null:
-		vb._kids.clip_contents = true
 	inner = ids.get(".vlin")
 	in0 = inner.r.position if inner != null else Vector2.ZERO
+	var io := Vector2(float(inn.r[0]), float(inn.r[1]))
+	var used := {}
+	for k in kids:
+		var key0: String = String(k.get("key", "")) if k.has("key") else JSON.stringify(k)
+		var key := key0
+		var dup := 1
+		while used.has(key):   # hai khối giống hệt: khoá riêng
+			dup += 1
+			key = key0 + "#" + str(dup)
+		used[key] = 1
+		var e = _pool.get(key)
+		var node: Control = null
+		if e != null and is_instance_valid(e[0]):
+			node = e[0]
+			if node.get_parent() != null:
+				node.get_parent().remove_child(node)
+			_re_act(node, k)
+			ids.merge(e[1], true)
+		else:
+			var bid := {}
+			node = U._build(k, bid, io)
+			_wire(node)
+			ids.merge(bid, true)
+			_pool[key] = [node, bid]
+		if inner != null:
+			inner.add(node)
+		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
+	for key in _pool.keys():   # khối không còn: bỏ
+		if not used.has(key):
+			var c1 = _pool[key][0]
+			if is_instance_valid(c1):
+				c1.queue_free()
+			_pool.erase(key)
 	_scroll_to(scroll)
-	_wire(box)
+
+static func _acts(n: Dictionary, out: Array) -> Array:   # các khối có việc bấm, theo thứ tự dựng
+	if n.has("act"):
+		out.append(n)
+	for k in n.get("kids", []):
+		_acts(k, out)
+	return out
+
+static func _act_nodes(b: Control, out: Array) -> Array:
+	if b.get_meta("snap", {}).has("act"):
+		out.append(b)
+	for k in b.kids():
+		_act_nodes(k, out)
+	return out
+
+func _re_act(node: Control, k: Dictionary) -> void:   # khối dùng lại: trỏ nút bấm sang việc của bản mới
+	var A := _acts(k, [])
+	var B := _act_nodes(node, [])
+	for q in mini(A.size(), B.size()):
+		B[q].set_meta("snap", A[q])
 
 func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Dictionary) -> void:   # hàng tab .khseg: L = [[khóa, chữ, chấm?]]
 	var K: Array = seg.kids
@@ -264,13 +340,18 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bản dựng
 	var n: Dictionary = b.get_meta("snap", {})
 	if n.has("act"):
-		U._click(b, _on.bind(n.act), "down")
+		U._click(b, _on_b.bind(b), "down")
 	if n.has("ic"):
 		var t: Texture2D = U.item_ic(String(n.ic), float(b.r.size.x) * Css.K)
 		if t != null:
 			b.pic(t, Rect2(Vector2.ZERO, b.r.size))
 	for k in b.kids():
 		_wire(k)
+
+func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối dùng lại có việc mới)
+	var n: Dictionary = b.get_meta("snap", {})
+	if n.get("act") is Callable:
+		_on(n.act)
 
 func _on(cb: Callable) -> void:
 	if moved_t:

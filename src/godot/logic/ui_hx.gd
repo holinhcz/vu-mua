@@ -33,6 +33,9 @@ func _tre_box(wr: Dictionary) -> void:   # khung tre đè lên mép hộp, nút 
 var _wsel := ".hxwrap"
 func _wire_ov(wsel: String) -> void:   # nút ×, nút ?, bấm ra ngoài hộp wsel thì đóng
 	_wsel = wsel
+	if not shell_new:   # khung giữ nguyên: nút đã nối
+		U._layout()
+		return
 	U._click(ids.get(".ngx"), close, "scale")
 	U._click(ids.get(".treq"), func(): U.tre_help(help[0], help[1]), "scale")
 	var o = ids.get(".lvov")

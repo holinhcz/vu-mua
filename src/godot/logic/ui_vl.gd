@@ -75,10 +75,11 @@ func _build() -> void:
 		Snap._move(seg, Vector2(0, dy))
 		vt.r = [vt.r[0], float(vt.r[1]) + dy, vt.r[2], float(vt.r[3]) - dy]
 	var blocks: Array = _chat() if ky == "chat" else (_gift() if ky == "gift" else _body(f))
+	n["_nt"] = G.night   # mặt người đổi ngày / đêm: dựng lại khung
 	_show(n, vt, blocks)
 	# mặt người (canvas bx của web: hình chụp sẵn theo áo f.lk, ngày / đêm)
 	var fc: Control = ids.get(".vl-face")
-	if fc != null:
+	if fc != null and shell_new:
 		var lk := clampi(W._i(f.get("lk")), 0, 7)
 		fc.pic(Css.image("res://ui/img/vlface/" + str(lk) + ("n" if G.night else "") + ".webp"), Rect2(Vector2.ZERO, fc.r.size))
 	U._layout()
