@@ -132,6 +132,7 @@ func _rao_done() -> void:
 			f.w = G.water_hold(f)
 	if G.w_all != null and G.lang != null:
 		G.w_all.WR.zb(true)
+		G.w_all.WR.yg()
 	G.mark()
 	_it = 0.0
 

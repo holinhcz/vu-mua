@@ -1,6 +1,6 @@
 extends RefCounted
 # Ruộng, cây ăn trái, mưa, nước mặn, thời tiết, đất: chép 1:1 luật bản web.
-#   mưa rào g.rain (đuôi vw + uG), cây ăn trái g.objs[].fp/fw (fq, Ql, zb, qM, X5, pu, Oj, Ib, Hb, Hj, Ax),
+#   cây ăn trái g.objs[].fp/fw (fq, Ql, zb, qM, X5, pu, Oj, Ib, Hb, Hj, Ax),
 #   hạn mặn g.man (B4, V6, $R, YR, JR, TZ, tO, aO, SZ, N4, LC, AC, MZ, O0, u7, EZ, LZ),
 #   ốc gạo mùa nước nổi g.plots[].oc (GY, qs), gà vịt bới ruộng (Y0: Hq, BD, _M, dx, ax),
 #   giống lai g.lai (z4, W6, MC, laiH, laiAdd, xZ, yZ, sdN, sdUse, qf), tổ ong g.lang.hive (TD, Lq, Sq, Eq, MD),
@@ -141,19 +141,11 @@ func _hrl() -> Array:   # Hr: món đặt có hình (gx, gy, fw, fd, idx, id)
 	return _hr
 
 # ------------------------------------------------------------------ mỗi lượt luật (vw) và mỗi khung hình
-func step(t: float, offline: bool) -> void:   # vw (đuôi: fq, Rq->TD, g.rain)
-	# đuôi vw(t, a): fq(t); Rq -> TD(t) khi có g.lang; mưa rào g.rain
+func step(t: float, _offline: bool) -> void:   # vw (đuôi: fq, Rq->TD)
+	# đuôi vw(t, a): fq(t); Rq -> TD(t) khi có g.lang. Mưa rào ngầm g.rain (uG) bỏ ở bản 169: mưa rào là trận mưa thật của troi.gd
 	fq(t)
 	if G.g.get("lang") is Dictionary:
 		td(t)
-	if not _num(G.g.get("rain")):
-		G.g.rain = 150.0
-	G.g.rain = float(G.g.rain) - t
-	if float(G.g.rain) <= 0.0:
-		if not offline and not rain_shower():
-			G.g.rain = 40.0
-		else:
-			G.g.rain = 150.0 + randf() * 150.0
 
 func frame(dt: float) -> void:   # ui({step}) mỗi khung: man SZ, cau GY, QD Hq, sao qH, dongbo oJ
 	# các bước ui({step}) của web chạy mỗi khung hình: man (SZ), cau (GY), làng (Hq), sao (qH), dongbo (oJ)
@@ -175,28 +167,9 @@ func frame(dt: float) -> void:   # ui({step}) mỗi khung: man SZ, cau GY, QD Hq
 			_ta(_qh_msg)
 			_qh_msg = ""
 
-# ------------------------------------------------------------------ mưa rào
-func qb() -> bool:   # QB: đang nắng hạn
-	return G.troi != null and G.troi.wx() == "han"
-
-func yg() -> void:   # yG
+# ------------------------------------------------------------------ sau mưa rào (troi._rao_done gọi)
+func yg() -> void:   # yG: 3,2 giây chưa cho gà vịt / chim tới
 	E5 = _perf() + 3200.0
-
-func rain_shower() -> bool:   # uG
-	if qb():
-		return false
-	var t := false
-	for a in G.g.plots:
-		if a.c != null and not G.ripe(a):
-			a.w = G.water_hold(a)
-			t = true
-	if zb(true) > 0:
-		t = true
-	if t:
-		yg()
-		_ta("Mưa rào. Cả vườn được tưới.")
-		return true
-	return false
 
 func sw() -> int:   # sW: số ô có sâu
 	var t := 0

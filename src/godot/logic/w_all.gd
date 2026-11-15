@@ -141,8 +141,6 @@ func on_load() -> void:   # sau load_game/_migrate, reset_game/_fresh, bản m�
 	WS.gJ()
 	WS.TF = not bool(g.get("pc", {}).get("made", false))
 	g.fish = WCA.jf(g.get("fish"))   # JF
-	if not (g.get("rain") is float or g.get("rain") is int):
-		g.rain = 150
 
 # ------------------------------------------------------------------ bước luật
 func _ok() -> bool:

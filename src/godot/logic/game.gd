@@ -95,7 +95,7 @@ func _fresh() -> Dictionary:
 		"harvested": 0, "last": now, "land": {"nha": 1},
 		"pc": {"lv": 1, "xp": 0, "en": 100.0, "et": now, "n": 0, "cnt": {}},
 		"ray": {"p": {}, "th": 0, "cd": 0, "k": 0}, "gio": {"lv": 1}, "sys": {"pts": 0, "stats": {}}, "lvq": [],
-		"orders": [], "delivered": 0, "ngoc": 0, "rain": 150, "goal": 0}   # NTWEB rain, goal như bản web
+		"orders": [], "delivered": 0, "ngoc": 0, "goal": 0}   # NTWEB goal như bản web
 
 func _migrate(s: Dictionary) -> Dictionary:
 	# bản lưu cũ hơn: thêm khóa thiếu, không xóa gì
