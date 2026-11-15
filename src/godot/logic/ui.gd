@@ -162,16 +162,25 @@ func _layout() -> void:
 	vw = v.x
 	vh = v.y
 	_vs = v
+	# bảng toàn màn (#pov 338x610, giữa màn): màn thấp hơn khuôn (điện thoại còn thanh trình duyệt trên dưới) thì thu cả bảng
+	# cho vừa chiều cao, như bản web để .pwin cao 100% màn; không thì đáy bảng bị cắt
+	var fp := minf(1.0, vh / VH0)
 	for a in anchors:
 		var b: Control = a[0]
 		if is_instance_valid(b):
-			b.position = (b.r.position + Vector2((vw - VW0) * a[1], (vh - VH0) * a[2])) * Css.K
+			var f := fp if a[1] == 0.5 and a[2] == 0.5 and _full_pov(b) else 1.0
+			b.scale = Vector2(f, f)
+			b.position = (b.r.position * f + Vector2((vw - VW0 * f) * a[1], (vh - VH0 * f) * a[2])) * Css.K
 	if dim != null:
 		dim.size = v * Css.K
 	# lớp tối phủ cả màn (.pbk, nền popup: số đo 0,0,338x610): luôn phủ kín màn thật, không chỉ khổ lúc chụp
 	for a in anchors:
 		if is_instance_valid(a[0]):
-			_cover(a[0], v)
+			_cover(a[0], v / a[0].scale.x)
+
+static func _full_pov(b: Control) -> bool:   # gốc là cả khuôn màn 338x610 (#pov, lớp tối bảng)
+	var rr = b.get_meta("snap", {}).get("r", [])
+	return rr is Array and rr.size() == 4 and absf(float(rr[2]) - VW0) < 0.5 and absf(float(rr[3]) - VH0) < 0.5
 
 func _cover(b: Control, v: Vector2) -> void:
 	for k in b.kids():
