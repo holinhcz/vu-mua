@@ -1706,7 +1706,7 @@ func _build_kho() -> void:
 				var cat: String = KH_CAT[q][0] if q < KH_CAT.size() else "khac"
 				kh_chips.append([L[q], cat, sn])
 				var cc := cat
-				_click(L[q], func(): kh_f = cc; kh_sig = ""; _kho_chips(), "scale94")
+				_click(L[q], func(): kh_f = cc; kh_sig = ""; kh_scroll = 0.0; _kho_chips(), "scale94")
 	# Vật liệu: chạm ô để xem
 	for b in _qall(kho_roots[1], "u2vt", []):
 		var bb: Control = b
@@ -1739,6 +1739,7 @@ func kho_open() -> void:
 	lock_close()
 	kho_on = true
 	kh_sig = ""
+	kh_scroll = 0.0
 	_kho_tab(kho_tab)
 
 func _kho_full(n: int, cap: int) -> void:
@@ -1897,10 +1898,23 @@ func _kho_sync() -> void:
 		var btn := _q(cb, "khb")
 		var tt: String = t
 		if btn != null:
-			_click(btn, func(): kh_sel = "" if kh_sel == tt else tt; kh_q = 1; kh_sig = ""; _kho_sync(), "scale94")
+			_click(btn, func():
+				if kh_drag != null and kh_drag.moved:
+					return   # vừa kéo cuộn, không phải chạm
+				kh_sel = "" if kh_sel == tt else tt
+				kh_q = 1
+				kh_sig = ""
+				_kho_sync(), "scale94")
 		idx += 1
 	var rows := int(ceil(idx / float(col)))
-	grid.place(Rect2(grid.r.position, Vector2(grid.r.size.x, maxf(grid0.size.y, rows * dy + 8.0))))
+	# lưới cuộn dọc (.khgrid overflow-y auto bản web): khung giữ cỡ gốc, cắt phần dư, kéo / lăn chuột để cuộn
+	grid.place(Rect2(grid.r.position, Vector2(grid.r.size.x, grid0.size.y)))
+	grid._kids.clip_contents = true
+	kh_grid = grid
+	kh_hmax = maxf(0.0, rows * dy + 8.0 - grid0.size.y)
+	kh_scroll = clampf(kh_scroll, 0.0, kh_hmax)
+	kh_off = 0.0
+	_kh_scroll_to(kh_scroll)
 	if selm:
 		_det_sync()
 	# Bán hết +N (chạm 2 lần), giữ 4 hạt mỗi thứ
@@ -2962,6 +2976,46 @@ func _lack_close() -> void:
 		od_lk.queue_free()
 		od_lk = null
 
+var kh_scroll := 0.0
+var kh_hmax := 0.0
+var kh_off := 0.0          # các ô trong lưới đang dời lên bao nhiêu
+var kh_grid: Control = null
+var kh_drag = null
+
+func _kh_scroll_to(v: float) -> void:
+	kh_scroll = clampf(v, 0.0, kh_hmax)
+	if kh_grid == null or not is_instance_valid(kh_grid):
+		return
+	var d := kh_scroll - kh_off
+	if d == 0.0:
+		return
+	for k in kh_grid.kids():
+		k.position.y -= d * Css.K
+	kh_off = kh_scroll
+
+func _kho_input(e: InputEvent) -> void:   # kéo / lăn chuột cuộn lưới Kho
+	if not kho_on or kh_grid == null or not is_instance_valid(kh_grid) or not kh_grid.is_visible_in_tree():
+		kh_drag = null
+		return
+	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		if kh_grid.get_global_rect().has_point(e.position):
+			_kh_scroll_to(kh_scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
+		return
+	if e is InputEventScreenTouch or e is InputEventMouseButton:
+		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if e.pressed:
+			kh_drag = {"y0": e.position.y / Css.K, "s0": kh_scroll, "moved": false} if kh_grid.get_global_rect().has_point(e.position) and kh_hmax > 0.0 else null
+		elif kh_drag != null:
+			var dd = kh_drag
+			get_tree().create_timer(0.05).timeout.connect(func(): if kh_drag == dd: kh_drag = null)
+	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and kh_drag != null:
+		var d: float = e.position.y / Css.K - kh_drag.y0
+		if absf(d) > 6.0:
+			kh_drag.moved = true
+		if kh_drag.moved:
+			_kh_scroll_to(kh_drag.s0 - d)
+
 func _od_input(e: InputEvent) -> void:
 	# kéo dọc danh sách đơn khi nhiều hơn 2 hàng thẻ
 	if not od_on or od_ul == null or od_hmax <= 0.0:
@@ -3453,6 +3507,9 @@ func _input(e: InputEvent) -> void:
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
 	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or _pans().any(func(p): return p != null and p.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
+	_kho_input(e)
+	if nvp != null:
+		nvp.input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
 	if xfp != null and xfp.ask != null and is_instance_valid(xfp.ask) and _is_tap_down(e):
 		var pp: Vector2 = e.position
