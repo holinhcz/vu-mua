@@ -481,6 +481,14 @@ func _web_prune() -> void:
 				if is_instance_valid(rs) and absf(rs.position.x - sp.position.x) < 0.5:
 					rs.set_meta("cay", true)
 					rs.visible = false
+	# món của nền (info.objs) đã bỏ khỏi game: đèn lồng
+	var io: Array = main.info.get("objs", [])
+	for j in mini(io.size(), main.objs.size()):
+		var r: Array = io[j]
+		if r.size() > 6 and lang.BO.has(String(r[6])):
+			main.objs[j]["cay"] = true   # main: "cay" = giấu luôn
+			main.objs[j]["spr"].visible = false
+			n += 1
 	print("web_prune: giấu ", n, " hình cảnh không có trong web")
 
 # cây lay (sprite_sway.gdshader): mỗi cây một pha cố định (như t.ph bản web) ghi vào kênh xanh dương của màu,

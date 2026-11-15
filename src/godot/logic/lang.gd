@@ -13,6 +13,7 @@ var Pi := {}              # id -> món
 var tm := {}              # LM id -> hoa cỏ nhỏ (có "_x" nhổ bỏ)
 var ug := {}              # Yz id -> nền
 var Yv := {}              # Kz id -> đường
+const BO := {"lantern": 1, "rock": 1}   # món đã bỏ khỏi game
 var SO := []              # So: vật cảnh có sẵn (dời / dọn được khi khu đã có)
 var HU := []              # hu: cây rừng, cỏ, nhà xa (dọn được)
 var so_at := {}           # "x,y" -> [chỉ số So] (vật cảnh không hoang)
@@ -56,6 +57,8 @@ func _init(game, farm) -> void:
 	for k in ["objs"]:
 		if not (G.g.get(k) is Array):
 			G.g[k] = []
+	# đèn lồng, cục đá cũ đã bỏ khỏi game (Link 11-15): món đã đặt trong bản lưu cũng dọn luôn (như bán, remove_at)
+	G.g.objs = G.g.objs.filter(func(o): return not (o is Dictionary and BO.has(String(o.get("id", "")))))
 	for k in ["clr", "mv", "minis", "road", "unroad", "gt", "penb", "fac"]:
 		if not (G.g.get(k) is Dictionary):
 			G.g[k] = {}
