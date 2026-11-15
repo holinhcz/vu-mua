@@ -205,6 +205,7 @@ func _free(b: Control) -> void:
 # Bảng cửa hàng dựng xong thì cất theo mục: đổi tab mà mục đó không đổi gì (thẻ, giá, khoá, xu, độ đẹp) thì hiện lại
 # bảng cũ ngay, khỏi dựng lại cả bảng từ bản chụp mỗi lần bấm tab (bấm tab bị khựng).
 var shop_c := {}   # mục -> {sig, pov, pids, grid, lis, sc_max}
+var card_pool := {}   # thẻ món đã dựng: khoá (mục, thẻ, thiếu xu, chỗ) -> Control; dựng lại bảng thì gắn lại thẻ cũ
 
 func _shop_sig() -> String:
 	return JSON.stringify([cat, _cards(), lg().beauty(), int(G.g.coins), G.lv(), U.vsize()])
@@ -219,6 +220,10 @@ func _shop_clear() -> void:
 	for k in shop_c:
 		_free(shop_c[k].pov)
 	shop_c = {}
+	for k in card_pool:
+		if is_instance_valid(card_pool[k]):
+			card_pool[k].queue_free()
+	card_pool = {}
 
 func _ps() -> void:
 	if mode == "shop":
@@ -422,6 +427,8 @@ func _build_shop() -> void:
 	var dx: float = (pos0[1].x - pos0[0].x) if pos0.size() > 1 else 104.0
 	var dy: float = (pos0[3].y - pos0[0].y) if pos0.size() > 3 else 89.0
 	var cells := []
+	var ckeys := []
+	var cbot := 0.0
 	for q in C.size():
 		var c: Dictionary = C[q]
 		var p: Vector2 = pos0[q] if q < pos0.size() else li0 + Vector2(dx * (q % 3), dy * (q / 3))
@@ -434,6 +441,14 @@ func _build_shop() -> void:
 			tp = T.li_unit
 		else:
 			tp = T.li_open
+		var poor0: bool = c.pr[0] == "c" and int(G.g.coins) < int(c.pr[1]) and c.r == 0
+		var key := JSON.stringify([cat, c, poor0, p])   # thẻ đã dựng y hệt thì dùng lại (card_pool)
+		ckeys.append(key)
+		cbot = maxf(cbot, p.y + float(tp.r[3]))
+		var cn = card_pool.get(key)
+		if cn != null and is_instance_valid(cn):
+			cells.append(null)
+			continue
 		var li: Dictionary = Snap.moved(tp, p - Vector2(float(tp.r[0]), float(tp.r[1])))
 		var b: Dictionary = li.kids[0]
 		b.cls = "khb bcard" + (" full" if c.get("full", false) else "") + (" locked" if c.r == 1 else "")
@@ -468,10 +483,10 @@ func _build_shop() -> void:
 		if poor:
 			b.cls += " poor"
 		cells.append(li)
-	g.kids = cells
+	g.kids = []   # thẻ gắn sau (card_pool)
 	card.kids[gi] = g
 	var gtop := float(g.r[1])
-	var last: float = float(cells[-1].r[1]) + float(cells[-1].r[3]) if cells.size() > 0 else gtop
+	var last: float = cbot if cells.size() > 0 else gtop
 	sc_max = maxf(0.0, last + 4.0 - (gtop + float(g.r[3])))
 	sc = clampf(sc, 0.0, sc_max)
 	pids = {}
@@ -528,17 +543,27 @@ func _build_shop() -> void:
 	grid = pids.get(".khgrid")
 	if grid != null:
 		grid._kids.clip_contents = true
-		var kb: Array = grid.kids()
-		for q in mini(kb.size(), C.size()):
-			var li: Control = kb[q]
-			lis.append([li, li.r.position])
-			var bt = U._q(li, "bcard")
+		var go := Vector2(float(g.r[0]), float(g.r[1]))
+		for q in C.size():
 			var c: Dictionary = C[q]
-			if bt != null and not c.get("full", false):
-				U._click(bt, func(): if not _dragged(): _card(c), "scale94")
-			var cv = U._q(li, "", "canvas")
-			if cv != null:
-				_icon(cv, c.ic, c.r == 1)
+			var key: String = ckeys[q]
+			var li = card_pool.get(key)
+			if li == null or not is_instance_valid(li):
+				li = U._build(cells[q], {}, go)
+				var bt = U._q(li, "bcard")
+				if bt != null and not c.get("full", false):
+					U._click(bt, func(): if not _dragged(): _card(c), "scale94")
+				var cv = U._q(li, "", "canvas")
+				if cv != null:
+					_icon(cv, c.ic, c.r == 1)
+				li.set_meta("p0", li.r.position)
+				card_pool[key] = li
+			elif li.get_parent() != null:
+				li.get_parent().remove_child(li)
+			grid.add(li)
+			var p0: Vector2 = li.get_meta("p0")
+			U._move(li, p0)
+			lis.append([li, p0])
 		_scroll(sc)
 
 func _card(c: Dictionary) -> void:

@@ -1720,6 +1720,7 @@ var kh_f := "all"
 var kh_sort := "n"
 var kh_sig := ""
 var kh_conf := 0.0
+var kh_pool := {}            # thẻ món Kho đã dựng: khoá -> Control
 var kh_chips := []           # [Box, cat, snap]
 var kh_chip_on := {}
 var kh_chip_off := {}
@@ -1964,10 +1965,8 @@ func _kho_sync() -> void:
 			wbb.redraw()
 			if xi != null:
 				_move(xi, Vector2(wbb.r.end.x + gap, xi.r.position.y))
-	# lưới món
-	for g0 in [kho_ids[0].get(".khgrid"), kho_ids[3].get(".khgrid")]:
-		for k in g0.kids():
-			k.queue_free()
+	# lưới món: mỗi thẻ dựng một lần rồi giữ (kh_pool, khoá = món + kiểu thẻ + số + giá + được giá + mũi tên); đổi gì thì
+	# chỉ thẻ đó dựng lại, các thẻ khác chỉ dời chỗ. Trước đây đổi một món là xoá hết rồi dựng lại cả nghìn thẻ.
 	var o := grid0.position
 	var col := 4
 	var x0 := kh_li0.x
@@ -1975,29 +1974,46 @@ func _kho_sync() -> void:
 	var dx := float(kh_tpl.r[2]) + 5.0
 	var dy := float(kh_tpl.r[3]) + 6.0
 	var idx := 0
+	var used := {}
 	for t in e:
 		var hx: float = G.hot_x(t)
-		var tp: Dictionary = kh_tpl_hot if hx > 1.0 else kh_tpl
-		if t == kh_sel and not kh_tpl_sel.is_empty():
-			tp = kh_tpl_sel.duplicate(true)
-			if hx <= 1.0:
-				tp.erase("::before")
-		var to := Vector2(x0 + (idx % col) * dx, y0 + int(idx / col) * dy)
-		var nd := Snap.moved(tp, to - Vector2(float(tp.r[0]), float(tp.r[1])))
-		_kh_fill(nd, t, hx)
-		var cb := _build(nd, {}, o)
-		grid.add(cb)
-		var btn := _q(cb, "khb")
-		var tt: String = t
-		if btn != null:
-			_click(btn, func():
-				if kh_drag != null and kh_drag.moved:
-					return   # vừa kéo cuộn, không phải chạm
-				kh_sel = "" if kh_sel == tt else tt
-				kh_q = 1
-				kh_sig = ""
-				_kho_sync(), "scale94")
+		var sel_on: bool = t == kh_sel and not kh_tpl_sel.is_empty()
+		var r: float = G.rel(t)
+		var key: String = t + "|" + ("s" if sel_on else ("h" if hx > 1.0 else "n")) + "|" + str(G.g.barn[t]) + "|" + str(G.price(t)) + "|" + str(hx) + "|" + ("u" if r > 1.08 else ("d" if r < 0.92 else ""))
+		var cb = kh_pool.get(key)
+		if cb == null or not is_instance_valid(cb):
+			var tp: Dictionary = kh_tpl_hot if hx > 1.0 else kh_tpl
+			if sel_on:
+				tp = kh_tpl_sel.duplicate(true)
+				if hx <= 1.0:
+					tp.erase("::before")
+			var nd := Snap.moved(tp, Vector2(x0, y0) - Vector2(float(tp.r[0]), float(tp.r[1])))
+			_kh_fill(nd, t, hx)
+			cb = _build(nd, {}, o)
+			var btn := _q(cb, "khb")
+			var tt: String = t
+			if btn != null:
+				_click(btn, func():
+					if kh_drag != null and kh_drag.moved:
+						return   # vừa kéo cuộn, không phải chạm
+					kh_sel = "" if kh_sel == tt else tt
+					kh_q = 1
+					kh_sig = ""
+					_kho_sync(), "scale94")
+			kh_pool[key] = cb
+		if cb.get_parent() != grid._kids:
+			if cb.get_parent() != null:
+				cb.get_parent().remove_child(cb)
+			grid.add(cb)
+		_move(cb, Vector2(x0 + (idx % col) * dx, y0 + int(idx / col) * dy) - o)
+		used[key] = 1
 		idx += 1
+	for k in kh_pool.keys():   # thẻ món đã đổi / hết: bỏ
+		if not used.has(k):
+			var c0 = kh_pool[k]
+			if is_instance_valid(c0):
+				c0.queue_free()
+			kh_pool.erase(k)
 	var rows := int(ceil(idx / float(col)))
 	# lưới cuộn dọc (.khgrid overflow-y auto bản web): khung giữ cỡ gốc, cắt phần dư, kéo / lăn chuột để cuộn
 	grid.place(Rect2(grid.r.position, Vector2(grid.r.size.x, grid0.size.y)))
