@@ -5,12 +5,14 @@ extends Node
 #   không cộng dồn từng lần nhích; nền (main.gd) không tự zoom / kéo thêm khi đang 2 ngón.
 # - Chuột giả: trình duyệt điện thoại bắn thêm sự kiện chuột sau mỗi lần chạm (web chỉ xét pointerType "mouse"): bỏ hết,
 #   nên nhấn giữ không hiện chữ trỏ chuột, không kéo làng lần nữa theo chuột giả.
+# - Sau khi đã 2 ngón: tới lúc nhấc hết tay, ngón còn lại không kéo làng, nhấc tay không tính là chạm (không mở xưởng, ô...).
 # Nút này nằm cuối cây nên nhận sự kiện trước mọi nút khác.
 
 var farm
 var T := {}          # ngón đang chạm: index -> vị trí
 var sp = null
 var last_touch := -1e9
+var multi := false   # lượt chạm này đã có 2 ngón: tới khi nhấc hết tay không kéo làng, không tính là chạm
 
 func _now() -> float:
 	return Time.get_ticks_msec()
@@ -28,6 +30,15 @@ func _input(e: InputEvent) -> void:
 			T[e.index] = e.position
 		else:
 			T.erase(e.index)
+			if multi:   # thả tay sau khi zoom: không mở xưởng / ô / món dưới ngón
+				for k in farm._press:
+					farm._press[k].moved = true
+				farm._lp = {}
+				farm.sw = null
+		if T.size() >= 2:
+			multi = true
+		elif T.is_empty():
+			multi = false
 		if T.size() >= 2 and not _modal():
 			var h := _mid()
 			var M = farm.main
@@ -40,6 +51,9 @@ func _input(e: InputEvent) -> void:
 	if e is InputEventScreenDrag:
 		last_touch = _now()
 		T[e.index] = e.position
+		if multi and T.size() < 2:   # zoom xong còn một ngón: làng đứng yên tới khi nhấc tay
+			get_viewport().set_input_as_handled()
+			return
 		if sp != null and T.size() >= 2:
 			if _modal():
 				sp = null
