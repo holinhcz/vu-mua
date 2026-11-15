@@ -127,6 +127,32 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 		else:
 			_add(sg, dk + 0.005)
 
+var cache := {}          # khóa món -> [[node của món] ...] lần dựng trước
+
+func _reuse(old: Dictionary, key: String) -> bool:   # còn node của khóa này từ lần trước thì lấy lại
+	var L = old.get(key)
+	if L == null or L.is_empty():
+		return false
+	var grp: Array = L.pop_back()
+	if L.is_empty():
+		old.erase(key)
+	nodes.append_array(grp)
+	_keep(key, grp)
+	return true
+
+func _keep(key: String, grp: Array) -> void:
+	if not cache.has(key):
+		cache[key] = []
+	cache[key].append(grp)
+
+func _item(old: Dictionary, id: String, seed: int, foot: Vector2, dk: float, sea: String) -> void:
+	var key := id + "|" + str(seed) + "|" + str(foot) + "|" + str(dk) + "|" + sea
+	if _reuse(old, key):
+		return
+	var n0 := nodes.size()
+	_obj(id, seed, foot, dk)
+	_keep(key, nodes.slice(n0))
+
 func sync() -> void:
 	var O: Array = LG.objs()
 	var fell: Dictionary = _fell()
@@ -137,14 +163,12 @@ func sync() -> void:
 	if sig == _sig:
 		return
 	_sig = sig
-	for s in nodes:
-		for e in F.sortables:
-			if e[0] == s:
-				F.sortables.erase(e)
-				break
-		s.queue_free()
+	# dựng lại theo khóa từng món (id, dáng, chỗ, lớp vẽ, mùa): món không đổi giữ nguyên node, chỉ món đổi (cây chín / hái
+	# trái, đặt, dời, bỏ) mới tạo lại. Gỡ hết rồi tạo lại cả làng mỗi lần hái trái / tưới cây làm cả làng khựng một cái.
+	var old := cache
+	cache = {}
 	nodes = []
-	flags = []
+	var sea := str(F.G.season())
 	var moving: int = F.ui.bdp.move_idx if F.ui.bdp != null else -1
 	for n in O.size():
 		if n == moving:
@@ -155,25 +179,29 @@ func sync() -> void:
 			continue
 		var cx: float = float(o.gx) + float(t.fw) / 2.0
 		var cy: float = float(o.gy) + float(t.fd) / 2.0
-		_obj(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy))
+		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea)
 	# vật cảnh có sẵn (lang.SO, trừ cây cỏ hoang): vẽ như đồ đặt, không dùng ảnh chụp của nền, nên dời đi là chỗ cũ trống luôn
 	for o in LG.SO:
 		if o.wild or not PICS.has(o.id) or fell.has(o.sk) or not LG.so_shown(o):
 			continue
 		var cx: float = float(o.gx) + float(o.fw) / 2.0
 		var cy: float = float(o.gy) + float(o.fd) / 2.0
-		_obj(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy))
+		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea)
 	for k in LG.G.g.minis:
 		var p: PackedStringArray = String(k).split(",")
 		var c := int(p[0])
 		var f := int(p[1])
 		var h := c / 2.0 + 0.25
 		var q := f / 2.0 + 0.25
-		_obj("mini_" + String(LG.G.g.minis[k]), int(floor(F.main.me_hash(c + 7, f + 3) * 4.0)), Vector2(L.en(h, q), L.nn(h, q)), L.nn(h, q))
+		_item(old, "mini_" + String(LG.G.g.minis[k]), int(floor(F.main.me_hash(c + 7, f + 3) * 4.0)), Vector2(L.en(h, q), L.nn(h, q)), L.nn(h, q), sea)
 	for p in LG.C.Di:
 		if not LG.pen_built(p) and F.ui.bdp.fmv != p:
 			continue
 		var g = LG.pen_pos(p)
+		var key: String = "pen|" + String(p) + "|" + str(g)
+		if _reuse(old, key):
+			continue
+		var n0 := nodes.size()
 		var b: String = "g_congtrinh_chuong_" + p
 		if not _op_has(b, "gd"):
 			F.P.load_bundle(b)
@@ -186,6 +214,23 @@ func sync() -> void:
 				nodes.append(s)
 			else:
 				_add(s, 968.0 + (g.x + g.y + float(e[1])) * 16.0)
+		_keep(key, nodes.slice(n0))
+	# món không còn: gỡ khỏi danh sách xếp lớp một lượt rồi bỏ
+	var gone := {}
+	for key in old:
+		for grp in old[key]:
+			for s in grp:
+				gone[s] = 1
+	if not gone.is_empty():
+		var keep := []
+		for e in F.sortables:
+			if not gone.has(e[0]):
+				keep.append(e)
+		F.sortables.assign(keep)
+		for s in gone:
+			if is_instance_valid(s):
+				s.queue_free()
+	flags = nodes.filter(func(s): return s.has_meta("flag"))
 	tiles.queue_redraw()
 
 func _fell() -> Dictionary:   # cây ngã / cháy sau bão (bao.gd): vật cảnh ở đó thôi vẽ, FellNode vẽ thay
