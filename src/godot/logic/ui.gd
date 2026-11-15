@@ -3385,7 +3385,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup]
+	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3565,8 +3565,6 @@ func _process(dt: float) -> void:
 		khp.step()
 	if spp != null:
 		spp.step()
-	if pcp != null:
-		pcp.step()
 	_t -= dt
 	if _t <= 0.0:
 		_t = 0.25

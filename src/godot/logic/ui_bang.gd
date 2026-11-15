@@ -694,20 +694,18 @@ func input(e: InputEvent) -> bool:
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 		_scroll_to(scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
 		return true
-	var pos := Vector2.ZERO
+	# so chỗ ngón tay với khung thân trên màn thật (bảng có thể đang thu nhỏ cho vừa màn: box.scale)
+	var k: float = Css.K * (box.scale.y if box != null else 1.0)
 	if e is InputEventScreenTouch or e is InputEventMouseButton:
 		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
 			return false
-		pos = e.position / Css.K
 		if e.pressed:
 			var vb: Control = ids.get("." + _area)
-			var gr := Rect2(vb.get_global_rect().position / Css.K, vb.r.size)
-			drag = {"y0": pos.y, "s0": scroll, "moved": false} if gr.has_point(pos) else null
+			drag = {"y0": e.position.y, "s0": scroll, "moved": false} if vb != null and vb.get_global_rect().has_point(e.position) else null
 		else:
 			drag = null
 	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		pos = e.position / Css.K
-		var d: float = pos.y - drag.y0
+		var d: float = (e.position.y - float(drag.y0)) / k
 		if absf(d) > 6.0:
 			drag.moved = true
 			moved_t = true
