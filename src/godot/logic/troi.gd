@@ -198,7 +198,7 @@ func step(dt: float) -> void:
 	var d := dh()
 	var sea: int = G.season()
 	st = {"phase": d.phase, "h": d.h, "night": d.night, "tint": d.tint, "light": ij(d.night), "wx": vwx(), "rain": rain(),
-		"flash": flash, "bolt": bao.bolt, "season": sea, "pal": pal(d.night, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
+		"flash": flash, "bolt": bao.bolt, "season": sea, "flood": G.w_all != null and G.w_all.WR != null and G.w_all.WR.qs(), "pal": pal(d.night, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
 
 func _iq(dt: float) -> void:
 	# mưa dầm: chớp mỗi 20–45 giây, sấm sau 0,4–1,6 giây

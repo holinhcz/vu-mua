@@ -492,6 +492,7 @@ func _lot_apply() -> void:
 var troi := {}
 var troi_fx: Node2D = null
 var troi_grass := ""
+var troi_flood := false
 func troi_set(st) -> void:
 	if not (st is Dictionary):
 		return
@@ -503,6 +504,11 @@ func troi_set(st) -> void:
 		troi_fx = TroiFX.new()
 		troi_fx.main = self
 		cl.add_child(troi_fx)
+	var fo := bool(st.get("flood", false))
+	if fo != troi_flood:   # (logic b174) đổi mùa trong Cài đặt: nước nổi lên / rút ngay, khỏi đợi 20 giây
+		troi_flood = fo
+		if song_cur >= 0:
+			_song_show(_tide_step())
 	if night_force < 0 and st.has("night") and int(bool(st["night"])) != night_cur:
 		_night_tick()
 	var pal = st.get("pal", null)
@@ -1157,6 +1163,8 @@ func _night_tick() -> void:
 func _flood_on() -> bool:
 	if flood_force >= 0:
 		return flood_force == 1
+	if troi.has("flood"):   # (logic b174) nước nổi theo lịch của logic (mùa trong Cài đặt đè lên), không tự tính theo đồng hồ máy
+		return bool(troi["flood"])
 	var bias: float = float(Time.get_time_zone_from_system().get("bias", 0))
 	var days := int(floor((Time.get_unix_time_from_system() + bias * 60.0) / 86400.0)) - 20738
 	var t := posmod(days, 28)
