@@ -108,7 +108,7 @@ i.addEventListener('keyup',function(e){e.stopPropagation()});
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
-var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": false, "fileSizes": {"index.pck": 23380824, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=24,WASM=38034280,PCK=23380824,B='8aaef68e',EV='dfd3ae5f';
+var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": false, "fileSizes": {"index.pck": 23380824, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=24,WASM=38034280,PCK=23380824,B='316a8746',EV='dfd3ae5f';
 var msg=document.getElementById('msg'),fill=document.getElementById('fill'),st=document.getElementById('st');
 // The engine asks for index.wasm and index.pck. They are published as engine.wasm (gzip) and pck_<n>.wasm (slices),
 // so those two requests are answered here from the published pieces. Every file of a build carries ?v=<crc> so a
@@ -144,14 +144,23 @@ var BASE=new URL('.',location.href).href,MF=null;
 var mfP=F0('files.json?v='+B).then(function(r){return r.json()}).then(function(j){MF=j;return j},function(){MF={};return MF});
 function rel(s){var a=new URL(s,location.href).href;if(a.indexOf(BASE)!=0)return null;return a.slice(BASE.length).split('?')[0]}
 function kept(p){return mfP.then(function(){var h=MF[p];if(!h)return F0(p);var q=p+'?h='+h;return stored(q)})}
+// Engine đã giải nén và gói game đã ghép mảnh cũng cất luôn vào bộ nhớ trình duyệt: lần sau mở đọc thẳng một file,
+// không giải nén / ghép lại; engine lấy thẳng từ bộ nhớ nên trình duyệt giữ được bản đã dịch, khỏi dịch lại 38 MB mỗi lần mở.
+function rawKey(){return 'engine.raw?h='+MF['engine.wasm']}
+function pckKey(){var h=[];for(var q=0;q<NP;q++)h.push(MF['pck_'+q+'.wasm']||'');return 'index.pck?h='+h.join('')}
+function made(k,mk){return csP.then(function(c){if(!c)return mk();var abs=new URL(k,location.href).href;
+  return c.match(abs).then(function(hit){if(hit)return hit;return mk().then(function(r){return r.blob().then(function(b){var t=r.headers.get('Content-Type');
+    return c.put(abs,new Response(b,{status:200,headers:{'Content-Type':t}})).then(function(){return c.match(abs)},function(){return null})
+      .then(function(m){return m||new Response(b,{status:200,headers:{'Content-Type':t}})})})})})},function(){return mk()})}
 var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){csP.then(function(c){if(!c)return;var keep={};
   Object.keys(MF).forEach(function(p){keep[new URL(p+'?h='+MF[p],location.href).href]=1});
+  keep[new URL(rawKey(),location.href).href]=1;keep[new URL(pckKey(),location.href).href]=1;
   c.keys().then(function(ks){ks.forEach(function(q){if(!keep[q.url])c.delete(q)})})})})}
 window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
-  if(/index\.wasm(\?|$)/.test(s))return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
-    return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),{status:200,headers:{'Content-Type':'application/wasm'}})});
-  if(/index\.pck(\?|$)/.test(s)){var ps=[];for(var q=0;q<NP;q++)ps.push(kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}));
-    return Promise.all(ps).then(function(bs){return new Response(new Blob(bs),{status:200,headers:{'Content-Type':'application/octet-stream'}})})}
+  if(/index\.wasm(\?|$)/.test(s))return mfP.then(function(){return made(rawKey(),function(){return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
+    return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),{status:200,headers:{'Content-Type':'application/wasm'}})})})});
+  if(/index\.pck(\?|$)/.test(s))return mfP.then(function(){return made(pckKey(),function(){var ps=[];for(var q=0;q<NP;q++)ps.push(kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}));
+    return Promise.all(ps).then(function(bs){return new Response(new Blob(bs),{status:200,headers:{'Content-Type':'application/octet-stream'}})})})});
   var p=(!o||!o.method||o.method=='GET')?rel(s):null;
   if(p&&p!='info.json'&&p!='files.json'&&!/\.html$/.test(p))return mfP.then(function(){return MF[p]?kept(p):F0(u,o)});
   if(/(^|\/)(info\.json|n\/sc\.json)$/.test(s))return F0(s+'?v='+B,o);
