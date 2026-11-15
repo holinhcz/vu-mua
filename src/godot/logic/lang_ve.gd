@@ -129,7 +129,8 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 
 func sync() -> void:
 	var O: Array = LG.objs()
-	var sig := str(LG.ver) + "|" + str(F.G.season()) + "|" + str(O.size())
+	var fell: Dictionary = _fell()
+	var sig := str(LG.ver) + "|" + str(F.G.season()) + "|" + str(O.size()) + "|" + str(LG.G.g.mv.size()) + "|" + str(LG.G.g.get("land")) + "|" + str(fell.keys())
 	for o in O:
 		if LG.C.Ei.has(o.id):
 			sig += str(ft_seed(o))
@@ -155,6 +156,13 @@ func sync() -> void:
 		var cx: float = float(o.gx) + float(t.fw) / 2.0
 		var cy: float = float(o.gy) + float(t.fd) / 2.0
 		_obj(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy))
+	# vật cảnh có sẵn (lang.SO, trừ cây cỏ hoang): vẽ như đồ đặt, không dùng ảnh chụp của nền, nên dời đi là chỗ cũ trống luôn
+	for o in LG.SO:
+		if o.wild or not PICS.has(o.id) or fell.has(o.sk) or not LG.so_shown(o):
+			continue
+		var cx: float = float(o.gx) + float(o.fw) / 2.0
+		var cy: float = float(o.gy) + float(o.fd) / 2.0
+		_obj(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy))
 	for k in LG.G.g.minis:
 		var p: PackedStringArray = String(k).split(",")
 		var c := int(p[0])
@@ -179,6 +187,13 @@ func sync() -> void:
 			else:
 				_add(s, 968.0 + (g.x + g.y + float(e[1])) * 16.0)
 	tiles.queue_redraw()
+
+func _fell() -> Dictionary:   # cây ngã / cháy sau bão (bao.gd): vật cảnh ở đó thôi vẽ, FellNode vẽ thay
+	var tr = LG.G.troi
+	if tr == null or tr.get("bao") == null:
+		return {}
+	var f = tr.bao.wx().get("fell")
+	return f if f is Dictionary else {}
 
 func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), như xưởng; cờ 10 khung/giây
 	var scr: float = F.main.zoom * F.main.dpr if "dpr" in F.main else F.main.zoom

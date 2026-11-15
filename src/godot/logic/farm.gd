@@ -485,7 +485,9 @@ func _web_prune() -> void:
 	var io: Array = main.info.get("objs", [])
 	for j in mini(io.size(), main.objs.size()):
 		var r: Array = io[j]
-		if r.size() > 6 and lang.BO.has(String(r[6])):
+		if r.size() > 6 and (lang.BO.has(String(r[6])) or lang_ve.has_pic(String(r[6]))):
+			# ảnh chụp vật cảnh của nền: bỏ hẳn (op = null thì nền không tải, không hiện), lang_ve vẽ vật cảnh từ lang.SO
+			main.objs[j]["op"] = null
 			main.objs[j]["cay"] = true   # main: "cay" = giấu luôn
 			main.objs[j]["spr"].visible = false
 			n += 1
