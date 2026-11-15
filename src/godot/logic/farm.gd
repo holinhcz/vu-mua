@@ -137,6 +137,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 	lines.farm = self
 	lines.z_index = -4
 	add_child(lines)
+
 	G.troi.bao.farm = self
 	player = PlayerNode.new()
 	player.farm = self
@@ -620,31 +621,13 @@ func _sway_step(dt: float) -> void:
 			if c is CanvasItem and absf(c.self_modulate.a - SWAY_A) < 0.002:   # cây lay của nền (main.gd)
 				c.self_modulate = Color(1, 1, sway_ph(c.position), SWAY_A)
 
-# ZOOM 2 NGÓN (bản web): lúc đặt 2 ngón ghi điểm làng nằm giữa 2 ngón + khoảng cách; mỗi khung zoom = zoom lúc đầu x tỉ lệ
-# khoảng cách, điểm làng đó luôn nằm đúng giữa 2 ngón (zoom tại chỗ, dời theo tay). Tính từ chỗ ngón hiện tại (main.touches
-# thấy mọi lần chạm), không cộng dồn từng lần nhích: lỡ mất lần nhích nào cũng không trôi.
-var pz = null
-
-func _pinch_step() -> void:
-	var T: Dictionary = main.touches
-	if T.size() < 2 or bool(get_tree().get_meta("ui_modal", false)):
-		pz = null
-		return
-	var ks: Array = T.keys()
-	var a: Vector2 = T[ks[0]]
-	var b: Vector2 = T[ks[1]]
-	var m := (a + b) * 0.5
-	var d := a.distance_to(b)
-	if pz == null or pz.ia != ks[0] or pz.ib != ks[1]:
-		pz = {"ia": ks[0], "ib": ks[1], "d0": maxf(d, 1.0), "z0": main.zoom, "w": main.cam + m / main.zoom}
-		return
-	var nz := clampf(float(pz.z0) * d / float(pz.d0), main.zmin, main.zmax)
-	main.zoom = nz
-	main.cam = pz.w - m / nz
-	main._clamp_cam()
-
+var cham: Node = null
 func _process(dt: float) -> void:
-	_pinch_step()
+	if cham == null:   # chạm điện thoại: zoom 2 ngón, bỏ chuột giả (cham.gd); cuối cây để nhận sự kiện trước
+		cham = Node.new()
+		cham.set_script(load("res://logic/cham.gd"))
+		cham.farm = self
+		get_tree().root.add_child.call_deferred(cham)
 	_web_prune()
 	_land_sync()
 	_chk_step(dt)
