@@ -17,7 +17,7 @@ func _process(dt: float) -> void:
 	var V = farm.G.vn
 	var L: Array = V.mc.get(t, [])
 	var mv: bool = j < L.size() and bool(L[j].mv)
-	if mv or V.hearts_t.has(t + str(j)) or _rd <= 0.0:
+	if (mv or V.hearts_t.has(t + str(j)) or _rd <= 0.0) and farm.on_view(foot()):
 		_rd = 1.0 / 15.0
 		queue_redraw()
 

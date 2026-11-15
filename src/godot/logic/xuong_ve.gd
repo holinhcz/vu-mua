@@ -279,11 +279,34 @@ func img(name: String) -> void:   # vẽ ảnh <name>_d/_n ở đúng chỗ atla
 	var c := centre()
 	draw_texture_rect(tx, Rect2(c.x + float(r[0]), c.y + float(r[1]), float(r[2]), float(r[3])), false)
 
+# Vẽ lại chỉ khi hình đổi (chạy / nghỉ, đang chọn, ngày đêm, mức nét theo zoom, chỗ, khung chạy, bong bóng nhún),
+# không vẽ lại cả 3 lớp mỗi khung như trước; 0,5 giây vẽ lại một lần cho ảnh vừa tải xong.
+var _sg := ""
+var _fsg := ""
+var _rt := 0.0
 func _process(dt: float) -> void:
 	t += dt
-	queue_redraw()
-	front.queue_redraw()
-	bub.queue_redraw()
+	_rt -= dt
+	var force := _rt <= 0.0
+	if force:
+		_rt = 0.5
+	var run := running()
+	var foc: bool = farm.ui.xfp != null and farm.ui.xfp.k == k
+	var sg: String = str(run) + str(foc) + farm.dn() + str(farm.P.level(PPU, farm.main.zoom)) + str(centre()) + str(A.size())
+	var ch: bool = sg != _sg or force
+	_sg = sg
+	if ch or foc:
+		queue_redraw()
+	var fs := ""
+	if run:
+		for q in seqs:
+			fs += str(int(floor(t * float(q[2]))) % int(q[1])) + ","
+	if ch or fs != _fsg:
+		_fsg = fs
+		front.queue_redraw()
+	var w: Dictionary = farm.G.xw.w(k)
+	if ch or ((farm.G.xw.df(k) > 0 or w.q.size() > 0) and not farm.G.motion_off()):
+		bub.queue_redraw()
 	if not fx.is_empty():
 		_fx_step()
 	if not xeng.is_empty():

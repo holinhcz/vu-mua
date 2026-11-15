@@ -6,7 +6,8 @@ var bub := true
 
 func _process(dt: float) -> void:
 	tt += dt
-	queue_redraw()
+	if farm.on_view(Vector2(farm.en(6.5, 5.5), farm.nn(6.5, 5.5))):
+		queue_redraw()
 
 func _draw() -> void:
 	var o := Vector2(6.5, 5.5)

@@ -1380,9 +1380,19 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 			hill_spr = s
 	if sc_root == obj_root:
 		_zsort_all()
+	# (logic b164) loại cảnh nào có hình gần chỗ đang nhìn thì tải trước; màn chờ chỉ đợi các loại đang hiện trên màn
+	# (trước đây đợi đủ 179 loại của cả làng: mở game mất 1-2 phút dù trên màn chỉ có vài chục loại)
+	var ctr := cam + get_viewport_rect().size / zoom * 0.5
+	var Q := []
 	for j in V.size():
 		if V[j] != null and sc_spr[j].size() > 0:
-			sc_q.append(j)
+			var d := 1e30
+			for sp in sc_spr[j]:
+				d = minf(d, sp.position.distance_squared_to(ctr))
+			Q.append([d, j])
+	Q.sort_custom(func(a, b): return a[0] < b[0])
+	for e in Q:
+		sc_q.append(e[1])
 	for nm in vmeta.keys():
 		sc_q.append(nm)
 	sc_tex_n = sc_q.size()
@@ -1397,9 +1407,34 @@ func _road_retry() -> void:   # (logic b163) đường logic gửi trước khi 
 	if road_pend.size() > 0 and road_img != null and sc_root != null and ground != null and not sc_data.is_empty():
 		road_set(road_pend[0], road_pend[1])
 
+var sc_done := {}      # (logic b164) loại cảnh đã có hình
+var _vk_key := ""
+var _vk := []
+func _sc_vis_kinds(r: Rect2) -> Array:   # các loại cảnh có hình nằm trong khung nhìn (nhớ theo khung, đổi mới tính lại)
+	var key := str(r.position.round()) + str(r.size.round())
+	if key == _vk_key:
+		return _vk
+	_vk_key = key
+	_vk = []
+	var V: Array = sc_data["v"]
+	var rr := r.grow(r.size.x * 0.1)
+	for j in sc_spr.size():
+		if V[j] == null:
+			continue
+		for sp in sc_spr[j]:
+			if rr.has_point(sp.position):
+				_vk.append(j)
+				break
+	return _vk
+
 func _pump_scenery() -> void:
 	while sc_busy < 6 and sc_q.size() > 0:
-		var j = sc_q.pop_front()
+		var j = sc_q[0]
+		for vj in _vk:   # đang hiện trên màn mà chưa tải: lên trước
+			if sc_q.has(vj):
+				j = vj
+				break
+		sc_q.erase(j)
 		sc_busy += 1
 		if j is String:
 			_fetch_in("vg", j, func(b):
@@ -1442,6 +1477,7 @@ func _pump_scenery() -> void:
 					s.visible = _lot_vis(s)
 				sc_rspr.erase(j)
 				tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0
+			sc_done[j] = true
 			sc_tex_have += 1
 			if sc_tex_have == sc_tex_n:
 				_sc_pack()
@@ -1617,8 +1653,15 @@ func _fetch(name: String, cb: Callable, tries: int = 0, prio: bool = false) -> v
 	if f_run >= 8:
 		if prio:
 			fq.push_front([name, cb, tries])
-		else:
+		elif name.begins_with("n/sc/"):
 			fq.append([name, cb, tries])
+		else:   # (logic b164) nền cỏ, nước, ao... đứng trước hình cảnh (179 loại) trong hàng chờ: mở game có nền ngay
+			var at := fq.size()
+			for i in fq.size():
+				if String(fq[i][0]).begins_with("n/sc/"):
+					at = i
+					break
+			fq.insert(at, [name, cb, tries])
 		return
 	f_run += 1
 	var h := HTTPRequest.new()
@@ -2298,8 +2341,17 @@ func _update_view() -> void:
 			_op_want(nm)
 		_show_obj(o, 0)
 	if info.get("native", false):
-		need_n += 1 + sc_tex_n
-		have_n += (1 if ground != null and gparts >= 16 else 0) + sc_tex_have
+		need_n += 1
+		have_n += 1 if ground != null and gparts >= 16 else 0
+		if not first_ready:
+			if sc_data.is_empty():
+				need_n += 1
+			else:
+				var vk := _sc_vis_kinds(Rect2(w0, w1 - w0))
+				need_n += vk.size()
+				for j in vk:
+					if sc_done.has(j):
+						have_n += 1
 		if ground != null and gparts >= 16:
 			ground.material.set_shader_parameter("uRoads", 1.0)
 			ground.material.set_shader_parameter("uPond", 1.0)
@@ -3236,6 +3288,8 @@ func _xg_one(e: Array, inside: Callable) -> void:
 class HiveNode extends Node2D:
 	var t := 0.0
 	func _process(dt: float) -> void:
+		if not is_visible_in_tree():   # (logic b164) tổ ong đang giấu: khỏi chạy / vẽ lại mỗi khung
+			return
 		t += dt
 		queue_redraw()
 	func _q(a: Vector2, c: Vector2, b: Vector2) -> PackedVector2Array:

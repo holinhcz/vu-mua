@@ -18,7 +18,8 @@ static func meta() -> Dictionary:
 
 func _process(dt: float) -> void:
 	tt += dt
-	queue_redraw()
+	if farm.on_view(Vector2(farm.en(float(d.get("x", 0)), float(d.get("y", 0))), farm.nn(float(d.get("x", 0)), float(d.get("y", 0))))):
+		queue_redraw()
 
 static func meta_of(dir: String) -> Dictionary:
 	if not METAS.has(dir):

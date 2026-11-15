@@ -702,7 +702,7 @@ func _process(dt: float) -> void:
 			rn.tt = tt
 			rn.queue_redraw()
 		var b: Bubble = v.bub
-		if b.visible and b.kind != "lock":
+		if b.visible and b.kind != "lock" and b.kind != "":
 			# X0: phập phồng 1 + .08 sin(5t + x), nhân le (làng nhỏ lại thì to lên cho dễ đọc)
 			b.k = (1.0 + 0.08 * sin(tt * 5.0 + b.position.x)) * sign_le()
 			b.zoom = main.zoom
@@ -725,6 +725,10 @@ func _process(dt: float) -> void:
 	if _resort_t <= 0.0:
 		_resort_t = 0.1
 		_resort()
+
+func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong màn (nới m): ngoài màn thì khỏi vẽ lại mỗi khung
+	var vs: Vector2 = get_viewport().get_visible_rect().size / main.zoom
+	return p.x > main.cam.x - m and p.y > main.cam.y - m and p.x < main.cam.x + vs.x + m and p.y < main.cam.y + vs.y + m * 2.0
 
 var _rs_pm := PackedFloat64Array()
 
@@ -1095,7 +1099,7 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 	var z: float = ui.cz()
 	for i in G.B0:   # ô ruộng
 		var b: Bubble = plots[i].bub
-		if b.visible and b.kind != "lock" and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
+		if b.visible and b.kind != "lock" and b.kind != "" and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
 			return {"type": "ray", "i": i} if G.has_ray(i) else {"type": "plot", "i": i}   # bong bóng của ô: rầy (ord 10) trước ô (44)
 	for i in tbubs:   # cây ăn trái / thùng ong
 		var b: Bubble = tbubs[i]
@@ -2427,6 +2431,8 @@ class Bubble extends Node2D:
 	var fnt: Font
 	var bob := 0.0
 	func _draw() -> void:
+		if kind == "":   # chưa có gì để báo (ô trống): không vẽ khung rỗng
+			return
 		if kind == "lock":
 			# ổ khóa + giá mở ô (gh bản web)
 			if tex != null:

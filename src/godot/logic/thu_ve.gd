@@ -7,7 +7,8 @@ var a: Dictionary = {}
 func _process(dt: float) -> void:
 	tt += dt
 	modulate.a = clampf(float(a.get("al", 1.0)), 0.0, 1.0)   # i.globalAlpha = t.al
-	queue_redraw()
+	if farm.on_view(foot()):
+		queue_redraw()
 
 func foot() -> Vector2:   # chân (toạ độ làng, chưa trừ độ cao z)
 	return Vector2(farm.en(float(a.x), float(a.y)), farm.nn(float(a.x), float(a.y)))
