@@ -324,7 +324,7 @@ func _tex(s: Sprite2D, scr: float) -> void:
 	s.offset = off / sc
 	s.set_meta("tk", tk if tx == F.P.tex(b, tk) else "")
 
-func show_ghost(id: String, seed: int, gx: int, gy: int, bad: bool) -> void:   # kj: món đang đặt (mờ .84, sai chỗ .5)
+func show_ghost(id: String, seed: int, gx: int, gy: int, bad: bool) -> void:   # kj: món đang đặt (sai chỗ ửng đỏ)
 	var t = LG.Pi.get(id)
 	if t == null or id == "pond" or not PICS.has(id):
 		ghost.visible = false
@@ -338,7 +338,8 @@ func show_ghost(id: String, seed: int, gx: int, gy: int, bad: bool) -> void:   #
 		_obj(id, seed, Vector2.ZERO, 0.0, true)
 		ghost.set_meta("sig", sig)
 	ghost.position = Vector2(L.en(cx, cy), L.nn(cx, cy))
-	ghost.modulate = Color(1, 1, 1, 0.5 if bad else 0.84)
+	ghost.set_meta("p0", ghost.position)   # chỗ chân; ui_bd nhấc món lên từ đây
+	ghost.modulate = Color(1, 0.55, 0.5, 0.75) if bad else Color(1, 1, 1, 0.92)   # sai chỗ: ửng đỏ
 	ghost.visible = true
 
 func hide_ghost() -> void:

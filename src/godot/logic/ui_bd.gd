@@ -69,7 +69,6 @@ var sc := 0.0
 var sc_max := 0.0
 var drag = null
 var ov_lo: Node2D = null
-var ov_hi: Node2D = null
 var t := 0.0
 var _gray: ShaderMaterial = null
 var _ic := {}            # TextureRect -> [gói, khoá]
@@ -1830,15 +1829,9 @@ func _ov() -> void:
 		ov_lo.z_index = -3
 		ov_lo.draw.connect(_draw_lo)
 		F.add_child(ov_lo)
-		ov_hi = Node2D.new()
-		ov_hi.z_index = 45
-		ov_hi.draw.connect(_draw_hi)
-		F.add_child(ov_hi)
 	var on := mode != "off" and mode != "shop"
 	ov_lo.visible = on
-	ov_hi.visible = on
 	ov_lo.queue_redraw()
-	ov_hi.queue_redraw()
 
 static func _dia(x: float, y: float, n: float) -> PackedVector2Array:   # U5
 	var e := 4268.0 + (x - y) * 32.0
@@ -1891,18 +1884,17 @@ func _draw_lo() -> void:
 					var gf := _gr_fade(n + 0.5 - cx, e + 0.5 - cy)
 					if gf <= 0.0:
 						continue
-					var fill := Color(1, 1, 1, 0.07 * gf)
-					var line := Color(1, 1, 1, 0.26 * gf)
+					var fill := Color(1, 1, 1, 0.045 * gf)
+					var line := Color(1, 1, 1, 0.18 * gf)
 					var l: String = L.zv(n, e, move_idx)
 					if l == "" and a.get("onroad", 0) and L.lz(n, e, move_idx):
 						l = "land"
 					var c := (l == "water") if wt == "only" else (l != "" if wt == "mixed" else l == "land")
 					if c:
-						_poly(ov_lo, _dia(n, e, 3.0), fill, line, 1.2)
-		var k := why != ""
-		for d in int(a.fw):
-			for v in int(a.fd):
-				_poly(ov_lo, _dia(gx + d, gy + v, 1.0), Color(226 / 255.0, 70 / 255.0, 56 / 255.0, 0.55) if k else (Color(70 / 255.0, 170 / 255.0, 235 / 255.0, 0.7) if id == "pond" else Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.5)), Color("#fff1ee") if k else Color.WHITE, 1.6)
+						_poly(ov_lo, _dia(n, e, 3.0), fill, line, 0.8)
+		_foot(gx, gy, int(a.fw), int(a.fd), FT_BAD if why != "" else (FT_POND if id == "pond" else FT_OK))
+		if id != "pond":
+			_shadow(gx, gy, int(a.fw), int(a.fd))
 	elif mode == "road" and hov != null:
 		var M: String = L.xz(hov.x, hov.y, road)
 		_poly(ov_lo, _dia(hov.x, hov.y, 1.0), Color(226 / 255.0, 70 / 255.0, 56 / 255.0, 0.45) if M != "" else Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.45), Color.WHITE, 1.6)
@@ -1930,13 +1922,20 @@ func _draw_lo() -> void:
 			var gf := _gr_fade(x + 0.5 - cx, y + 0.5 - cy)
 			if gf <= 0.0:
 				continue
-			var fill := Color(120 / 255.0, 225 / 255.0, 80 / 255.0, 0.22 * gf)
-			var line := Color(1, 1, 1, 0.4 * gf)
+			var fill := Color(1, 1, 1, 0.06 * gf)
+			var line := Color(1, 1, 1, 0.2 * gf)
 			var e := 4268.0 + (x - y) * 32.0
 			var r := 968.0 + (x + y) * 16.0
 			if e + 34 < vr.position.x or e - 34 > vr.end.x or r + 34 < vr.position.y or r - 2 > vr.end.y:
 				continue
-			_poly(ov_lo, _dia(x, y, 3.0), fill, line, 1.2)
+			_poly(ov_lo, _dia(x, y, 3.0), fill, line, 0.8)
+		_foot(fp.x, fp.y, fz.x, fz.y, FT_BAD if fwhy != "" else FT_OK)
+	elif mode == "fsel" and fac != "":
+		var fp2 := fpos(fac)
+		var fz2 := fsize(fac)
+		var K2 := 0.5 if G.motion_off() else 0.5 + 0.5 * sin(t * 5.0)
+		var acc2 := Color(String((G.troi.st.get("pal", {}) if G.troi != null else {}).get("accent", "#dba013")))
+		_poly(ov_lo, _rect_dia(fp2.x, fp2.y, fz2.x, fz2.y, 1.0), Color(1, 236 / 255.0, 150 / 255.0, 0.28), acc2, 2.2 + K2 * 1.6)
 	elif mode == "sel" and sel >= 0 and sel < L.objs().size():
 		var dt: Dictionary = L.objs()[sel]
 		var Wt: Dictionary = L.Pi[dt.id]
@@ -1946,74 +1945,42 @@ func _draw_lo() -> void:
 			for v in int(Wt.fd):
 				_poly(ov_lo, _dia(dt.gx + d, dt.gy + v, 1.0), Color(1, 236 / 255.0, 150 / 255.0, 0.28), acc, 2.2 + K * 1.6)
 
-func _draw_hi() -> void:   # Mj: khung ô + mũi tên nhún
-	var L = lg()
-	var fw := 0
-	var fd := 0
-	var n := 0
-	var e := 0
-	var r := false
-	var f := Color.WHITE
-	var top = null
-	var acc := Color(String((G.troi.st.get("pal", {}) if G.troi != null else {}).get("accent", "#dba013")))
-	if mode == "place":
-		var a: Dictionary = L.Pi[id]
-		fw = int(a.fw)
-		fd = int(a.fd)
-		n = gx
-		e = gy
-		r = why != ""
-		f = Color("#e2432f") if r else Color("#2f9e44")
-		top = [id, seed]
-	elif mode == "sel" and sel >= 0 and sel < L.objs().size():
-		var p: Dictionary = L.objs()[sel]
-		var a: Dictionary = L.Pi[p.id]
-		fw = int(a.fw)
-		fd = int(a.fd)
-		n = int(p.gx)
-		e = int(p.gy)
-		f = acc
-		top = [p.id, int(p.get("seed", 0))]
-	elif (mode == "fsel" or mode == "fmove") and fac != "":
-		var d := fpos(fac)
-		var v := fsize(fac)
-		fw = v.x
-		fd = v.y
-		n = d.x
-		e = d.y
-		r = mode == "fmove" and fwhy != ""
-		f = (Color("#e2432f") if fwhy != "" else Color("#2f9e44")) if mode == "fmove" else acc
-	else:
+# Ô dưới chân món đang đặt / dời: một mảng trên mặt đất (vẽ ở lớp đất, cây nhà đứng đè lên), không viền dày, không mũi tên.
+const FT_OK := [Color(1.0, 0.96, 0.82, 0.38), Color(1.0, 0.98, 0.9, 0.75)]     # kem: đặt được
+const FT_BAD := [Color(0.9, 0.3, 0.25, 0.4), Color(1.0, 0.75, 0.7, 0.8)]      # đỏ nhạt: bị vướng
+const FT_POND := [Color(0.3, 0.65, 0.92, 0.45), Color(0.85, 0.95, 1.0, 0.8)]
+const LIFT := 7.0   # món đang cầm nổi lên khỏi đất (px làng)
+
+func _rect_dia(x: float, y: float, w: float, d: float, n: float) -> PackedVector2Array:   # khung thoi bao cả w x d ô
+	return PackedVector2Array([Vector2(LN.en(x, y), LN.nn(x, y) + n), Vector2(LN.en(x + w, y) - n * 2, LN.nn(x + w, y)),
+		Vector2(LN.en(x + w, y + d), LN.nn(x + w, y + d) - n), Vector2(LN.en(x, y + d) + n * 2, LN.nn(x, y + d))])
+
+func _foot(x: float, y: float, w: float, d: float, c: Array) -> void:
+	_poly(ov_lo, _rect_dia(x, y, w, d, 1.5), c[0], c[1], 1.0)
+
+func _shadow(x: float, y: float, w: float, d: float) -> void:   # bóng mờ bầu dục dưới món đang nhấc
+	var p := Vector2(LN.en(x + w / 2.0, y + d / 2.0), LN.nn(x + w / 2.0, y + d / 2.0))
+	var rx := 13.0 * (w + d) / 2.0
+	var k := 1.0 if G.motion_off() else 1.0 - 0.08 * (0.5 + 0.5 * sin(t * 4.0))   # món nhún lên thì bóng thu lại chút
+	for i in 4:
+		var f := 1.0 - i * 0.22
+		ov_lo.draw_set_transform(p, 0.0, Vector2(rx * f * k, rx * 0.5 * f * k))
+		ov_lo.draw_circle(Vector2.ZERO, 1.0, Color(0, 0, 0, 0.07))
+	ov_lo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _lift() -> void:   # món đang cầm nổi lên, nhún nhẹ
+	var gh: Node2D = U.F.lang_ve.ghost
+	if gh == null or not gh.visible or mode != "place":
 		return
-	for o in fw:
-		for l in fd:
-			var q := _dia(n + o, e + l, 1.0)
-			q.append(q[0])
-			ov_hi.draw_polyline(q, Color(0, 0, 0, 0.35), 4.0, true)
-			ov_hi.draw_polyline(q, f if mode == "place" or mode == "fmove" else Color.WHITE, 2.0, true)   # đang đặt / dời: viền xanh đặt được, đỏ bị vướng
-	var x := LN.en(n + fw / 2.0, e + fd / 2.0)
-	var k := LN.nn(n + fw / 2.0, e + fd / 2.0)
-	var c := k - 22.0
-	if top == null:
-		c = k - 70.0
-	elif top[0] != "pond":
-		c = minf(c, k + U.F.lang_ve.top_of({"id": top[0], "seed": top[1]}) - 6.0)   # mũi tên nằm trên đỉnh món, không đè lên món
-	var bob := 0.0 if G.motion_off() else sin(t * 5.0) * 3.0
-	var le: float = U.F.sign_le()
-	ov_hi.draw_set_transform(Vector2(x, c + bob), 0.0, Vector2(le, le))
-	var tri := PackedVector2Array([Vector2(0, 0), Vector2(-9, -14), Vector2(9, -14)])
-	ov_hi.draw_colored_polygon(tri, f)
-	var tl := tri.duplicate()
-	tl.append(tri[0])
-	ov_hi.draw_polyline(tl, Color.WHITE, 2.2, true)
-	ov_hi.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
+	gh.position = gh.get_meta("p0", gh.position) - Vector2(0, LIFT + b)
 
 # ------------------------------------------------------------------ mỗi khung, cuộn
 func step(dt: float) -> void:
 	t += dt
-	if ov_hi != null and ov_hi.visible:
-		ov_hi.queue_redraw()
+	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
+		_lift()
 	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
 		if is_instance_valid(tr):
