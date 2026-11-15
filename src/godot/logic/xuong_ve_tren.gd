@@ -15,7 +15,7 @@ func _draw() -> void:
 		if run:
 			_img("che")
 			for s in xv.seqs:
-				var f := int(floor(xv.t * float(s[2]))) % int(s[1])
+				var f := (int(floor(xv.t * float(s[2]))) % int(s[1])) if xv.seq_ok(s) else 0
 				_img(String(s[0]) + str(f))
 		return
 	# Ey: bong bóng / thanh tiến độ ở độ cao bh của xưởng

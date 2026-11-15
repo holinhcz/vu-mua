@@ -21,7 +21,7 @@ var seqs := []          # [tiền tố, số khung, khung/s] theo thứ tự v�
 var t := 0.0
 var front: Node2D
 var bub: Node2D
-var fx := []            # [CPUParticles2D, mô tả]
+var fx := []            # [CPUParticles2D, mô tả, chỗ tính từ tâm nền]
 var _fx_on := false
 const FX = preload("res://logic/xuong_fx.gd")
 
@@ -62,18 +62,18 @@ func _meta() -> void:
 	_fx_make()
 
 func _fx_make() -> void:   # lửa giữa ảnh r và ảnh che; hơi/khói/nước sau khung chạy, dưới bong bóng
-	var c := centre()
 	for e in FX.list(dir):
 		var p: CPUParticles2D = FX.make(e, A)
 		if p == null:
 			continue
-		p.position += c
+		var p0 := p.position
+		p.position = p0 + centre()
 		add_child(p)
 		if e.kind == "lua":
 			move_child(p, front.get_index())
 		else:
 			move_child(p, bub.get_index())
-		fx.append([p, e])
+		fx.append([p, e, p0])
 	if dir == "lobanhmi":
 		_xeng_make()
 	if dir == "ep":
@@ -233,9 +233,11 @@ func _gon_draw() -> void:
 func _fx_step() -> void:
 	var on := running()
 	var n := 1 if farm.dn() == "n" else 0
+	var c := centre()   # dời xưởng: lửa, hơi, khói theo chỗ mới
 	for a in fx:
 		var p: CPUParticles2D = a[0]
 		var e: Dictionary = a[1]
+		p.position = a[2] + c
 		if p.texture == null:
 			p.texture = farm.P.tex(b, String(e.tex))
 		if e.has("col"):
@@ -245,6 +247,16 @@ func _fx_step() -> void:
 			if on:
 				p.restart()
 				_t_on = t
+
+# đủ hết khung của chuỗi chạy (đã giải mã ở mức nào đó) thì mới cho chạy, chưa đủ thì đứng ở khung 0 và xin giải mã cả chuỗi
+# (khung chưa có thì bị bỏ qua, chạy vòng đầu giựt cục)
+func seq_ok(s: Array) -> bool:
+	var d: String = farm.dn()
+	var ok := true
+	for i in int(s[1]):
+		if farm.P.texz(b, String(s[0]) + str(i) + "_" + d, PPU, farm.main.zoom) == null:
+			ok = false
+	return ok
 
 func centre() -> Vector2:
 	var s: Dictionary = farm.G.xw.sr[k]
