@@ -148,7 +148,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 	lines.farm = self
 	lines.z_index = -4
 	add_child(lines)
-	main.add_child(load("res://logic/hau_ky.gd").new(G, main))   # lớp chỉnh màu theo giờ (Cân bằng / Nét)
+	main.add_child(load("res://logic/hau_ky.gd").new(G, main, self))   # lớp chỉnh màu theo giờ (Cân bằng / Nét)
 	G.troi.bao.farm = self
 	player = PlayerNode.new()
 	player.farm = self

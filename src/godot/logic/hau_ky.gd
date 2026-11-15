@@ -4,8 +4,8 @@ extends CanvasLayer
 # Mốc theo giờ, nội suy liền mạch từng phút: [giờ, phơi sáng, độ rực, tương phản, màu chỗ tối, màu chỗ sáng, tối góc, sương].
 
 const K := [
-	[0.0, 0.52, 0.48, 1.06, Vector3(0.56, 0.70, 1.28), Vector3(0.78, 0.88, 1.20), 0.38, 0.0],
-	[4.5, 0.52, 0.48, 1.06, Vector3(0.56, 0.70, 1.28), Vector3(0.78, 0.88, 1.20), 0.38, 0.0],
+	[0.0, 0.70, 0.58, 1.03, Vector3(0.68, 0.79, 1.18), Vector3(0.88, 0.96, 1.12), 0.30, 0.0],
+	[4.5, 0.70, 0.58, 1.03, Vector3(0.68, 0.79, 1.18), Vector3(0.88, 0.96, 1.12), 0.30, 0.0],
 	[5.5, 0.72, 0.72, 1.00, Vector3(0.74, 0.76, 1.12), Vector3(1.08, 0.90, 0.94), 0.30, 0.28],
 	[6.5, 0.90, 0.90, 1.00, Vector3(0.88, 0.88, 1.05), Vector3(1.10, 0.98, 0.93), 0.22, 0.18],
 	[8.0, 1.00, 1.00, 1.00, Vector3(1.00, 1.00, 1.00), Vector3(1.00, 1.00, 1.00), 0.10, 0.0],
@@ -13,17 +13,18 @@ const K := [
 	[15.5, 1.00, 1.04, 1.03, Vector3(0.98, 0.98, 1.00), Vector3(1.05, 1.00, 0.93), 0.12, 0.0],
 	[17.3, 0.97, 1.12, 1.05, Vector3(0.86, 0.78, 0.95), Vector3(1.17, 0.98, 0.76), 0.24, 0.0],
 	[18.4, 0.82, 1.02, 1.04, Vector3(0.70, 0.64, 0.95), Vector3(1.16, 0.82, 0.66), 0.32, 0.0],
-	[19.5, 0.62, 0.76, 1.04, Vector3(0.62, 0.68, 1.08), Vector3(0.95, 0.86, 0.96), 0.36, 0.0],
-	[20.5, 0.52, 0.48, 1.06, Vector3(0.56, 0.70, 1.28), Vector3(0.78, 0.88, 1.20), 0.38, 0.0],
-	[24.0, 0.52, 0.48, 1.06, Vector3(0.56, 0.70, 1.28), Vector3(0.78, 0.88, 1.20), 0.38, 0.0]]
+	[19.5, 0.74, 0.74, 1.03, Vector3(0.70, 0.75, 1.10), Vector3(0.96, 0.89, 0.98), 0.30, 0.0],
+	[20.5, 0.70, 0.58, 1.03, Vector3(0.68, 0.79, 1.18), Vector3(0.88, 0.96, 1.12), 0.30, 0.0],
+	[24.0, 0.70, 0.58, 1.03, Vector3(0.68, 0.79, 1.18), Vector3(0.88, 0.96, 1.12), 0.30, 0.0]]
 
 var G
 var main
 var rect: ColorRect
 var mat: ShaderMaterial
 var t := 0.0
+var dem   # dem.gd: bản đồ ánh sáng đèn, đom đóm, sao trên nước
 
-func _init(g, m) -> void:
+func _init(g, m, f) -> void:
 	G = g
 	main = m
 	layer = 6   # trên làng và mưa / lá bay (lớp 5), dưới giao diện (lớp 10)
@@ -34,14 +35,18 @@ func _init(g, m) -> void:
 	mat.shader = load("res://logic/hau_ky.gdshader")
 	rect.material = mat
 	add_child(rect)
+	dem = load("res://logic/dem.gd").new(g, f)
+	add_child(dem)
+	mat.set_shader_parameter("uLight", dem.texture())
 
 func _process(dt: float) -> void:
 	t += dt
 	var on: bool = G.fx_new() and G.troi != null
 	visible = on
+	var h: float = float(G.troi.dh().h) if G.troi != null else 12.0
+	dem.step(dt, on and int(G.cfg.get("q", 2)) >= 1, h, on and int(G.cfg.get("q", 2)) >= 2)
 	if not on:
 		return
-	var h: float = float(G.troi.dh().h)
 	var i := 0
 	while i < K.size() - 2 and h >= float(K[i + 1][0]):
 		i += 1
@@ -49,7 +54,9 @@ func _process(dt: float) -> void:
 	var b: Array = K[i + 1]
 	var u := clampf((h - float(a[0])) / maxf(0.001, float(b[0]) - float(a[0])), 0.0, 1.0)
 	u = u * u * (3.0 - 2.0 * u)
-	mat.set_shader_parameter("uExp", lerpf(a[1], b[1], u))
+	# trăng: đêm rằm sáng hơn, cuối tháng tối hơn
+	mat.set_shader_parameter("uExp", lerpf(a[1], b[1], u) * lerpf(1.0, 0.9 + 0.18 * dem.moon_k(), dem.night_k(h)))
+	mat.set_shader_parameter("uNk", dem.nk)
 	mat.set_shader_parameter("uSat", lerpf(a[2], b[2], u))
 	mat.set_shader_parameter("uCon", lerpf(a[3], b[3], u))
 	mat.set_shader_parameter("uSh", (a[4] as Vector3).lerp(b[4], u))
