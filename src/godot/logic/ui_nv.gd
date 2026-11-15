@@ -860,8 +860,9 @@ func badge(btn: Control) -> void:
 	src.r = [rx - w, src.r[1], w, src.r[3]]
 	var tw := _tw(src, s)
 	_st(src, s, rx - w + (w - tw) * 0.5, tw + 0.5)
-	var bn: Dictionary = btn.get_meta("snap")
-	bdg = U._build(src, {}, Vector2(float(bn.r[0]), float(bn.r[1])))
+	var bn: Dictionary = btn.get_meta("snap", {})
+	var bo: Vector2 = Vector2(float(bn.r[0]), float(bn.r[1])) if bn.has("r") else btn.r.position
+	bdg = U._build(src, {}, bo)
 	btn.add(bdg)
 
 func step(dt: float) -> void:

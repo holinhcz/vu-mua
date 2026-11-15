@@ -120,7 +120,12 @@ func strike() -> void:   # HK: sét đánh cây cao (chưa có cột thu lôi �
 	var t := hn().filter(func(c): return (farm != null and farm.onscreen(c.gx, c.gy, 200.0)) or randf() < 0.3)
 	if t.is_empty():
 		return
-	t.sort_custom(func(c, f): return float(EM[f.id] - EM[c.id]) + (randf() - 0.5) * 2.0 < 0.0)
+	# web: sort((c, f) => EM[f.id] - EM[c.id] + (random - .5) * 2): cây cao hơn bị sét trước, có xáo nhẹ. So sánh ngẫu nhiên
+	# làm Godot báo "bad comparison function": gán mỗi cây một điểm ngẫu nhiên một lần rồi xếp theo điểm đó.
+	var sc := {}
+	for c in t:
+		sc[c] = float(EM[c.id]) + (randf() - 0.5) * 2.0
+	t.sort_custom(func(c, f): return sc[c] > sc[f])
 	var a: Dictionary = t[0]
 	var e := float(a.gx) + float(a.fw) / 2.0
 	var r := float(a.gy) + float(a.fd) / 2.0

@@ -135,7 +135,7 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 		em.visible = L.is_empty()
 	if L.is_empty():
 		return
-	var vr: Array = vw.get_meta("snap").r
+	var vr: Array = vw.get_meta("snap", {}).get("r", [vw.r.position.x, vw.r.position.y])
 	var o := Vector2(float(vr[0]), float(vr[1]))
 	var x0 := float(K.li0.r[0])
 	var y := float(K.li0.r[1])

@@ -140,6 +140,9 @@ func _txt(b: Control, s: String) -> void:
 	var i: int = b.get_meta("ti", 0)
 	b.set_text(i, String(b.get_meta("prefix", "")) + s + String(b.get_meta("suffix", "")))
 
+func _sm(b: Control) -> Dictionary:   # bản chụp gốc của nút (meta "snap"); thiếu thì {}
+	return b.get_meta("snap") if b.has_meta("snap") else {}
+
 func _move(b: Control, p: Vector2) -> void:
 	b.r.position = p
 	b.position = p * Css.K
@@ -793,7 +796,7 @@ func _buttons(b: Control, out: Array) -> Array:
 	return out
 
 static func _di(sk: Array, k: Control) -> int:
-	var n = k.get_meta("snap", null)
+	var n = k.get_meta("snap") if k.has_meta("snap") else null   # get_meta(.., null) vẫn báo lỗi khi thiếu
 	for i in sk.size():
 		if is_same(sk[i], n):
 			return i
@@ -1788,7 +1791,7 @@ func _build_kho() -> void:
 		if chips != null:
 			var L := _buttons(chips, [])
 			for q in L.size():
-				var sn: Dictionary = L[q].get_meta("snap")
+				var sn: Dictionary = _sm(L[q])
 				if String(sn.cls).split(" ").has("on"):
 					kh_chip_on = sn
 				elif kh_chip_off.is_empty():
@@ -2141,7 +2144,7 @@ func _kho_sell_all() -> void:
 func _kho_conf_off() -> void:
 	var sa = kho_ids[0].get("#sellAll")
 	if sa != null:
-		sa.style(Snap.css_of(sa.get_meta("snap")), sa.z)
+		sa.style(Snap.css_of(_sm(sa)), sa.z)
 		sa.place(sa.r)
 
 # ------------------------------------------------------------------ #khDet (món đang chọn)
@@ -2172,8 +2175,8 @@ func _build_det() -> void:
 	kd.plus = bs[2]
 	kd.all = bs[3]
 	# lúc chụp: "−" đang tắt (1 cái), "+" đang bật -> hai dáng nút
-	var sm: Dictionary = kd.minus.get_meta("snap")
-	var sp: Dictionary = kd.plus.get_meta("snap")
+	var sm: Dictionary = _sm(kd.minus)
+	var sp: Dictionary = _sm(kd.plus)
 	kd.off = [Snap.css_of(sm), Css.color(sm.css.get("color", "rgb(0,0,0)"))]
 	kd.on = [Snap.css_of(sp), Css.color(sp.css.get("color", "rgb(0,0,0)"))]
 	kd.sell = _q(kh_det, "kdsell")
@@ -2288,7 +2291,7 @@ func _det_sync() -> void:
 var kh_vl := ""
 
 func _kho_vl_pick(b: Control) -> void:
-	var n: Dictionary = b.get_meta("snap")
+	var n: Dictionary = _sm(b)
 	var nm := Snap.find(n, "u2vn")
 	kh_vl = nm.get("text", "")
 	kh_sig = ""
@@ -2306,7 +2309,7 @@ func _kho_vl_sync() -> void:
 	var ids: Dictionary = kho_ids[1]
 	var mats: Dictionary = G.g.get("mats", {})
 	for b in _qall(kho_roots[1], "u2vt", []):
-		var n: Dictionary = b.get_meta("snap")
+		var n: Dictionary = _sm(b)
 		var nm: String = Snap.find(n, "u2vn").get("text", "")
 		var id := _mat_id(nm)
 		var c := int(mats.get(id, 0))
