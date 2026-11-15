@@ -19,7 +19,7 @@ var force := ""        # đè thời tiết (thử)
 
 const BAO := {"nang": "Trời tạnh, nắng đẹp trở lại.",
 	"mua": "Mưa dầm rả rích cả buổi, có sấm sét: ruộng vườn thấm nước dần, khỏi tưới. Gió có thể quật ngã cây, nhớ ra dọn.",
-	"rao": "Mưa rào ào xuống! Ruộng vườn no nước ngay. Mưa mau tạnh thôi.",
+	"rao": "Mưa rào ào xuống! Tạnh là ruộng vườn no nước.",
 	"han": "Nắng hạn gắt: ruộng khô nhanh gấp rưỡi, nhớ tưới thường xuyên. Đặt lu nước, giếng gần ruộng cho đỡ."}
 # kX: hình đồng hồ theo buổi
 const KX := {
@@ -108,11 +108,32 @@ func rain() -> float:   # oj: lượng mưa cho shader nền
 static func _rain_of(w: String) -> float:
 	return 1.0 if w == "rao" else (0.55 if w == "mua" else 0.0)
 
-func vwx() -> String:   # thời tiết để VẼ: Cài đặt › Thời tiết (xem thử) đè lên, luật vẫn theo cur
+func vwx() -> String:   # thời tiết để VẼ (= luật cur: Cài đặt › Thời tiết đặt luôn thời tiết thật, xem step)
+	return "rao" if rao_t > 0.0 else cur
+
+func _cfg_wx() -> String:   # Cài đặt › Thời tiết: "" = tự động
 	var w := String(G.cfg.get("w", "auto"))
 	if w == "giong":   # cài đặt cũ (trước bản 167)
 		w = "mua"
-	return cur if w == "auto" else w
+	return "" if w == "auto" or w == "rao" else w
+
+# Mưa rào: trận mưa 5 giây rồi tạnh, tạnh là ruộng + cây ăn trái no nước. Buổi nắng có trận rào (nv.rao_at) thì tới giờ đổ
+# một lần (g.rao_sl giữ buổi đã đổ); bấm Cài đặt › Mưa rào thì đổ ngay một trận.
+var rao_t := 0.0
+const RAO_S := 5.0
+
+func rao_start() -> void:
+	rao_t = RAO_S
+	_it = 0.0
+
+func _rao_done() -> void:
+	for f in G.g.plots:
+		if f.c != null and not G.ripe(f):
+			f.w = G.water_hold(f)
+	if G.w_all != null and G.lang != null:
+		G.w_all.WR.zb(true)
+	G.mark()
+	_it = 0.0
 
 func step(dt: float) -> void:
 	# rQ mỗi khung: chớp tắt dần; mỗi giây xét đổi thời tiết, mưa thì ruộng tự tưới
@@ -121,6 +142,10 @@ func step(dt: float) -> void:
 	if thT > 0.0:
 		thT -= dt
 	bao.step(dt)
+	if rao_t > 0.0:
+		rao_t -= dt
+		if rao_t <= 0.0:
+			_rao_done()
 	_it -= dt
 	if _it > 0.0:
 		if vwx() == "mua":
@@ -128,7 +153,18 @@ func step(dt: float) -> void:
 	else:
 		_it = 1.0
 		var a: int = G.day() * 4 + int(floor(hour() / 6.0))
-		var n: String = force if force != "" else G.nv.Wd()
+		if String(G.cfg.get("w", "auto")) == "rao":   # bấm Mưa rào: đổ một trận, nút về Tự động
+			G.cfg.w = "auto"
+			rao_start()
+		elif rao_t <= 0.0 and int(G.g.get("rao_sl", -1)) != a and G.nv.Wd() == "nang" and _cfg_wx() == "":
+			var rr: Array = G.nv.rao_at(a)
+			var hs := fposmod(hour(), 6.0)
+			if rr.size() == 2 and hs >= float(rr[0]) and hs < float(rr[0]) + 1.0:   # mở game trễ hơn 1 tiếng thì thôi
+				G.g.rao_sl = a
+				rao_start()
+		var n: String = force if force != "" else (_cfg_wx() if _cfg_wx() != "" else G.nv.Wd())
+		if rao_t > 0.0:
+			n = "rao"
 		var first := cur == ""
 		if n != cur:
 			cur = n
@@ -148,11 +184,11 @@ func step(dt: float) -> void:
 			var ch := false
 			for f in G.g.plots:
 				if f.c != null and not G.ripe(f) and float(f.w) < G.water_hold(f) * 0.9:
-					# mưa rào / giông: đầy nước ngay; mưa dầm: thấm dần (mỗi giây 1,5%, khô hẳn thì hơn 1 phút mới đầy)
-					f.w = G.water_hold(f) if n != "mua" else minf(G.water_hold(f), float(f.w) + G.water_hold(f) * 0.015)
+					# mưa rào: đầy nước ngay; mưa dầm: thấm dần (mỗi giây 5%, khô hẳn thì 20 giây là đầy)
+					f.w = G.water_hold(f) if n != "mua" else minf(G.water_hold(f), float(f.w) + G.water_hold(f) * 0.05)
 					ch = true
-			an += 1   # NTWEB rQ: 5 lượt mưa thì tưới luôn cây ăn trái (zb); mưa dầm 15 lượt
-			if an >= (15 if n == "mua" else 5):
+			an += 1   # NTWEB rQ: 5 lượt mưa thì tưới luôn cây ăn trái (zb); mưa rào tưới ngay
+			if an >= (5 if n == "mua" else 1):
 				an = 0
 				if G.w_all != null and G.lang != null and G.w_all.WR.zb(true) > 0:
 					ch = true

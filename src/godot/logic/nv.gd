@@ -140,19 +140,17 @@ static func Hx(t: int) -> String:
 			return TQ[l]
 	return "nang"
 
-# Mưa dầm: rả rích cả buổi 6 tiếng, có sấm chớp, sét đánh / gió quật ngã cây. Mưa rào (rao): buổi nắng (không phải hạn) có khi đổ một trận
-# ngắn 20-40 phút, giờ nào trong buổi theo số cố định của buổi (mọi máy như nhau); trưa chiều mùa hạ, mùa thu hay gặp.
+# Mưa dầm: rả rích cả buổi 6 tiếng, có sấm chớp, sét đánh / gió quật ngã cây. Mưa rào: buổi nắng (không phải hạn) có khi
+# đổ một trận 5 giây (troi.rao_start), giờ nào trong buổi theo số cố định của buổi; trưa chiều mùa hạ, mùa thu hay gặp.
 const RAO_P := [0.12, 0.3, 0.24, 0.05]
 
 func Wd() -> String:
 	var h := hour()
 	var sl: int = G.day() * 4 + int(floor(h / 6.0))
 	var k := Hx(sl)
-	if k == "nang" and rao_in(sl, fposmod(h, 6.0)):
-		return "rao"
 	return k
 
-static func rao_at(sl: int) -> Array:   # [giờ bắt đầu trong buổi, dài (giờ)] hoặc [] nếu buổi này không có mưa rào
+static func rao_at(sl: int) -> Array:   # [giờ đổ trong buổi, (cũ: dài)] hoặc [] nếu buổi này không có mưa rào
 	var a := int(floor(sl / 4.0))
 	if fest_day(a):
 		return []
@@ -160,10 +158,6 @@ static func rao_at(sl: int) -> Array:   # [giờ bắt đầu trong buổi, dài
 	if Me(sl * 13 + 5, 377) >= p:
 		return []
 	return [0.5 + Me(sl * 17 + 9, 401) * 4.5, (20.0 + Me(sl * 19 + 3, 433) * 20.0) / 60.0]
-
-static func rao_in(sl: int, hs: float) -> bool:
-	var r := rao_at(sl)
-	return r.size() == 2 and hs >= float(r[0]) and hs < float(r[0]) + float(r[1])
 
 # ------------------------------------------------------------------ trạng thái
 func Pl() -> Dictionary:

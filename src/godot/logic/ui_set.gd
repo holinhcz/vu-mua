@@ -300,6 +300,11 @@ func pick(k: String, v) -> void:
 		elif int(v) == 0 and _tm:
 			TM.tat()
 		return
+	if k == "w" and v == "rao":   # Mưa rào: đổ ngay một trận 5 giây (không phải chế độ giữ), nút vẫn ở Tự động
+		G.cfg_set("w", "auto")
+		G.troi.rao_start()
+		_build()
+		return
 	if str(G.cfg[k]) == str(v):
 		return
 	G.cfg_set(k, v)

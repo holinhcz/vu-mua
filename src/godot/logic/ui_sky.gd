@@ -11,7 +11,7 @@ const TK := ["Khuya", "Sáng", "Chiều", "Tối"]
 const T8 := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
 const HQ := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa rào tưới giùm.",
 	"mua": "Mưa rả rích cả buổi, ruộng và cây ăn trái thấm nước dần, khỏi tưới. Có sấm sét, gió quật ngã 1–3 cây; cây đè ruộng thì ruộng ngưng lớn tới khi dọn. Đi chậm 15% nếu không mặc áo mưa.",
-	"rao": "Trận mưa ngắn 20–40 phút, ruộng no nước ngay. Đi chậm 30% lúc đang mưa.",
+	"rao": "Trận mưa rào 5 giây, tạnh là ruộng và cây ăn trái no nước.",
 	"han": "Ruộng khô nhanh gấp rưỡi, không có mưa rào. Lu nước, giếng, ao gần ruộng giúp đỡ khô."}
 const RK := ["điệu Bắc rộn ràng", "điệu Nam thong thả", "điệu Oán man mác", "điệu Oán chậm rãi"]   # rk[xi].nm
 
