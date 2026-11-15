@@ -1,7 +1,7 @@
 extends "res://logic/ui_bang.gd"
-# KHO › ĐỒ DÙNG bản web (l() + f() trong .u2vw) và hai chip HUD (AF: .ddchips dưới hàng đầu bên trái).
+# KHO › ĐỒ DÙNG bản web (l() + f() trong .u2vw) và chip HUD bùa EXP (AF: .ddchips dưới hàng đầu bên trái).
 # Lưới thẻ .u2vg (bùa +50% EXP theo L3, thẻ "đang chạy" khi chỉ còn giờ, phần cơm hồi sức), khung chi tiết .u2vd ở đáy bảng
-# (Dùng / Ăn). Chip: "XP +50% h:mm:ss" (bấm mở Kho › Đồ dùng), "×n" phần cơm (bấm là ăn). Mẫu: ui/snap/kdd.json.
+# (Dùng / Ăn). Chip: "XP +50% h:mm:ss" (bấm mở Kho › Đồ dùng). Mẫu: ui/snap/kdd.json.
 
 var K := {}
 var sel := ""
@@ -203,65 +203,35 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 			sync(ids)
 			chips_sync(), "scale")
 
-func chips_sync() -> void:   # AF: chip HUD
+func chips_sync() -> void:   # AF: chip HUD "XP +50% h:mm:ss" (bấm mở Kho › Đồ dùng); chip phần cơm bỏ ở bản 172
 	var hl = U.hud_roots.get(".hudtl")
 	if hl == null or G.nv == null:
 		return
 	var n: float = G.nv.Fu()
-	var e: int = G.nv.tu()
 	var off: bool = G.w_all == null or G.w_all.WC._mode() == "off"
-	var sg := (PF(n) if n > 0.0 else "") + "|" + str(e) + "|" + str(off)
+	var sg := (PF(n) if n > 0.0 else "") + "|" + str(off)
 	if sg == csig and (chips == null or is_instance_valid(chips)):
 		return
 	csig = sg
 	if chips != null and is_instance_valid(chips):
 		chips.queue_free()
 	chips = null
-	if not off or (n <= 0.0 and e <= 0):
+	if not off or n <= 0.0:
 		return
 	var d := _cl(K.chips)
 	var xp: Dictionary = d.kids[0]
-	var cm: Dictionary = d.kids[1]
-	var kids := []
-	var dx := 0.0
-	if n > 0.0:
-		var k := _kid(xp, "ddk")
-		var s := PF(n)
-		var dw := _tw(k, s) - _tw(k, String(k.text))
-		k.text = s
-		k.r[2] = float(k.r[2]) + dw
-		if k.has("tr"):
-			k.tr[2] = float(k.tr[2]) + dw
-		xp.r[2] = float(xp.r[2]) + dw
-		dx = dw
-		kids.append(xp)
-	else:
-		dx = -float(cm.r[0])
-	if e > 0:
-		Snap._move(cm, Vector2(dx, 0))
-		var t := _kid(cm, "ddt")
-		var s2 := "×" + str(e)
-		var dw2 := _tw(t, s2) - _tw(t, String(t.text))
-		t.text = s2
-		t.r[2] = float(t.r[2]) + dw2
-		if t.has("tr"):
-			t.tr[2] = float(t.tr[2]) + dw2
-		cm.r[2] = float(cm.r[2]) + dw2
-		kids.append(cm)
-	d.kids = kids
+	var k := _kid(xp, "ddk")
+	var s := PF(n)
+	var dw := _tw(k, s) - _tw(k, String(k.text))
+	k.text = s
+	k.r[2] = float(k.r[2]) + dw
+	if k.has("tr"):
+		k.tr[2] = float(k.tr[2]) + dw
+	xp.r[2] = float(xp.r[2]) + dw
+	d.kids = [xp]
 	chips = U._build(d, {}, hl.r.position)
 	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hl.add(chips)
-	var bs: Array = chips.kids()
-	for i in bs.size():
-		var isxp: bool = kids[i] == xp
-		U._click(bs[i], func():
-			if isxp:
-				U.kho_open()
-				U._kho_tab(2)
-			else:
-				G.nv.j8()
-				G.mark()
-				csig = ""
-				dsig = ""
-				chips_sync(), "scale")
+	U._click(chips.kids()[0], func():
+		U.kho_open()
+		U._kho_tab(2), "scale")
