@@ -106,6 +106,8 @@ func _ready() -> void:
 	var ui := CanvasLayer.new()
 	add_child(ui)
 	ui_layer = ui
+	# (logic b166) màn chờ che kín: khỏi vẽ cả làng phía dưới mỗi khung (máy dồn sức tải + giải ảnh), xong thì hiện lại
+	visible = false
 	cover = ColorRect.new()
 	cover.color = Color(0.043, 0.067, 0.059)
 	ui.add_child(cover)
@@ -1698,6 +1700,9 @@ func _fetch(name: String, cb: Callable, tries: int = 0, prio: bool = false) -> v
 	f_run += 1
 	var h := HTTPRequest.new()
 	h.accept_gzip = false   # the browser already unpacked the body; unpacking again fails
+	# (logic b166) HTTPRequest chỉ đọc download_chunk_size (mặc định 64 KB) mỗi khung: máy chậm lúc đang tải (vài khung/giây)
+	# thì một ảnh 500 KB mất cả chục khung, 8 lượt tải nối nhau đứng ì ("tải 13% là đứng"). Đọc cả file trong một khung.
+	h.download_chunk_size = 1 << 22
 	add_child(h)
 	h.request_completed.connect(func(res, code, _hd, body):
 		h.queue_free()
@@ -2662,6 +2667,7 @@ func _update_meter() -> void:
 		var wok: bool = water != null or not info.get("river", false)
 		if (need_n > 0 and have_n >= need_n and wok) or Time.get_ticks_msec() - t_start > 90000:
 			first_ready = true
+			visible = true
 			get_tree().create_timer(2.0).timeout.connect(_op_prefetch_start)
 			status.text = ""
 			cover.visible = false
