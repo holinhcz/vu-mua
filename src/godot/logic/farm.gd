@@ -622,29 +622,7 @@ func _sway_step(dt: float) -> void:
 				c.self_modulate = Color(1, 1, sway_ph(c.position), SWAY_A)
 
 var cham: Node = null
-# cây cỏ hoang đã dọn / vật cảnh đã nhận / chỗ xưởng, chuồng: bên nền giấu hình theo main.xuong_set, nhưng nó chỉ giấu
-# hình cảnh đã dựng xong lúc được gọi, và gọi lại cùng danh sách thì bỏ qua. Mở game: lần gọi đầu đến trước khi cảnh dựng
-# xong -> tải lại làng cây đã dọn hiện lại, dọn thêm cây khác mới mất hết. Cảnh / món nền dựng thêm thì gửi lại.
-var _sc_ready := ""
-var _sc_t := 0.0
-func _sc_ready_step(dt: float) -> void:
-	_sc_t -= dt
-	if _sc_t > 0.0:
-		return
-	_sc_t = 0.5
-	var n := 0
-	if "sc_spr" in main:
-		for L in main.sc_spr:
-			n += L.size()
-	var sg := str(main.sc_data.is_empty()) + "|" + str(n) + "|" + str(main.objs.size())
-	if sg != _sc_ready:
-		_sc_ready = sg
-		main.xg_sig = ""
-		_xw_sig = ""
-		_xw_sync()
-
 func _process(dt: float) -> void:
-	_sc_ready_step(dt)
 	if cham == null:   # chạm điện thoại: zoom 2 ngón, bỏ chuột giả (cham.gd); cuối cây để nhận sự kiện trước
 		cham = Node.new()
 		cham.set_script(load("res://logic/cham.gd"))

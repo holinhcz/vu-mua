@@ -288,7 +288,8 @@ func _make_ground() -> void:
 					tile_img = im2
 					_build_pondwater()
 				else: road_img = im2
-				gparts += 2 if nm == "tile" else 1)
+				gparts += 2 if nm == "tile" else 1
+				_road_retry())
 		# layer 4: ponds, canal, ditches (fields + the game's colours + bank detail textures)
 		_fetch("n/pond.json", func(b5):
 			var pj = JSON.parse_string(b5.get_string_from_utf8())
@@ -319,7 +320,8 @@ func _make_ground() -> void:
 		g.material = mat
 		g.z_index = -40
 		add_child(g)
-		ground = g)
+		ground = g
+		_road_retry())
 
 # ---------------------------------------------------------------- bought land (n41, web ci()/tc() + NEN2 own()/tv())
 # Which lot every tile belongs to (n/parcel.png), the lots' names and aliases, and the wild things that stand on unbought
@@ -1387,7 +1389,12 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 	_pump_scenery()
 	_build_refl()
 	_build_fall()
-	if road_pend.size() > 0:
+	_road_retry()
+	if not _xg_last.is_empty():
+		xuong_set(_xg_last)
+
+func _road_retry() -> void:   # (logic b163) đường logic gửi trước khi nền sẵn sàng (ảnh đường / cảnh chưa về): áp ngay khi đủ
+	if road_pend.size() > 0 and road_img != null and sc_root != null and ground != null and not sc_data.is_empty():
 		road_set(road_pend[0], road_pend[1])
 
 func _pump_scenery() -> void:
@@ -3135,10 +3142,14 @@ func _foot_tile(p: Vector2) -> Vector2:
 func xuong_set(rects) -> void:
 	if not (rects is Dictionary):
 		return
+	var n := objs.size()
+	for L in sc_spr:
+		n += L.size()
 	var sig := JSON.stringify(rects)
-	if sig == xg_sig:
+	if sig == xg_sig and n == _xg_n:
 		return
 	xg_sig = sig
+	_xg_last = rects.duplicate(true)
 	var R := []
 	var RK := {}
 	for k in rects:
@@ -3156,9 +3167,6 @@ func xuong_set(rects) -> void:
 	# (logic b162) only the tiles of a workshop that came, went or moved are looked at: an index tile -> scenery / objects
 	# standing there, built once (and again when the scenery count changes). Before, every move of a workshop or pen
 	# walked all ~9000 scenery sprites and every object.
-	var n := objs.size()
-	for L in sc_spr:
-		n += L.size()
 	if n != _xg_n or sc_data.is_empty():
 		_xg_n = n
 		_xg_ix = {}
@@ -3198,6 +3206,7 @@ func xuong_set(rects) -> void:
 var _xg_ix := {}   # ô chân -> [[foot, sprite cảnh | object dict]]
 var _xg_n := -1
 var _xg_R := {}
+var _xg_last := {}   # (logic b163) rects lần gọi trước: cảnh dựng xong sau lần gọi đầu thì tự áp lại (cây đã dọn không hiện lại)
 
 func _xg_add(foot: Vector2, it) -> void:
 	var t := _foot_tile(foot)
