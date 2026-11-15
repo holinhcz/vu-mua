@@ -304,8 +304,27 @@ func bS(t: Dictionary) -> bool:   # bS: chỗ bãi bùn này con nước này đ
 	var a = G.g.get("td")
 	return a is Dictionary and int(a.get("c", -1)) == GN() and a.get("p") is Dictionary and bool(a.p.get(t.key, 0))
 
+# Bãi bùn lúc nước ròng (v6, bản 176): ô nước sát hai bờ khúc sông đã mua lộ bùn, mỗi bờ 4 chỗ rải đều; chỗ đổi theo con nước.
+# Mỗi chỗ có một thứ để mò: cá kèo, ốc, ốc bươu, tép, lục bình.
+const BUN_K := ["ca_keo", "oc", "oc_buou", "tep", "luc_binh"]
+var _v6_sig := ""
+var _v6 := []
+func v6() -> Array:   # [{gx, gy, x, y, k, key, ph}]
+	if not pk() or G.w_all == null:
+		return []
+	var n := GN()
+	var sig := str(n) + "|" + str(G.lang.ver if G.lang != null else 0) + "|" + JSON.stringify(G.g.get("land", {}))
+	if sig == _v6_sig:
+		return _v6
+	_v6_sig = sig
+	_v6 = []
+	for e in G.w_all.WC.bank_spots(4, n * 17 + 5):
+		var k: String = BUN_K[int(floor(G.nv.Me(n * 13 + int(e.gx) * 3 + int(e.gy), 607) * BUN_K.size()))]
+		_v6.append({"gx": e.gx, "gy": e.gy, "x": float(e.gx) + 0.5, "y": float(e.gy) + 0.5, "k": k, "key": "bb" + str(e.gx) + "," + str(e.gy), "ph": G.nv.Me(int(e.gx), int(e.gy))})
+	return _v6
+
 func gk(t: String) -> bool:   # gk: mò bãi bùn
-	var a: Array = _x("v6", [], [])
+	var a: Array = v6()
 	var n = null
 	for r in a:
 		if r.key == t:

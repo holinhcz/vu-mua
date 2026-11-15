@@ -717,7 +717,9 @@ func _process(dt: float) -> void:
 	_dan_sync(tt)
 	_hop_sync()
 	_tree_bub_sync(tt)
-	_nn_sync(dt)
+	if song == null:
+		song = load("res://logic/song_ve.gd").new(self)
+	song.step(dt)
 	_parts_step(dt)
 	_jobs(dt)
 	player.step(dt)
@@ -735,51 +737,7 @@ func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong m�
 	var vs: Vector2 = get_viewport().get_visible_rect().size / main.zoom
 	return p.x > main.cam.x - m and p.y > main.cam.y - m and p.x < main.cam.x + vs.x + m and p.y < main.cam.y + vs.y + m * 2.0
 
-# bụi ven sông mùa nước nổi (w_cho.Vb): hình món (ui/svg/kh) đứng ở chân bụi, đã hái hôm nay thì mờ
-const NN_IC := {"dd": "dien_dien", "kn": "keo_neo", "sm": "bong_sung"}
-var nn_nodes := {}
-var _nn_t := 0.0
-func _nn_sync(dt: float) -> void:
-	_nn_t -= dt
-	if _nn_t > 0.0:
-		return
-	_nn_t = 1.0
-	var L: Array = G.w_all.WC.Vb() if G.w_all != null else []
-	var keep := {}
-	for o in L:
-		keep[o.key] = 1
-		var s = nn_nodes.get(o.key)
-		if s == null or not is_instance_valid(s):
-			var tx: Texture2D = ui.item_ic(String(NN_IC.get(o.kd, "dien_dien")), 64.0)
-			if tx == null:
-				continue
-			s = Node2D.new()   # một bụi = 3 nhánh (hình món) chụm lại, nhánh sau nhỏ hơn
-			var cx: float = float(o.gx) + 0.5
-			var cy: float = float(o.gy) + 0.5
-			s.position = Vector2(en(cx, cy), nn(cx, cy) + 3.0)
-			for b in [[Vector2(-8, -3), 20.0], [Vector2(8, -2), 21.0], [Vector2(0, 2), 25.0]]:
-				var sp := Sprite2D.new()
-				sp.centered = false
-				sp.texture = tx
-				var k: float = float(b[1]) / float(tx.get_width())
-				sp.scale = Vector2(k, k)
-				sp.offset = Vector2(-tx.get_width() * 0.5, -tx.get_height() * 0.92)
-				sp.position = b[0]
-				sp.material = main.night_mat
-				s.add_child(sp)
-			_add_sorted(s, nn(cx, cy) + 0.5)
-			nn_nodes[o.key] = s
-		s.modulate.a = 0.3 if G.w_all.WC.cT(o) else 1.0
-	for k in nn_nodes.keys():
-		if not keep.has(k):
-			var s0 = nn_nodes[k]
-			for e in sortables:
-				if e[0] == s0:
-					sortables.erase(e)
-					break
-			if is_instance_valid(s0):
-				s0.queue_free()
-			nn_nodes.erase(k)
+var song = null   # song_ve.gd: bụi ven sông, cụm trôi, bãi bùn, cá búng
 
 var _rs_pm := PackedFloat64Array()
 
@@ -1036,11 +994,10 @@ func tap(sp: Vector2) -> void:
 	if ui.vlp != null and String(h.get("type", "")) != "sonha":
 		ui.vlp.chip_close()
 	match String(h.get("type", "")):
-		"nn":   # bụi ven sông: đi tới hái
+		"nn", "fl", "bun":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn
 			ui.close_all()
-			var nk := String(h.k)
-			if not has_job(nk):
-				q.append({"key": nk, "kind": "nn", "i": -1, "seed": nk, "pos": Vector2(float(h.gx) + 0.5, float(h.gy) + 1.2)})
+			if song != null:
+				song.tap(h)
 		"fall":
 			ui.close_all()
 			var fk := String(h.k)
@@ -1205,12 +1162,8 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var ga = WR.Y0.a
 		if ga != null:
 			_pk_add(L, {"type": "gavit"}, 5, nn(float(ga.x), float(ga.y)), func(p: Vector2) -> bool: return WR.iq(p.x, p.y), {"mv": true})
-	if G.w_all != null:   # bụi ven sông mùa nước nổi (điên điển, kèo nèo, bông súng ma)
-		for o in G.w_all.WC.Vb():
-			if G.w_all.WC.cT(o):
-				continue
-			var nf := Vector2(en(float(o.gx) + 0.5, float(o.gy) + 0.5), nn(float(o.gx) + 0.5, float(o.gy) + 0.5))
-			_pk_add(L, {"type": "nn", "k": o.key, "gx": o.gx, "gy": o.gy}, 6, nf.y, func(p: Vector2) -> bool: return absf(p.x - nf.x) < 11.0 and p.y > nf.y - 20.0 and p.y < nf.y + 5.0)
+	if song != null:   # sông: bụi ven sông, lục bình / rau muống trôi, bãi bùn
+		song.pick_add(L)
 	var B = G.troi.bao   # cây ngã / cháy
 	var fk: String = B.hit(w)
 	if fk != "" and B.by.has(fk):
@@ -1535,7 +1488,7 @@ func _jobs(dt: float) -> void:
 				G.mark()
 				ok = true
 			"fall": ok = G.troi.bao.chop(j.seed)
-			"nn": ok = G.w_all.WC.wx(j.seed)   # hái bụi ven sông
+			"nn", "fl", "bun": ok = song.job(j)
 			"scn":
 				if not G.g.clr.has(j.h.o.key):
 					lang.clear_hu(j.h.o)

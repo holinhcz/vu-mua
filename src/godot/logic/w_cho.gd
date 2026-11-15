@@ -831,23 +831,38 @@ func lT(_n: Dictionary) -> bool:   # bụi đang có (mùa nước nổi)
 	return WR != null and WR.qs()
 
 func Vb() -> Array:   # [{key, kd, gx, gy}]
-	var L = G.lang
-	if L == null or WR == null or not WR.qs() or L.M.is_empty():
+	if WR == null or not WR.qs():
 		return []
-	var sig := str(G.day()) + "|" + str(L.ver) + "|" + JSON.stringify(G.g.get("land", {}))
+	var sig := "vb" + str(G.day()) + "|" + str(G.lang.ver if G.lang != null else 0) + "|" + JSON.stringify(G.g.get("land", {}))
 	if sig == _vb_sig:
 		return _vb
 	_vb_sig = sig
 	_vb = []
+	for e in bank_spots(NN_SIDE, G.day() * 31):
+		var kd: String = ["dd", "kn", "sm"][(int(e.b) + int(e.side)) % 3]
+		_vb.append({"key": "nn" + str(e.gx) + "," + str(e.gy), "kd": kd, "gx": e.gx, "gy": e.gy})
+	return _vb
+
+# Sông Vàm: ô nước (mặt nước có sẵn thuộc khu sông), trục dòng sông (PCA), dùng chung cho bụi ven sông, bãi bùn, lục bình trôi
+var _rv_sig := ""
+var _rv := {}
+func river() -> Dictionary:   # {tiles: {Vector2i: 1}, c, ax, nx, path: [[điểm (ô), nửa bề ngang]]}
+	var L = G.lang
+	if L == null or L.M.is_empty():
+		return {}
+	var sig := str(L.ver)
+	if sig == _rv_sig:
+		return _rv
+	_rv_sig = sig
+	_rv = {}
 	var B: Array = L.M.B
-	var riv := {}   # ô nước sông (mặt nước có sẵn thuộc khu sông)
+	var riv := {}
 	for y in range(int(B[2]), int(B[3])):
 		for x in range(int(B[0]), int(B[1])):
 			if L.fm(x, y) and (String(L.fo(x, y)).begins_with("song") or W5.has(String(L.fo(x, y)))):
 				riv[Vector2i(x, y)] = 1
 	if riv.size() < 4:
-		return _vb
-	# trục dòng sông: hướng trải dài nhất của các ô nước (PCA), hai bờ = hai phía của trục
+		return _rv
 	var c := Vector2.ZERO
 	for k in riv:
 		c += Vector2(k)
@@ -860,21 +875,53 @@ func Vb() -> Array:   # [{key, kd, gx, gy}]
 		sxx += d.x * d.x
 		sxy += d.x * d.y
 		syy += d.y * d.y
-	var ax := Vector2(cos(0.5 * atan2(2.0 * sxy, sxx - syy)), sin(0.5 * atan2(2.0 * sxy, sxx - syy)))
+	var an := 0.5 * atan2(2.0 * sxy, sxx - syy)
+	var ax := Vector2(cos(an), sin(an))
 	var nx := Vector2(-ax.y, ax.x)
-	var side := [[], []]   # [[t, ô nước sát bờ]]
+	# đường giữa dòng: chia theo trục thành đoạn 3 ô, mỗi đoạn lấy trọng tâm + bề ngang
+	var bins := {}
+	for k in riv:
+		var d := Vector2(k) - c
+		var bi := int(floor(d.dot(ax) / 3.0))
+		if not bins.has(bi):
+			bins[bi] = []
+		bins[bi].append(d.dot(nx))
+	var ks := bins.keys()
+	ks.sort()
+	var path := []
+	for bi in ks:
+		var A: Array = bins[bi]
+		var lo := 1e9
+		var hi := -1e9
+		for v in A:
+			lo = minf(lo, float(v))
+			hi = maxf(hi, float(v))
+		var mid := (lo + hi) * 0.5
+		path.append([c + ax * (bi * 3.0 + 1.5) + nx * mid + Vector2(0.5, 0.5), maxf(0.5, (hi - lo) * 0.5)])
+	_rv = {"tiles": riv, "c": c, "ax": ax, "nx": nx, "path": path}
+	return _rv
+
+func bank_spots(per_side: int, seed: int) -> Array:   # ô nước sát hai bờ khúc sông đã mua, rải đều: mỗi bờ chia per_side đoạn, mỗi đoạn 1 ô
+	var R := river()
+	var L = G.lang
+	if R.is_empty():
+		return []
+	var riv: Dictionary = R.tiles
+	var c: Vector2 = R.c
+	var ax: Vector2 = R.ax
+	var nx: Vector2 = R.nx
+	var side := [[], []]
 	var N4 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 	for k in riv:
 		if not L.ci(String(L.fo(k.x, k.y))):
 			continue   # khúc sông chưa mua
-		for o in N4:   # ô nước sát bờ (kề ô không phải sông): bụi mọc ở mép nước, không bị cây trên bờ che
-			var q: Vector2i = k + o
-			if riv.has(q):
+		for o in N4:
+			if riv.has(k + o):
 				continue
 			var d := Vector2(k) - c
 			side[0 if d.dot(nx) < 0.0 else 1].append([d.dot(ax), k])
 			break
-	var day: int = G.day()
+	var out := []
 	for si in 2:
 		var S: Array = side[si]
 		if S.is_empty():
@@ -884,47 +931,15 @@ func Vb() -> Array:   # [{key, kd, gx, gy}]
 		for e in S:
 			t0 = minf(t0, float(e[0]))
 			t1 = maxf(t1, float(e[0]))
-		var used := {}
-		for b in NN_SIDE:
-			var lo := t0 + (t1 - t0) * b / NN_SIDE
-			var hi := t0 + (t1 - t0) * (b + 1) / NN_SIDE + 0.001
+		for b in per_side:
+			var lo := t0 + (t1 - t0) * b / per_side
+			var hi := t0 + (t1 - t0) * (b + 1) / per_side + 0.001
 			var C := S.filter(func(e): return float(e[0]) >= lo and float(e[0]) < hi)
 			if C.is_empty():
 				continue
-			var e: Array = C[int(floor(G.nv.Me(day * 31 + si * 7 + b, 523) * C.size()))]
-			var kd: String = ["dd", "kn", "sm"][(b + si) % 3]
-			var at: Vector2i = e[1]
-			if used.has(at):
-				continue
-			used[at] = 1
-			_vb.append({"key": "nn" + str(at.x) + "," + str(at.y), "kd": kd, "gx": at.x, "gy": at.y})
-	return _vb
-
-func cT(t: Dictionary) -> bool:   # cT: bụi này hôm nay hái rồi
-	var a = G.g.get("dd")
-	return a is Dictionary and int(a.get("day", -1)) == G.day() and a.get("p") is Dictionary and bool(a.p.get(t.key, 0))
-
-func wx(t: String) -> bool:   # wx (+ lớp bọc A1: kho còn 1 chỗ): hái bụi khóa t
-	if not G.kho_fit(1):
-		return false
-	var n = null
-	for o in Vb():
-		if o.key == t:
-			n = o
-	if n == null or not lT(n) or cT(n):
-		return false
-	var e: int = G.day()
-	if not (G.g.get("dd") is Dictionary) or int(G.g.dd.get("day", -1)) != e:
-		G.g.dd = {"day": e, "p": {}}   # web ghi đè cả g.dd (mất dữ liệu điểm danh Sp) — giữ đúng như web
-	G.g.dd.p[t] = 1
-	var r := 2 + (1 if randf() < 0.35 else 0)
-	var P9: Dictionary = NNP[String(n.get("kd", "dd")) if n.get("kd") else "dd"]
-	_add(P9.p, r)
-	G.float_text.emit(float(n.gx) + 0.5, float(n.gy) + 0.5, "+" + str(r) + " " + String(P9.n))
-	G.vib(8)
-	qi("harvest")
-	G.mark()
-	return true
+			var at: Vector2i = C[int(floor(G.nv.Me(seed + si * 7 + b, 523) * C.size()))][1]
+			out.append({"gx": at.x, "gy": at.y, "side": si, "b": b})
+	return out
 
 func Sp() -> Dictionary:   # Sp: g.dd của điểm danh tháng {l7, m, ms, bu}
 	var t = G.g.get("dd")
