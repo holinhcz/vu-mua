@@ -72,7 +72,7 @@ func _spr(b: String, k: String, foot: Vector2, sway: bool, fx := false) -> Sprit
 	s.set_meta("b", b)
 	s.set_meta("k", k)
 	if sway:
-		s.modulate = Color(1, 1, 1, 254.0 / 255.0)   # sprite_night: cây đung đưa quanh chân
+		s.modulate = Color(1, 1, F.sway_ph(foot), 254.0 / 255.0)   # sprite_sway: cây đung đưa quanh chân, pha cố định ở kênh xanh dương
 	return s
 
 func _add(s: Node2D, dk: float) -> void:

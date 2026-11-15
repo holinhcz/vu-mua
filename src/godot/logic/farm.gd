@@ -483,23 +483,42 @@ func _web_prune() -> void:
 					rs.visible = false
 	print("web_prune: giấu ", n, " hình cảnh không có trong web")
 
-# đang nhấn giữ kéo map: cây, lúa đứng yên (thôi lay) tới khi buông tay, khỏi giựt theo tay kéo
-var keo := false
-var _keo_cam := Vector2.INF
-var _keo_off0 = null   # sway_off gốc của nền (cờ thử __nosw)
+# cây lay (sprite_sway.gdshader): mỗi cây một pha cố định (như t.ph bản web) ghi vào kênh xanh dương của màu,
+# shader đọc pha đó, nên kéo map cây vẫn lay đều như lúc đứng yên (pha cũ tính theo tọa độ trên WebGL đổi theo camera -> giựt)
+const SWAY_A := 254.0 / 255.0
+var _sw_n := -1
+var _sw_t := 0.0
 
-func _keo_step() -> void:
-	if not ("touches" in main and "mdrag" in main and "sway_off" in main):
+static func sway_ph(p: Vector2) -> float:   # pha 0..1 theo chỗ đứng (cố định)
+	return fposmod(sin(floor(p.x) * 12.9898 + floor(p.y) * 78.233) * 43758.5453, 1.0)
+
+func _sway_step(dt: float) -> void:
+	if not ("night_mat" in main) or main.night_mat == null:
 		return
-	if _keo_off0 == null:
-		_keo_off0 = main.sway_off
-	var down: bool = main.touches.size() > 0 or main.mdrag
-	if not down:
-		keo = false
-	elif _keo_cam != Vector2.INF and main.cam != _keo_cam:
-		keo = true
-	_keo_cam = main.cam
-	main.sway_off = bool(_keo_off0) or keo
+	if _sw_n < 0:
+		var sh: Shader = load("res://logic/sprite_sway.gdshader")
+		main.night_mat.shader = sh
+		if main.night_raw != null:
+			main.night_raw.shader = sh
+		_sw_n = 0
+	_sw_t -= dt
+	if _sw_t > 0.0:
+		return
+	_sw_t = 1.0
+	var roots := [main.obj_root, main.sc_root]
+	var n := 0
+	for r in roots:
+		if r != null:
+			n += r.get_child_count()
+	if n == _sw_n:
+		return
+	_sw_n = n
+	for r in roots:
+		if r == null:
+			continue
+		for c in r.get_children():
+			if c is CanvasItem and absf(c.self_modulate.a - SWAY_A) < 0.002:   # cây lay của nền (main.gd)
+				c.self_modulate = Color(1, 1, sway_ph(c.position), SWAY_A)
 
 func _process(dt: float) -> void:
 	_web_prune()
@@ -521,7 +540,7 @@ func _process(dt: float) -> void:
 		refresh()
 	var tt := Time.get_ticks_msec() / 1000.0
 	var zz: float = main.zoom / maxf(1.0, main.dpr)
-	_keo_step()
+	_sway_step(dt)
 	if lang_ve != null:
 		lang_ve.step()
 	_lp_step()
@@ -544,7 +563,7 @@ func _process(dt: float) -> void:
 		var cs: Sprite2D = v.crop
 		if cs.visible:
 			# gió lay nhẹ (pP): +-0,05 rad, đứng yên khi xa
-			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 and not keo and G.stage(G.p(i)) > 0 else 0.0
+			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 and G.stage(G.p(i)) > 0 else 0.0
 			# chín: nhún lên (W = -|sin(3t + gx)| x 2); vừa gieo: nảy từ 0,25 lên (easeOutBack); vừa tưới/thu: lắc
 			var gc: Dictionary = G.cells[i]
 			var W := -absf(sin(tt * 3.0 + gc.gx)) * 2.0 if G.ripe(G.p(i)) else 0.0
