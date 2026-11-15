@@ -790,8 +790,17 @@ func harvest(i: int) -> bool:   # Xu
 		w_all.WS.ht_dat_after(i, true, pre)
 	return true
 
-func catch_bug(i: int) -> bool:   # Ty
+func catch_bug(i: int) -> bool:   # Ty (+ nhặt ốc gạo mùa nước nổi: g.plots[].oc)
 	var a := p(i)
+	if not a.get("b", 0) and a.get("oc", 0):
+		if not kho_fit(1):
+			return false
+		a.oc = 0
+		var n := 2 + (1 if randf() < 0.4 else 0)
+		g.barn["oc"] = int(g.barn.get("oc", 0)) + n
+		float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.5, "+" + str(n) + " ốc gạo")
+		mark()
+		return true
 	if not a.get("b", 0):
 		return false
 	a.b = 0

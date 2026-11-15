@@ -260,7 +260,7 @@ func _ok(id: String) -> bool:
 		"wc": return has_work()
 		"tharvest": return has_tree()
 		"chat": return has_fam()
-		"dd": return false      # qs() && O0(): chưa có bụi điên điển
+		"dd": return G.w_all != null and not G.w_all.WC.Vb().is_empty()   # mùa nước nổi, có bụi ven khúc sông đã mua
 		"bun": return false     # O0() > 0
 		"lo": return false      # T1().set.length
 		"cho": return false     # u4(): chợ nổi

@@ -820,6 +820,86 @@ func Um(t: String) -> bool:   # Um "khóa|giống|số|giá|tối đa" (+ lớp 
 	return true
 
 # ------------------------------------------------------------------ g.dd: hái bông ven sông (cT, wx); điểm danh (Sp)
+# Bụi ven sông mùa nước nổi (Vb, bản 175): điên điển, kèo nèo, bông súng ma mọc ở mép nước sát hai bờ sông Vàm (nước nổi tràn bờ);
+# chỉ ở khúc sông đã mua, rải đều hai bên bờ theo chiều dòng sông (mỗi bên 5 bụi, chia 5 đoạn, mỗi đoạn một bụi), chỗ đổi theo
+# ngày. Hết mùa nước nổi thì không còn bụi.
+const NN_SIDE := 5
+var _vb_sig := ""
+var _vb := []
+
+func lT(_n: Dictionary) -> bool:   # bụi đang có (mùa nước nổi)
+	return WR != null and WR.qs()
+
+func Vb() -> Array:   # [{key, kd, gx, gy}]
+	var L = G.lang
+	if L == null or WR == null or not WR.qs() or L.M.is_empty():
+		return []
+	var sig := str(G.day()) + "|" + str(L.ver) + "|" + JSON.stringify(G.g.get("land", {}))
+	if sig == _vb_sig:
+		return _vb
+	_vb_sig = sig
+	_vb = []
+	var B: Array = L.M.B
+	var riv := {}   # ô nước sông (mặt nước có sẵn thuộc khu sông)
+	for y in range(int(B[2]), int(B[3])):
+		for x in range(int(B[0]), int(B[1])):
+			if L.fm(x, y) and (String(L.fo(x, y)).begins_with("song") or W5.has(String(L.fo(x, y)))):
+				riv[Vector2i(x, y)] = 1
+	if riv.size() < 4:
+		return _vb
+	# trục dòng sông: hướng trải dài nhất của các ô nước (PCA), hai bờ = hai phía của trục
+	var c := Vector2.ZERO
+	for k in riv:
+		c += Vector2(k)
+	c /= riv.size()
+	var sxx := 0.0
+	var sxy := 0.0
+	var syy := 0.0
+	for k in riv:
+		var d := Vector2(k) - c
+		sxx += d.x * d.x
+		sxy += d.x * d.y
+		syy += d.y * d.y
+	var ax := Vector2(cos(0.5 * atan2(2.0 * sxy, sxx - syy)), sin(0.5 * atan2(2.0 * sxy, sxx - syy)))
+	var nx := Vector2(-ax.y, ax.x)
+	var side := [[], []]   # [[t, ô nước sát bờ]]
+	var N4 := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	for k in riv:
+		if not L.ci(String(L.fo(k.x, k.y))):
+			continue   # khúc sông chưa mua
+		for o in N4:   # ô nước sát bờ (kề ô không phải sông): bụi mọc ở mép nước, không bị cây trên bờ che
+			var q: Vector2i = k + o
+			if riv.has(q):
+				continue
+			var d := Vector2(k) - c
+			side[0 if d.dot(nx) < 0.0 else 1].append([d.dot(ax), k])
+			break
+	var day: int = G.day()
+	for si in 2:
+		var S: Array = side[si]
+		if S.is_empty():
+			continue
+		var t0 := 1e9
+		var t1 := -1e9
+		for e in S:
+			t0 = minf(t0, float(e[0]))
+			t1 = maxf(t1, float(e[0]))
+		var used := {}
+		for b in NN_SIDE:
+			var lo := t0 + (t1 - t0) * b / NN_SIDE
+			var hi := t0 + (t1 - t0) * (b + 1) / NN_SIDE + 0.001
+			var C := S.filter(func(e): return float(e[0]) >= lo and float(e[0]) < hi)
+			if C.is_empty():
+				continue
+			var e: Array = C[int(floor(G.nv.Me(day * 31 + si * 7 + b, 523) * C.size()))]
+			var kd: String = ["dd", "kn", "sm"][(b + si) % 3]
+			var at: Vector2i = e[1]
+			if used.has(at):
+				continue
+			used[at] = 1
+			_vb.append({"key": "nn" + str(at.x) + "," + str(at.y), "kd": kd, "gx": at.x, "gy": at.y})
+	return _vb
+
 func cT(t: Dictionary) -> bool:   # cT: bụi này hôm nay hái rồi
 	var a = G.g.get("dd")
 	return a is Dictionary and int(a.get("day", -1)) == G.day() and a.get("p") is Dictionary and bool(a.p.get(t.key, 0))
@@ -827,15 +907,11 @@ func cT(t: Dictionary) -> bool:   # cT: bụi này hôm nay hái rồi
 func wx(t: String) -> bool:   # wx (+ lớp bọc A1: kho còn 1 chỗ): hái bụi khóa t
 	if not G.kho_fit(1):
 		return false
-	var vb := _x("Vb")
-	var lt := _x("lT")
-	if not vb.is_valid() or not lt.is_valid():
-		return false
 	var n = null
-	for o in vb.call():
+	for o in Vb():
 		if o.key == t:
 			n = o
-	if n == null or not bool(lt.call(n)) or cT(n):
+	if n == null or not lT(n) or cT(n):
 		return false
 	var e: int = G.day()
 	if not (G.g.get("dd") is Dictionary) or int(G.g.dd.get("day", -1)) != e:

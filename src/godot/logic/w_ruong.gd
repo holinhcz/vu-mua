@@ -900,6 +900,7 @@ func gy(t: float) -> void:   # GY
 			o.append(n)
 	if o.size():
 		G.g.plots[o[randi() % o.size()]].oc = 1
+		G.mark()
 		if G.g.get("ocHint") == null or int(G.g.ocHint) != _vr():
 			G.g.ocHint = _vr()
 			_ta("Mùa nước nổi: ốc gạo bò lên ruộng! Chạm ô ruộng có ốc để nhặt làm mồi câu, mồi lọp lươn.")
