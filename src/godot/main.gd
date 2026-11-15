@@ -491,6 +491,20 @@ func _lot_apply() -> void:
 # grass colours for the lawn and the wild grass (NEN2 C.base / C.wild from OO grassA/grassB).
 var troi := {}
 var troi_fx: Node2D = null
+var troi_heat: ColorRect = null
+const HEAT_SH := """shader_type canvas_item;
+uniform sampler2D SCR : hint_screen_texture, filter_linear;
+uniform float amp = 0.0;
+uniform vec2 px = vec2(0.001);
+void fragment() {
+	vec2 uv = SCREEN_UV;
+	float k = smoothstep(0.1, 0.65, uv.y);
+	float w = sin(uv.y * 150.0 - TIME * 6.0) * 0.6 + sin(uv.y * 63.0 + uv.x * 21.0 - TIME * 4.3) * 0.4;
+	uv.x += w * amp * k * px.x;
+	uv.y += sin(uv.x * 85.0 + TIME * 5.0) * amp * 0.35 * k * px.y;
+	COLOR = texture(SCR, uv);
+}
+"""
 var troi_grass := ""
 func troi_set(st) -> void:
 	if not (st is Dictionary):
@@ -500,9 +514,27 @@ func troi_set(st) -> void:
 		var cl := CanvasLayer.new()
 		cl.layer = 5   # over the village, under the game's UI (layer 10)
 		add_child(cl)
+		troi_heat = ColorRect.new()   # (logic b170) nắng hạn giữa trưa: hơi nóng làm làng rung rinh (đọc màn đã vẽ, lệch nhẹ)
+		troi_heat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		troi_heat.visible = false
+		var hm := ShaderMaterial.new()
+		var hs := Shader.new()
+		hs.code = HEAT_SH
+		hm.shader = hs
+		troi_heat.material = hm
+		cl.add_child(troi_heat)
 		troi_fx = TroiFX.new()
 		troi_fx.main = self
 		cl.add_child(troi_fx)
+	var hh: float = float(st.get("h", 12.0))
+	var amp := 0.0
+	if str(st.get("wx", "")) == "han" and not bool(st.get("night", false)) and hh > 10.0 and hh < 16.0 and not motion_off:
+		amp = sin((hh - 10.0) / 6.0 * PI) * 1.4 * dpr   # đỉnh lúc 13g
+	troi_heat.visible = amp > 0.05
+	if troi_heat.visible:
+		troi_heat.size = get_viewport_rect().size
+		(troi_heat.material as ShaderMaterial).set_shader_parameter("amp", amp)
+		(troi_heat.material as ShaderMaterial).set_shader_parameter("px", Vector2.ONE / get_viewport_rect().size)
 	if night_force < 0 and st.has("night") and int(bool(st["night"])) != night_cur:
 		_night_tick()
 	var pal = st.get("pal", null)
@@ -585,6 +617,61 @@ class TroiFX extends Node2D:
 	var leaf_sea := -1
 	var bolt := PackedVector2Array()
 	var bolt_on := false
+	# (logic b170) nắng hạn ban ngày: cứ 7-14 giây một cơn gió cuốn bụi đất ngang màn (2,8 giây), 1/3 số lần xoáy thành cột bụi
+	var gust := {}
+	var gust_cd := 4.0
+	func _gust_step(dt: float, W: float, H: float, st: Dictionary) -> void:
+		var hot: bool = str(st.get("wx", "")) == "han" and not bool(st.get("night", false))
+		if not gust.is_empty():
+			gust.t += dt
+			if gust.t >= gust.d:
+				gust = {}
+			return
+		if not hot:
+			return
+		gust_cd -= dt
+		if gust_cd > 0.0:
+			return
+		gust_cd = randf_range(7.0, 14.0)
+		var dir := 1.0 if randf() < 0.5 else -1.0
+		var P := []
+		for i in 26:
+			P.append({"dx": randf_range(-140.0, 40.0), "dy": randf_range(-26.0, 26.0), "r": randf_range(8.0, 20.0), "ph": randf() * TAU, "a": randf_range(0.13, 0.26)})
+		var L := []
+		for i in 7:
+			L.append({"dx": randf_range(-120.0, 30.0), "dy": randf_range(-30.0, 20.0), "r": randf_range(3.0, 4.6), "ph": randf() * TAU,
+				"va": randf_range(4.0, 9.0) * (1.0 if randf() < 0.5 else -1.0), "c": Color(["#b8893e", "#9c6b2e", "#c9a25a", "#8a5a2b"][randi() % 4])})
+		gust = {"t": 0.0, "d": 2.8, "dir": dir, "y": randf_range(H * 0.45, H * 0.88), "x0": -60.0 if dir > 0 else W + 60.0,
+			"sp": (W + 240.0) / 2.8, "whirl": randf() < 0.33, "P": P, "L": L}
+	func _draw_gust(k: float) -> void:
+		var g := gust
+		var u: float = g.t / g.d
+		var fade := clampf(minf(u / 0.15, (1.0 - u) / 0.2), 0.0, 1.0)
+		var cx: float = g.x0 + g.dir * g.sp * g.t
+		var cy: float = g.y
+		for p in g.P:
+			var x: float = cx + g.dir * p.dx
+			var y: float = cy + p.dy + sin(g.t * 3.0 + p.ph) * 5.0
+			if g.whirl:   # xoáy: bụi quay quanh cột, bốc lên cao dần
+				var a: float = g.t * 6.0 + p.ph
+				var hgt: float = (p.dy + 26.0) / 52.0
+				x = cx + cos(a) * (6.0 + hgt * 22.0)
+				y = cy - hgt * 60.0 + sin(a) * 4.0
+			draw_set_transform(Vector2(x, y) * k, 0.0, Vector2(k, k))
+			draw_circle(Vector2.ZERO, p.r, Color(0.78, 0.66, 0.47, p.a * fade))
+			draw_circle(Vector2.ZERO, p.r * 0.55, Color(0.88, 0.79, 0.62, p.a * fade * 0.8))
+		for l in g.L:
+			var x: float = cx + g.dir * l.dx
+			var y: float = cy + l.dy + sin(g.t * 5.0 + l.ph) * 10.0 - u * 18.0
+			if g.whirl:
+				var a: float = g.t * 5.0 + l.ph
+				x = cx + cos(a) * 20.0
+				y = cy - 15.0 - u * 50.0 + sin(a) * 6.0
+			draw_set_transform(Vector2(x, y) * k, l.ph + g.t * l.va, Vector2(k, k))
+			var c: Color = l.c
+			c.a = fade
+			draw_colored_polygon(_ell(l.r, l.r * 0.5), c)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	func _process(dt: float) -> void:
 		if main.motion_off:
 			dt = 0.0   # Cài đặt / Chuyển động tắt: the scene stands still (web he)
@@ -626,6 +713,7 @@ class TroiFX extends Node2D:
 				bolt.append(Vector2(x, y))
 		elif fl <= 0.7:
 			bolt_on = false
+		_gust_step(dt, W, H, st)
 		queue_redraw()
 	func _leaf(W: float, H: float, cols: Array, sea: int, first: bool) -> Dictionary:
 		var r := (3.4 if sea >= 2 else 2.4) + randf() * 1.6
@@ -683,17 +771,8 @@ class TroiFX extends Node2D:
 					var a: float = PI + PI * q / 8.0
 					pts.append(p + Vector2(cos(a) * rr, sin(a) * rr * 0.45))
 				draw_polyline(pts, Color(0.9, 0.94, 1.0, 0.5 * I * (1.0 - ph)), 1.0, true)
-		elif wx == "han" and not bool(st.get("night", false)):
-			draw_rect(R, Color(1.0, 190 / 255.0, 90 / 255.0, 0.03))
-			var hc := Color(1.0, 240 / 255.0, 210 / 255.0, 0.12)
-			for d in 14:
-				var y0 := H * (0.2 + 0.06 * d) + sin(t * 1.3 + d) * 3.0
-				var pts := PackedVector2Array()
-				var x := 0.0
-				while x <= W:
-					pts.append(Vector2(x, y0 + sin(x * 0.03 + t * 2.0 + d) * 2.0))
-					x += 8.0
-				draw_polyline(pts, hc, 1.0, true)
+		elif wx == "han" and not gust.is_empty():   # (logic b170) nắng hạn: gió cuốn bụi đất + lá khô bay ngang
+			_draw_gust(k)
 		for p in leaves:
 			draw_set_transform(Vector2(p.x, p.y) * k, p.a, Vector2(k, k))
 			draw_colored_polygon(_ell(p.r, p.r * 0.5), p.c)
