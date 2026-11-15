@@ -24,6 +24,9 @@ var rd: Control = null      # bảng radio (Cf)
 var rd_cl := false          # Cf.cl
 const PILL = preload("res://logic/pill.gd")
 var pill: Control = null    # y2
+var ghe: Control = null     # bảng ghe thương hồ (D của BUON)
+var ghe_sig := ""
+var gpill: Control = null   # vu: nút viên "Ghe thương hồ ghé bến"
 
 func _init(ui, wc) -> void:
 	U = ui
@@ -295,6 +298,89 @@ func _pill_go() -> void:   # y2 click: aN(), Ui.pos && Ns({type: "cho", k: 1})
 	var ns := _x("Ns")
 	if W.Ui.pos != null and ns.is_valid():
 		ns.call({"type": "cho", "k": 1})
+
+
+# ------------------------------------------------------------------ ghe thương hồ (BUON D / UD / OD)
+func _GH():
+	return G.w_all.WGH
+
+func open_ghe() -> void:   # OD(), gu("ghe")
+	var A = _GH().Ae
+	if int(A.st) != 2 and int(A.st) != 1:
+		return
+	close_ghe()
+	U.close_all()
+	var cam := _x("camTo")
+	if cam.is_valid():
+		var q: Array = _GH().vx()
+		cam.call(float(q[0]), float(q[1]), 40.0)
+	ghe_sig = ""
+	var p := _panel("Ghe thương hồ " + String(A.from), close_ghe)
+	ghe = p[0]
+	ghe.set_meta("body", p[1])
+	sync_ghe()
+
+func close_ghe() -> void:   # i1
+	if ghe != null:
+		ghe.queue_free()
+		ghe = null
+
+func sync_ghe() -> void:   # D: dựng lại khi thùng / kho / mỗi 30 giây đổi
+	if ghe == null:
+		return
+	var A = _GH().Ae
+	if int(A.st) != 2 and int(A.st) != 1:
+		close_ghe()
+		return
+	var L: Array = A.offers
+	var At := maxf(0.0, float(A.left))
+	var cnt := []
+	for o in L:
+		cnt.append(int(G.g.barn.get(o.id, 0)))
+	var sg := JSON.stringify([L, cnt, A.st, int(floor(At / 30.0))])
+	if sg == ghe_sig:
+		return
+	ghe_sig = sg
+	var body: VBoxContainer = ghe.get_meta("body")
+	for k in body.get_children():
+		k.queue_free()
+	var Y: Dictionary = _GH().bonus(L)
+	var Lt := 0
+	var Ft := 0
+	for o in L:
+		Ft += int(o.q)
+		if int(o.done):
+			Lt += 1
+	body.add_child(_note("Còn " + _GH().cm(At) + " là ghe nhổ neo", "Ghe đặt " + str(L.size()) + " thùng, tổng " + str(Ft) + " món. Chất thùng nào trả tiền thùng đó; đủ hết thùng thưởng thêm " + G.fmt_n(int(Y.xu)) + " xu, " + str(int(Y.xp)) + " kinh nghiệm và vật liệu hiếm (cân đòn, dây mây, gạch nung)."))
+	body.add_child(_note("Đã chất " + str(Lt) + "/" + str(L.size()) + " thùng", ""))
+	for i in L.size():
+		var o: Dictionary = L[i]
+		var done := int(o.done) == 1
+		var ok: bool = int(G.g.barn.get(o.id, 0)) >= int(o.q) and int(A.st) == 2
+		var go := func():
+			_GH().Hd(i)
+			ghe_sig = ""
+			sync_ghe()
+		body.add_child(_rec(String(o.id), "Thùng " + str(i + 1) + ": " + W.ho(o.id, int(o.q)), "Đã chất lên ghe" if done else "Trả " + G.fmt_n(int(o.xu)) + " xu",
+			[] if done else [String(o.id), int(o.q)], [_btn("Xong" if done else "Chất", true, ok and not done, go)]))
+
+func ghe_pill_sync(parent: Control) -> void:   # UD: nút viên khi ghe đang vào / đậu bến
+	var A = _GH().Ae
+	var on: bool = (int(A.st) == 1 or int(A.st) == 2) and W._mode() == "off"
+	if not on:
+		if gpill != null:
+			gpill.visible = false
+		return
+	if gpill == null:
+		gpill = PILL.new(U)
+		gpill.pressed.connect(open_ghe)
+		parent.add_child(gpill)
+	gpill.visible = true
+	var t := maxf(0.0, ceil(float(A.left)))
+	var s: String = "Ghe thương hồ đang vào bến" if int(A.st) == 1 else "Ghe thương hồ ghé bến · " + String(_GH().cm(t))
+	if gpill.text != s:
+		gpill.text = s
+	gpill.hurry = int(A.st) == 2 and t < 30
 
 # ------------------------------------------------------------------ radio (MU / tR / PS)
 func open_rd() -> void:   # MU

@@ -1003,6 +1003,14 @@ func tap(sp: Vector2) -> void:
 			ui.vl_open(int(h.u))
 		"sonha":
 			ui.vl_chip(h.o)
+		"cho":   # chạm ghe chợ nổi: nhân vật ra bến rồi mở bảng ghe đó
+			ui.close_all()
+			var ns = G.w_all.WCU.ext.get("Ns")
+			if ns is Callable and ns.is_valid():
+				ns.call({"type": "cho", "k": int(h.k)})
+		"ghe":   # chạm ghe thương hồ: bảng chất thùng
+			ui.close_all()
+			G.w_all.WCU.open_ghe()
 		"dl":   # chạm khách du lịch: bảng Du lịch miệt vườn
 			ui.close_all()
 			ui.dl_open()
@@ -1259,6 +1267,14 @@ func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trố
 	var bb = _pk_bubs(w)
 	if bb != null:
 		return bb
+	var W = G.w_all
+	if W != null and W.WGH != null:   # ghe thương hồ (Gq), ghe chợ nổi (GT)
+		var gq = W.WGH.Gq(w)
+		if gq != null:
+			return gq
+		var gt = W.WC.GT(w.x, w.y)
+		if gt != null:
+			return gt
 	var L := _pk_list(w)
 	if L.is_empty():
 		return {}

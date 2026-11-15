@@ -21,6 +21,9 @@ var WD    # w_duong.gd  chuồng, thiên tai, trò chơi nhỏ
 var WDL   # w_dl.gd     du lịch miệt vườn
 var WAU   # w_auto.gd   AUTO: nhân vật tự chơi
 var WEV   # w_ev.gd     cột sự kiện: điểm danh, 7 ngày về làng
+var WSG   # sgeo.gd     hình học sông Vàm (SGEO)
+var WGH   # w_ghe.gd    ghe thương hồ
+var GHV = null   # ghe_ve.gd  hình ghe trên sông (chợ nổi, ghe thương hồ)
 
 var U = null    # ui.gd (ui_setup)
 var TIP = null  # w_tip.gd
@@ -50,6 +53,8 @@ func _init(game) -> void:
 	WDL = load("res://logic/w_dl.gd").new(G)
 	WAU = load("res://logic/w_auto.gd").new(G)
 	WEV = load("res://logic/w_ev.gd").new(G)
+	WSG = load("res://logic/sgeo.gd").new()
+	WGH = load("res://logic/w_ghe.gd").new(G)
 	# 2. tham chiếu chéo
 	WC.WR = WR
 	WC.CA = WCA            # dedupe: w_cho._Cc -> w_ca.cc (g.pet)
@@ -80,6 +85,12 @@ func _init(game) -> void:
 	WDL.WC = WC
 	WDL.WCA = WCA
 	WEV.WS = WS
+	WGH.WC = WC
+	WGH.WR = WR
+	WGH.panel_close.connect(func(): if WCU != null: WCU.close_ghe())
+	WC.ext["SGEO_c"] = Callable(WSG, "c")
+	WC.ext["SGEO_top"] = Callable(WSG, "top")
+	WL.ext["ben_ok"] = Callable(WGH, "ben_ok")
 	WEV.WC = WC
 	WEV.WL = WL
 	WEV.WH = WH
@@ -179,6 +190,9 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 	WDL.step(dt)
 	if U != null:
 		WAU.step(dt)
+		WGH.step(dt)
+		if GHV != null:
+			GHV.step()
 
 # ------------------------------------------------------------------ móc vào luật game.gd
 func boost_add() -> float:   # tw: jH() + (gB() - 1) + (Dx() > 1 ? .04 : 0)
@@ -231,7 +245,23 @@ static func _v2(p) -> Vector2:
 func ui_setup(ui) -> void:
 	U = ui
 	WAU.U = ui
+	WGH.U = ui
 	var F = U.F
+	# camera tới chỗ (x, y) trên làng: ngang giữa màn, dọc ở ky phần màn (aN: chợ nổi .42, OD: ghe thương hồ .38)
+	var cam_to := func(x: float, y: float, z: float, ky := 0.42) -> void:
+		var m = F.main
+		var vs: Vector2 = m.get_viewport_rect().size / m.zoom
+		m.cam = Vector2(F.en(x, y) - vs.x / 2.0, F.nn(x, y, z) - vs.y * ky)
+	WCU.ext["camTo"] = func(x: float, y: float, z: float) -> void: cam_to.call(x, y, z, 0.38)
+	WCU.ext["aN"] = func() -> void:
+		var t = WC.YB()
+		if t != null:
+			cam_to.call(float(t[1][0]), float(t[1][1]), 40.0, 0.42)
+	if GHV == null and F != null:
+		GHV = load("res://logic/ghe_ve.gd").new(F)
+		GHV.G = G
+		GHV.name = "GheVe"
+		F.add_child(GHV)
 	WRU = load("res://logic/w_ruong_ui.gd").new(U, WR)
 	WKU = load("res://logic/w_kho_ui.gd").new(U, WK)
 	WCU = load("res://logic/w_cho_ui.gd").new(U, WC)
@@ -327,6 +357,8 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 		WRU.pill.reparent(pills, false)
 	WCU.sync_cho()
 	WCU.pill_sync(pills)
+	WCU.ghe_pill_sync(pills)
+	WCU.sync_ghe()
 	WHU.sync_fest()
 	WHU.pill_sync(pills)
 	_ray_pill()
