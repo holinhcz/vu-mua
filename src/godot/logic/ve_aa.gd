@@ -8,7 +8,7 @@ var farm
 var tt := 0.0
 
 func _m(day: String, nite: String) -> Color:   # m(): màu ban ngày / ban đêm
-	return Color(nite if farm.G.vnight else day)
+	return Color(nite if farm.G.night else day)
 
 # Hình vẽ thẳng ở độ phân giải màn hình (canvas_transform của làng), không phóng ảnh. Godot không khử răng cưa khi
 # tô đa giác, nên mỗi hình = lõi đặc + một vòng 1 px màn hình nhạt dần ra ngoài (mép mịn như canvas bản web).
