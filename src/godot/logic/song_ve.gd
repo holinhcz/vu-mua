@@ -1,8 +1,8 @@
 extends RefCounted
 # SÔNG VÀM SỐNG ĐỘNG (bản 176): vẽ + chạm cho các thứ trên sông / mặt nước, bằng bộ ảnh 9 px ui/img/ts (hinh/thuysinh):
 #   - bụi ven sông mùa nước nổi (w_cho.Vb): điên điển, kèo nèo, súng ma ở mép nước hai bờ; chạm đi tới hái
-#   - lục bình + bèo trôi chung từng cụm, rau muống trôi riêng, theo con nước (nước lớn trôi vô, ròng trôi ra); chạm vớt
-#     (khúc sông đã mua); trôi tới đầu sông thì mờ đi, cụm mới trôi vô từ đầu kia
+#   - lục bình + bèo trôi chung từng cụm (to nhỏ khác nhau), rau muống trôi riêng, luôn xuôi dòng (nước lớn trôi chậm, nước nổi
+#     trôi nhanh); chạm vớt (khúc sông đã mua); trôi tới cuối sông thì mờ đi, cụm mới trôi vô từ đầu trên
 #   - bãi bùn lúc nước ròng (w_xuong.v6): mảng bùn ở mép nước, có món để mò; chạm đi tới mò
 #   - cá búng mặt nước: sông, kênh, ao trên màn thỉnh thoảng có cá búng lên, nước bắn, vòng gợn loang (mưa nhiều, đêm ít)
 
@@ -110,28 +110,39 @@ func _bush_sync() -> void:
 			bush.erase(k)
 
 # ------------------------------------------------------------------ lục bình + bèo trôi, rau muống trôi riêng
-const N_LB := 9
+const N_LB := 12
 const N_RAU := 3
 var fl := []        # {n, e (dòng xếp lớp), s, off, kind, a, ph}
 var _fl_dn := ""
 func _clump(kind: String) -> Node2D:
 	var n := Node2D.new()
-	if kind == "lb":
-		var c := 2 + randi() % 3
-		for i in c:   # lục bình, 1/4 cụm có một cây trổ bông
-			var fr := _dn() + ("lbf" + str(randi() % 3) if i == 0 and randf() < 0.25 else "lb" + str(randi() % 6))
+	if kind == "lb":   # cụm nhỏ 3-4 cây, vừa 5-7, to 8-12 (1/3 mỗi loại); bèo trải quanh, cụm to thì bè rộng
+		var r := randf()
+		var c := (3 + randi() % 2) if r < 0.34 else ((5 + randi() % 3) if r < 0.67 else (8 + randi() % 5))
+		var rx := 8.0 + c * 2.8   # bề ngang cụm (đơn vị làng)
+		var ry := rx * 0.4
+		var P := []
+		for i in c:   # lục bình chen nhau, cây sau (cao hơn trên màn) vẽ trước
+			var a := randf() * TAU
+			var d := sqrt(randf())
+			P.append(Vector2(cos(a) * rx * d, sin(a) * ry * d))
+		P.sort_custom(func(a, b): return a.y < b.y)
+		for i in c:   # 1/4 cụm có cây trổ bông tím
+			var fr := _dn() + ("lbf" + str(randi() % 3) if i == c / 2 and randf() < 0.3 else "lb" + str(randi() % 6))
 			var s := _spr("luc_binh", fr)
-			s.position = Vector2(randf_range(-9.0, 9.0), randf_range(-3.0, 3.0))
+			s.position = P[i]
+			s.scale *= randf_range(1.6, 2.0)
 			n.add_child(s)
-		for i in 1 + randi() % 3:   # bèo tấm quanh cụm
+		for i in 2 + c / 2:   # bèo trải quanh cụm
 			var s := _spr("beo", _dn() + "beo" + str(randi() % 4))
-			s.position = Vector2(randf_range(-12.0, 12.0), randf_range(-2.0, 4.0))
-			s.scale *= randf_range(0.5, 0.75)
+			var a := randf() * TAU
+			s.position = Vector2(cos(a) * rx * randf_range(0.6, 1.25), sin(a) * ry * randf_range(0.6, 1.25) + 1.0)
+			s.scale *= randf_range(0.9, 1.25)
 			n.add_child(s)
 			n.move_child(s, 0)
 	else:
 		var s := _spr("rau_muong", _dn() + "rau" + str(randi() % 4))
-		s.scale *= randf_range(0.6, 0.8)
+		s.scale *= randf_range(1.1, 1.4)
 		n.add_child(s)
 	return n
 
@@ -175,12 +186,14 @@ func _float_step(dt: float) -> void:
 		var f := _fl_new("lb" if fl.size() < N_LB else "rau", path, randf() * m)
 		f.a = 1.0
 		fl.append(f)
-	var dir := 1.0 if G.w_all.WX.FN() or G.w_all.WR.qs() else -1.0   # nước lớn / nước nổi trôi vô, ròng trôi ra
+	# luôn trôi xuôi dòng (về phía +trục sông); nước lớn thì nước dồn lên nên trôi chậm gần như đứng, nước nổi trôi nhanh
+	var dir := 1.0
+	var sk := 1.3 if G.w_all.WR.qs() else (0.25 if G.w_all.WX.FN() else 1.0)
 	for i in fl.size():
 		var f: Dictionary = fl[i]
 		f.ph = float(f.ph) + dt * 1.3
 		f.a = minf(1.0, float(f.a) + dt * 0.5)
-		f.s = float(f.s) + dir * float(f.v) * dt / 3.0   # path cách nhau 3 ô
+		f.s = float(f.s) + dir * sk * float(f.v) * dt / 3.0   # path cách nhau 3 ô
 		if f.s < 0.0 or f.s > m:   # trôi khỏi sông: cụm mới từ đầu kia
 			_unsort(f.n)
 			fl[i] = _fl_new(String(f.kind), path, m if dir < 0.0 else 0.0)
@@ -243,8 +256,7 @@ func job(j: Dictionary) -> bool:   # tới nơi: hái / vớt / mò
 					G.mark()
 					_unsort(f.n)   # vớt rồi: cụm mới trôi vô từ đầu sông
 					var R: Dictionary = G.w_all.WC.river()
-					var dir := 1.0 if G.w_all.WX.FN() or G.w_all.WR.qs() else -1.0
-					fl[i] = _fl_new(String(f.kind), R.path, 0.0 if dir > 0.0 else float(R.path.size() - 1))
+					fl[i] = _fl_new(String(f.kind), R.path, 0.0)   # trôi xuôi: vô từ đầu trên
 					return true
 	return false
 
