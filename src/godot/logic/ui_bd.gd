@@ -202,12 +202,33 @@ func _free(b: Control) -> void:
 		U.anchors.erase(U._anchor_of(b))
 		b.queue_free()
 
-func _ps() -> void:
-	_free(pov)
+# Bảng cửa hàng dựng xong thì cất theo mục: đổi tab mà mục đó không đổi gì (thẻ, giá, khoá, xu, độ đẹp) thì hiện lại
+# bảng cũ ngay, khỏi dựng lại cả bảng từ bản chụp mỗi lần bấm tab (bấm tab bị khựng).
+var shop_c := {}   # mục -> {sig, pov, pids, grid, lis, sc_max}
+
+func _shop_sig() -> String:
+	return JSON.stringify([cat, _cards(), lg().beauty(), int(G.g.coins), G.lv(), U.vsize()])
+
+func _shop_hide() -> void:   # cất bảng đang hiện (không bỏ)
+	if pov != null and is_instance_valid(pov):
+		pov.visible = false
+		U.anchors.erase(U._anchor_of(pov))
 	pov = null
+
+func _shop_clear() -> void:
+	for k in shop_c:
+		_free(shop_c[k].pov)
+	shop_c = {}
+
+func _ps() -> void:
+	if mode == "shop":
+		_shop_hide()
+	else:
+		_shop_clear()
+		_free(pov)
+		pov = null
 	grid = null
 	lis = []
-	_ic = {}
 	_free(sheet)
 	sheet = null
 	var b: int = lg().beauty()
@@ -222,7 +243,23 @@ func _ps() -> void:
 		tier_i = st
 	_ov()
 	if mode == "shop":
-		_build_shop()
+		var sg := _shop_sig()
+		var c = shop_c.get(cat)
+		if c != null and c.sig == sg and is_instance_valid(c.pov):
+			pov = c.pov
+			pids = c.pids
+			grid = c.grid
+			lis = c.lis
+			sc_max = c.sc_max
+			pov.visible = true
+			U.root.move_child(pov, -1)
+			U.anchors.append([pov, 0.5, 0.5])
+			_scroll(sc)
+		else:
+			if c != null:
+				_free(c.pov)
+			_build_shop()
+			shop_c[cat] = {"sig": sg, "pov": pov, "pids": pids, "grid": grid, "lis": lis, "sc_max": sc_max}
 	elif mode != "off":
 		_build_sheet()
 	U.F.lang_ve.sync()
