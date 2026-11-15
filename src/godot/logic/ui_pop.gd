@@ -63,6 +63,8 @@ func _sec_p(t: String, q := "") -> Dictionary:   # .vl-sec: <b> [+ nút ? (treq)
 	return c
 
 # .tt (.got): bên trái <b> (runs) + <small>, bên phải một nút [chữ, chính?, bật, act] hoặc không
+const BW2 := 63.4
+const BH2 := 28.5
 func _tt_p(got: bool, bruns: Array, small: String, btn = null) -> Dictionary:
 	var c := _cl(PT.tt_got if got else PT.tt)
 	var lf: Dictionary = c.kids[0]
@@ -71,7 +73,10 @@ func _tt_p(got: bool, bruns: Array, small: String, btn = null) -> Dictionary:
 	var y0 := float(c.r[1])
 	var W0 := float(c.r[2]) - 18.0
 	var bw := 0.0
-	if btn != null:
+	var many: bool = btn != null and btn.size() > 0 and btn[0] is Array   # .vl-jobs nhiều nút: chia đều 63,4 mỗi nút, cách 4,5
+	if many:
+		bw = btn.size() * BW2 + (btn.size() - 1) * 4.5
+	elif btn != null:
 		bt = _cl(PT.btn_p if btn[1] and btn[2] else PT.tt_plain.kids[1])
 		bw = _tw(bt, String(btn[0])) + _px(bt, "padding-left") + _px(bt, "padding-right") + 2.0
 	var lw := W0 - ((bw + 6.0) if btn != null else 0.0)
@@ -83,7 +88,7 @@ func _tt_p(got: bool, bruns: Array, small: String, btn = null) -> Dictionary:
 	var hb := _put(b, bruns.map(func(z): return _r(String(z[0]), hs_sty if z[1] else bs)), "left", lw)
 	var hs := _put(sm, [_r(small, _cl(sm))], "left", lw)
 	var ch := hb + 0.2 + hs
-	var H := maxf(ch, float(bt.r[3]) if btn != null else 0.0) + 18.0
+	var H := maxf(ch, (BH2 if many else float(bt.r[3])) if btn != null else 0.0) + 18.0
 	var cy := y0 + (H - ch) * 0.5
 	b.r = [x, cy, lw, hb]
 	_flow_to(b, x, cy)
@@ -93,7 +98,23 @@ func _tt_p(got: bool, bruns: Array, small: String, btn = null) -> Dictionary:
 	lf.kids = [b, sm]
 	c.r[3] = H
 	c.kids = [lf]
-	if btn != null:
+	if many:
+		var bx2 := x + W0 - bw
+		for q in btn:
+			var b2 := _cl(PT.btn_p if q[1] and q[2] else PT.tt_plain.kids[1])
+			_mv(b2, bx2, y0 + (H - BH2) * 0.5)
+			b2.r[2] = BW2
+			b2.r[3] = BH2
+			var pl := _px(b2, "padding-left")
+			var th := _put(b2, [_r(String(q[0]), _cl(b2))], "center", BW2 - pl - _px(b2, "padding-right"))
+			var pk: Array = b2.get("kids", [])
+			var dy2 := float(b2.r[1]) + (BH2 - th) * 0.5 - (float(pk[0].r[1]) if pk.size() else 0.0)
+			for pc in pk:
+				Snap._move(pc, Vector2(0, dy2))
+			_act(b2, q[3], q[2])
+			c.kids.append(b2)
+			bx2 += BW2 + 4.5
+	elif btn != null:
 		var bx := x + W0 - bw
 		_mv(bt, bx, y0 + (H - float(bt.r[3])) * 0.5)
 		bt.r[2] = bw

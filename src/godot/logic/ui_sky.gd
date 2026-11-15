@@ -178,8 +178,10 @@ func _cards() -> Array:
 		out.append(_t(cg, "Gió chướng", "Đang có gió, ra đồng thả diều (bảng nhân vật › Diều)." if cg else "Mùa này chiều 14–18 giờ có gió thả diều."))
 	# radio, thư nhà
 	var th: Dictionary = W.WC.Eg()
-	out.append(_t(false, "Radio, thư nhà", "Bản tin thời tiết ngày mai, giá cả, cải lương." + (" Có thư chưa xử lý." if _tr(th.get("un")) or _tr(th.get("rq")) else " Ông đưa thư ghé khoảng 9–12 giờ."),
-		["Mở radio", false, true, _go(W.WCU.open_rd)]))
+	var co: bool = _tr(th.get("un")) or _tr(th.get("rq"))
+	var rd := ["Mở radio", false, true, _go(W.WCU.open_rd)]
+	out.append(_t(false, "Radio, thư nhà", "Bản tin thời tiết ngày mai, giá cả, cải lương." + (" Có thư chưa xử lý." if co else " Ông đưa thư ghé khoảng 9–12 giờ."),
+		[rd, ["Đọc thư", true, true, _go(W.WTH.YN)]] if co else rd))
 	# rầy nâu
 	var es: int = G.ray_n()
 	out.append(_t(es == 0, "Rầy nâu", ("Đang có dịch: " + str(es) + " ô bị rầy." if es else "Ruộng đang sạch rầy.") + " Mùa hạ, mùa thu, trời mưa dễ có dịch. Đèn bẫy rầy (Xây dựng › Đồ vật) che ruộng trong 6 ô. Thuốc còn " + str(int(G.g.ray.th)) + " lần.",

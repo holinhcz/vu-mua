@@ -49,6 +49,7 @@ var ddp = null               # bảng ĐIỂM DANH (ui_dd.gd)
 var napp = null              # bảng NẠP ĐẦU (ui_nap.gd)
 var ttp = null               # bảng 7 NGÀY VỀ LÀNG (ui_tt.gd)
 var skyp = null              # bảng TRỜI ĐẤT TRONG LÀNG (ui_sky.gd)
+var thup = null              # bảng THƯ NHÀ (ui_thu.gd)
 var klp = null               # bảng KỶ LỤC (ui_kl.gd)
 var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
 var gdp = null               # SỔ TAY (ui_gd.gd)
@@ -3279,7 +3280,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp]
+	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3315,6 +3316,11 @@ func tt_open() -> void:   # XI: 7 ngày về làng
 	if G.w_all == null:
 		return
 	_pan_open("ttp", "res://logic/ui_tt.gd", [G.w_all.WEV]).open()
+
+func thu_open() -> void:   # gu("thu"): bảng đọc thư nhà
+	if G.w_all == null:
+		return
+	_pan_open("thup", "res://logic/ui_thu.gd", [G.w_all.WTH]).open()
 
 func sky_open() -> void:   # RN: chạm ô giờ / thời tiết -> Trời đất trong làng
 	if G.w_all == null:

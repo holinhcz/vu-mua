@@ -3,8 +3,10 @@ extends Node2D
 # d = {u, x, y, lk, mv, ph, face, wave, carry, bob}; farm.gd tạo node, cập nhật d, xếp lớp theo chân.
 
 const Css = preload("res://ui/css.gd")
+const Bong = preload("res://logic/bong.gd")
 
 static var META := {}
+static var METAS := {}   # bảng ảnh riêng (d.sheet: thư mục có meta.json + mi.webp), như ông đưa thư
 var farm
 var d: Dictionary = {}
 var tt := 0.0
@@ -18,20 +20,27 @@ func _process(dt: float) -> void:
 	tt += dt
 	queue_redraw()
 
+static func meta_of(dir: String) -> Dictionary:
+	if not METAS.has(dir):
+		METAS[dir] = JSON.parse_string(FileAccess.get_file_as_string(dir + "/meta.json"))
+	return METAS[dir]
+
 func _draw() -> void:
-	var m := meta()
+	var m := meta_of(String(d.sheet)) if d.has("sheet") else meta()
+	modulate.a = clampf(float(d.get("al", 1.0)), 0.0, 1.0)
 	var x: float = float(d.x)
 	var y: float = float(d.y)
 	var foot := Vector2(farm.en(x, y), farm.nn(x, y))
 	var le: float = farm.sign_le()
-	var r := le * 1.15
-	# bóng (L(n, e + 1, 6r, 2r))
+	var r := le * float(d.get("rk", 1.15))
+	# bóng (L(n, e + 1, 6r, 2r); ông đưa thư L(e, r + 1, 9o, 2,6o) .22)
+	var sh: Array = d.get("sh", [6.0, 2.0, 0.2])
 	var pts := PackedVector2Array()
 	for k in 24:
 		var a := k * TAU / 24.0
-		pts.append(foot + Vector2(cos(a) * 6.0 * r, 1.0 + sin(a) * 2.0 * r))
-	draw_colored_polygon(pts, Color(0, 0, 0, 0.2))
-	var tex: Texture2D = Css.image(String(d.img) if d.has("img") else "res://ui/img/dan/" + str(clampi(int(d.get("lk", 0)), 0, 7)) + ".webp")
+		pts.append(foot + Vector2(cos(a) * float(sh[0]) * r, 1.0 + sin(a) * float(sh[1]) * r))
+	draw_colored_polygon(pts, Color(0, 0, 0, float(sh[2])))
+	var tex: Texture2D = Css.image(String(d.sheet) + "/mi.webp" if d.has("sheet") else String(d.img) if d.has("img") else "res://ui/img/dan/" + str(clampi(int(d.get("lk", 0)), 0, 7)) + ".webp")
 	if tex == null:
 		return
 	var fi := 0
@@ -55,6 +64,12 @@ func _draw() -> void:
 		if it != null:
 			draw_texture_rect(it, Rect2(-9.0 * r, (-21.0 - f) * r, 8.0 * r, 8.0 * r), false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# bong bóng trên đầu (X0: r - 38o, nhún sin(Ke·3)·1,2)
+	if d.get("bub") != null and farm.ui != null:
+		var mo: bool = farm.G.motion_off()
+		var bs := (1.0 if mo else 1.0 + 0.08 * sin(tt * 5.0 + foot.x)) * le
+		var at := foot + Vector2(0, -38.0 * r + (0.0 if mo else sin(tt * 3.0) * 1.2))
+		Bong.ve(self, at, bs, farm.ui.item_ic(String(d.bub), 13.6 * bs * farm.main.zoom))
 	# khách du lịch vui: tim đỏ bay lên trên đầu (J_: r - 40o - (Ke·12 + n·7) % 14)
 	if bool(d.get("heart", false)) and not farm.G.motion_off():
 		var hy := foot.y - 40.0 * r - fposmod(tt * 12.0 + float(d.get("ph", 0.0)) * 7.0, 14.0)

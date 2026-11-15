@@ -704,6 +704,7 @@ func _process(dt: float) -> void:
 	_vn_sync(dt)
 	_crit_sync()
 	_dan_sync(tt)
+	_hop_sync()
 	_tree_bub_sync(tt)
 	_parts_step(dt)
 	_jobs(dt)
@@ -1008,6 +1009,9 @@ func tap(sp: Vector2) -> void:
 			var ns = G.w_all.WCU.ext.get("Ns")
 			if ns is Callable and ns.is_valid():
 				ns.call({"type": "cho", "k": int(h.k)})
+		"thu":   # chạm ông đưa thư / hộp thư: đọc thư
+			ui.close_all()
+			G.w_all.WTH.YN()
 		"ghe":   # chạm ghe thương hồ: bảng chất thùng
 			ui.close_all()
 			G.w_all.WCU.open_ghe()
@@ -1275,6 +1279,9 @@ func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trố
 		var gt = W.WC.GT(w.x, w.y)
 		if gt != null:
 			return gt
+		var th = W.WTH.hit(self, w)   # ông đưa thư / hộp thư
+		if th != null:
+			return th
 	var L := _pk_list(w)
 	if L.is_empty():
 		return {}
@@ -1819,6 +1826,12 @@ func _dan_list(tt: float) -> Array:
 			var p: Vector2 = WL._home(h.u)
 			out.append({"key": "h" + str(h.u), "u": int(h.u), "n": String(f.n), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
 				"face": 1 if String(h.r.id).ends_with("2") else -1, "wave": WL._tr(f.get("req")) and sin(tt * 0.8 + float(h.u)) > 0.6, "carry": null, "bob": false})
+	var mi: Dictionary = G.w_all.WTH.mi   # ông đưa thư (yU): đạp xe tới / đi, đứng vẫy cầm thư
+	if int(mi.st) > 0:
+		var st2 := int(mi.st) == 2
+		out.append({"key": "mi", "u": 0, "n": "", "x": mi.x, "y": mi.y, "mv": not st2, "ph": float(mi.ph) * 1.6, "face": mi.face, "wave": st2,
+			"carry": "thu" if st2 else null, "bob": false, "sheet": "res://ui/img/thu", "rk": 1.2, "sh": [9.0, 2.6, 0.22], "al": mi.al,
+			"bub": "thu" if st2 and (ui.bdp == null or ui.bdp.mode == "off") else null})
 	for e in G.w_all.WDL.Jc:   # khách du lịch (Y_ / J_): vẫy tay, tim khi vui
 		if e.st == "rest":
 			continue
@@ -1829,6 +1842,28 @@ func _dan_list(tt: float) -> Array:
 				"face": o.face, "wave": busy and sin(tt * 1.3 + j) > 0.5, "carry": null, "bob": false, "dl": true, "heart": busy and float(e.happy) > 1.0,
 				"img": "res://ui/img/khach/" + String(e.k) + str(o.j) + ("n" if o.non else "") + ".webp"})
 	return out
+
+var hop: Node2D = null   # hộp thư có thư (w_thu)
+
+func _hop_sync() -> void:
+	var W = G.w_all
+	var on: bool = W != null and W.WTH != null and W.WTH._tr(W.WTH.Eg().get("un")) and int(W.WTH.mi.st) != 2
+	if not on:
+		if hop != null:
+			for e in sortables:
+				if e[0] == hop:
+					sortables.erase(e)
+					break
+			hop.queue_free()
+			hop = null
+		return
+	if hop == null:
+		hop = Node2D.new()
+		hop.set_script(load("res://logic/hopthu_ve.gd"))
+		hop.farm = self
+		main.obj_root.add_child(hop)
+		sortables.insert(sortables.size() - 1, [hop, nn(6.85, 5.2), -2])
+	hop.bub = ui.bdp == null or ui.bdp.mode == "off"
 
 func _dan_sync(tt: float) -> void:
 	dans = _dan_list(tt)

@@ -23,6 +23,7 @@ var WAU   # w_auto.gd   AUTO: nhân vật tự chơi
 var WEV   # w_ev.gd     cột sự kiện: điểm danh, 7 ngày về làng
 var WSG   # sgeo.gd     hình học sông Vàm (SGEO)
 var WGH   # w_ghe.gd    ghe thương hồ
+var WTH   # w_thu.gd    thư nhà, ông đưa thư
 var GHV = null   # ghe_ve.gd  hình ghe trên sông (chợ nổi, ghe thương hồ)
 
 var U = null    # ui.gd (ui_setup)
@@ -55,6 +56,7 @@ func _init(game) -> void:
 	WEV = load("res://logic/w_ev.gd").new(G)
 	WSG = load("res://logic/sgeo.gd").new()
 	WGH = load("res://logic/w_ghe.gd").new(G)
+	WTH = load("res://logic/w_thu.gd").new(G)
 	# 2. tham chiếu chéo
 	WC.WR = WR
 	WC.CA = WCA            # dedupe: w_cho._Cc -> w_ca.cc (g.pet)
@@ -86,6 +88,8 @@ func _init(game) -> void:
 	WDL.WCA = WCA
 	WEV.WS = WS
 	WGH.WC = WC
+	WTH.WC = WC
+	WTH.WL = WL
 	WGH.WR = WR
 	WGH.panel_close.connect(func(): if WCU != null: WCU.close_ghe())
 	WC.ext["SGEO_c"] = Callable(WSG, "c")
@@ -191,6 +195,7 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 	if U != null:
 		WAU.step(dt)
 		WGH.step(dt)
+		WTH.step(dt)
 		if GHV != null:
 			GHV.step()
 
@@ -246,6 +251,7 @@ func ui_setup(ui) -> void:
 	U = ui
 	WAU.U = ui
 	WGH.U = ui
+	WTH.U = ui
 	var F = U.F
 	# camera tới chỗ (x, y) trên làng: ngang giữa màn, dọc ở ky phần màn (aN: chợ nổi .42, OD: ghe thương hồ .38)
 	var cam_to := func(x: float, y: float, z: float, ky := 0.42) -> void:
