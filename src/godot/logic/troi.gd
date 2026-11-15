@@ -147,8 +147,9 @@ func step(dt: float) -> void:
 				G.mark()
 	var d := dh()
 	var sea: int = G.season()
-	st = {"phase": d.phase, "h": d.h, "night": d.night, "tint": d.tint, "light": ij(d.night), "wx": cur, "rain": rain(),
-		"flash": flash, "bolt": bao.bolt, "season": sea, "pal": pal(d.night, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
+	var fx: bool = G.fx_new()   # lớp chỉnh màu (hau_ky.gd) lo sáng sớm / hoàng hôn / đêm: bỏ tấm phủ màu, bảng màu ngày
+	st = {"phase": d.phase, "h": d.h, "night": d.night, "tint": null if fx else d.tint, "light": ij(d.night), "wx": cur, "rain": rain(),
+		"flash": flash, "bolt": bao.bolt, "season": sea, "pal": pal(d.night and not fx, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
 
 func _iq(dt: float) -> void:
 	# giông: chớp mỗi 5–13 giây, sấm sau 0,4–1,6 giây

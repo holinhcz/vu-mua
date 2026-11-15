@@ -31,6 +31,10 @@ var _ray_g := 0.0         # jS
 var _ray_d := 0.0         # DS
 var _en_t := 0.0          # CT
 var night := false        # Xn
+var vnight := false       # vẽ kiểu đêm (ảnh đêm, màu đêm): chỉ khi Chất lượng hình Tiết kiệm; mức khác đêm là lớp chỉnh màu (hau_ky.gd)
+
+func fx_new() -> bool:    # Chất lượng hình Cân bằng / Nét: ảnh ngày + lớp chỉnh màu theo giờ, không ảnh đêm
+	return int(cfg.get("q", 2)) >= 1
 var nv                    # sổ nhiệm vụ (nv.gd)
 var xw                    # xưởng chế biến (xuong.gd)
 var vn                    # vật nuôi (vatnuoi.gd)

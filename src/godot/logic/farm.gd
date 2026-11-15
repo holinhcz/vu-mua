@@ -35,13 +35,23 @@ static func to_tile(w: Vector2) -> Vector2:
 	var Y := w.y - 968.0
 	return Vector2((X / 32.0 + Y / 16.0) / 2.0, (Y / 16.0 - X / 32.0) / 2.0)
 
-func is_night() -> bool:
+func is_night() -> bool:   # đêm theo đồng hồ làng (troi.gd), không theo bên nền (bên nền bị ép ngày khi dùng lớp chỉnh màu)
+	if G.troi != null:
+		return bool(G.troi.dh().night)
 	if main.has_method("_night_on"):
 		return main._night_on()
 	return false
 
+func _vnight_sync() -> void:   # ảnh đêm / màu đêm chỉ ở mức Tiết kiệm; mức khác ép bên nền vẽ ngày
+	var fx: bool = G.fx_new()
+	G.vnight = G.night and not fx
+	var want := 0 if fx else -1
+	if main.night_force != want:
+		main.night_force = want
+		main._night_tick()
+
 func dn() -> String:
-	return "n" if G.night else "d"
+	return "n" if G.vnight else "d"
 
 const PPU := 9.0          # hình cây / ô đất / khóa: 9 px mỗi đơn vị làng (bản 4K gốc)
 var fnt: FontFile
@@ -65,6 +75,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 	main = village
 	ui = u
 	G.night = is_night()
+	G.vnight = G.night and not G.fx_new()
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR   # hình đúng mức nét (P.texz), không mipmap làm nhòe
 	fnt = FontFile.new()
 	fnt.data = FileAccess.get_file_as_bytes("res://ui/font/nunito_800.ttf")
@@ -137,6 +148,7 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 	lines.farm = self
 	lines.z_index = -4
 	add_child(lines)
+	main.add_child(load("res://logic/hau_ky.gd").new(G, main))   # lớp chỉnh màu theo giờ (Cân bằng / Nét)
 	G.troi.bao.farm = self
 	player = PlayerNode.new()
 	player.farm = self
@@ -176,7 +188,7 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 	_bz = zz > 0.55
 	if not _bz:
 		return
-	var fc := Color("#d8b040") if G.night else Color("#f2c63a")
+	var fc := Color("#d8b040") if G.vnight else Color("#f2c63a")
 	var lc := Color(90 / 255.0, 60 / 255.0, 0, 0.55)
 	for i in G.B0:
 		var a: Dictionary = G.p(i)
@@ -200,7 +212,7 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 
 var _hu_sig := 0
 func _draw_hu() -> void:   # tnHu: gốc rạ khô trên ô cây bị thiên tai làm hư (g.plots[i].hu, ô chưa gieo lại)
-	var col := Color("#8a7040") if G.night else Color("#d8b468")
+	var col := Color("#8a7040") if G.vnight else Color("#d8b468")
 	for i in G.B0:
 		var a: Dictionary = G.p(i)
 		if a.get("c") or not a.get("hu"):
@@ -219,6 +231,7 @@ func refresh() -> void:
 	var nt := is_night()
 	if nt != G.night:
 		G.night = nt
+	_vnight_sync()
 	for i in G.B0:
 		_plot_view(i)
 	if badges != null:
@@ -256,12 +269,12 @@ func _plot_view(i: int) -> void:
 	var d := dn()
 	if not a.u:
 		# ô chưa mở: đất khô mờ + ổ khóa + giá
-		_put(L[0], "dat", d + "dry", 66, 42, 0.55 if G.night else 0.5)
+		_put(L[0], "dat", d + "dry", 66, 42, 0.55 if G.vnight else 0.5)
 		bub.kind = "lock"
 		bub.text = str(G.open_cost())
 		bub.can = int(G.g.coins) >= G.open_cost() and G.lv_for_more() == 0
 		bub.tex = P.texz("dat", d + "khoa", PPU, main.zoom)
-		bub.night = G.night
+		bub.night = G.vnight
 		bub.position.y = nn(G.cells[i].gx + 0.5, G.cells[i].gy + 0.5)
 		bub.z_index = -4   # nằm sát đất như bản web (vẽ cùng lượt ô ruộng)
 		bub.visible = true
@@ -2111,7 +2124,7 @@ class FellNode extends Node2D:
 	var tt := 0.0
 	var zz := 1.0
 	func m(d: String, n: String) -> Color:
-		return Color(n) if farm.G.night else Color(d)
+		return Color(n) if farm.G.vnight else Color(d)
 	func na(c: Color) -> Color:   # na(c, -.5): trộn đen 50%
 		return c.lerp(Color.BLACK, 0.5)
 	func L(x: float, y: float, rx: float, ry: float, col: Color, rot := 0.0) -> void:
@@ -2132,7 +2145,7 @@ class FellNode extends Node2D:
 		return ["#3e7a2e", "#5aa83a", "#4d9a34"]
 	func leaf(i: int) -> Color:
 		var c := Color(N()[i % 3])
-		return na(c) if farm.G.night else c
+		return na(c) if farm.G.vnight else c
 	func _draw() -> void:
 		if st.is_empty():
 			return
@@ -2242,14 +2255,14 @@ class ParcelLines extends Node2D:
 		for id in farm.PC.x1:
 			if farm.pc_next(id) and int(G.g.coins) >= int(farm.PC.G0[id].cost):
 				L.append(id)
-		var s := str(G.night) + ",".join(L)
+		var s := str(G.vnight) + ",".join(L)
 		if s != sig:
 			sig = s
 			on = L
 			queue_redraw()
 	var seg := PackedVector2Array()   # NTBAKE: mọi nét đứt gom vào 1 lệnh draw_multiline
 	func _draw() -> void:
-		var c := Color("#f0bd3d") if farm.G.night else Color("#dba013")
+		var c := Color("#f0bd3d") if farm.G.vnight else Color("#dba013")
 		seg = PackedVector2Array()
 		for id in on:
 			for pl in paths.get(id, []):
@@ -2341,7 +2354,7 @@ class ParcelSign extends Node2D:
 		var r: int = farm.pc_lv(id)
 		var l: bool = o and r == 0 and int(G.g.coins) >= int(farm.PC.G0[id].cost)
 		pulse = l
-		var s := str(G.night) + str(o) + str(r) + str(l)
+		var s := str(G.vnight) + str(o) + str(r) + str(l)
 		if s != sig and visible and vp != null:
 			sig = s
 			vp.get_child(0).queue_redraw()
@@ -2381,7 +2394,7 @@ class SignArt extends Node2D:   # nét vẽ biển Khai hoang (như cũ), vẽ t
 		var G = farm.G
 		var id: String = sg.id
 		var n: Dictionary = farm.PC.G0[id]
-		var nt: bool = G.night
+		var nt: bool = G.vnight
 		var o: bool = farm.pc_next(id)
 		var r: int = farm.pc_lv(id)
 		var l: bool = o and r == 0 and int(G.g.coins) >= int(n.cost)
@@ -2649,7 +2662,7 @@ class RayNode extends Node2D:   # o_: nền nâu mờ trên ô + 9 con rầy nh�
 	func _draw() -> void:
 		var G = farm.G
 		var z: float = farm.main.zoom
-		var dem: String = "_dem" if G.night else ""
+		var dem: String = "_dem" if G.vnight else ""
 		var nen: Texture2D = Bong.anh("raynen" + dem, z)
 		if nen != null:
 			draw_texture_rect(nen, Rect2(-30.0, -15.0, 60.0, 30.0), false)
