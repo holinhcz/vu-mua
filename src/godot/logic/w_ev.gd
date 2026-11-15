@@ -2,7 +2,7 @@ extends RefCounted
 # CỘT SỰ KIỆN BÊN PHẢI (WY bản web): luật quà
 #  - Điểm danh (g.dd: Sp, Cp, N8, tF, aF, R8, q9, tA, nF, eF, rF): quà 7 ngày đầu + điểm danh tháng (bù bằng sen đỏ, mốc 7/14/21/28).
 #  - 7 ngày về làng (g.tt: V1, nv, ev, rv, A9, VI, QI, KI, UI, XL): mỗi ngày một quà + 4 việc +10 điểm khai hoang, rương theo điểm.
-# Bảng: ui_dd.gd, ui_tt.gd. Bùa EXP (túi A3 của web chưa có ở Godot) thì dùng luôn: cộng giờ vào g.xpU.
+# Bảng: ui_dd.gd, ui_tt.gd. Bùa EXP cất vào túi đồ dùng (nv.EF / bp), dùng ở Kho › Đồ dùng.
 
 var G
 var WS   # w_sys.gd (V1, Tp, ru, SC)
@@ -29,9 +29,6 @@ func _coins(n: int) -> void:
 func _sa(n) -> String:   # Sa
 	return G.fmt_n(int(n))
 
-func bua_h(h: int) -> void:   # EF(h) rồi dùng liền (LF): bùa +50% EXP h giờ
-	var n := maxf(G._now_ms(), float(G.g.get("xpU", 0)))
-	G.g.xpU = n + h * 3600000.0
 
 func D9(L: Array) -> String:   # D9: cộng vật liệu, trả "Tên ×n, ..."
 	var a := {}
@@ -179,7 +176,7 @@ func _af_give(t: int) -> String:
 		2:
 			return "Gói vật liệu: " + qY(2)
 		3:
-			bua_h(2)
+			G.nv.EF(2)
 			return "Bùa +50% EXP 2 giờ (cất trong Kho, mục Đồ dùng)"
 	G.g.enBank = int(G.g.get("enBank", 0)) + 1
 	return "1 phần cơm hồi sức (cất trong Kho, ăn lúc nào cũng được)"

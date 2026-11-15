@@ -394,12 +394,62 @@ func S0(m: String, a: int) -> void:   # vật liệu
 		G.g.mats = {}
 	G.g.mats[m] = mini(999, int(G.g.mats.get(m, 0)) + a)
 
-func bp(days: int) -> void:   # bùa +50% EXP
-	var n := maxf(G._now_ms(), float(G.g.get("xpU", 0)))
-	G.g.xpU = n + days * 86400000.0
+# ------------------------------------------------------------------ đồ dùng (túi A3 bản web): bùa +50% EXP cất theo số giờ,
+# dùng khi muốn (LF, cộng dồn vào g.xpU); phần cơm hồi sức (g.enBank, ăn j8). Không chiếm chỗ trong kho.
+const L3 := [2, 24, 48, 72]   # thứ tự bùa trong Kho › Đồ dùng (giờ)
+
+func A3() -> Dictionary:   # A3: túi bùa {giờ: số lá}
+	if not (G.g.get("bua") is Dictionary):
+		G.g.bua = {}
+	return G.g.bua
+
+func EF(h: int, n := 1) -> void:   # EF: cất n lá bùa h giờ
+	var a := A3()
+	a[str(h)] = int(a.get(str(h), 0)) + n
+
+func bp(days: int) -> void:   # bp: bùa +50% EXP days ngày (cất vào túi)
+	EF(days * 24)
+
+static func xA(h: int) -> String:   # xA: tên bùa
+	return "Bùa +50% EXP " + (str(h) + " giờ" if h < 24 else str(h / 24) + " ngày")
+
+func Fu() -> float:   # Fu: ms bùa còn chạy
+	return maxf(0.0, float(G.g.get("xpU", 0)) - G._now_ms())
+
+func LF(h: int) -> void:   # LF: dùng 1 lá bùa h giờ
+	var a := A3()
+	var k := str(h)
+	if int(a.get(k, 0)) <= 0:
+		return
+	a[k] = int(a[k]) - 1
+	if int(a[k]) <= 0:
+		a.erase(k)
+	var e := maxf(G._now_ms(), float(G.g.get("xpU", 0)))
+	G.g.xpU = e + h * 3600000.0
+	G.toast.emit("Đã dùng " + xA(h) + ", còn " + G.ao(Fu() / 1000.0) + ".")
+	G.vib([10, 30, 10])
+	G.mark()
 
 func en_bank() -> void:   # phần cơm hồi sức
 	G.g.enBank = int(G.g.get("enBank", 0)) + 1
+
+func tu() -> int:   # tu: số phần cơm
+	return int(G.g.get("enBank", 0))
+
+func j8() -> bool:   # j8: ăn 1 phần cơm, hồi đầy sức
+	var a: float = G.en_max()
+	if tu() < 1:
+		G.toast.emit("Hết phần cơm hồi sức.")
+		return false
+	if float(G.g.pc.en) >= a - 1.0:
+		G.toast.emit("Nhân vật còn khỏe re, để dành cơm khi mệt.")
+		return false
+	G.g.enBank = tu() - 1
+	G.g.pc.en = a
+	G.toast.emit("Ăn 1 phần cơm hồi sức, hồi đầy sức! Còn " + str(tu()) + " phần.")
+	G.vib([10, 30, 10])
+	G.mark()
+	return true
 
 func _lang() -> Dictionary:   # R0
 	if not (G.g.get("lang") is Dictionary):
