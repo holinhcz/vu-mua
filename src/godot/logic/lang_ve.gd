@@ -196,6 +196,11 @@ func _fell() -> Dictionary:   # cây ngã / cháy sau bão (bao.gd): vật cản
 	return f if f is Dictionary else {}
 
 func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), như xưởng; cờ 10 khung/giây
+	# đường người chơi gửi lúc nền chưa tải xong (ảnh đường n/road.png về sau khi dựng cảnh): nền chỉ giữ road_pend, tự nó
+	# không áp lại -> tải lại làng là mất đường. Còn treo thì gọi lại tới khi áp được.
+	var M = F.main
+	if M.road_pend.size() > 0 and M.road_img != null:
+		M.road_set(M.road_pend[0], M.road_pend[1])
 	var scr: float = F.main.zoom * F.main.dpr if "dpr" in F.main else F.main.zoom
 	var fi := int(Time.get_ticks_msec() / 100) % 12
 	for s in flags:
@@ -450,7 +455,11 @@ class TileLayer extends Node2D:
 			var sig := JSON.stringify([g.road, g.unroad, dead])
 			if sig != _road_sig:
 				_road_sig = sig
-				M.road_set(g.road.duplicate(), g.unroad.keys() + dead.keys())
+				var rm := []   # đường gốc bỏ (gỡ, đường cụt nhà đã dời): trừ ô người chơi đặt đường lại lên
+				for k in g.unroad.keys() + dead.keys():
+					if not g.road.has(k):
+						rm.append(k)
+				M.road_set(g.road.duplicate(), rm)
 		else:
 			_draw_roads(g)
 		for k in g.gt:
