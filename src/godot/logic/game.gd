@@ -908,7 +908,7 @@ func _ray_step(t: float) -> void:
 		_ray_t = 60.0
 		if ray_n() == 0 and n > float(a.cd):
 			if _ray_cells().size() >= 6:
-				var o: float = 0.016 * RAY_MUA[season()] * (1.5 if troi != null and (troi.cur == "mua" or troi.cur == "giong") else 1.0)
+				var o: float = 0.016 * RAY_MUA[season()] * (1.5 if troi != null and (troi.cur == "mua" or troi.cur == "giong" or troi.cur == "rao") else 1.0)
 				if randf() < o:
 					_ray_start(2 + randi() % 3)
 	if ray_n() == 0:

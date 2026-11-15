@@ -18,7 +18,8 @@ var hh := -1.0         # web hh: đè giờ (thử)
 var force := ""        # đè thời tiết (thử)
 
 const BAO := {"nang": "Trời tạnh, nắng đẹp trở lại.",
-	"mua": "Mưa dầm rả rích: ruộng vườn tự thấm nước, khỏi tưới. Đi lại chậm hơn, mặc Áo mưa (Tủ đồ) để đi nhanh.",
+	"mua": "Mưa dầm rả rích cả buổi: ruộng vườn thấm nước dần, khỏi tưới. Đi lại chậm hơn, mặc Áo mưa (Tủ đồ) để đi nhanh.",
+	"rao": "Mưa rào ào xuống! Ruộng vườn no nước ngay. Mưa mau tạnh thôi.",
 	"giong": "Giông bão kéo tới! Ruộng được tưới no nước nhưng gió quật ngã cây, nhớ ra dọn.",
 	"han": "Nắng hạn gắt: ruộng khô nhanh gấp rưỡi, nhớ tưới thường xuyên. Đặt lu nước, giếng gần ruộng cho đỡ."}
 # kX: hình đồng hồ theo buổi
@@ -27,7 +28,7 @@ const KX := {
 	"dawn": '<svg viewBox="0 0 24 24"><path d="M5 16a7 7 0 0 1 14 0z" fill="#ffb347" stroke="#d9822b" stroke-width="1.2"/><path d="M2.5 19.5h19" stroke="#8a6a4a" stroke-width="2" stroke-linecap="round"/><path d="M12 4.5v3M4.8 8.3l2 2M19.2 8.3l-2 2" stroke="#f0a060" stroke-width="2" stroke-linecap="round"/></svg>',
 	"dusk": '<svg viewBox="0 0 24 24"><path d="M5 16a7 7 0 0 1 14 0z" fill="#ff8a4c" stroke="#c4562a" stroke-width="1.2"/><path d="M2.5 19.5h19" stroke="#7a5a4a" stroke-width="2" stroke-linecap="round"/><path d="M8 21.5h8" stroke="#c4562a" stroke-width="1.6" stroke-linecap="round"/></svg>',
 	"night": '<svg viewBox="0 0 24 24"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z" fill="#f2e6a8" stroke="#bfae5a" stroke-width="1.2" stroke-linejoin="round"/><circle cx="17.6" cy="6" r="1" fill="#f2e6a8"/><circle cx="20.4" cy="9.4" r="0.7" fill="#f2e6a8"/></svg>'}
-const TEN := {"nang": "Nắng đẹp", "mua": "Mưa dầm", "giong": "Giông bão", "han": "Nắng hạn"}
+const TEN := {"nang": "Nắng đẹp", "mua": "Mưa dầm", "rao": "Mưa rào", "giong": "Giông bão", "han": "Nắng hạn"}
 
 # mG(night): bảng màu ngày / đêm; gX[mùa] đè lên một số màu
 const MG := {"skyA": ["#8fd0f5", "#07122a"], "skyB": ["#eaf6e4", "#1a3a3d"], "grassA": ["#99cc56", "#2f6e44"], "grassB": ["#92c752", "#2a653d"],
@@ -94,19 +95,19 @@ func wx() -> String:
 
 func rainy() -> bool:   # DB
 	var t := wx()
-	return t == "mua" or t == "giong"
+	return t == "mua" or t == "giong" or t == "rao"
 
 func dry_k() -> float:   # VB: hạn thì đất khô nhanh gấp rưỡi (1,6)
 	return 1.6 if wx() == "han" else 1.0
 
-func walk_k() -> float:   # KB: mưa x0,8, giông x0,7 (chưa có áo mưa ở bản Godot)
-	return 0.7 if cur == "giong" else (0.8 if cur == "mua" else 1.0)
+func walk_k() -> float:   # KB: mưa dầm x0,85, mưa rào / giông x0,7 (chưa có áo mưa ở bản Godot)
+	return 0.7 if cur == "giong" or cur == "rao" else (0.85 if cur == "mua" else 1.0)
 
 func rain() -> float:   # oj: lượng mưa cho shader nền
 	return _rain_of(vwx())
 
 static func _rain_of(w: String) -> float:
-	return 1.0 if w == "giong" else (0.7 if w == "mua" else 0.0)
+	return 1.0 if w == "giong" or w == "rao" else (0.55 if w == "mua" else 0.0)
 
 func vwx() -> String:   # thời tiết để VẼ: Cài đặt › Thời tiết (xem thử) đè lên, luật vẫn theo cur
 	var w := String(G.cfg.get("w", "auto"))
@@ -139,14 +140,15 @@ func step(dt: float) -> void:
 		if n == "giong" and int(w.fs) != a:
 			w.fs = a
 			bao.storm(first)
-		if n == "mua" or n == "giong":
+		if n == "mua" or n == "giong" or n == "rao":
 			var ch := false
 			for f in G.g.plots:
 				if f.c != null and not G.ripe(f) and float(f.w) < G.water_hold(f) * 0.9:
-					f.w = G.water_hold(f)
+					# mưa rào / giông: đầy nước ngay; mưa dầm: thấm dần (mỗi giây 1,5%, khô hẳn thì hơn 1 phút mới đầy)
+					f.w = G.water_hold(f) if n != "mua" else minf(G.water_hold(f), float(f.w) + G.water_hold(f) * 0.015)
 					ch = true
-			an += 1   # NTWEB rQ: 5 lượt mưa thì tưới luôn cây ăn trái (zb)
-			if an >= 5:
+			an += 1   # NTWEB rQ: 5 lượt mưa thì tưới luôn cây ăn trái (zb); mưa dầm 15 lượt
+			if an >= (15 if n == "mua" else 5):
 				an = 0
 				if G.w_all != null and G.lang != null and G.w_all.WR.zb(true) > 0:
 					ch = true

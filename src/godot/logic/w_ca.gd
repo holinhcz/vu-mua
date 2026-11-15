@@ -1077,7 +1077,7 @@ func kl_harvest(kind: String, id: String, o: Dictionary) -> void:   # klHarvest:
 func kl_info(f: Dictionary) -> Array:   # klInfo: [[nhãn, giá trị]]
 	var D: Array = kld().get(f.id, ["g", 1, 1, "", "Cỡ", 1, 0])
 	var se: String = (["Xuân", "Hạ", "Thu", "Đông"][int(f.sea)] if _num(f.get("sea")) and int(f.sea) >= 0 and int(f.sea) < 4 else "")
-	var wx: String = {"nang": "nắng", "mua": "mưa", "giong": "giông", "han": "hạn"}.get(String(f.get("wx", "")), String(f.get("wx", "")))
+	var wx: String = {"nang": "nắng", "mua": "mưa", "rao": "mưa rào", "giong": "giông", "han": "hạn"}.get(String(f.get("wx", "")), String(f.get("wx", "")))
 	var out := [["Cân nặng", kl_kg(f.g, f.id)], [String(D[4]), (str(int(round(float(f.s)))) + " củ") if D[4] == "Số củ" else kl_num(float(f.s)) + " cm"]]
 	if _tr(f.get("br")):
 		out.append(["Độ ngọt", kl_num(float(f.br)) + " °Bx"])
@@ -2066,7 +2066,7 @@ func cg() -> bool:   # Cg: đang có gió thả diều
 	var w: String = String(G.troi.wx())
 	if w == "":
 		w = "nang"
-	return (xi == 3 or xi == 0) and not G.night and _d0() >= 14.0 and _d0() < 18.5 and w != "mua" and w != "giong"
+	return (xi == 3 or xi == 0) and not G.night and _d0() >= 14.0 and _d0() < 18.5 and w != "mua" and w != "giong" and w != "rao"
 
 func v1() -> int:   # v1
 	return mini(4, int(floor(float(G.g.get("delivered", 0)) / 2.0)))

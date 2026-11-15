@@ -655,6 +655,38 @@ class TroiFX extends Node2D:
 				draw_rect(R, Color(235 / 255.0, 240 / 255.0, 1.0, 0.55 * fl * fl))
 			if fl > 0.7 and bolt.size() > 1:
 				draw_polyline(bolt, Color(1, 1, 1, 0.9), 2.0, true)
+		elif wx == "mua":   # (logic b165) mưa dầm: trời xám, mù xa, hạt mảnh rơi đều, hơi xiên
+			var I := clampf(float(main.rain_rr) / 0.55, 0.0, 1.0)
+			draw_rect(R, Color(0.42, 0.47, 0.53, 0.16 * I))
+			for q in 6:
+				draw_rect(Rect2(0, q * H * 0.05, W, H * 0.05), Color(0.86, 0.89, 0.92, 0.06 * I * (1.0 - q / 6.0)))
+			var cm := Color(0.86, 0.9, 0.95, 0.32 * I)
+			for i in int(170 * I):
+				var sp: float = 300.0 + main.me_hash(i, 7) * 120.0
+				var x: float = fmod(main.me_hash(i, 5) * (W + 40.0) + t * 40.0, W + 40.0) - 20.0
+				var y: float = fmod(main.me_hash(i, 6) * (H + 20.0) + t * sp, H + 20.0) - 10.0
+				draw_line(Vector2(x, y), Vector2(x - 2.0, y + 9.0), cm, 0.8, true)
+		elif wx == "rao":   # (logic b165) mưa rào: tối hơn, hạt dày to rơi nhanh, nước bắn tung trên đất
+			var I := clampf(float(main.rain_rr), 0.0, 1.0)
+			draw_rect(R, Color(0.1, 0.14, 0.2, 0.2 * I))
+			var cr := Color(0.82, 0.88, 0.96, 0.5 * I)
+			for i in int(260 * I):
+				var sp: float = 680.0 + main.me_hash(i, 7) * 200.0
+				var x: float = fmod(main.me_hash(i, 5) * (W + 120.0) + t * 180.0, W + 120.0) - 60.0
+				var y: float = fmod(main.me_hash(i, 6) * (H + 30.0) + t * sp, H + 30.0) - 15.0
+				draw_line(Vector2(x, y), Vector2(x - 6.0, y + 20.0), cr, 1.2, true)
+			for i in int(55 * I):
+				var per: float = 0.45 + main.me_hash(i, 9) * 0.3
+				var u: float = t + main.me_hash(i, 8) * per
+				var cyc := int(floor(u / per))
+				var ph: float = fmod(u, per) / per
+				var p := Vector2(main.me_hash(i * 31 + cyc, 11) * W, H * 0.25 + main.me_hash(i * 17 + cyc, 12) * H * 0.75)
+				var rr: float = 1.5 + ph * 5.0
+				var pts := PackedVector2Array()
+				for q in 9:
+					var a: float = PI + PI * q / 8.0
+					pts.append(p + Vector2(cos(a) * rr, sin(a) * rr * 0.45))
+				draw_polyline(pts, Color(0.9, 0.94, 1.0, 0.5 * I * (1.0 - ph)), 1.0, true)
 		elif wx == "han" and not bool(st.get("night", false)):
 			draw_rect(R, Color(1.0, 190 / 255.0, 90 / 255.0, 0.03))
 			var hc := Color(1.0, 240 / 255.0, 210 / 255.0, 0.12)
