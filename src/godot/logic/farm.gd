@@ -483,6 +483,24 @@ func _web_prune() -> void:
 					rs.visible = false
 	print("web_prune: giấu ", n, " hình cảnh không có trong web")
 
+# đang nhấn giữ kéo map: cây, lúa đứng yên (thôi lay) tới khi buông tay, khỏi giựt theo tay kéo
+var keo := false
+var _keo_cam := Vector2.INF
+var _keo_off0 = null   # sway_off gốc của nền (cờ thử __nosw)
+
+func _keo_step() -> void:
+	if not ("touches" in main and "mdrag" in main and "sway_off" in main):
+		return
+	if _keo_off0 == null:
+		_keo_off0 = main.sway_off
+	var down: bool = main.touches.size() > 0 or main.mdrag
+	if not down:
+		keo = false
+	elif _keo_cam != Vector2.INF and main.cam != _keo_cam:
+		keo = true
+	_keo_cam = main.cam
+	main.sway_off = bool(_keo_off0) or keo
+
 func _process(dt: float) -> void:
 	_web_prune()
 	_land_sync()
@@ -503,6 +521,7 @@ func _process(dt: float) -> void:
 		refresh()
 	var tt := Time.get_ticks_msec() / 1000.0
 	var zz: float = main.zoom / maxf(1.0, main.dpr)
+	_keo_step()
 	if lang_ve != null:
 		lang_ve.step()
 	_lp_step()
@@ -525,7 +544,7 @@ func _process(dt: float) -> void:
 		var cs: Sprite2D = v.crop
 		if cs.visible:
 			# gió lay nhẹ (pP): +-0,05 rad, đứng yên khi xa
-			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 and G.stage(G.p(i)) > 0 else 0.0
+			cs.rotation = sin(tt * 1.7 + G.cells[i].gx * 1.7 + G.cells[i].gy) * 0.05 if zz >= 0.6 and not keo and G.stage(G.p(i)) > 0 else 0.0
 			# chín: nhún lên (W = -|sin(3t + gx)| x 2); vừa gieo: nảy từ 0,25 lên (easeOutBack); vừa tưới/thu: lắc
 			var gc: Dictionary = G.cells[i]
 			var W := -absf(sin(tt * 3.0 + gc.gx)) * 2.0 if G.ripe(G.p(i)) else 0.0
