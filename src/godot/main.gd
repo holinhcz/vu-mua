@@ -3140,37 +3140,86 @@ func xuong_set(rects) -> void:
 		return
 	xg_sig = sig
 	var R := []
+	var RK := {}
 	for k in rects:
 		var r = rects[k]
 		if r is Array and r.size() >= 4:
-			R.append(Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])))
+			var q := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+			R.append(q)
+			RK[str(q)] = q
 	var inside := func(p: Vector2) -> bool:
 		var t: Vector2 = _foot_tile(p)
 		for q in R:
 			if t.x >= q.position.x and t.y >= q.position.y and t.x < q.end.x and t.y < q.end.y:
 				return true
 		return false
-	if not sc_data.is_empty():
-		var V: Array = sc_data["v"]
-		for j in sc_spr.size():
-			var v = V[j]
-			if v == null or j == 16:
-				continue
-			for sp in sc_spr[j]:
-				var foot: Vector2 = sp.position if sp.has_meta("sw") else sp.position - Vector2(float(v[0]), float(v[1]))
-				var on: bool = inside.call(foot)
-				if on != bool(sp.get_meta("xg", false)):
-					sp.set_meta("xg", on)
-					sp.visible = sp.texture != null and _lot_vis(sp)
-	for o in objs:
-		var foot: Vector2 = o["piv"] if o.has("piv") else Vector2(o["x"] + o["w"] * 0.5, o["y"] + o["h"] * 0.88)
-		var on: bool = inside.call(foot)
-		if on != o.get("xg", false):
-			o["xg"] = on
+	# (logic b162) only the tiles of a workshop that came, went or moved are looked at: an index tile -> scenery / objects
+	# standing there, built once (and again when the scenery count changes). Before, every move of a workshop or pen
+	# walked all ~9000 scenery sprites and every object.
+	var n := objs.size()
+	for L in sc_spr:
+		n += L.size()
+	if n != _xg_n or sc_data.is_empty():
+		_xg_n = n
+		_xg_ix = {}
+		if not sc_data.is_empty():
+			var V: Array = sc_data["v"]
+			for j in sc_spr.size():
+				var v = V[j]
+				if v == null or j == 16:
+					continue
+				for sp in sc_spr[j]:
+					var foot: Vector2 = sp.position if sp.has_meta("sw") else sp.position - Vector2(float(v[0]), float(v[1]))
+					_xg_add(foot, sp)
+		for o in objs:
+			_xg_add(o["piv"] if o.has("piv") else Vector2(o["x"] + o["w"] * 0.5, o["y"] + o["h"] * 0.88), o)
+		for key in _xg_ix:
+			for e in _xg_ix[key]:
+				_xg_one(e, inside)
+	else:
+		var seen := {}
+		for side in 2:
+			var D: Dictionary = RK if side == 0 else _xg_R
+			var other: Dictionary = _xg_R if side == 0 else RK
+			for rk in D:
+				if other.has(rk):
+					continue
+				var q: Rect2 = D[rk]
+				for x in range(int(floor(q.position.x)), int(ceil(q.end.x))):
+					for y in range(int(floor(q.position.y)), int(ceil(q.end.y))):
+						var tk := Vector2i(x, y)
+						if seen.has(tk):
+							continue
+						seen[tk] = 1
+						for e in _xg_ix.get(tk, []):
+							_xg_one(e, inside)
+	_xg_R = RK
+
+var _xg_ix := {}   # ô chân -> [[foot, sprite cảnh | object dict]]
+var _xg_n := -1
+var _xg_R := {}
+
+func _xg_add(foot: Vector2, it) -> void:
+	var t := _foot_tile(foot)
+	var k := Vector2i(int(floor(t.x)), int(floor(t.y)))
+	if not _xg_ix.has(k):
+		_xg_ix[k] = []
+	_xg_ix[k].append([foot, it])
+
+func _xg_one(e: Array, inside: Callable) -> void:
+	var on: bool = inside.call(e[0])
+	var it = e[1]
+	if it is Dictionary:
+		if on != it.get("xg", false):
+			it["xg"] = on
 			if on:
-				o["spr"].visible = false
+				it["spr"].visible = false
 			else:
-				o["lev"] = 99   # shown again by the next object pass
+				it["lev"] = 99   # shown again by the next object pass
+	elif is_instance_valid(it):
+		if on != bool(it.get_meta("xg", false)):
+			it.set_meta("xg", on)
+			it.visible = it.texture != null and _lot_vis(it)
 
 
 # (b51) tổ ong in the tràm/fruit trees, drawn live from the web game's own hive code (aZ): a hanging string, the comb

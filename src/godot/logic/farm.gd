@@ -748,20 +748,23 @@ func _process(dt: float) -> void:
 		_resort_t = 0.1
 		_resort()
 
+var _rs_pm := PackedFloat64Array()
+
 func _resort() -> void:
 	# chen node của mình vào thứ tự vẽ của làng: trước vật đầu tiên có đáy thấp hơn mình
 	var O: Array = main.objs
 	sortables[sortables.size() - 1][1] = player.base_y()
-	var ch := false
-	for s in sortables:
-		var j := O.size()
+	if O.size() != _rs_pm.size():   # đáy lớn nhất tính tới vật k (vật nền không đổi): tìm nhị phân thay vì dò cả ngàn vật cho mỗi node
+		_rs_pm.resize(O.size())
+		var m := -1e30
 		for k in O.size():
 			var o: Dictionary = O[k]
-			if o["x"] < -50000:
-				continue
-			if float(o["y"]) + float(o["h"]) > s[1]:
-				j = k
-				break
+			if o["x"] >= -50000:
+				m = maxf(m, float(o["y"]) + float(o["h"]))
+			_rs_pm[k] = m
+	var ch := false
+	for s in sortables:
+		var j := _rs_pm.bsearch(float(s[1]), false)   # vật đầu tiên có đáy thấp hơn s
 		if j != s[2]:
 			s[2] = j
 			ch = true
