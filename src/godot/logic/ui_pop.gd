@@ -1,52 +1,25 @@
 extends "res://logic/ui_bang.gd"
-# HỘP NỔI KHUNG TRE (.raceov.pcov > .rbox.pcbox bản web: Người làm thuê, Hụi làng, ...): khung chung với Kho (ui_bang.gd).
-# Hộp giữa màn, cao theo nội dung (tối đa BOX_MAX, dư thì cuộn trong thân), nút × góc trên, bấm ra ngoài thì đóng.
+# BẢNG KHUNG TRE (Người làm thuê, Hụi làng, Trời đất, ...): dùng đúng khung bảng của Kho / Xây dựng (ui_bang.gd), vừa màn,
+# nút × góc trên, bấm nền tối thì đóng, thân cuộn được.
 # Khối trong thân xếp dọc, lề trái 25 so với khung lớn; "gap" của khối là khoảng cách phía trên nó (khối đầu: lề trên thân).
 # Mẫu: ui/snap/hr.json (hộp trống), hui_tab.json (thẻ .tt, .vl-sec, p.note, ul.kh-gb dùng chung).
 
-var PB := {}                # .raceov
+var SHELL := {}             # #pov .pwin trống (khung Kho, ui/snap/thu.json)
 var PT := {}                # khối mẫu chung
-const BODY_TOP := 39.0      # từ mép trên .rbox tới thân
-const BODY_BOT := 16.5
-const BOX_MAX := 592.0      # .rbox cao tối đa (màn 610, chừa 9 trên dưới)
 
 func _init(ui) -> void:
 	super(ui)
-	PB = Snap.load_snap("hr")["#pov"][0]
+	SHELL = Snap.load_snap("thu")["#pov"][0]
 	PT = Snap.load_snap("hui_tab")
 
-func _pop(blocks: Array) -> void:   # dựng hộp: khối xếp dọc trong #hrBody (gap = khoảng trên mỗi khối), hộp cao theo nội dung rồi cuộn
-	var n := _cl(PB)
-	var rb := _find(n, "rbox")
-	var vt := _find(n, "hrbody")
+func _pop(blocks: Array) -> void:   # dựng bảng: khung chung của Kho / Xây dựng (#pov .pwin, nút ×, thân cuộn), khối xếp dọc
+	var n := _cl(SHELL)
+	var vt := _find(n, "vlBody")
 	var top: float = float(blocks[0].get("gap", 0.0)) if blocks.size() else 0.0
-	var ch := 0.0
 	for i in blocks.size():
-		if i:
-			ch += float(blocks[i].get("gap", 6.0))
-		ch += float(blocks[i].r[3])
 		blocks[i].dx = 25.0 + float(blocks[i].get("ddx", 0.0))   # ddx: khối lệch khỏi lề (hàng tab tre)
-	var bh := minf(top + ch, BOX_MAX - BODY_TOP - BODY_BOT)
-	var H := BODY_TOP + bh + BODY_BOT
-	_mv(rb, float(rb.r[0]), (610.0 - H) * 0.5)
-	rb.r[3] = H
-	vt.r[3] = bh
-	rb.kids.append(tre_frame(float(rb.r[0]), float(rb.r[1]), float(rb.r[2]), H))
-	_show(_ovl(n), vt, blocks, top)
-	U._click(ids.get(".tre-x"), close, "scale")
-	var ov = ids.get(".raceov")
-	if ov != null:
-		U._stop(ov)
-		ov.gui_input.connect(_ov_tap.bind(ov))
-	var bx = ids.get(".rbox")
-	if bx != null:
-		U._stop(bx)
+	_show(n, vt, blocks, top)
 	U._layout()
-
-func _ov_tap(e: InputEvent, ov: Control) -> void:   # bấm ra ngoài hộp thì đóng (kx)
-	var bx = ids.get(".rbox")
-	if U._is_tap_down(e) and bx != null and not bx.get_global_rect().has_point(ov.global_position + e.position):
-		close()
 
 
 # ------------------------------------------------------------------ khối dùng chung
