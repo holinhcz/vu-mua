@@ -14,8 +14,6 @@ uniform vec3 uFogC = vec3(1.0);
 uniform vec2 uCam = vec2(0.0);
 uniform float uZoom = 1.0;
 uniform float uT = 0.0;
-uniform sampler2D uLight : filter_linear;   // bản đồ ánh sáng đèn (dem.gd), 1/4 màn
-uniform float uNk = 0.0;                    // độ đêm: đèn bật dần
 
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn(vec2 p) {
@@ -29,8 +27,7 @@ float fbm(vec2 p) {
 	return s;
 }
 void fragment() {
-	vec3 c0 = texture(SCR, SCREEN_UV).rgb;
-	vec3 c = c0;
+	vec3 c = texture(SCR, SCREEN_UV).rgb;
 	float L = dot(c, vec3(0.299, 0.587, 0.114));
 	c *= mix(uSh, uHi, smoothstep(0.08, 0.85, L)) * uExp;
 	float L2 = dot(c, vec3(0.299, 0.587, 0.114));
@@ -40,16 +37,6 @@ void fragment() {
 		vec2 w = uCam + FRAGCOORD.xy / uZoom;
 		float n = fbm(w * vec2(0.0035, 0.007) + vec2(uT * 0.012, uT * 0.004));
 		c = mix(c, uFogC, uFog * smoothstep(0.38, 0.8, n));
-	}
-	if (uNk > 0.001) {   // đèn: chỗ có sáng trở lại màu ngày, nhuộm màu đèn, sát đèn sáng hơn chút
-		vec3 Lm = texture(uLight, SCREEN_UV).rgb;
-		float m = max(Lm.r, max(Lm.g, Lm.b));
-		if (m > 0.004) {
-			vec3 lc = Lm / m;
-			float a = clamp(m, 0.0, 1.0);
-			vec3 lit = c0 * mix(vec3(1.0), lc, 0.6) * (0.95 + 0.25 * a);
-			c = mix(c, lit, a);
-		}
 	}
 	vec2 q = SCREEN_UV - 0.5;
 	c *= 1.0 - uVig * smoothstep(0.15, 0.75, dot(q, q) * 2.2);
