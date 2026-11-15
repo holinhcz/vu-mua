@@ -25,6 +25,7 @@ var T := {}
 var box: Control = null
 var ids := {}
 var pn: Control = null
+var _bsig := ""
 var pn0 := Vector2.ZERO
 var scroll := 0.0
 var drag = null
@@ -175,6 +176,17 @@ func _build() -> void:
 		_lbl(acs.kids[0], String(ac.b))
 		acs.kids[0].css = (T.on if ac.out else T.off).duplicate()
 		acs.kids[1].css = T.off.duplicate()
+	var sk := JSON.stringify(n)   # bảng y hệt lần dựng trước (mở lại, chưa đổi gì): hiện lại bảng cũ, khỏi dựng
+	if sk == _bsig and box != null and is_instance_valid(box):
+		if not box.visible:
+			box.visible = true
+			U.root.move_child(box, -1)
+			U.anchors.append([box, 0.5, 0.5])
+		pn = ids.get("#pn-set")
+		_scroll_to(scroll)
+		U._layout()
+		return
+	_bsig = sk
 	var old := box
 	ids = {}
 	box = U._build(n, ids)
@@ -266,10 +278,9 @@ func close() -> void:   # Zh
 	on = false
 	armed = 0.0
 	pop_close()
-	if box != null:
+	if box != null and is_instance_valid(box):   # cất bảng (ẩn), mở lại hiện ngay
 		U.anchors.erase(U._anchor_of(box))
-		box.queue_free()
-		box = null
+		box.visible = false
 	pn = null
 
 func _scroll_to(s: float) -> void:

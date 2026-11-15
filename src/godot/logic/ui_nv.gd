@@ -137,20 +137,40 @@ func open(t := "") -> void:
 	scroll = 0.0
 	sync()
 
-func close() -> void:
+func close() -> void:   # cất bảng (ẩn, giữ lại): mở lại khỏi dựng
 	on = false
-	wig = []
-	if box != null:
-		U.anchors.erase(U._anchor_of(box))
-		box.queue_free()
-		box = null
+	_stash()
+	box = null
 	cont = null
 	body = null
+	wig = []
+
+# Bảng mỗi tab dựng một lần rồi giữ (ẩn khi đóng / đổi tab), như Kho: mở lại chỉ việc hiện, nội dung đổi mới dựng lại phần thân.
+var shells_c := {}   # tab -> {box, ids, body, body_r, cont, sig, wig}
+
+func _stash() -> void:
+	if box == null or not is_instance_valid(box):
+		return
+	box.visible = false
+	U.anchors.erase(U._anchor_of(box))
+	shells_c[shsig] = {"box": box, "ids": ids, "body": body, "body_r": body_r, "cont": cont, "sig": sig, "wig": wig}
 
 func _shell() -> void:
-	if box != null:
-		U.anchors.erase(U._anchor_of(box))
-		box.queue_free()
+	_stash()
+	var e = shells_c.get(tab)
+	if e != null and is_instance_valid(e.box):
+		box = e.box
+		ids = e.ids
+		body = e.body
+		body_r = e.body_r
+		cont = e.cont if e.cont != null and is_instance_valid(e.cont) else null
+		sig = e.sig if cont != null else ""
+		wig = e.wig
+		box.visible = true
+		U.root.move_child(box, -1)
+		U.anchors.append([box, 0.5, 0.5])
+		U._layout()
+		return
 	cont = null
 	wig = []
 	ids = {}
@@ -158,6 +178,7 @@ func _shell() -> void:
 	box = U._build(n, ids)
 	U.root.add_child(box)
 	U.anchors.append([box, 0.5, 0.5])
+	sig = ""
 	body = ids.get(".lsbody")
 	var bn := Snap.find(n, "lsbody")
 	body_r = Rect2(bn.r[0], bn.r[1], bn.r[2], bn.r[3])
@@ -728,9 +749,8 @@ func sync() -> void:
 	if not on:
 		return
 	if shsig != tab:
+		_shell()   # cất bảng tab cũ (khoá shsig) rồi lấy / dựng bảng tab này
 		shsig = tab
-		sig = ""
-		_shell()
 	var c := _content()
 	hmax = maxf(0.0, float(c.r[3]) - body_r.size.y)
 	scroll = clampf(scroll, 0.0, hmax)

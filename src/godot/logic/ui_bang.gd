@@ -31,20 +31,13 @@ func _init(ui) -> void:
 	B = Snap.load_snap("vl")["#pov"][0]
 	T = Snap.load_snap("vl_tab")
 
-func close() -> void:
+func close() -> void:   # cất bảng (ẩn, giữ khung + khối): mở lại như Kho, chỉ hiện, cái gì đổi mới dựng
 	_qe_drop()
 	on = false
-	if box != null:
+	drag = null
+	if box != null and is_instance_valid(box):
 		U.anchors.erase(U._anchor_of(box))
-		box.queue_free()
-		box = null
-	inner = null
-	_shell_key = ""
-	for k in _pool:
-		var c0 = _pool[k][0]
-		if is_instance_valid(c0):
-			c0.queue_free()
-	_pool = {}
+		box.visible = false
 
 func _build() -> void:   # bảng con dựng lại
 	pass
@@ -214,6 +207,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			old.queue_free()
 		U.anchors.append([box, 0.5, 0.5])
 		U._click(ids.get("#pClose"), close, "scale")
+		_vis = true
 		var bk = ids.get(".pbk")
 		if bk != null:
 			U._stop(bk)
@@ -225,6 +219,11 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 		if vb != null:
 			vb._kids.clip_contents = true
 		_wire(box)
+	elif not box.visible:   # mở lại bảng đã cất
+		box.visible = true
+		U.root.move_child(box, -1)
+		U.anchors.append([box, 0.5, 0.5])
+		_vis = true
 	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
 		U.root.move_child(U.help_pop, -1)
 	inner = ids.get(".vlin")
@@ -263,6 +262,11 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 				c1.queue_free()
 			_pool.erase(key)
 	_scroll_to(scroll)
+	if _vis:   # khung mới / vừa hiện lại: canh giữa, thu nhỏ theo màn
+		_vis = false
+		U._layout()
+
+var _vis := false
 
 static func _acts(n: Dictionary, out: Array) -> Array:   # các khối có việc bấm, theo thứ tự dựng
 	if n.has("act"):

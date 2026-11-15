@@ -38,8 +38,7 @@ func open(t := "") -> void:
 	_build()
 
 func close() -> void:
-	wc = null
-	pic = null
+	wc = null   # hình nhân vật (pic) giữ theo bảng cất
 	super()
 
 func step(dt := 0.25) -> void:
