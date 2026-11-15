@@ -13,7 +13,8 @@ const TM = preload("res://logic/toan_man.gd")
 var HMAX := 281.0          # .pbody scrollHeight - clientHeight của web (trừ mục Chuyển động đã bỏ)
 # nút trong từng nhóm, theo thứ tự trái qua phải: [khoá G.cfg, các giá trị]
 const SEGS := {"#fsSeg": ["fs", [1, 0]], "#aSeg": ["a", [1, 0]], "#muSeg": ["mu", [1, 0]], "#qSeg": ["q", [0, 1, 2]],
-	"#dSeg": ["d", ["real", "fast", "day", "night"]], "#sSeg": ["s", ["auto", "0", "1", "2", "3"]]}
+	"#dSeg": ["d", ["real", "fast"]], "#xSeg": ["d", ["sang", "trua", "chieu", "dem"]], "#sSeg": ["s", ["auto", "0", "1", "2", "3"]],
+	"#wSeg": ["w", ["auto", "nang", "mua", "giong", "han"]]}
 const HINT := "Chạm ô đất trống để chọn giống gieo, ô khô để tưới, ô chín để thu hoạch, hoặc vuốt qua nhiều ô để làm cả loạt. Nông sản trong kho cũng là hạt giống: nhớ chừa lại để gieo tiếp. Lên cấp mở thêm giống mới. Con giống mua ở Chợ phiên, chợ nổi sáng sớm. Chạm nút Xây dựng để mua cây, nhà, đồ trang trí."
 const T_SEA := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
 
@@ -42,29 +43,87 @@ func _init(ui) -> void:
 	var pn_0 := _fid(T.pov, "pn-set")
 	T.armed = T.armed.duplicate(true)
 	Snap._move(T.armed, Vector2(0, float(pn_0.r[1]) - float(pn_rs.r[1])))
-	# Link 11-13: chuyển động luôn bật trên mọi máy, bỏ mục Chuyển động; các mục dưới dồn lên
-	var d := _drop_qset(T.pov, "mSeg")
-	Snap._move(T.armed, Vector2(0, -d))
-	HMAX -= d
+	# Link 11-13: chuyển động luôn bật trên mọi máy, bỏ mục Chuyển động: chỗ đó thành hàng Xem giờ (4 nút của Ngày và đêm);
+	# Ngày và đêm còn Giờ thật / Nhanh (2 nút như Toàn màn hình); thêm hàng Thời tiết (5 nút như Mùa) dưới Mùa
+	var pnd := _fid(T.pov, "pn-set")
+	var dS := _fid(T.pov, "dSeg")
+	var fsS := _fid(T.pov, "fsSeg")
+	var four: Array = dS.kids.duplicate(true)
+	for j in 2:
+		var bb: Dictionary = dS.kids[j]
+		Snap._move(bb, Vector2(float(fsS.kids[j].r[0]) - float(bb.r[0]), 0))
+		bb.r[2] = fsS.kids[j].r[2]
+		_lbl(bb, ["Giờ thật", "Nhanh"][j])
+	dS.kids = dS.kids.slice(0, 2)
+	var mS := _fid(T.pov, "mSeg")
+	var mrow := _row_of(pnd, "mSeg")
+	for j in 4:
+		var bb: Dictionary = four[j]
+		Snap._move(bb, Vector2(0, float(mS.r[1]) - float(bb.r[1])))
+		_lbl(bb, ["Sáng sớm", "Trưa", "Hoàng hôn", "Đêm"][j])
+	mS.kids = four
+	mS.id = "xSeg"
+	_title(mrow, "Xem giờ")
+	# Tài khoản: thêm hàng 2 nút dưới tên: Đăng nhập Google (trang: __ntc.login) | Nhập giftcode (trang: hộp nhập mã);
+	# hai nút nổi giữa màn của trang (#ntc, #ntgb) bỏ, gom vô đây
+	var ac := _fid(pnd, "acct")
+	var ar := Snap.find(ac, "acctrow")
+	var gr: Dictionary = fsS.duplicate(true)
+	gr.id = "acSeg"
+	var gy := float(ar.r[1]) + float(ar.r[3]) + 7.5
+	Snap._move(gr, Vector2(0, gy - float(gr.r[1])))
+	_lbl(gr.kids[0], "Đăng nhập Google")
+	_lbl(gr.kids[1], "Nhập giftcode")
+	var ga := float(gr.r[3]) + 7.5
+	ac.kids.append(gr)
+	ac.r[3] = float(ac.r[3]) + ga
+	for k in pnd.kids:
+		if float(k.r[1]) > float(ac.r[1]) + 1.0:
+			Snap._move(k, Vector2(0, ga))
+	pnd.r[3] = float(pnd.r[3]) + ga
+	Snap._move(T.armed, Vector2(0, ga))
+	HMAX += ga
+	var srow := _row_of(pnd, "sSeg")
+	var st := float(mrow.r[1]) - float(_row_of(pnd, "dSeg").r[1])   # bước giữa hai hàng
+	var wrow: Dictionary = srow.duplicate(true)
+	Snap._move(wrow, Vector2(0, st))
+	var wS := _fid(wrow, "sSeg")
+	wS.id = "wSeg"
+	for j in wS.kids.size():
+		_lbl(wS.kids[j], ["Tự động", "Nắng đẹp", "Mưa dầm", "Giông bão", "Nắng hạn"][j])
+	_title(wrow, "Thời tiết")
+	var y0 := float(srow.r[1])
+	for k in pnd.kids:
+		if float(k.r[1]) > y0:
+			Snap._move(k, Vector2(0, st))
+	pnd.kids.insert(pnd.kids.find(srow) + 1, wrow)
+	pnd.r[3] = float(pnd.r[3]) + st
+	Snap._move(T.armed, Vector2(0, st))
+	HMAX += st
 	# nút đang chọn / chưa chọn: lấy css từ nhóm Toàn màn hình (Bật chưa chọn, Tắt đang chọn)
 	var fs := _fid(T.pov, "fsSeg")
 	T.off = fs.kids[0].css
 	T.on = fs.kids[1].css
 
-static func _drop_qset(root: Dictionary, seg: String) -> float:
-	var pn := _fid(root, "pn-set")
-	var L: Array = pn.kids
-	for j in L.size():
-		if not _fid(L[j], seg).is_empty():
-			var d: float = float(L[j + 1].r[1]) - float(L[j].r[1])
-			var y: float = float(L[j].r[1])
-			L.remove_at(j)
-			for k in L:
-				if float(k.r[1]) > y:
-					Snap._move(k, Vector2(0, -d))
-			pn.r = [pn.r[0], pn.r[1], pn.r[2], float(pn.r[3]) - d]
-			return d
-	return 0.0
+static func _row_of(pn: Dictionary, seg: String) -> Dictionary:   # .qset chứa nhóm nút seg
+	for k in pn.kids:
+		if not _fid(k, seg).is_empty():
+			return k
+	return {}
+
+static func _lbl(b: Dictionary, t: String) -> void:   # chữ nút, giữa nút
+	var fs := Css.px(String(b.css.get("font-size", "15px"))) * float(b.get("z", 1.0))
+	var w: float = Box.text_w(t, fs, int(String(b.css.get("font-weight", "400"))))
+	b.text = t
+	var tr: Array = b.get("tr", b.r)
+	b.tr = [float(b.r[0]) + (float(b.r[2]) - w) * 0.5, tr[1], w, tr[3]]
+
+static func _title(row: Dictionary, t: String) -> void:   # chữ đầu hàng, bỏ nút ?
+	var b: Dictionary = row.kids[0]
+	b.text = t
+	b.kids = []
+	if b.has("tr"):
+		b.tr = [b.tr[0], b.tr[1], Box.text_w(t, Css.px(String(b.css.get("font-size", "15px"))) * float(b.get("z", 1.0)), int(String(b.css.get("font-weight", "700")))) + 1.0, b.tr[3]]
 
 static func _fid(n: Dictionary, id: String) -> Dictionary:
 	if n.get("id", "") == id:
@@ -104,6 +163,18 @@ func _build() -> void:
 		for j in L.size():
 			if L[j].get("id", "") == "reset":
 				L[j] = T.armed.duplicate(true)
+	var ac := _acct()   # tên / trạng thái lưu mạng, nút đăng nhập
+	_ac_sig = JSON.stringify(ac)
+	var an := _fid(n, "acctName")
+	if not an.is_empty():
+		an.text = String(ac.t)
+		an.tr = [an.tr[0], an.tr[1], Box.text_w(String(ac.t), Css.px(String(an.css.get("font-size", "15px"))) * float(an.get("z", 1.0)), int(String(an.css.get("font-weight", "400")))) + 1.0, an.tr[3]]
+		an.r = [an.r[0], an.r[1], maxf(float(an.r[2]), float(an.tr[2])), an.r[3]]
+	var acs := _fid(n, "acSeg")
+	if not acs.is_empty():
+		_lbl(acs.kids[0], String(ac.b))
+		acs.kids[0].css = (T.on if ac.out else T.off).duplicate()
+		acs.kids[1].css = T.off.duplicate()
 	var old := box
 	ids = {}
 	box = U._build(n, ids)
@@ -146,7 +217,50 @@ func _build() -> void:
 		var kk: String = keys[j]
 		U._click(qs[j], func(): help(kk), "scale")
 	U._click(ids.get("#reset"), reset_tap, "down")
+	var acb = ids.get("#acSeg")
+	if acb != null:
+		var L2: Array = U._buttons(acb, [])
+		L2.sort_custom(func(a, b): return a.r.position.x < b.r.position.x)
+		if L2.size() >= 2:
+			U._click(L2[0], _login, "scale94")
+			U._click(L2[1], _gift, "scale94")
 	U._layout()
+
+# ------------------------------------------------------------------ tài khoản (trang: window.__ntc), giftcode (window.__ntgopen)
+var _ac_sig := ""
+var _ac_t := 0.0
+
+func _acct() -> Dictionary:
+	var st := "web"
+	var nm := ""
+	var msg := ""
+	if OS.has_feature("web"):
+		var r = JavaScriptBridge.eval("JSON.stringify(window.__ntc?{st:__ntc.st,name:__ntc.name,msg:__ntc.msg||''}:null)", true)
+		var o = JSON.parse_string(str(r)) if r != null else null
+		if o is Dictionary:
+			st = String(o.st)
+			nm = String(o.name)
+			msg = String(o.msg)
+	match st:
+		"in":
+			return {"t": "Đã nối · " + nm + " (làng lưu lên mạng)", "b": "Đã đăng nhập", "out": false}
+		"out":
+			return {"t": "Chưa đăng nhập: làng chỉ lưu trên máy này", "b": "Đăng nhập Google", "out": true}
+		"kick":
+			return {"t": "Đang chơi ở máy khác", "b": "Đã đăng nhập", "out": false}
+		"loading":
+			return {"t": "Đang tải…", "b": "Đăng nhập Google", "out": false}
+	return {"t": msg.replace("☁ ", "") if msg != "" else "Không nối được máy chủ lưu", "b": "Đăng nhập Google", "out": false}
+
+func _login() -> void:
+	if not OS.has_feature("web"):
+		return
+	if String(JavaScriptBridge.eval("window.__ntc?__ntc.st:''", true)) == "out":
+		JavaScriptBridge.eval("window.__ntc.login()", true)
+
+func _gift() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__ntgopen&&window.__ntgopen()", true)
 
 func close() -> void:   # Zh
 	on = false
@@ -196,13 +310,13 @@ func reset_tap() -> void:   # #reset: bấm 1 lần đổi chữ đỏ 4 giây, 
 func _help_text(k: String) -> Array:
 	match k:
 		"acct":
-			return ["Tài khoản", "Mở game trong ứng dụng Claude (đã đăng nhập) để lưu tiến trình theo tài khoản và chơi tiếp trên máy khác. Hiện chỉ lưu trên máy này."]
+			return ["Tài khoản", "Đăng nhập Google để lưu làng lên mạng và chơi tiếp trên máy khác. Mỗi tài khoản chơi ở một máy một lúc. Nhập giftcode để nhận quà."]
 		"fs":
 			return ["Toàn màn hình", "Ẩn thanh trình duyệt cho cảnh rộng hơn. Bấm Esc hoặc chọn Tắt để thoát."]
 		"q":
 			return ["Chất lượng hình", "Nếu máy nóng hoặc nhanh hết pin thì chọn Tiết kiệm. Máy mạnh thì chọn Nét."]
 		"d":
-			return ["Ngày và đêm", "Giờ thật: tối từ 19:30 đến 5:30 theo đồng hồ máy. Nhanh: 1 phút ngoài đời bằng 1 giờ trong làng."]
+			return ["Ngày và đêm", "Giờ thật: tối từ 19:30 đến 5:30 theo đồng hồ máy. Nhanh: 1 phút ngoài đời bằng 1 giờ trong làng. Xem giờ: làng đứng ở sáng sớm, trưa, hoàng hôn hoặc đêm."]
 		"m":
 			return ["Chuyển động", "Máy này đang tắt hiệu ứng chuyển động. Chọn Bật để con vật đi lại, cây lay, lá rơi." if G.rm_dev else "Con vật đi lại, cây lay, lá rơi, bướm bay."]
 		"s":
@@ -261,6 +375,11 @@ func step(dt: float) -> void:
 				G.toast.emit("Trình duyệt không cho bật toàn màn hình lúc này. Bấm lại nút Bật thử lần nữa.")
 		if TM.dang_bat() != _tm:
 			_build()
+		_ac_t -= dt
+		if _ac_t <= 0.0:   # đăng nhập xong / lưu xong: đổi chữ tài khoản
+			_ac_t = 1.0
+			if JSON.stringify(_acct()) != _ac_sig:
+				_build()
 	if armed > 0.0:
 		armed -= dt
 		if armed <= 0.0:

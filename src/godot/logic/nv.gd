@@ -74,10 +74,17 @@ func hour() -> float:   # Pc / aQ (d0: hh đè giờ khi thử)
 		return G.troi.hh
 	if G.cfg.d == "fast":
 		return fmod(Time.get_unix_time_from_system() / 60.0, 24.0)
-	if G.cfg.d == "day":
-		return 12.0
-	if G.cfg.d == "night":
-		return 0.0
+	match String(G.cfg.d):   # Cài đặt › Ngày và đêm / Xem giờ: đứng ở một giờ
+		"day", "trua":
+			return 12.0
+		"night":
+			return 0.0
+		"sang":
+			return 6.0
+		"chieu":
+			return 18.2
+		"dem":
+			return 22.0
 	var t := Time.get_time_dict_from_system()
 	return float(t.hour) + float(t.minute) / 60.0 + float(t.second) / 3600.0
 

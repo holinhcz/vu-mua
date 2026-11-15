@@ -25,7 +25,7 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--txt);font-famil
 <style>
 #ntc{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(6px,env(safe-area-inset-top,0px)) + 88px);z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
   color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;white-space:nowrap}
-#ntc[hidden]{display:none}
+#ntc,#ntc[hidden]{display:none}
 #ntk{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(20,16,8,.72);padding:16px}
 #ntk[hidden]{display:none}
 #ntk>div{width:min(300px,100%);background:#fff8e2;border:2px solid #b08a4a;border-radius:14px;padding:18px;display:grid;gap:12px;text-align:center;
@@ -43,7 +43,7 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--txt);font-famil
 (function(){
 var N=window.__ntc={st:'loading',uid:'',name:'',cloud:'',rev:0,save:function(){},login:function(){}};
 var btn=document.getElementById('ntc'),kick=document.getElementById('ntk');
-function show(t){btn.textContent=t;btn.hidden=false}
+function show(t){btn.textContent=t;btn.hidden=false;N.msg=t}   // nút nổi đã ẩn: game đọc N.msg trong Cài đặt › Tài khoản
 if(!window.firebase){N.st='err';return}
 var app,auth,db;
 try{app=firebase.initializeApp({apiKey:"AIzaSyDmF3QtPD-CJGVXQhTFaIMPmmHoJUg5r0I",authDomain:"vu-mua.firebaseapp.com",projectId:"vu-mua",
@@ -81,7 +81,7 @@ auth.onAuthStateChanged(function(u){
 <!-- Giftcode: ô nhập của trang; game Godot đọc window.__ntgq và trả lời vào window.__ntgr (main.gd gift_try). -->
 <style>
 #ntgb{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(6px,env(safe-area-inset-top,0px)) + 120px);z-index:5;font:600 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
-  color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer}
+  color:#4a3a1e;background:rgba(255,248,226,.92);border:1px solid rgba(120,90,40,.35);border-radius:999px;padding:6px 11px;box-shadow:0 1px 3px rgba(0,0,0,.18);cursor:pointer;display:none}
 #ntgp{position:fixed;inset:0;z-index:6;display:grid;place-items:center;background:rgba(0,0,0,.45);padding:16px}
 #ntgp[hidden]{display:none}
 #ntgp>div{width:min(300px,100%);background:#fff8e2;border:2px solid #b08a4a;border-radius:14px;padding:16px;display:grid;gap:10px;font:15px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;color:#4a3a1e}
@@ -98,7 +98,7 @@ auth.onAuthStateChanged(function(u){
 <script>
 (function(){var p=document.getElementById('ntgp'),i=document.getElementById('ntgi'),m=document.getElementById('ntgm');
 window.__ntgq=[];window.__ntgshow=function(){m.textContent=window.__ntgr||''};
-document.getElementById('ntgb').onclick=function(){m.textContent='';i.value='';p.hidden=false;setTimeout(function(){i.focus()},50)};
+window.__ntgopen=document.getElementById('ntgb').onclick=function(){m.textContent='';i.value='';p.hidden=false;setTimeout(function(){i.focus()},50)};   // mở từ Cài đặt của game
 document.getElementById('ntgx').onclick=function(){p.hidden=true;var c=document.getElementById('canvas');c&&c.focus()};
 function go(){var v=i.value.trim();if(!v)return;m.textContent='Đang kiểm tra…';window.__ntgq.push(v)}
 document.getElementById('ntgok').onclick=go;i.addEventListener('keydown',function(e){e.stopPropagation();if(e.key==='Enter')go()});
