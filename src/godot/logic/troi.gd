@@ -83,7 +83,7 @@ func pal(night: bool, sea: int) -> Dictionary:   # OO
 		e[k] = MG[k][1 if night else 0]
 	for k in GX[sea]:
 		e[k] = GX[sea][k][1 if night else 0]
-	if not night and sea != 3 and cur == "han":
+	if not night and sea != 3 and vwx() == "han":
 		e.grassA = _mix(e.grassA, "#dacf88", 0.36)
 		e.grassB = _mix(e.grassB, "#d3c87e", 0.36)
 		e.path = _mix(e.path, "#f2e6bc", 0.22)
@@ -103,7 +103,14 @@ func walk_k() -> float:   # KB: mưa x0,8, giông x0,7 (chưa có áo mưa ở b
 	return 0.7 if cur == "giong" else (0.8 if cur == "mua" else 1.0)
 
 func rain() -> float:   # oj: lượng mưa cho shader nền
-	return 1.0 if cur == "giong" else (0.7 if cur == "mua" else 0.0)
+	return _rain_of(vwx())
+
+static func _rain_of(w: String) -> float:
+	return 1.0 if w == "giong" else (0.7 if w == "mua" else 0.0)
+
+func vwx() -> String:   # thời tiết để VẼ: Cài đặt › Thời tiết (xem thử) đè lên, luật vẫn theo cur
+	var w := String(G.cfg.get("w", "auto"))
+	return cur if w == "auto" else w
 
 func step(dt: float) -> void:
 	# rQ mỗi khung: chớp tắt dần; mỗi giây xét đổi thời tiết, mưa thì ruộng tự tưới
@@ -114,7 +121,7 @@ func step(dt: float) -> void:
 	bao.step(dt)
 	_it -= dt
 	if _it > 0.0:
-		if cur == "giong":
+		if vwx() == "giong":
 			_iq(dt)
 	else:
 		_it = 1.0
@@ -148,7 +155,7 @@ func step(dt: float) -> void:
 	var d := dh()
 	var sea: int = G.season()
 	var fx: bool = G.fx_new()   # lớp chỉnh màu (hau_ky.gd) lo sáng sớm / hoàng hôn / đêm: bỏ tấm phủ màu, bảng màu ngày
-	st = {"phase": d.phase, "h": d.h, "night": d.night, "tint": null if fx else d.tint, "light": ij(d.night), "wx": cur, "rain": rain(),
+	st = {"phase": d.phase, "h": d.h, "night": d.night, "tint": null if fx else d.tint, "light": ij(d.night), "wx": vwx(), "rain": rain(),
 		"flash": flash, "bolt": bao.bolt, "season": sea, "pal": pal(d.night and not fx, sea), "bay": BAY[sea], "bay_c": BAY_C[sea]}
 
 func _iq(dt: float) -> void:
