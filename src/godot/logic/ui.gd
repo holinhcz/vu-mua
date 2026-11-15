@@ -323,7 +323,11 @@ func _build_hud() -> void:
 	_click(hid.get("#setBtn"), func(): setp.open(), "scale")
 	_click(hid.get("#pcAv"), func(): pcp.open(), "scale")
 	_auto_setup(hid.get(".autob"))
-	for k in [".ngpill", ".hudTab", "#coinsPill"]:
+	_click(hid.get("#hudTab"), func(): hud_min(not hm), "scale")   # yO: thu gọn / mở thẻ nhiệm vụ bên trái
+	_click(hid.get("#goal"), _goal_tap, "scale94")
+	hm_badge = null
+	hud_min(bool(G.cfg.get("hm", false)), true)
+	for k in [".ngpill", "#coinsPill"]:
 		var b = hid.get(k)
 		if b != null:
 			_click(b, func(): say(SOON))
@@ -558,7 +562,7 @@ func _sync_hud() -> void:
 	var gfr := minf(1.0, hv / 5.0)
 	if G.w_all != null and hid.get("#goal") != null:   # NTWEB fy: mục tiêu tân thủ (w_sys.goal_view)
 		var gv: Dictionary = G.w_all.WS.goal_view()
-		hid["#goal"].visible = not gv.is_empty()
+		hid["#goal"].visible = not gv.is_empty() and not hm
 		if not gv.is_empty():
 			gtx = String(gv.txt) + (" · " + String(gv.btn) if gv.get("ready", false) else "")
 			gfr = float(gv.bar)
@@ -567,6 +571,79 @@ func _sync_hud() -> void:
 	if gb != null:
 		var par: Control = gb.get_parent().get_parent()
 		gb.place(Rect2(gb.r.position, Vector2(par.r.size.x * gfr, gb.r.size.y)))
+
+# ------------------------------------------------------------------ thẻ nhiệm vụ bên mép trái (.hudq bản web: yO, xO, #goalGo)
+# Nút ‹ thu gọn thẻ mục tiêu + hàng nút viên (body.hudmin), thành › kèm số nút viên đang có (chấm đỏ); nhớ theo máy.
+# Chạm thẻ mục tiêu lúc đủ: nhận thưởng (#goalGo).
+var hm := false
+var hm_badge: Control = null
+var hm_n := -1
+
+func hud_min(on: bool, quiet := false) -> void:   # yO
+	hm = on
+	if G.cfg.get("hm", false) != on:
+		G.cfg["hm"] = on
+		var f := FileAccess.open(G.CFG_PATH, FileAccess.WRITE)
+		if f:
+			f.store_string(JSON.stringify(G.cfg))
+			f.close()
+	var tb = hid.get("#hudTab")
+	if tb != null:
+		var ar := _q(tb, "ar")
+		_txt(ar, "›" if on else "‹")
+	if hid.get("#goal") != null:
+		hid["#goal"].visible = not on and G.w_all != null and not G.w_all.WS.goal_view().is_empty()
+	if G.w_all != null and G.w_all.pills != null:
+		G.w_all.pills.visible = not on
+	hm_n = -1
+	_hm_badge()
+
+func _hm_badge() -> void:   # xO: số nút viên đang hiện, chỉ lúc thu gọn
+	var tb = hid.get("#hudTab")
+	if tb == null:
+		return
+	var n := 0
+	if G.w_all != null and G.w_all.pills != null:
+		for c in G.w_all.pills.get_children():
+			if c is Control and c.visible:
+				n += 1
+	if not hm:
+		n = 0
+	if n == hm_n:
+		return
+	hm_n = n
+	if hm_badge == null or not is_instance_valid(hm_badge):
+		hm_badge = Control.new()
+		hm_badge.set_meta("snap", {})
+		hm_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hm_badge.draw.connect(func():
+			if hm_n <= 0:
+				return
+			var k := Css.K
+			var t := str(hm_n)
+			var f: Font = Css.font(800)
+			var fs := int(round(10.0 * 0.75 * k))
+			var w := maxf(17.0 * 0.75 * k, f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0 * 0.75 * k)
+			var h := 17.0 * 0.75 * k
+			var r := Rect2(hm_badge.size.x - w + 8.0 * 0.75 * k, -8.0 * 0.75 * k, w, h)
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = Color("#e04b3a")
+			sb.set_corner_radius_all(int(h / 2.0))
+			sb.anti_aliasing = true
+			hm_badge.draw_style_box(sb, r)
+			var tw := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			hm_badge.draw_string(f, Vector2(r.position.x + (w - tw) / 2.0, r.position.y + h / 2.0 + fs * 0.36), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE))
+		tb.add_child(hm_badge)
+	hm_badge.position = Vector2.ZERO
+	hm_badge.size = tb.size
+	hm_badge.queue_redraw()
+
+func _goal_tap() -> void:   # #goalGo: đủ thì nhận thưởng mục tiêu
+	if G.w_all == null:
+		return
+	var gv: Dictionary = G.w_all.WS.goal_view()
+	if gv.get("ready", false) and G.w_all.WS.goal_claim():
+		G.mark()
 
 # #coinsPill bản web rộng theo số (width auto, bám mép phải): số dài hơn thì ô xu nới sang trái, không cắt chữ
 func _coins_txt(s: String) -> void:
@@ -3484,6 +3561,7 @@ func _process(dt: float) -> void:
 			_kho_sync()
 		if kdp != null:
 			kdp.chips_sync()
+		_hm_badge()
 		if od_on:
 			_ord_sync()
 		if G.w_all != null:   # NTWEB bảng cây, chợ nổi, lễ hội, nút viên

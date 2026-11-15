@@ -280,7 +280,7 @@ func season() -> int:   # t3().i: Cài đặt Mùa khác "Theo lịch" thì gi�
 # ------------------------------------------------------------------ Cài đặt (localStorage nong-trai-* của bản web: lưu theo máy, không theo bản lưu)
 const CFG_PATH := "user://caidat.json"
 signal cfg_changed(k: String)
-var cfg := {"a": 1, "mu": 1, "q": 2, "d": "real", "m": "auto", "s": "auto", "w": "auto"}   # w: xem thời tiết (chỉ hình, không đổi luật)
+var cfg := {"a": 1, "mu": 1, "q": 2, "d": "real", "m": "auto", "s": "auto", "w": "auto", "hm": false}   # w: xem thời tiết (chỉ hình, không đổi luật)
 var rm_dev := false        # kw: máy đang bật giảm chuyển động
 
 func cfg_load() -> void:
