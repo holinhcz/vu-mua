@@ -82,8 +82,24 @@ static func color(s: String) -> Color:
 		return c
 	return Color.from_string(s, Color(0, 0, 0, 0))
 
+# Chuỗi css lặp lại rất nhiều (mỗi khung dựng từ bản chụp đọc lại cả nền svg dài hàng nghìn ký tự): tách một lần rồi nhớ.
+static var _split_c := {}
+static var _parse_c := {}
+static var _sh_c := {}
+
 static func split_top(s: String, sep := ",") -> PackedStringArray:
 	# split on sep outside brackets and quotes
+	var ck := sep + s
+	var hit = _split_c.get(ck)
+	if hit != null:
+		return hit
+	if _split_c.size() > 4000:
+		_split_c.clear()
+	var out := _split_top(s, sep)
+	_split_c[ck] = out
+	return out
+
+static func _split_top(s: String, sep: String) -> PackedStringArray:
 	var out := PackedStringArray()
 	var d := 0
 	var q := ""
@@ -115,9 +131,18 @@ static func px(s: String, ref := 0.0) -> float:
 		return float(s.trim_suffix("%")) / 100.0 * ref
 	return float(s.trim_suffix("px"))
 
-static func parse(css: String) -> Dictionary:
+static func parse(css: String) -> Dictionary:   # bản sao (người gọi được sửa)
+	var hit = _parse_c.get(css)
+	if hit == null:
+		if _parse_c.size() > 4000:
+			_parse_c.clear()
+		hit = _parse(css)
+		_parse_c[css] = hit
+	return hit.duplicate()
+
+static func _parse(css: String) -> Dictionary:
 	var d := {}
-	for decl in split_top(css, ";"):
+	for decl in _split_top(css, ";"):
 		var i := decl.find(":")
 		if i < 0:
 			continue
@@ -140,7 +165,16 @@ static func radius(s: String, w: float, h: float) -> Vector4:
 		return Vector4(v[0], v[1], v[2], v[1])
 	return Vector4(v[0], v[1], v[2], v[3])
 
-static func shadows(s: String) -> Array:
+static func shadows(s: String) -> Array:   # chỉ đọc: dùng chung kết quả đã tách
+	var hit = _sh_c.get(s)
+	if hit == null:
+		if _sh_c.size() > 2000:
+			_sh_c.clear()
+		hit = _shadows(s)
+		_sh_c[s] = hit
+	return hit
+
+static func _shadows(s: String) -> Array:
 	var out := []
 	if s == "" or s == "none":
 		return out
@@ -221,7 +255,19 @@ static func _stops(args: PackedStringArray, L: float) -> Dictionary:
 		i += 1
 	return {"c": cs, "p": out, "px": anypx}
 
-static func gradient(g: String, w: float, h: float) -> Dictionary:
+static var _gr_c := {}
+
+static func gradient(g: String, w: float, h: float) -> Dictionary:   # chỉ đọc: dùng chung theo (chuỗi, cỡ)
+	var ck := g + "|" + str(w) + "|" + str(h)
+	var hit = _gr_c.get(ck)
+	if hit == null:
+		if _gr_c.size() > 2000:
+			_gr_c.clear()
+		hit = _gradient(g, w, h)
+		_gr_c[ck] = hit
+	return hit
+
+static func _gradient(g: String, w: float, h: float) -> Dictionary:
 	var kind := g.substr(0, g.find("("))
 	var inner := g.substr(g.find("(") + 1)
 	inner = inner.substr(0, inner.length() - 1)

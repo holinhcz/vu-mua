@@ -210,28 +210,56 @@ var card_pool := {}   # thẻ món đã dựng: khoá (mục, thẻ, thiếu xu,
 func _shop_sig() -> String:
 	return JSON.stringify([cat, _cards(), lg().beauty(), int(G.g.coins), G.lv(), U.vsize()])
 
+# Như Kho (dựng sẵn mọi thẻ): cửa hàng đang mở thì dựng ngầm các mục chưa có / đã cũ, mỗi lần một mục, cách nhau chút,
+# để bấm sang mục nào cũng chỉ việc hiện bảng có sẵn.
+var warm_t := 0.0
+
+func _warm(dt: float) -> void:
+	if mode != "shop" or pov == null or not is_instance_valid(pov):
+		warm_t = 0.0
+		return
+	warm_t += dt
+	if warm_t < 0.35:
+		return
+	warm_t = 0.2
+	var keep := [cat, pov, pids, grid, lis, sc_max, sc]
+	for gp in GROUPS:
+		for it in gp.c:
+			var c: String = it[0]
+			if c == keep[0]:
+				continue
+			cat = c
+			var e = shop_c.get(c)
+			var sg := _shop_sig()
+			if e != null and e.sig == sg and is_instance_valid(e.pov):
+				continue
+			if e != null:
+				_free(e.pov)
+			sc = 0.0
+			lis = []
+			_build_shop()
+			pov.visible = false
+			U.anchors.erase(U._anchor_of(pov))
+			shop_c[c] = {"sig": sg, "pov": pov, "pids": pids, "grid": grid, "lis": lis, "sc_max": sc_max}
+			cat = keep[0]
+			pov = keep[1]
+			pids = keep[2]
+			grid = keep[3]
+			lis = keep[4]
+			sc_max = keep[5]
+			sc = keep[6]
+			U.root.move_child(pov, -1)
+			return
+	cat = keep[0]
+
 func _shop_hide() -> void:   # cất bảng đang hiện (không bỏ)
 	if pov != null and is_instance_valid(pov):
 		pov.visible = false
 		U.anchors.erase(U._anchor_of(pov))
 	pov = null
 
-func _shop_clear() -> void:
-	for k in shop_c:
-		_free(shop_c[k].pov)
-	shop_c = {}
-	for k in card_pool:
-		if is_instance_valid(card_pool[k]):
-			card_pool[k].queue_free()
-	card_pool = {}
-
 func _ps() -> void:
-	if mode == "shop":
-		_shop_hide()
-	else:
-		_shop_clear()
-		_free(pov)
-		pov = null
+	_shop_hide()   # bảng các mục giữ lại (ẩn) cả khi đóng cửa hàng, mở lại không phải dựng
 	grid = null
 	lis = []
 	_free(sheet)
@@ -1981,6 +2009,7 @@ func step(dt: float) -> void:
 	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
 		_lift()
+	_warm(dt)
 	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
 		if is_instance_valid(tr):
