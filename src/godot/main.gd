@@ -3944,6 +3944,8 @@ func _drw_text(frames: int) -> String:
 	return " · ".join(o)
 var zs_ready := false
 var zs_count := -1
+var zs_mine := -1
+var _zs_sig := false
 var zs_keys := PackedFloat32Array()
 var zs_nodes := []
 func _zsort_all() -> void:
@@ -3979,13 +3981,18 @@ func _zfix() -> void:
 		if is_instance_valid(n) and n.get_parent() == obj_root:
 			mine[n] = true
 			L.append([(float(e[1]) - 968.0) / 16.0, n])
-	if obj_root.get_child_count() != zs_count:
+	if not _zs_sig:   # (bản 195) có node vào / ra obj_root thì dựng lại danh sách khoá (trước chỉ so số con: vào k ra k thì giữ
+		_zs_sig = true   # danh sách cũ, node mới đặt chỗ sai tới khi tải lại)
+		obj_root.child_entered_tree.connect(func(_n): zs_count = -1)
+		obj_root.child_exiting_tree.connect(func(_n): zs_count = -1)
+	if obj_root.get_child_count() != zs_count or S.size() != zs_mine:
 		zs_count = obj_root.get_child_count()
+		zs_mine = S.size()
 		zs_keys = PackedFloat32Array()
 		zs_nodes = []
 		var last := -1.0e9
 		for n in obj_root.get_children():
-			if mine.has(n):
+			if mine.has(n) or n.is_queued_for_deletion():
 				continue
 			var kf: float = _zkey(n, last)
 			last = kf
