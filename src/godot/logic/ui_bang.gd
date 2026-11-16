@@ -45,6 +45,9 @@ func _build() -> void:   # bảng con dựng lại
 func step(_dt: float) -> void:   # bảng con: dựng lại khi đổi
 	pass
 
+func busy() -> bool:   # đang kéo cuộn (dọc hoặc hàng chip): ui hoãn step, khỏi dựng lại bảng giữa lúc kéo (giật, khựng)
+	return (drag != null and drag.moved) or (hd != null and hd.moved)
+
 func _barn(id) -> int:   # g.barn[id] || 0
 	return int(G.g.barn.get(String(id), 0))
 
@@ -693,6 +696,10 @@ func _scroll_to(s: float) -> void:
 		U._move(inner, in0 - Vector2(0, scroll))
 
 func input(e: InputEvent) -> bool:
+	# ngón tay mới chạm xuống: bỏ cờ "vừa kéo" của lần trước. Trước đây cờ này không bao giờ tắt: kéo cuộn một lần là từ đó
+	# mọi nút trong bảng (tab, nút việc) bấm không ăn, bảng như đứng yên
+	if ((e is InputEventScreenTouch and e.pressed) or (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT)):
+		moved_t = false
 	if not on or inner == null or hmax <= 0.0:
 		return false
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):

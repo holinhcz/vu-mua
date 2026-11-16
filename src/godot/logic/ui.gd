@@ -3550,12 +3550,12 @@ func _process(dt: float) -> void:
 		lvp.step(dt)
 	if setp != null:
 		setp.step(dt)
-	if vlp != null:
+	if vlp != null and not vlp.busy():
 		vlp.step(dt)
-	if ngp != null:
+	if ngp != null and not ngp.busy():
 		ngp.step(dt)
 	for p in _pans():
-		if p != null:
+		if p != null and not p.busy():
 			p.step(dt)
 	_ng_bdg()
 	_auto_sync()
