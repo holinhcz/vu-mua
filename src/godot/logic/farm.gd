@@ -742,9 +742,13 @@ var song = null   # song_ve.gd: bụi ven sông, cụm trôi, bãi bùn, cá bú
 var _rs_pm := PackedFloat64Array()
 
 func _resort() -> void:
-	# chen node của mình vào thứ tự vẽ của làng: trước vật đầu tiên có đáy thấp hơn mình
+	# MỘT logic xếp trên dưới (bản 194): nền (main._zfix) xếp mọi thứ mỗi khung theo độ sâu ô như bản web, cả cảnh, cỏ ven
+	# đường lẫn node của logic (khoá ở sortables). Ở đây chỉ cập nhật khoá; chỉ khi nền chưa sẵn sàng mới tự chen tạm.
+	# (Trước đây hai bên cùng xếp, mỗi bên một cách: dời đồ xong lệch, tải lại mới đúng.)
 	var O: Array = main.objs
 	sortables[sortables.size() - 1][1] = player.base_y()
+	if main.get("zs_ready") and int(main.get("zf_off")) != 1:
+		return
 	if O.size() != _rs_pm.size():   # đáy lớn nhất tính tới vật k (vật nền không đổi): tìm nhị phân thay vì dò cả ngàn vật cho mỗi node
 		_rs_pm.resize(O.size())
 		var m := -1e30

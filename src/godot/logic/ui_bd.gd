@@ -1604,7 +1604,7 @@ func _flift() -> void:
 				for grp in V.cache[key]:
 					for sp in grp:
 						if is_instance_valid(sp):
-							want[sp] = d + (up if sp.z_index != -4 else Vector2.ZERO)   # nền chuồng nằm đất, chỉ dời
+							want[sp] = d + (up if sp.z_index != -5 else Vector2.ZERO)   # nền chuồng nằm đất, chỉ dời
 							wk[sp] = dk
 		else:   # xưởng vẽ theo số chỗ (s.gx) nên chỉ cần nhấc
 			var xn = U.F.xnodes.get(fac)

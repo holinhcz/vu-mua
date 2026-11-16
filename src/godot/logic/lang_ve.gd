@@ -213,7 +213,7 @@ func sync() -> void:
 		for e in [["g", -100.0], ["b", 1.15], ["r0", 2.495], ["f0", 2.495], ["r1", 3.495], ["f1", 3.495]]:
 			var s := _spr(b, String(e[0]) + "d", base, false)
 			if e[0] == "g":
-				s.z_index = -4   # nền chuồng: trên cỏ ven đường (main.vg_root -5), dưới rào / con vật
+				s.z_index = -5
 				F.add_child(s)
 				nodes.append(s)
 			else:
