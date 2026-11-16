@@ -634,6 +634,9 @@ func _icon(cv: Control, ic: Array, locked: bool) -> void:
 	m.set_shader_parameter("a", 0.45 if locked else 1.0)
 	tr.material = m
 	cv.add_child(tr)
+	if ic.size() > 1 and str(ic[1]) == "pond":   # Đào ao: không có hình món, dùng hình ao vẽ sẵn
+		tr.texture = Css.image("res://ui/img/bd/pond.webp")
+		return
 	var kb := _ic_key(ic)
 	if kb.is_empty():
 		return
