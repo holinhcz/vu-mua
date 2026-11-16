@@ -852,6 +852,16 @@ func _load_scenery() -> void:
 # Pure rule on the road map: lay a road and its verges follow.
 var vg_tex := {}
 var vg_rows := []
+# (bản 193) cỏ ven đường nằm lớp đất như bản web (DUONG.draw trong lượt vẽ nền, trước mọi vật): dưới cây, nhà, chuồng, xưởng,
+# trên nền đất / ruộng. Trước đây chen vô thứ tự vẽ của vật: dời đồ xong cỏ đè lên gốc cây, tải lại thì về đúng.
+var vg_root: Node2D = null
+func _vg_root() -> Node2D:
+	if vg_root == null:
+		vg_root = Node2D.new()
+		vg_root.z_index = -5
+		vg_root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		add_child(vg_root)
+	return vg_root
 # ---------------------------------------------------------------- layer 4: what grows at the water (pondgen.gd rules)
 class PondPics extends Node2D:
 	var items := []   # [name, x, y, scale x (negative = mirrored), scale y]
@@ -1302,8 +1312,6 @@ func _load_song() -> void:
 		go.call())
 
 class VergeRow extends Node2D:
-	func is_verge() -> bool:   # farm._verge_fit nhận ra hàng cỏ ven đường
-		return true
 	var items := []   # [name, x, y, sc, flip]
 	var meta := {}
 	var tex := {}
@@ -1435,15 +1443,11 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 			own_rows[sc_data["i"][k]] = true
 	vg_meta = vmeta
 	for e in _verges(road, vmeta):
-		L.append([e[0], e[1]])
+		e[1].material = night_mat
+		_vg_root().add_child(e[1])
 		vg_rows.append(e[1])
 	L.sort_custom(func(a, b): return a[0] < b[0])
 	for e in L:
-		if e[1] is Node2D:
-			e[1].material = night_mat
-			e[1].set_meta("k", e[0])
-			sc_root.add_child(e[1])
-			continue
 		var r: Array = e[1]
 		var j: int = r[0]
 		var v: Array = V[j]
@@ -3194,13 +3198,14 @@ func _do_step() -> void:
 		var hide := false
 		if scs.has(n):
 			hide = do_ph == 4
-		elif vg_rows.has(n):
-			hide = do_ph == 2
 		else:
 			hide = do_ph == 3
 		if hide:
 			n.visible = false
 			do_hid.append(n)
+	if do_ph == 2 and vg_root != null and vg_root.visible:
+		vg_root.visible = false
+		do_hid.append(vg_root)
 # (b75) ?do2 : hides each top-level layer alone for 1.5 s and lists the ones whose hiding saves most draw calls
 var do2_on := -1
 var do2_L := []
@@ -3747,31 +3752,18 @@ func road_set(add: Dictionary, rm: Array) -> void:
 		im.set_pixel(q.x, q.y, Color8(c.r8, m, c.b8, c.a8))
 	road_img = im
 	(ground.material as ShaderMaterial).set_shader_parameter("uRD", ImageTexture.create_from_image(im))
-	# verges: the old rows go, the new ones go in at their place in the draw order
+	# verges: the old rows go, the new ones go in (lớp đất, không cần chen thứ tự)
 	for row in vg_rows:
 		if is_instance_valid(row):
 			row.queue_free()
-			sc_root.remove_child(row)
 	vg_rows = []
-	var kids := sc_root.get_children()
-	var keys := PackedFloat32Array()
-	var lk := -1.0e9
-	for n in kids:
-		lk = _zkey(n, lk)
-		keys.append(lk)
-	var add_rows := _verges(im, vg_meta)
-	add_rows.sort_custom(func(a, b): return a[0] > b[0])   # last first, so earlier indexes stay right
-	for e in add_rows:
+	for e in _verges(im, vg_meta):
 		var row = e[1]
 		row.material = night_mat
-		row.set_meta("k", e[0])
 		row.atl = sc_atl if sc_far == 1 else null
 		row.arect = sc_arect
-		var i := keys.bsearch(float(e[0]), false)
-		sc_root.add_child(row)
-		sc_root.move_child(row, mini(i, sc_root.get_child_count() - 1))
+		_vg_root().add_child(row)
 		vg_rows.append(row)
-	zs_count = -1
 
 # ---- GIFTCODE (Link 11-13 11:00 "làm chỗ nhập giftcode, mã 1tr xu để test") ----
 # The page has the input box (window.__ntgq = codes typed, window.__ntgr = answer shown under the box); the game

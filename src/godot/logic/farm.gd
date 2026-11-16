@@ -773,26 +773,7 @@ func _resort() -> void:
 			var ti := ref.get_index()
 			var ci := n.get_index()
 			root.move_child(n, ti if ci > ti else ti - 1)
-		_verge_fit(root, n, (float(s[1]) - 968.0) / 16.0)
 
-# hàng cỏ ven đường (main VergeRow, khoá "k" = độ sâu theo ô) không có trong danh sách vật cảnh: node chen vào đứng
-# trước / sau đúng mấy hàng cỏ kề nó theo độ sâu. Trước đây hàng cỏ phía sau chuồng vẽ đè lên chuồng.
-func _verge_fit(root: Node2D, n: Node2D, ky: float) -> void:
-	var i := n.get_index()
-	var j := i
-	while j > 0:
-		var pv := root.get_child(j - 1)
-		if not pv.has_method("is_verge") or float(pv.get_meta("k", 0.0)) <= ky:
-			break
-		j -= 1
-	if j == i:
-		while j + 1 < root.get_child_count():
-			var nx := root.get_child(j + 1)
-			if not nx.has_method("is_verge") or float(nx.get_meta("k", 0.0)) >= ky:
-				break
-			j += 1
-	if j != i:
-		root.move_child(n, j)
 
 # ------------------------------------------------------------------ chạm / vuốt (pointerdown/move/up + click của bản web)
 # Chạm xuống ô có việc (gieo/tưới/gặt/bắt sâu): giữ 220 ms rồi kéo = vuốt làm cả loạt (không kéo làng);
