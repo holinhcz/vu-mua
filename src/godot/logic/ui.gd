@@ -3318,15 +3318,6 @@ func vl_open(u: int) -> void:   # gu("nha", u): chạm nhà dân
 	kho_close()
 	vlp.open(u)
 
-func vl_chip(o: Dictionary) -> void:   # chạm nhà có sẵn: chip "Dọn vào ở"
-	if G.w_all == null:
-		return
-	if vlp == null:
-		vlp = load("res://logic/ui_vl.gd").new(self, G.w_all.WL, G.w_all.WC)
-	close_all()
-	kho_close()
-	vlp.chip_open(o)
-
 func ng_open(t := "") -> void:   # ngcOpen: nút Nghề trong Menu
 	if G.w_all == null:
 		return
@@ -3483,7 +3474,6 @@ func close_all() -> void:
 		ngp.close()
 	if vlp != null:
 		vlp.close()
-		vlp.chip_close()
 	if pcp != null and pcp.on:
 		pcp.close()
 	if xfp != null:

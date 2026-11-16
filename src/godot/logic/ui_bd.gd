@@ -1832,15 +1832,9 @@ func fz(w: Vector2):   # Fz: món / vật cảnh / xưởng / chuồng / cây r�
 	var n: int = L.obj_at(w, V.pick_obj)
 	if n >= 0:
 		return func(): vj(n)
-	var e = L.so_pick(w, true, V.pick_so)
-	if e != null:
-		return func(): _hz(e)
 	var r := _sj(w)
 	if r != "":
 		return func(): fac = r; sel = -1; G.vib(15); _fl("fsel")
-	var o = L.so_pick(w, false, V.pick_so)
-	if o != null:
-		return func(): _hz(o)
 	var l = L.hu_pick(w)
 	if l != null and l.type == "scn" and L.Pi.has(l.o.id):
 		return func(): _rz(l.o)
@@ -1857,14 +1851,6 @@ func _sj(w: Vector2) -> String:   # Sj: xưởng hoặc chuồng đã xây bị 
 			if tl.x >= q.x and tl.x < q.x + 2 and tl.y >= q.y and tl.y < q.y + 2:
 				return p
 	return ""
-
-func _hz(o: Dictionary) -> void:   # Hz: nhận vật cảnh có sẵn rồi dời
-	var n: int = lg().take_so(o)
-	if n < 0:
-		return
-	_hide_sync()
-	sel = n
-	bm()
 
 func _rz(o: Dictionary) -> void:   # Rz
 	var n: int = lg().take_hu(o)

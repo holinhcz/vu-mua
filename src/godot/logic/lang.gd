@@ -458,21 +458,6 @@ func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị ch�
 				r = l
 	return r
 
-func so_pick(w: Vector2, strict: bool, pick_px: Callable):   # Oz: vật cảnh có sẵn bị chạm
-	var e = null
-	for o in SO:
-		if o.wild or o.ring or not Pi.has(o.id) or not so_shown(o) or not ci(o.pc):
-			continue
-		var bb: Array = o.bb
-		if w.x < float(bb[0]) or w.x > float(bb[2]) or w.y < float(bb[1]) or w.y > float(bb[3]):
-			continue
-		var s: bool = pick_px.call(o, w)
-		if not s and not strict:
-			s = absf(w.x - o.sx) < (float(bb[2]) - float(bb[0])) * 0.22 and w.y >= o.sy + (float(bb[1]) - o.sy) * 0.8 and w.y <= o.sy + 8
-		if s and (e == null or o.k > e.k):
-			e = o
-	return e
-
 func hu_near(w: Vector2, m := 12.0) -> Array:   # cây rừng / cỏ hoang có khung hình quanh chỗ chạm (nới m)
 	var tl := tile_of(w)
 	var l := int(floor(tl.x))
@@ -553,9 +538,9 @@ func own_n() -> int:   # số món tính vào giới hạn: không tính vật c
 			n += 1
 	return n
 
-# MỘT LOẠI ĐỒ (bản 202): cây, bụi, đồ một ô có sẵn của làng (chuối, tre, dâm bụt, cau, xoài, sen, rơm...) ở khu đã có gộp
-# thẳng vào đồ của mình (g.objs, f = 1), như đã "nhận": dời, bán, xếp, chiếm chỗ, sét đánh y như món mình đặt. Khu mới mua
-# thì gộp lúc đó. Nhà, đình, cổng có sẵn còn giữ chỗ (đường sân nhà, dân dọn vào ở, đình làng gắn với chúng).
+# MỘT LOẠI ĐỒ (bản 203): mọi vật có sẵn của làng (cây, bụi, nhà tranh, đình, cổng, cầu, sen, rơm...) ở khu đã có thành
+# đúng món Xây dựng cùng tên (g.objs, f = 1): dời, bán, xếp, chiếm chỗ, sét đánh, dân ở y như món mình đặt. Khu mới mua thì
+# gộp lúc đó. Không còn "vật cảnh có sẵn" riêng.
 var _abs_sig := ""
 func absorb_so() -> bool:   # true = có gộp thêm
 	var sg := str(G.g.get("land")) + "/" + str(G.g.mv.size())
@@ -564,7 +549,7 @@ func absorb_so() -> bool:   # true = có gộp thêm
 	_abs_sig = sg
 	var n := 0
 	for o in SO:
-		if o.wild or o.sk == "" or G.g.mv.has(o.sk) or not so_shown(o) or int(o.fw) * int(o.fd) != 1:
+		if o.wild or o.sk == "" or G.g.mv.has(o.sk) or not so_shown(o):
 			continue
 		var id: String = XV.get(o.id, o.id)
 		if not Pi.has(id):
@@ -576,15 +561,6 @@ func absorb_so() -> bool:   # true = có gộp thêm
 	if n > 0:
 		changed()
 	return n > 0
-
-func take_so(o: Dictionary) -> int:   # Hz: nhận vật cảnh có sẵn thành món của mình (rồi dời)
-	if own_n() >= int(C.V5):
-		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
-		return -1
-	G.g.mv[o.sk] = 1
-	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
-	changed()
-	return objs().size() - 1
 
 func take_hu(o: Dictionary) -> int:   # Rz
 	if not Pi.has(o.id):
