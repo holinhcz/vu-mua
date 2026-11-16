@@ -1302,6 +1302,8 @@ func _load_song() -> void:
 		go.call())
 
 class VergeRow extends Node2D:
+	func is_verge() -> bool:   # farm._verge_fit nhận ra hàng cỏ ven đường
+		return true
 	var items := []   # [name, x, y, sc, flip]
 	var meta := {}
 	var tex := {}
@@ -1414,7 +1416,6 @@ func _verges(road: Image, meta: Dictionary) -> Array:
 				row.items = S
 				row.meta = meta
 				row.tex = vg_tex
-				row.set_meta("t", Vector2(nx + 0.5, ny + 0.5))   # ô đất mà hàng cỏ quay ra: xưởng / chuồng đặt đó thì cất hàng cỏ (xuong_set)
 				out.append([x + y + 1 + (0.47 if sd > 0 else -0.47), row])
 	return out
 
@@ -3482,12 +3483,6 @@ func xuong_set(rects) -> void:
 					_xg_add(foot, sp)
 		for o in objs:
 			_xg_add(o["piv"] if o.has("piv") else Vector2(o["x"] + o["w"] * 0.5, o["y"] + o["h"] * 0.88), o)
-		var ki0: float = info["ki"]
-		var hi0: float = info["hi"]
-		for row in vg_rows:   # cỏ ven đường quay ra ô có chuồng / xưởng: cất (không đè lên chuồng, nền chuồng lộ ra)
-			if is_instance_valid(row) and row.has_meta("t"):
-				var tt: Vector2 = row.get_meta("t")
-				_xg_add(Vector2(ki0 + (tt.x - tt.y) * 32.0, hi0 + (tt.x + tt.y) * 16.0), row)
 		for key in _xg_ix:
 			for e in _xg_ix[key]:
 				_xg_one(e, inside)
@@ -3532,8 +3527,6 @@ func _xg_one(e: Array, inside: Callable) -> void:
 				it["spr"].visible = false
 			else:
 				it["lev"] = 99   # shown again by the next object pass
-	elif is_instance_valid(it) and it is VergeRow:
-		it.visible = not on
 	elif is_instance_valid(it):
 		if on != bool(it.get_meta("xg", false)):
 			it.set_meta("xg", on)
@@ -3669,10 +3662,6 @@ func road_set(add: Dictionary, rm: Array) -> void:
 		sc_root.move_child(row, mini(i, sc_root.get_child_count() - 1))
 		vg_rows.append(row)
 	zs_count = -1
-	if not _xg_last.is_empty():   # hàng cỏ mới: cất lại hàng quay ra chuồng / xưởng
-		_xg_n = -1
-		xg_sig = ""
-		xuong_set(_xg_last)
 
 # ---- GIFTCODE (Link 11-13 11:00 "làm chỗ nhập giftcode, mã 1tr xu để test") ----
 # The page has the input box (window.__ntgq = codes typed, window.__ntgr = answer shown under the box); the game
