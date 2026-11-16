@@ -194,20 +194,18 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 	hmax = maxf(0.0, ch + top - float(vt.r[3]))
 	scroll = clampf(scroll, 0.0, hmax)
 	var sk := JSON.stringify(n)
-	shell_new = box == null or not is_instance_valid(box) or sk != _shell_key
+	shell_new = false
+	if box == null or not is_instance_valid(box) or sk != _shell_key:
+		_shell_swap(sk)
+	elif not box.visible:   # mở lại bảng đã cất
+		box.visible = true
+		U.root.move_child(box, -1)
+		U.anchors.append([box, 0.5, 0.5])
+		_vis = true
 	if shell_new:
-		for k in _pool:   # khối giữ lại: gỡ khỏi khung cũ trước khi bỏ khung
-			var c0 = _pool[k][0]
-			if is_instance_valid(c0) and c0.get_parent() != null:
-				c0.get_parent().remove_child(c0)
-		_shell_key = sk
-		var old := box
 		ids = {}
 		box = U._build(n, ids)
 		U.root.add_child(box)
-		if old != null and is_instance_valid(old):
-			U.anchors.erase(U._anchor_of(old))
-			old.queue_free()
 		U.anchors.append([box, 0.5, 0.5])
 		U._click(ids.get("#pClose"), close, "scale")
 		_vis = true
@@ -222,11 +220,6 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 		if vb != null:
 			vb._kids.clip_contents = true
 		_wire(box)
-	elif not box.visible:   # mở lại bảng đã cất
-		box.visible = true
-		U.root.move_child(box, -1)
-		U.anchors.append([box, 0.5, 0.5])
-		_vis = true
 	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
 		U.root.move_child(U.help_pop, -1)
 	inner = ids.get(".vlin")
@@ -245,7 +238,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 		var node: Control = null
 		if e != null and is_instance_valid(e[0]):
 			node = e[0]
-			if node.get_parent() != null:
+			if node.get_parent() != null and node.get_parent() != inner._kids:
 				node.get_parent().remove_child(node)
 			_re_act(node, k)
 			ids.merge(e[1], true)
@@ -255,7 +248,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			_wire(node)
 			ids.merge(bid, true)
 			_pool[key] = [node, bid]
-		if inner != null:
+		if inner != null and node.get_parent() == null:
 			inner.add(node)
 		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
 	for key in _pool.keys():   # khối không còn: bỏ
@@ -265,11 +258,83 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 				c1.queue_free()
 			_pool.erase(key)
 	_scroll_to(scroll)
+	_sig_sh[sig] = _shell_key
 	if _vis:   # khung mới / vừa hiện lại: canh giữa, thu nhỏ theo màn
 		_vis = false
 		U._layout()
 
 var _vis := false
+
+# GIỮ KHUNG THEO TAB (như Kho, bản 183): mỗi khung (tab đang chọn, chữ trên khung...) dựng một lần, đổi tab thì cất khung cũ
+# (ẩn, giữ cả khối của nó) rồi lấy lại khung đã có; tối đa SH_N khung, quá thì bỏ khung lâu nhất.
+const SH_N := 6
+var _shells := {}          # khoá khung -> [box, ids, _pool]
+var _sh_order := []
+
+var _sig_sh := {}          # sig của bảng -> khoá khung đã dựng đúng trạng thái đó (đổi tab quay lại: lấy ra, khỏi dựng)
+var _jump := false         # vừa bấm tab (_seg_tabs)
+
+func _tab_jump(go: Callable, k) -> void:
+	_jump = true
+	go.call(k)
+
+func _jump_back() -> bool:   # đổi tab về trạng thái đã dựng: chỉ hiện lại khung cất, không tính lại khối
+	if not has_method("_sig"):
+		return false
+	var s: String = call("_sig")
+	var sk = _sig_sh.get(s)
+	if sk == null or sk == _shell_key or not _shells.has(sk) or not is_instance_valid(_shells[sk][0]):
+		return false
+	var e: Array = _shells[sk]
+	_shell_swap(sk)
+	hmax = e[3]
+	_area = e[4]
+	sig = s
+	inner = ids.get(".vlin")
+	in0 = inner.r.position if inner != null else Vector2.ZERO
+	_scroll_to(e[5])
+	if _vis:
+		_vis = false
+		U._layout()
+	return true
+
+func _shell_swap(sk: String) -> void:   # cất khung đang hiện, lấy khung sk (chưa có thì shell_new = true để dựng)
+	if box != null and is_instance_valid(box):
+		var was := box.visible
+		box.visible = false
+		U.anchors.erase(U._anchor_of(box))
+		_shells[_shell_key] = [box, ids, _pool, hmax, _area, scroll]
+		_sh_order.erase(_shell_key)
+		_sh_order.append(_shell_key)
+		if not was:
+			_vis = true
+	_shell_key = sk
+	var e = _shells.get(sk)
+	if e != null and is_instance_valid(e[0]):
+		_shells.erase(sk)
+		_sh_order.erase(sk)
+		box = e[0]
+		ids = e[1]
+		_pool = e[2]
+		box.visible = true
+		U.root.move_child(box, -1)
+		U.anchors.append([box, 0.5, 0.5])
+		_vis = true
+	else:
+		box = null
+		_pool = {}
+		shell_new = true
+	while _sh_order.size() > SH_N:   # quá nhiều khung cất: bỏ khung lâu nhất (cả khối không gắn)
+		var k0: String = _sh_order.pop_front()
+		var o = _shells.get(k0)
+		_shells.erase(k0)
+		if o != null:
+			for kk in o[2]:
+				var c = o[2][kk][0]
+				if is_instance_valid(c) and c.get_parent() == null:
+					c.queue_free()
+			if is_instance_valid(o[0]):
+				o[0].queue_free()
 
 static func _acts(n: Dictionary, out: Array) -> Array:   # các khối có việc bấm, theo thứ tự dựng
 	if n.has("act"):
@@ -334,7 +399,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		c.kids = []
 		c.text = L[i][1]
 		c.tr = [x + (w - tw) * 0.5, c.tr[1], tw, c.tr[3]]
-		c.act = go.bind(L[i][0])
+		c.act = _tab_jump.bind(go, L[i][0])
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
@@ -685,10 +750,18 @@ func _qe_drop() -> void:
 
 # ------------------------------------------------------------------ cuộn
 func _redo() -> void:
+	var j := _jump
+	_jump = false
 	sig = ""
 	_sig_t = 0.0
-	if on:
-		_build()
+	if not on:
+		return
+	if j:
+		if _jump_back():
+			return
+	else:   # bấm việc khác (mua, nhận...): trạng thái có thể đổi ngoài sig, khung cất của tab khác không dùng lại nguyên được
+		_sig_sh.clear()
+	_build()
 
 func _scroll_to(s: float) -> void:
 	scroll = clampf(s, 0.0, hmax)
