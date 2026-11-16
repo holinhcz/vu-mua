@@ -6,7 +6,7 @@ shader_type canvas_item;
 uniform sampler2DArray uRA : repeat_enable, filter_linear_mipmap;
 uniform sampler2D uMap : filter_nearest;   // ô (x - uBox.x, y - uBox.y): R = lớp ảnh + 1 (0 = không lát)
 uniform vec4 uBox;                          // ô đầu (x, y), cỡ (w, h)
-uniform float uB = 0.45;                    // bề rộng loang (đơn vị ô)
+uniform float uB = 0.8;                     // bề rộng loang (đơn vị ô)
 varying vec2 wp;
 
 void vertex() {
