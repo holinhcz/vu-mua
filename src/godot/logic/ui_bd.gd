@@ -310,7 +310,7 @@ func _ps() -> void:
 
 func _ghost() -> void:
 	var V = U.F.lang_ve
-	if mode == "place":
+	if mode == "place" and move_idx < 0:   # dời món: nhấc món thật (_mv_lift), hình ma chỉ cho món mới mua
 		V.show_ghost(id, seed, gx, gy, why != "")
 	else:
 		V.hide_ghost()
@@ -2075,18 +2075,51 @@ func _shadow(x: float, y: float, w: float, d: float) -> void:   # bóng mờ b�
 	ov_lo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _lift() -> void:   # món đang cầm nổi lên, nhún nhẹ
-	var gh: Node2D = U.F.lang_ve.ghost
-	if gh == null or not gh.visible or mode != "place":
-		return
 	var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
-	gh.position = gh.get_meta("p0", gh.position) - Vector2(0, LIFT + b)
+	var up := Vector2(0, -(LIFT + b))
+	var gh: Node2D = U.F.lang_ve.ghost
+	if gh != null and gh.visible and mode == "place":   # món mới mua: hình ma (chưa có món thật)
+		gh.position = gh.get_meta("p0", gh.position) + up
+	_mv_lift(up)
+
+# Dời món: nhấc chính các node đang vẽ món đó (như xưởng / chuồng _flift), dời tới chỗ đang chọn, khoá xếp lớp theo chỗ mới;
+# sai chỗ thì ửng đỏ. Không còn hình ma thứ hai cho món đang dời.
+var _mv_n := {}   # node -> [chỗ gốc, khoá gốc]
+func _mv_lift(up: Vector2) -> void:
+	var want := {}
+	if mode == "place" and move_idx >= 0:
+		var L = lg()
+		var o = L.objs()[move_idx] if move_idx < L.objs().size() else null
+		var a = L.Pi.get(id)
+		if o != null and a != null:
+			var c0 := Vector2(LN.en(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0), LN.nn(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0))
+			var c1 := Vector2(LN.en(gx + a.fw / 2.0, gy + a.fd / 2.0), LN.nn(gx + a.fw / 2.0, gy + a.fd / 2.0))
+			for nd in U.F.lang_ve.obj_nodes.get(move_idx, []):
+				if is_instance_valid(nd):
+					want[nd] = c1 - c0
+	for nd in _mv_n.keys():
+		if not is_instance_valid(nd):
+			_mv_n.erase(nd)
+		elif not want.has(nd):
+			nd.position = _mv_n[nd][0]
+			nd.self_modulate = _mv_n[nd][2]
+			_sort_set(nd, _mv_n[nd][1])
+			_mv_n.erase(nd)
+	for nd in want:
+		if not _mv_n.has(nd):
+			_mv_n[nd] = [nd.position, _sort_get(nd), nd.self_modulate]   # self_modulate: modulate của cây giữ pha lay (sprite_sway)
+		nd.position = _mv_n[nd][0] + want[nd] + up
+		var m0: Color = _mv_n[nd][2]
+		nd.self_modulate = Color(m0.r, m0.g * 0.55, m0.b * 0.5, m0.a * 0.8) if why != "" else m0
+		if _mv_n[nd][1] != null:
+			_sort_set(nd, float(_mv_n[nd][1]) + float(want[nd].y))
 
 # ------------------------------------------------------------------ mỗi khung, cuộn
 func step(dt: float) -> void:
 	t += dt
 	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
-		_lift()
+	_lift()
 	if mode == "fmove" or not _fl_nodes.is_empty():
 		_flift()
 	_warm(dt)

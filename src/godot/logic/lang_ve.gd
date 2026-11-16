@@ -132,6 +132,7 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 			_add(sg, dk + 0.005)
 
 var cache := {}          # khóa món -> [[node của món] ...] lần dựng trước
+var obj_nodes := {}      # chỉ số món (g.objs) -> các node đang vẽ món đó (ui_bd nhấc lên khi dời)
 
 func _reuse(old: Dictionary, key: String) -> bool:   # còn node của khóa này từ lần trước thì lấy lại
 	var L = old.get(key)
@@ -177,17 +178,17 @@ func sync() -> void:
 	cache = {}
 	nodes = []
 	var sea := str(F.G.season())
-	var moving: int = F.ui.bdp.move_idx if F.ui.bdp != null else -1
-	for n in O.size():
-		if n == moving:
-			continue   # đang dời: vẽ bằng hình ma theo chỗ đang chọn
+	obj_nodes = {}
+	for n in O.size():   # đang dời cũng vẽ như thường: ui_bd nhấc chính các node này lên, như xưởng / chuồng
 		var o: Dictionary = O[n]
 		var t = LG.Pi.get(o.id)
 		if t == null or o.id == "pond" or (o.has("bk") and fell.has("o" + str(o.bk))):   # cây mình đang cháy / ngã / mọc lại: FellNode vẽ thay
 			continue
 		var cx: float = float(o.gx) + float(t.fw) / 2.0
 		var cy: float = float(o.gy) + float(t.fd) / 2.0
+		var n0 := nodes.size()
 		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea, Rect2(float(o.gx), float(o.gy), float(t.fw), float(t.fd)))
+		obj_nodes[n] = nodes.slice(n0)
 	# vật cảnh có sẵn (lang.SO, trừ cây cỏ hoang): vẽ như đồ đặt, không dùng ảnh chụp của nền, nên dời đi là chỗ cũ trống luôn
 	for o in LG.SO:
 		if o.wild or not PICS.has(o.id) or fell.has(o.sk) or not LG.so_shown(o):
