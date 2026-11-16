@@ -49,11 +49,35 @@ func ck(t: Dictionary) -> bool:   # CK: cây trong khu đã mua, không phải c
 		return false
 	return farm != null and farm.pc_own(String(t.pc))
 
+func moved(sk: String) -> bool:   # cây không còn đứng chỗ gốc: đã nhận / dời đi (g.mv), hoặc xưởng / chuồng xây đè lên (nền giấu
+	# cây dưới đó). Không ngã, không cháy, không mọc cây con ở đó (trước đây cây con mọc giữa nhà, giữa xưởng)
+	if G.g.get("mv") is Dictionary and G.g.mv.has(sk):
+		return true
+	var t = by.get(sk)
+	if t == null:
+		return true
+	var cx := float(t.gx) + float(t.fw) / 2.0
+	var cy := float(t.gy) + float(t.fd) / 2.0
+	var R := []
+	if G.xw != null:
+		for k in G.xw.list_built():
+			var e: Dictionary = G.xw.sr[k]
+			R.append([float(e.gx), float(e.gy), float(e.fw), float(e.fd)])
+	if G.lang != null:
+		for p in G.lang.C.Di:
+			if G.lang.pen_built(p):
+				var q: Vector2i = G.lang.pen_pos(p)
+				R.append([float(q.x), float(q.y), float(G.lang.C.mo[p].w), float(G.lang.C.mo[p].h)])
+	for r in R:
+		if cx >= r[0] and cy >= r[1] and cx < r[0] + r[2] and cy < r[1] + r[3]:
+			return true
+	return false
+
 func hn() -> Array:   # HN: cây còn đứng, ngã được
 	var f: Dictionary = wx().fell
 	var a := []
 	for t in trees:
-		if not f.has(t.sk) and ck(t):
+		if not f.has(t.sk) and ck(t) and not moved(String(t.sk)):
 			a.append(t)
 	return a
 
@@ -147,7 +171,10 @@ func pk() -> void:   # PK: cháy xong thì ngã, cây con lớn xong thì về n
 	var n := false
 	for e in t.fell.keys():
 		var r: Dictionary = t.fell[e]
-		if r.s == "burn" and a - float(r.at) > SK:
+		if moved(String(e)):   # cây ngã / cháy / cây con ở chỗ gốc của cây đã dời đi: bỏ (trước đây cây con mọc giữa nhà)
+			t.fell.erase(e)
+			n = true
+		elif r.s == "burn" and a - float(r.at) > SK:
 			t.fell[e] = {"s": "down", "p": -1, "at": a, "d": [[1, 0], [0, 1], [1, 1]].pick_random()}
 			n = true
 		elif r.s == "grow" and a - float(r.at) > ON:
