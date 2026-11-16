@@ -1753,10 +1753,7 @@ func fz(w: Vector2):   # Fz: món / vật cảnh / xưởng / chuồng / cây r�
 	var r := _sj(w)
 	if r != "":
 		return func(): fac = r; sel = -1; G.vib(15); _fl("fsel")
-	var l = L.hu_pick(w)
-	if l != null and l.type == "scn" and L.Pi.has(L.XV.get(l.o.id, l.o.id)):
-		return func(): _rz(l.o)
-	return null
+	return null   # cây cỏ hoang, đồ có sẵn của làng: chỉ Dọn ngoài Xây dựng
 
 func _sj(w: Vector2) -> String:   # Sj: xưởng hoặc chuồng đã xây bị chạm
 	var k: String = U.F.xw_at(w)
@@ -1766,21 +1763,10 @@ func _sj(w: Vector2) -> String:   # Sj: xưởng hoặc chuồng đã xây bị 
 	for p in lg().C.Di:
 		if lg().pen_built(p):
 			var q: Vector2i = lg().pen_pos(p)
-			if tl.x >= q.x and tl.x < q.x + 2 and tl.y >= q.y and tl.y < q.y + 2:
+			var sz := fsize(p)
+			if tl.x >= q.x and tl.x < q.x + sz.x and tl.y >= q.y and tl.y < q.y + sz.y:
 				return p
 	return ""
-
-func _rz(o: Dictionary) -> void:   # Rz
-	var n: int = lg().take_hu(o)
-	if n < 0:
-		return
-	_hide_sync()
-	sel = n
-	bm()
-
-func _hide_sync() -> void:
-	U.F._xw_sig = ""
-	U.F._xw_sync()
 
 func world_tap(w: Vector2) -> void:   # xj
 	match mode:
@@ -1807,9 +1793,6 @@ func world_tap(w: Vector2) -> void:   # xj
 		f.call()
 		return
 	var s = lg().hu_pick(w)
-	if s != null and s.type == "scn":
-		_rz(s.o)
-		return
 	if s != null and s.type == "scnlock":
 		var h = U.F.PC.G0.get(s.id)
 		if h != null:

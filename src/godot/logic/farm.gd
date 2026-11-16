@@ -1049,7 +1049,13 @@ func tap(sp: Vector2) -> void:
 			var a = PC.G0.get(h.id)
 			if a != null:
 				G.toast.emit("Khai hoang " + String(a.name).to_lower() + " trước đã (" + G.fmt_n(int(a.cost)) + " xu).")
-		"scn", "paddy":
+		"scn":   # cây cỏ hoang: vòng nút Dọn (bấm Dọn mới đi tới dọn)
+			ui.dn_open({"hu": h.o})
+		"don":   # đồ có sẵn của làng không có việc khác: vòng nút Dọn
+			var Od: Array = lang.objs()
+			if int(h.i) < Od.size():
+				ui.dn_open({"o": Od[int(h.i)]})
+		"paddy":
 			ui.close_all()
 			var key := ("scn" + String(h.o.key)) if h.type == "scn" else ("paddy" + str(h.gx) + "," + str(h.gy))
 			if not has_job(key):
@@ -1281,8 +1287,11 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
 					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb, {"n": on})
-			if L.size() == nL and lang_ve.obj_rect(idx).has_point(w):   # món không có việc gì để chạm: vẫn che thứ phía sau nó
-				_pk_add(L, {"type": "none"}, 99, sy, px, {"n": on})
+			if L.size() == nL and lang_ve.obj_rect(idx).has_point(w):
+				if lang.is_decor(o):   # đồ có sẵn của làng: chạm hiện vòng nút Dọn
+					_pk_add(L, {"type": "don", "i": idx}, 47, sy, px, {"n": on})
+				else:   # món không có việc gì để chạm: vẫn che thứ phía sau nó
+					_pk_add(L, {"type": "none"}, 99, sy, px, {"n": on})
 		for d in lang.hu_near(w):   # cây rừng / cỏ hoang (51): trúng điểm ảnh (cả cây bị che, để chạm lại lùi ra sau)
 			var dd: Dictionary = d
 			_pk_add(L, {"type": "scn" if lang.ci(dd.pc) else "scnlock", "o": dd, "id": dd.pc}, 51, float(dd.sy), func(p: Vector2) -> bool: return lang.hu_hit1(dd, p), {"n": main.sc_nodes(float(dd.k))})
@@ -1369,6 +1378,21 @@ var q := []
 var cur = null
 var st := 0
 var wt := 0.0
+
+func don_job(k: Dictionary) -> void:   # bấm Dọn (rm_don.gd): nhân vật đi tới dọn {hu} cây cỏ hoang / {o} đồ có sẵn
+	if k.has("hu"):
+		var o: Dictionary = k.hu
+		var key := "scn" + String(o.key)
+		if not has_job(key):
+			q.append({"key": key, "kind": "scn", "i": -1, "seed": "", "h": {"type": "scn", "o": o}, "pos": Vector2(o.gx + o.fw / 2.0, o.gy + o.fd + 0.3)})
+		return
+	var d: Dictionary = k.o
+	var tp = lang.Pi.get(d.id)
+	var fw: float = float(tp.fw) if tp != null else 1.0
+	var fd: float = float(tp.fd) if tp != null else 1.0
+	var key2 := "dobj" + str(d.gx) + "," + str(d.gy) + String(d.id)
+	if not has_job(key2):
+		q.append({"key": key2, "kind": "dobj", "i": -1, "seed": "", "o": d, "pos": Vector2(float(d.gx) + fw / 2.0, float(d.gy) + fd + 0.3)})
 
 func has_job(key: String) -> bool:
 	if cur != null and cur.key == key:
@@ -1457,7 +1481,7 @@ func _jobs(dt: float) -> void:
 			if cur.kind == "walk":
 				wt = 0.05
 			else:
-				wt = (float(cur.dur) if cur.has("dur") else 12.0 if cur.kind == "sleep" else 0.6 if cur.kind == "scn" or cur.kind == "paddy" else 0.35) * (2.0 if G.tired() else 1.0) * ((1.0 - 0.15 * G.fd("liem")) if cur.kind == "harvest" else 1.0)
+				wt = (float(cur.dur) if cur.has("dur") else 12.0 if cur.kind == "sleep" else 0.6 if cur.kind == "scn" or cur.kind == "paddy" or cur.kind == "dobj" else 0.35) * (2.0 if G.tired() else 1.0) * ((1.0 - 0.15 * G.fd("liem")) if cur.kind == "harvest" else 1.0)
 				player.work = true
 		return
 	if st == 2:
@@ -1505,6 +1529,13 @@ func _jobs(dt: float) -> void:
 				if not G.g.clr.has(j.h.o.key):
 					lang.clear_hu(j.h.o)
 					ok = true
+			"dobj":   # Dọn đồ có sẵn của làng (giữ chính dict: chỉ số món có thể đã đổi lúc đi tới)
+				var Oj: Array = lang.objs()
+				for ii in Oj.size():
+					if is_same(Oj[ii], j.o):
+						lang.drop_obj(ii)
+						ok = true
+						break
 			"paddy":
 				var pk := str(j.h.gx) + "," + str(j.h.gy)
 				if not G.g.clr.has(pk):

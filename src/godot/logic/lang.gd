@@ -446,7 +446,7 @@ func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị ch�
 	for l in O.size():
 		var c: Dictionary = O[l]
 		var t = Pi.get(c.id)
-		if t == null:
+		if t == null or is_decor(c):   # đồ có sẵn chỉ Dọn: Xây dựng không chọn / dời
 			continue
 		var d: float = -1e6 + c.gx + c.gy if c.id == "pond" else float(F.main.draw_rank(F.lang_ve.obj_nodes.get(l, []), w))
 		if c.id != "pond" and pick_px.call(l, w):
@@ -558,22 +558,50 @@ func absorb_so() -> bool:   # true = có gộp thêm
 		G.g.mv[o.sk] = 1
 		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if String(XV.get(o.id, "")).begins_with("ft_") else o.seed, "f": 1})
 		n += 1
+	for o in HU:   # cây ăn trái hoang trong khu đất đã mở: thành cây ăn trái của mình (như mua), hái đủ HV lần thì tự mất
+		var fid: String = XV.get(o.id, "")
+		if fid.begins_with("ft_") and Pi.has(fid) and not G.g.clr.has(o.key) and ci(o.pc):
+			G.g.clr[o.key] = 1
+			objs().append({"id": fid, "gx": o.gx, "gy": o.gy, "seed": int(o.seed) >> 1, "f": 1})   # dáng = seed hình / 2 (khung ft: chín + 2 × dáng)
+			n += 1
+	for o in SO:
+		var fid2: String = XV.get(o.id, "")
+		if o.wild and o.sk != "" and fid2.begins_with("ft_") and Pi.has(fid2) and not G.g.mv.has(o.sk) and ci(o.pc):
+			G.g.mv[o.sk] = 1
+			objs().append({"id": fid2, "gx": o.gx, "gy": o.gy, "seed": int(o.seed) >> 1, "f": 1})
+			n += 1
 	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
 	if n > 0:
 		changed()
+		if G.w_all != null:   # nhà có sẵn trong khu đất vừa mở: thành nhà dân, có người ở luôn
+			G.w_all.WL.uf()
 	return n > 0
 
-func take_hu(o: Dictionary) -> int:   # Rz
-	if not Pi.has(XV.get(o.id, o.id)):
-		G.toast.emit("Bụi cỏ này chỉ dọn được. Thoát Xây dựng rồi chạm để dọn.")
-		return -1
-	if own_n() >= int(C.V5):
-		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
-		return -1
-	G.g.clr[o.key] = 1
-	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if String(XV.get(o.id, "")).begins_with("ft_") else o.seed, "f": 1})
+const HV := 10   # cây ăn trái có sẵn của làng (món f): hái đủ chừng này lần thì cây tự mất
+
+func is_decor(o) -> bool:   # đồ có sẵn của làng không có việc gì khác: hoa, đá, cây cảnh, cao su... chỉ Dọn (không dời)
+	if not (o is Dictionary) or not int(o.get("f", 0)):
+		return false
+	var id := String(o.get("id", ""))
+	return not C.Ei.has(id) and not (G.w_all != null and G.w_all.WL.CX.has(id))
+
+func drop_obj(i: int, pay := true) -> int:   # bỏ món i khỏi làng (Dọn đồ có sẵn / cây hết lần hái): xu như dọn, bụi bay
+	var O: Array = objs()
+	if i < 0 or i >= O.size():
+		return 0
+	var o: Dictionary = O[i]
+	var t = Pi.get(o.id)
+	var e: int = refund(o) if pay and t != null else 0
+	var cx: float = float(o.gx) + (float(t.fw) / 2.0 if t != null else 0.5)
+	var cy: float = float(o.gy) + (float(t.fd) / 2.0 if t != null else 0.5)
+	O.remove_at(i)
+	if e > 0:
+		G.g.coins = int(G.g.coins) + e
+		G.float_text.emit(cx, cy, "+" + G.fmt_n(e) + " xu")
+	F.burst(Vector2(en(cx, cy), nn(cx, cy) - 24.0), 10, [Color("#4f8f3a"), Color("#6aa84a"), Color("#a4764d"), Color("#e3d09b")], 90.0, 2.8, 280.0, 2.0, 0.6, 16.0)
+	G.vib(10)
 	changed()
-	return objs().size() - 1
+	return e
 
 # ------------------------------------------------------------------ chiếm chỗ (bản 200, một luật cho mọi món)
 # Đặt / dời / xây món gì vào ô nào thì cảnh cũ trên các ô đó (cây cỏ hoang, bụi, cây cảnh nền) bị dọn hẳn, lưu vào save

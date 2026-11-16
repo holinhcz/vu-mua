@@ -1163,6 +1163,8 @@ var rm_i := -1
 var rm_t := -1               # cây ăn trái đang mở (g.objs idx): xài chung vòng nút ô ruộng, không có nút sao
 var rm_v := {}               # con vật {t, j} / chuồng {t, j: -1}: xài chung vòng nút ô ruộng (rm_vn.gd lo phần riêng)
 var rv = null                # rm_vn.gd
+var rm_d := {}               # vật đang mở vòng nút Dọn (rm_don.gd): {hu} cây cỏ hoang / {o} đồ có sẵn của làng
+var rd = null                # rm_don.gd
 var rm_x0 := {}              # chỗ gốc của .fast / .water
 var rm_in0 := {}             # hình trong gốc của .star / .water / .rmth (+ vòng gốc .rmth)
 var rm_sig := ""
@@ -1193,6 +1195,7 @@ func _build_rm() -> void:
 	rm_in0["rmth_ring"] = th.kids()[0].get_meta("snap", {}).get("svg", "")
 	rm_gi[".rmth"] = th
 	rv = load("res://logic/rm_vn.gd").new(self)
+	rd = load("res://logic/rm_don.gd").new(self)
 	_click(rm_gi.get(".rmt"), func(): _rm_do("chip"))
 	_click(rm_gi.get(".fast"), func(): _rm_do("fast"))
 	_click(rm_gi.get(".star"), func(): _rm_do("star"))
@@ -1244,7 +1247,7 @@ func _rm_in() -> Control:
 	return top.kids()[0] if top.kids().size() > 0 else null
 
 func rm_on() -> bool:
-	return rm_i >= 0 or rm_t >= 0 or not rm_v.is_empty()
+	return rm_i >= 0 or rm_t >= 0 or not rm_v.is_empty() or not rm_d.is_empty()
 
 func rm_close() -> void:
 	if not rm_on():
@@ -1253,6 +1256,7 @@ func rm_close() -> void:
 	rm_i = -1
 	rm_t = -1
 	rm_v = {}
+	rm_d = {}
 	if xfp != null:
 		xfp._ask_close()   # chip hỏi (chín ngay, chữa bệnh...) đi theo vòng nút
 	rm_g.visible = false
@@ -1275,6 +1279,8 @@ func _rm_reset() -> void:   # trả vòng nút về như ô ruộng (hình trong
 		b.modulate.a = 1.0
 		_move(b, rm_x0.get(k, b.r.position))
 	_rm_ic(".fast", "")
+	if rm_gi[".fast"].has_meta("vfic"):
+		rm_gi[".fast"].remove_meta("vfic")
 	_rm_ic(".star", rm_in0[".star"])
 	_rm_ic(".water", rm_in0[".water"])
 	_rm_ic(".rmth", rm_in0[".rmth"])
@@ -1343,16 +1349,27 @@ func _rm_note(rt: Control, s: String, col = null) -> void:   # dòng chữ nhỏ
 	if sm.has_meta("wet"):
 		sm.get_meta("wet").visible = false
 
+func dn_open(k: Dictionary) -> void:   # chạm cây cỏ hoang / đồ có sẵn của làng: vòng nút Dọn
+	rd.open(k)
+
 func rm_tree(t: int) -> void:   # hg: chạm cây ăn trái
 	close_all()
 	if G.w_all.WR.ql(t) == null:
 		return
 	rm_t = t
 	rm_sig = ""
-	_rm_kind(true)
+	var vf: bool = _rm_vf()
+	_rm_kind(not vf)   # cây có sẵn của làng: thêm nút Dọn ở giữa (chỗ nút sao)
+	if vf:
+		_set_svg(rm_gi[".star"].kids()[0], _ring("rmw", "#1e90e8", "rgba(150,112,48,.18)", 0.0))
+		_rm_ic(".star", FileAccess.get_file_as_string("res://ui/svg/kh/pc_cuoc.svg"), true)
 	_set_focus(true)
 	_rm_sync()
 	_rm_pos()
+
+func _rm_vf() -> bool:   # cây ăn trái đang mở là cây có sẵn của làng (f): Dọn + Hái, hái đủ HV lần thì cây tự mất
+	var O: Array = G.lang.objs()
+	return rm_t >= 0 and rm_t < O.size() and int(O[rm_t].get("f", 0)) == 1
 
 func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòng nước, nhãn tên + giờ còn lại
 	var R = G.w_all.WR
@@ -1361,9 +1378,26 @@ func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòn
 		rm_close()
 		return
 	var ripe: bool = R.wc(t)
-	rm_g.visible = not ripe
-	rm_r.visible = ripe
-	if ripe:
+	var vf := _rm_vf()
+	rm_g.visible = not ripe or vf
+	rm_r.visible = ripe and not vf
+	if vf:   # chip: còn mấy lần hái
+		var left_n: int = G.lang.HV - int(t.get("hv", 0))
+		var ic := String(R._ei()[t.id].p) if ripe else ""
+		if rm_gi[".fast"].get_meta("vfic", "?") != ic:   # đổi hình nút chỉ khi chín / hết chín
+			rm_gi[".fast"].set_meta("vfic", ic)
+			_rm_ic(".fast", rv._svg(ic) if ripe else "", true)
+			if ripe:
+				_set_svg(rm_gi[".fast"].kids()[0], rm_in0["rmth_ring"])
+		_q(rm_gi[".fast"], "rmsen").visible = not ripe
+		if ripe:
+			_txt(_q(rm_gi[".fast"], "", "b"), "")
+			var rt0 = rm_gi.get(".rmt")
+			if rt0 != null:
+				_txt(rt0, String(G.lang.Pi[t.id].n))
+				_rm_note(rt0, "Còn " + str(left_n) + " lần hái")
+			return
+	elif ripe:
 		return
 	var e: Dictionary = R._ei()[t.id]
 	var fw := float(t.fw)
@@ -1391,7 +1425,7 @@ func _rm_tree_pos() -> void:   # am (fi.t): vòng nút đứng trên ngọn cây
 	var gy := float(o.gy)
 	var foot := Vector2(F.en(gx + fw / 2.0, gy + fd / 2.0), F.nn(gx + fw / 2.0, gy + fd / 2.0))
 	var top: float = L.F.lang_ve.top_of(o)
-	var tb := rm_r if G.w_all.WR.wc(o) else rm_g
+	var tb := rm_r if (G.w_all.WR.wc(o) and not _rm_vf()) else rm_g
 	var box: Control = tb.kids()[0]
 	var w = box.r.size.x
 	var h = box.r.size.y
@@ -1418,6 +1452,13 @@ func _rm_tree_do(k: String) -> void:
 	if o == null:
 		return
 	var WRU = G.w_all.WRU
+	if _rm_vf():
+		if k == "star":   # Dọn: xoá cây ngay
+			rm_close()
+			G.lang.drop_obj(t)
+			return
+		if k == "fast" and R.wc(o):   # Hái
+			k = "harvest"
 	if k == "harvest":
 		if R.wc(o):
 			rm_close()
@@ -1448,6 +1489,9 @@ static func tfmt(t: float) -> String:   # o(): 1g 5p / 3p 20s / 40s
 	return (str(h) + "g " + str(m) + "p") if h else ((str(m) + "p " + str(x) + "s") if m else (str(x) + "s"))
 
 func _rm_sync() -> void:
+	if not rm_d.is_empty():
+		rd.sync()
+		return
 	if not rm_v.is_empty():
 		rv.sync()
 		return
@@ -1540,6 +1584,9 @@ func _rm_small(rt: Control, wet: bool, tm: String) -> void:
 
 func _rm_pos() -> void:
 	# rt(): vòng nút đứng trên ngọn cây
+	if not rm_d.is_empty():
+		rd.pos()
+		return
 	if not rm_v.is_empty():
 		rv.pos()
 		return
@@ -1575,6 +1622,9 @@ func _rm_pos() -> void:
 	dim_mat.set_shader_parameter("r", rr)
 
 func _rm_do(k: String) -> void:
+	if not rm_d.is_empty():
+		rd.act(k)
+		return
 	if not rm_v.is_empty():
 		rv.act(k)
 		return

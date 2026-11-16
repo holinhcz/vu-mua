@@ -421,6 +421,12 @@ func x5(t: int) -> bool:   # X5 (+ lớp bọc g8: kho phải đủ chỗ)
 		_a0(r.gx + r.fw / 2.0, r.gy + r.fd / 2.0, "+" + str(e) + " " + String(G.item_name(p)) + (" (có ong)" if e > int(n.yield) else ""))
 	G.vib(10)
 	G.nv.qi("harvest")
+	if int(a.get("f", 0)) == 1:   # cây có sẵn của làng: hái đủ lang.HV lần thì cây tự mất
+		a.hv = int(a.get("hv", 0)) + 1
+		if int(a.hv) >= int(G.lang.HV):
+			var nm := String(G.lang.Pi[a.id].n) if G.lang.Pi.has(a.id) else "Cây"
+			G.lang.drop_obj(t, false)
+			G.toast.emit(nm + " đã hái đủ " + str(G.lang.HV) + " lần, cây già rồi tự mất.")
 	return true
 
 func hj() -> int:   # Hj: thu hết cây đã có trái
