@@ -3990,10 +3990,15 @@ func dbg_tap(w: Vector2) -> void:
 			dk[e[0]] = float(e[1])
 	var L := []
 	for n in obj_root.get_children():
-		if not (n is Sprite2D) or not n.is_visible_in_tree() or n.texture == null:
+		if not (n is Node2D) or not n.is_visible_in_tree():
 			continue
-		var p: Vector2 = n.get_global_transform().affine_inverse() * w
-		if not n.get_rect().has_point(p):
+		if n is Sprite2D:
+			if n.texture == null:
+				continue
+			var p: Vector2 = n.get_global_transform().affine_inverse() * w
+			if not n.get_rect().has_point(p):
+				continue
+		elif absf(n.position.x - w.x) > 30.0 or w.y > n.position.y + 10.0 or w.y < n.position.y - 120.0:   # node tự vẽ (cây ngã, cháy, cây con...)
 			continue
 		var nm := ""
 		if fm != null and fm.lang_ve.nodes.has(n):
@@ -4001,14 +4006,15 @@ func dbg_tap(w: Vector2) -> void:
 		elif n.has_meta("j"):
 			nm = "cảnh " + str(n.get_meta("j"))
 		else:
-			nm = "khác " + str(n.get_class())
+			nm = "khác " + (str(n.get_script().resource_path.get_file()) if n.get_script() != null else str(n.get_class()))
 		var k: float = (float(dk[n]) - 968.0) / 16.0 if dk.has(n) else _zkey(n, -999.0)
 		var t := _zo_tile(n, float(dk.get(n, 0.0)))
 		var fp := (" chiếm " + str(n.get_meta("fp"))) if n.has_meta("fp") else ""
-		L.append([n.get_index(), "%s ô(%.1f,%.1f) khoá %.2f #%d%s" % [nm, t.x, t.y, k, n.get_index(), fp]])
+		var ft: Vector2 = _foot_tile(n.position) if n is Node2D else Vector2.ZERO
+		L.append([n.get_index(), "%s ô(%.1f,%.1f) chân(%.1f,%.1f) khoá %.2f #%d%s" % [nm, t.x, t.y, ft.x, ft.y, k, n.get_index(), fp]])
 	L.sort_custom(func(a, b): return a[0] > b[0])
 	var out := []
-	for i in mini(5, L.size()):
+	for i in mini(6, L.size()):
 		out.append(L[i][1])
 	tap_dbg = ("\nDÒ: ".join(PackedStringArray(out)) if out.size() else "trống").replace("[P: ", "[").replace("), S: (", ")+(")
 
