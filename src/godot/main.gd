@@ -3894,7 +3894,7 @@ func road_set(add: Dictionary, rm: Array) -> void:
 # ---- GIFTCODE (Link 11-13 11:00 "làm chỗ nhập giftcode, mã 1tr xu để test") ----
 # The page has the input box (window.__ntgq = codes typed, window.__ntgr = answer shown under the box); the game
 # checks the code here and adds the reward through the logic autoload (/root/Boot.G). Each save uses a code once (g.gc).
-const GIFT := {"VUMUA1TR": {"coins": 1000000}}
+const GIFT := {"VUMUA1TR": {"coins": 1000000}, "VUMUA100": {"lv": 100}}   # VUMUA100: đủ EXP lên cấp 100
 func gift_try(code: String) -> String:
 	var c := code.strip_edges().to_upper().replace(" ", "")
 	var bt = get_node_or_null("/root/Boot")
@@ -3909,11 +3909,22 @@ func gift_try(code: String) -> String:
 		return "Mã này làng mày dùng rồi."
 	var rw: Dictionary = GIFT[c]
 	g.gc.append(c)
+	var s := ""
 	if rw.has("coins"):
 		g.coins = int(g.coins) + int(rw.coins)
+		s = "Nhận %s xu!" % _gift_num(int(rw.coins))
+	if rw.has("lv"):   # cộng đúng số EXP còn thiếu tới cấp đó (lên cấp như thường: quà từng cấp), bảng LÊN CẤP chỉ hiện cấp cuối
+		var G0 = bt.G
+		var need := -int(g.pc.xp)
+		for l in range(int(g.pc.lv), int(rw.lv)):
+			need += G0.xp_need(l)
+		if need > 0:
+			G0.add_xp(need, "")
+		if g.get("lvq") is Array and (g.lvq as Array).size() > 1:
+			g.lvq = [g.lvq.back()]
+		s = "Nhận EXP lên cấp %d!" % int(g.pc.lv)
 	bt.G.mark()
 	bt.G.save_game()
-	var s := "Nhận %s xu!" % _gift_num(int(rw.get("coins", 0)))
 	if "ui" in bt and bt.ui != null and bt.ui.has_method("say"):
 		bt.ui.say(s)
 	return s
