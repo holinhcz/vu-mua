@@ -260,7 +260,7 @@ func _make_ground() -> void:
 				mat.set_shader_parameter("e" + nm2 + "g", V.call(rc["ex"]["p" + nm2][0]))
 				mat.set_shader_parameter("e" + nm2 + "o", V.call(rc["ex"]["p" + nm2][1]))
 			gparts += 1)
-		var RK := ["dat", "do", "cat", "soi", "gach", "da", "codai", "co", "dat2"]   # (n41) + wild grass, lawn, yard earth
+		var RK := ["dat", "do", "cat", "soi", "gach", "da", "codai", "co", "dat2"]   # 0-5: mặt đường (main.road_tex)   # (n41) + wild grass, lawn, yard earth
 		var rimg := {}
 		for j in RK.size():
 			var nm3: String = RK[j]
@@ -272,6 +272,8 @@ func _make_ground() -> void:
 				im4.convert(Image.FORMAT_RGB8)
 				im4.generate_mipmaps()
 				rimg[nm3] = im4
+				if j < 6:   # ảnh mặt đường: nền đất người chơi lát + hình thẻ Xây dựng dùng chung (lang_ve TileLayer)
+					road_tex[nm3] = ImageTexture.create_from_image(im4)
 				if rimg.size() == RK.size():
 					var arr := []
 					for nm4 in RK:
@@ -1101,6 +1103,7 @@ func _tide_step() -> int:
 # in autumn (season 2) on days 2..6
 # ban đêm like the game (dh(): night from 19:30 to 5:30 local time); -1 = clock, 0 day, 1 night
 var night_force := -1
+var road_tex := {}   # ảnh mặt đường dg2 (dat, do, cat, soi, gach, da) -> texture
 var night_mat: ShaderMaterial = null
 var night_raw: ShaderMaterial = null
 # cây đung đưa (web: plants with sway:1 turn about their foot, sin(t*1.1+ph)*.017 rad, only at zoom >= .7). One material

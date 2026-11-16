@@ -453,222 +453,58 @@ class SignNode extends Node2D:
 
 # ------------------------------------------------------------------ đường + nền tô (Zz / aq / fj bản web)
 class TileLayer extends Node2D:
+	# nền đất người chơi lát (g.gt) + hình thẻ đường / nền của Xây dựng: vẽ bằng ĐÚNG ảnh mặt đường của làng (n/dg2_*, main.road_tex),
+	# cùng cỡ lặp như đường trên nền (dg2 1024 px = 112 đơn vị, sỏi 96): ô nền giáp nhau liền một mặt, không vẽ bằng code
 	var v
-	const ROADC := {"do": ["#c96f40", "#bd6538"], "cat": ["#efdfaa", "#e7d69e"], "soi": ["#bdb7a9", "#b3ad9f"],
-		"da": ["#a8a49b", "#9f9b92"], "gach": ["#bd5f3f", "#b45838"]}
-	const PATH := "#e3d09b"   # Le.path (mG ngày)
-	const GRASS := ["#99cc56", "#92c752"]   # Le.grassA, grassB
+	const GRASS := ["#99cc56", "#92c752"]   # Le.grassA, grassB (ô "trả cỏ" của thẻ)
 	var cv: CanvasItem = null   # TileIcon vẽ nhờ lên Control của nó
 
 	func _cv() -> CanvasItem:
 		return cv if cv != null else self
 
-	static func i0(c: Color, a: float) -> Color:   # pha trắng (a > 0) hoặc đen (a < 0)
-		return c.lerp(Color(0, 0, 0) if a < 0.0 else Color(1, 1, 1), absf(a))
-
-	func me(t: int, a: int) -> float:
-		return v.F.main.me_hash(t, a)
-
 	func dia(a: float, n: float, c: Color) -> void:   # xe([a,n-.6,a+32.8,n+16,a,n+32.6,a-32.8,n+16])
 		_cv().draw_colored_polygon(PackedVector2Array([Vector2(a, n - 0.6), Vector2(a + 32.8, n + 16), Vector2(a, n + 32.6), Vector2(a - 32.8, n + 16)]), c)
 
-	func ell(x: float, y: float, rx: float, ry: float, c: Color, rot := 0.0) -> void:
-		var P := PackedVector2Array()
-		for i in 16:
-			var q := i / 16.0 * TAU
-			var p := Vector2(cos(q) * rx, sin(q) * ry).rotated(rot)
-			P.append(Vector2(x, y) + p)
-		_cv().draw_colored_polygon(P, c)
-
-	static func k1(a: float, n: float, x: float, y: float) -> Vector2:
-		return Vector2(a + (x - y) * 32.0, n + (x + y) * 16.0)
-
-	func tb(x: float, y: float, s: float, c: Color) -> void:   # Tb: khóm cỏ 3 nét
-		_cv().draw_line(Vector2(x, y), Vector2(x - 2.2 * s, y - 4 * s), c, 1.2, true)
-		_cv().draw_line(Vector2(x, y), Vector2(x + 0.3 * s, y - 5.2 * s), c, 1.2, true)
-		_cv().draw_line(Vector2(x, y), Vector2(x + 2.4 * s, y - 3.8 * s), c, 1.2, true)
+	func tex_dia(tx: String, a: float, n: float) -> void:   # một ô bằng ảnh mặt đường tx (dat / do / cat / soi / da / gach)
+		var t: Texture2D = v.F.main.road_tex.get(tx)
+		var P := PackedVector2Array([Vector2(a, n - 0.6), Vector2(a + 32.8, n + 16), Vector2(a, n + 32.6), Vector2(a - 32.8, n + 16)])
+		if t == null:   # ảnh chưa về
+			_cv().draw_colored_polygon(P, Color("#b8a27a"))
+			return
+		var sc := 96.0 if tx == "soi" else 112.0
+		var U := PackedVector2Array()
+		for q in P:
+			U.append(q / sc)
+		_cv().texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		_cv().draw_colored_polygon(P, Color.WHITE, U, t)
 
 	func _draw() -> void:
 		var LG = v.LG
 		var g: Dictionary = LG.G.g
 		var M = v.F.main
-		if M.has_method("road_set"):   # đường người chơi: bên nền vẽ bằng DUONG (ảnh dg2 9 px + viền + cỏ mép) như web
-			var dead: Dictionary = LG.dead_roads()
-			var sig := JSON.stringify([g.road, g.unroad, dead])
-			if sig != _road_sig:
-				_road_sig = sig
-				var rm := []   # đường gốc bỏ (gỡ, đường cụt nhà đã dời): trừ ô người chơi đặt đường lại lên
-				for k in g.unroad.keys() + dead.keys():
-					if not g.road.has(k):
-						rm.append(k)
-				M.road_set(g.road.duplicate(), rm)
-		else:
-			_draw_roads(g)
+		# đường người chơi: bên nền vẽ bằng DUONG (ảnh dg2 9 px + viền + cỏ mép) như web
+		var dead: Dictionary = LG.dead_roads()
+		var sig := JSON.stringify([g.road, g.unroad, dead])
+		if sig != _road_sig:
+			_road_sig = sig
+			var rm := []   # đường gốc bỏ (gỡ, đường cụt nhà đã dời): trừ ô người chơi đặt đường lại lên
+			for k in g.unroad.keys() + dead.keys():
+				if not g.road.has(k):
+					rm.append(k)
+			M.road_set(g.road.duplicate(), rm)
 		for k in g.gt:
 			var p: PackedStringArray = String(k).split(",")
 			_nen(String(g.gt[k]), int(p[0]), int(p[1]))
 
 	var _road_sig := ""
-	func _draw_roads(g: Dictionary) -> void:   # dự phòng (Zz web) khi bản nền chưa có road_set
-		for k in g.unroad:   # đường gốc đã gỡ: trả cỏ
-			var p: PackedStringArray = String(k).split(",")
-			var x := int(p[0])
-			var y := int(p[1])
-			if g.road.has(k):
-				continue
-			dia(4268.0 + (x - y) * 32.0, 968.0 + (x + y) * 16.0, Color(GRASS[(x + y) & 1]))
-		for k in g.road:
-			var p: PackedStringArray = String(k).split(",")
-			var x := int(p[0])
-			var y := int(p[1])
-			_road(String(g.road[k]), 4268.0 + (x - y) * 32.0, 968.0 + (x + y) * 16.0, x + 40, y + 40)
+	func _road(t: String, a: float, n: float, _e: int, _r: int) -> void:   # hình thẻ đường: ô bằng ảnh mặt đường đó
+		tex_dia(t, a, n)
 
-	func _road(t: String, a: float, n: float, e: int, r: int) -> void:   # Zz
-		var o: Array = ROADC.get(t, [PATH, PATH])
-		var c := Color(o[0]) if me(e, r) > 0.5 else Color(o[1])
-		if t == "dat":
-			var pc := Color(PATH)
-			c = pc if me(e, r) > 0.5 else pc.lerp(Color(0, 0, 0), 0.05)
-		dia(a, n, c)
-		var p := i0(c, -0.16)
-		var d := i0(c, 0.12)
-		if t == "da":
-			for f in 9:
-				var s := (f % 3) / 3.0 + 0.17
-				var h := floorf(f / 3.0) / 3.0 + 0.17
-				var vx := a + (s - h) * 32.0
-				var vy := n + (s + h) * 16.0
-				ell(vx, vy, 7.2, 3.6, p)
-				ell(vx - 0.6, vy - 0.8, 6.2, 3.0, d)
-		elif t == "gach":
-			var lc := i0(c, -0.28)
-			for f in range(1, 4):
-				_cv().draw_line(k1(a, n, 0, f / 4.0), k1(a, n, 1, f / 4.0), lc, 1.0, true)
-			for f in 4:
-				for T in 3:
-					var w := (T + (0.5 if f % 2 else 0.0)) / 2.5 + 0.1
-					if w < 0.98:
-						_cv().draw_line(k1(a, n, w, f / 4.0), k1(a, n, w, (f + 1) / 4.0), lc, 1.0, true)
-		elif t == "soi":
-			for f in 14:
-				var s := me(e * 5 + f, r * 3 + 1)
-				var h := me(r * 7 + f, e * 2 + 3)
-				ell(a + (s - h) * 30.0, n + 16.0 + (s + h - 1.0) * 14.0, 1.6, 1.0, p if f % 2 else d)
-		elif t == "cat":
-			for f in 6:
-				var s := me(e * 3 + f, r * 5 + 2)
-				var h := me(r * 3 + f, e * 7 + 1)
-				ell(a + (s - 0.5) * 36.0, n + 10.0 + h * 12.0, 2.2, 0.8, p)
-		else:
-			for f in 3:
-				var s := me(e * 3 + f, r * 5)
-				var h := me(r * 3 + f, e * 7)
-				ell(a + (s - 0.5) * 34.0, n + 10.0 + h * 12.0, 2.0 + s * 2.0, 1.0, p)
-
-	func _nen(t: String, e: int, r: int) -> void:   # aq (nét viền chỗ giáp nền khác)
+	func _nen(t: String, e: int, r: int) -> void:
 		_nen_at(t, 4268.0 + (e - r) * 32.0, 968.0 + (e + r) * 16.0, e, r, true)
 
-	func _nen_at(t: String, a: float, n: float, e: int, r: int, edges: bool) -> void:
-		var LG = v.LG
-		var u = LG.ug.get(t)
-		if u == null:
+	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
+		var u = v.LG.ug.get(t)
+		if u == null or not u.has("tx"):
 			return
-		var c := Color(u.c[0]) if (e + r) & 1 else Color(u.c[1])
-		dia(a, n, c)
-		var vv := i0(c, -0.17)
-		var x := i0(c, -0.28)
-		var kk := i0(c, 0.13)
-		var M := func(W: int, N: int) -> float: return me(e * 7 + W * 3 + N, r * 5 + W * 11 + N * 2)
-		if t in ["co_xanh", "co_non", "co_vang"]:
-			var T := 6 if t == "co_vang" else 5
-			for f in T:
-				var s := k1(a, n, 0.12 + M.call(f, 1) * 0.76, 0.12 + M.call(f, 2) * 0.76)
-				tb(s.x, s.y + 1, 0.8 + M.call(f, 3) * 0.5, vv if f % 2 else x)
-			for f in 3:
-				var s := k1(a, n, 0.15 + M.call(f, 4) * 0.7, 0.15 + M.call(f, 5) * 0.7)
-				tb(s.x, s.y + 1, 0.7, kk)
-			if t == "co_vang":
-				for f in 4:
-					var s := k1(a, n, 0.2 + M.call(f, 6) * 0.6, 0.2 + M.call(f, 7) * 0.6)
-					_cv().draw_line(s - Vector2(3, 0), s + Vector2(3, -1), i0(c, 0.2), 1.2, true)
-		elif t == "co_hoa":
-			for f in 4:
-				var s := k1(a, n, 0.12 + M.call(f, 1) * 0.76, 0.12 + M.call(f, 2) * 0.76)
-				tb(s.x, s.y + 1, 0.9, vv)
-			var w := ["#ffffff", "#ffd84a", "#f58ab8", "#a77ae0"]
-			for f in 9:
-				var s := k1(a, n, 0.1 + M.call(f, 8) * 0.8, 0.1 + M.call(f, 9) * 0.8)
-				ell(s.x, s.y, 1.5, 1.0, Color(w[int(floor(M.call(f, 10) * 4.0)) % 4]))
-				if f % 3 == 0:
-					ell(s.x, s.y, 0.6, 0.4, Color("#f2a43a"))
-		elif t == "la_kho":
-			var E := ["#d98a32", "#c9a640", "#a8642c", "#e6b84a"]
-			for f in 3:
-				var s := k1(a, n, 0.15 + M.call(f, 1) * 0.7, 0.15 + M.call(f, 2) * 0.7)
-				tb(s.x, s.y + 1, 0.8, vv)
-			for f in 8:
-				var s := k1(a, n, 0.1 + M.call(f, 3) * 0.8, 0.1 + M.call(f, 4) * 0.8)
-				var d: float = M.call(f, 5) * 3.1
-				var P := PackedVector2Array()
-				for i in 9:
-					var q := -3.4 + 6.8 * i / 8.0
-					P.append(Vector2(q, -2.4 * 0.55 * (1.0 - pow(q / 3.4, 2)) * 0.9))
-				for i in 9:
-					var q := 3.4 - 6.8 * i / 8.0
-					P.append(Vector2(q, 2.4 * 0.55 * (1.0 - pow(q / 3.4, 2)) * 0.9))
-				var T2 := Transform2D(d, s)
-				_cv().draw_colored_polygon(T2 * P, Color(E[f % E.size()]))
-				_cv().draw_line(T2 * Vector2(-3, 0), T2 * Vector2(3, 0), Color(80 / 255.0, 50 / 255.0, 20 / 255.0, 0.35), 0.7, true)
-		elif t == "dat_do" or t == "dat_nau":
-			for f in 6:
-				var s := k1(a, n, 0.12 + M.call(f, 1) * 0.76, 0.12 + M.call(f, 2) * 0.76)
-				var d: float = 1.6 + M.call(f, 3) * 1.8
-				ell(s.x, s.y + 0.6, d, d * 0.5, x)
-				ell(s.x - 0.3, s.y - 0.2, d * 0.85, d * 0.42, vv if f % 2 else kk)
-			for f in 5:
-				var s := k1(a, n, 0.1 + M.call(f, 6) * 0.8, 0.1 + M.call(f, 7) * 0.8)
-				ell(s.x, s.y, 0.9, 0.55, i0(c, 0.24))
-			if M.call(0, 9) > 0.55:
-				var s := k1(a, n, 0.2 + M.call(1, 9) * 0.6, 0.2 + M.call(2, 9) * 0.6)
-				tb(s.x, s.y + 1, 0.8, Color("#5d9a3a"))
-		elif t == "phu_sa":
-			for f in 3:
-				var s := k1(a, n, 0.2 + M.call(f, 1) * 0.6, 0.2 + M.call(f, 2) * 0.6)
-				var C: float = M.call(f, 3) * 6.28
-				for R in 3:
-					C += M.call(f, 4 + R) - 0.5
-					var s2 := s + Vector2(cos(C) * 4.0, sin(C) * 2.0)
-					_cv().draw_line(s, s2, vv, 0.9, true)
-					s = s2
-			for f in 5:
-				var s := k1(a, n, 0.1 + M.call(f, 8) * 0.8, 0.1 + M.call(f, 9) * 0.8)
-				ell(s.x, s.y, 1.3, 0.7, kk if f % 2 else vv)
-		elif t == "dat_cat":
-			for f in range(1, 4):
-				var N2: float = f / 4.0 + (M.call(f, 1) - 0.5) * 0.08
-				var z := k1(a, n, 0.08, N2)
-				var rt := k1(a, n, 0.5, N2 - 0.04) - Vector2(0, 1.5)
-				var dt := k1(a, n, 0.92, N2)
-				var P := PackedVector2Array()
-				for i in 9:
-					var q := i / 8.0
-					P.append(z.lerp(rt, q).lerp(rt.lerp(dt, q), q))
-				_cv().draw_polyline(P, i0(c, -0.1), 1.0, true)
-			for f in range(1, 4):
-				var W2 := f / 4.0 + 0.05
-				_cv().draw_line(k1(a, n, 0.12, W2), k1(a, n, 0.88, W2), i0(c, 0.16), 1.0, true)
-			for f in 4:
-				var s := k1(a, n, 0.12 + M.call(f, 5) * 0.76, 0.12 + M.call(f, 6) * 0.76)
-				ell(s.x, s.y, 1.0, 0.6, Color("#fff6dc") if f % 2 else vv)
-		# viền chỗ giáp ô nền khác loại (globalAlpha .55)
-		if not edges:
-			return
-		var j := [[e, r - 1, 0, 1, 0, 0], [e + 1, r, 0, 0, 1, 0], [e, r + 1, 1, 0, 1, 1], [e - 1, r, 0, 1, 1, 1]]
-		var lc := i0(c, -0.12)
-		lc.a = 0.55
-		for st in j:
-			if String(LG.G.g.gt.get(str(st[0]) + "," + str(st[1]), "")) != t:
-				var ut := k1(a, n, st[2], st[3])
-				var it := k1(a, n, st[4], st[5])
-				var D := Vector2(a, n + 16)
-				_cv().draw_line(ut + (D - ut) * 0.04, it + (D - it) * 0.04, lc, 1.6, true)
+		tex_dia(String(u.tx), a, n)

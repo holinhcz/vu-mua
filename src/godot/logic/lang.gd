@@ -62,6 +62,9 @@ func _init(game, farm) -> void:
 	for k in ["clr", "mv", "minis", "road", "unroad", "gt", "penb", "fac"]:
 		if not (G.g.get(k) is Dictionary):
 			G.g[k] = {}
+	for k in G.g.gt.keys():   # loại nền đã bỏ (cỏ, lá khô, phù sa... bản 223): ô đó trả về nền cũ
+		if not ug.has(String(G.g.gt[k])) or String(G.g.gt[k]) == "_x":
+			G.g.gt.erase(k)
 
 static func en(x: float, y: float) -> float:
 	return 4268.0 + (x - y) * 32.0
