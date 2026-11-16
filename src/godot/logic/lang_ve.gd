@@ -306,22 +306,29 @@ func _op(s: Sprite2D) -> bool:   # khung làng đã có (n/op): dùng chung đú
 	var a = F.main.op_box(nm)
 	if not (a is Array) or a.size() < 4:   # [] = làng không có khung này
 		return false
-	if s.get_meta("tk", "") == "op:" + nm and s.texture != null:
+	# ban đêm: ảnh ĐÊM của chính khung đó (info.opn: tên ảnh đêm + chỗ lệch so với ảnh ngày), vẽ không qua công thức đêm
+	var nn = F.main.info.get("opn", {}).get(nm) if F.main.night_cur == 1 else null
+	var tk := ("opn:" if nn != null else "op:") + nm
+	if s.get_meta("tk", "") == tk and s.texture != null:
 		return true
-	var tx: Texture2D = F.main.op_pic(nm)
+	var tx: Texture2D = F.main.op_pic(String(nn[0]) if nn != null else nm)
 	if tx == null:
 		return true
-	var sc := float(a[2]) / float(tx.get_width())
-	var ox := float(a[0])
+	var bx := [float(a[0]), float(a[1]), float(a[2]), float(a[3])]
+	if nn != null:
+		bx = [float(a[0]) + float(nn[1]), float(a[1]) + float(nn[2]), float(nn[3]), float(nn[4])]
+	var sc := float(bx[2]) / float(tx.get_width())
+	var ox := float(bx[0])
 	if s.flip_h:
-		ox = -(ox + float(a[2]))
-	var off := Vector2(ox, float(a[1]))
+		ox = -(ox + float(bx[2]))
+	var off := Vector2(ox, float(bx[1]))
 	if s.has_meta("fd"):
 		off += s.get_meta("fd")
 	s.texture = tx
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
-	s.set_meta("tk", "op:" + nm)
+	s.material = F.main.night_raw if nn != null else F.main.night_mat
+	s.set_meta("tk", tk)
 	return true
 
 func _tex(s: Sprite2D, scr: float) -> void:
@@ -329,6 +336,10 @@ func _tex(s: Sprite2D, scr: float) -> void:
 		return
 	var b: String = s.get_meta("b")
 	var k: String = s.get_meta("k")
+	var night := false
+	if F.main.night_cur == 1 and k.begins_with("d") and F.P.meta(b).has("n" + k.substr(1)):   # ban đêm: ảnh đêm của gói
+		k = "n" + k.substr(1)
+		night = true
 	var lv: int = F.P.level(PXU, scr)
 	var tk := k + ("" if lv == 0 else "@" + str(lv))
 	if s.get_meta("tk", "") == tk and s.texture != null:
@@ -350,6 +361,7 @@ func _tex(s: Sprite2D, scr: float) -> void:
 	s.texture = tx
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
+	s.material = F.main.night_raw if night else F.main.night_mat
 	s.set_meta("tk", tk if tx == F.P.tex(b, tk) else "")
 
 func show_ghost(id: String, seed: int, gx: int, gy: int, bad: bool) -> void:   # kj: món đang đặt (sai chỗ ửng đỏ)

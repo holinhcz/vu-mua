@@ -1571,6 +1571,9 @@ func _sc_got(j: int, img, nv) -> void:   # hình của loại cảnh j về (nv:
 		var v: Array = sc_data["v"][j]
 		var k := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
 		sc_full[j] = [tex, k]
+		if nv != null and sc_item.has(j):   # ảnh món ban ngày: nhớ để đổi mùa / đêm khỏi tải lại
+			sc_itex[String(sc_item[j].b) + "/" + String(sc_item[j].k)] = [tex, v.duplicate(), false]
+			sc_item[j].on = String(sc_item[j].k)
 		for s in sc_spr[j]:
 			s.texture = tex
 			s.scale = k
@@ -1677,41 +1680,80 @@ func _sc_item_poll() -> void:   # gói ảnh món về (hoặc lỗi): trả ả
 		var im = P.img(b, w[1]) if st == 2 else null
 		var a = P.meta(b).get(w[1]) if st == 2 else null
 		(w[2] as Callable).call((im as Image).duplicate() if im != null and a != null else null, a)
-func _sc_item_season() -> void:   # mùa đổi: loại nào đổi khung thì lấy ảnh món mới (chỉ lúc đổi mùa)
+var sc_itex := {}   # "gói/khung" (+ "n" ban đêm) -> [texture, khung [ox, oy, w, h], đêm?]
+func _sc_item_show_all() -> void:   # mùa / ngày đêm đổi: mỗi loại lấy đúng khung ảnh món (ảnh đêm khi đêm), như món đặt
 	if not _sci_ok:
 		return
 	for j in sc_item:
+		if not sc_full.has(j):
+			continue
 		var e: Dictionary = sc_item[j]
-		if String(e.k) == "" or not sc_full.has(j):
-			continue
 		var k := _sc_item_k(j)
-		if k == String(e.k):
+		var night := night_cur == 1
+		var want := k + ("n" if night else "")
+		if String(e.get("on", "")) == want:
 			continue
+		e.on = want
 		e.k = k
 		var jj: int = j
-		_sc_item_load(jj, k, func(img, box):
-			if img == null or String(sc_item[jj].k) != k:
+		_sc_item_src(jj, k, night, func(tex: Texture2D, box: Array, ntx: bool):
+			if String(sc_item[jj].get("on", "")) != want:
 				return
 			_sc_v_set(jj, box)
-			var tex := ImageTexture.create_from_image(img)
-			_mask_keep(tex, img)
-			img.generate_mipmaps()
-			tex.set_image(img)
-			var v: Array = sc_data["v"][jj]
-			var sk := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
+			var sk := Vector2(float(box[2]) / tex.get_width(), float(box[3]) / tex.get_height())
 			sc_full[jj] = [tex, sk]
-			sc_arect.erase(jj)   # khung mùa mới không có trong atlas xa: hình đủ (có mipmap) ở mọi mức zoom
+			if e.has("ar") and want == String(e.ar[0]):
+				sc_arect[jj] = e.ar[1]   # đúng khung đã xếp vào atlas xa
+			else:
+				sc_arect.erase(jj)   # khung khác: hình đủ (có mipmap) ở mọi mức zoom
+			var mat: ShaderMaterial = night_raw if ntx else night_mat
 			for sp in sc_spr[jj]:
 				sp.texture = tex
 				sp.region_enabled = false
 				sp.scale = sk
+				sp.material = mat
 				if sp.has_meta("sw"):
-					sp.offset = Vector2(v[0] / sk.x, v[1] / sk.y)
+					sp.offset = Vector2(float(box[0]) / sk.x, float(box[1]) / sk.y)
 			for sp in sc_rall.get(jj, []):
 				if is_instance_valid(sp) and sp.texture != null:
 					sp.texture = tex
 					sp.region_enabled = false
-					sp.scale = Vector2(sk.x, -sk.y))
+					sp.scale = Vector2(sk.x, -sk.y)
+			sc_far = -1
+			_sc_mode())
+func _sc_item_src(j: int, k: String, night: bool, cb: Callable) -> void:   # cb(texture, khung, là ảnh đêm)
+	var fm = get_node("Farm")
+	var b: String = sc_item[j].b
+	var key := b + "/" + k + ("n" if night else "")
+	if sc_itex.has(key):
+		var c: Array = sc_itex[key]
+		cb.call(c[0], c[1], c[2])
+		return
+	var nm: String = fm.lang_ve.op_name(b, k)
+	var day = info.get("opb", {}).get(nm)
+	var nn = info.get("opn", {}).get(nm) if night else null
+	var done := func(img, box, ntx: bool):
+		if img == null:
+			if night:   # không có ảnh đêm: ảnh ngày qua công thức đêm
+				_sc_item_src(j, k, false, cb)
+			return
+		var tex := ImageTexture.create_from_image(img)
+		_mask_keep(tex, img)
+		img.generate_mipmaps()
+		tex.set_image(img)
+		sc_itex[key] = [tex, box, ntx]
+		cb.call(tex, box, ntx)
+	if night and nn != null and day != null:
+		var bx := [float(day[0]) + float(nn[1]), float(day[1]) + float(nn[2]), float(nn[3]), float(nn[4])]
+		_fetch("n/op/" + String(nn[0]) + ".webp", func(body):
+			var img := Image.new()
+			done.call(img if img.load_webp_from_buffer(body) == OK else null, bx, true))
+		return
+	if night and day != null:   # khung n/op mà không có ảnh đêm
+		done.call(null, [], false)
+		return
+	var kk := ("n" + k.substr(1)) if night else k   # khung trong gói l/: ảnh đêm cùng tên (d -> n), gói không có thì null
+	_sc_item_load(j, kk, func(img, box): done.call(img, box, night))
 
 # Zoomed out, thousands of scenery pictures are on screen and each one has its own texture: the phone makes one draw
 # call per picture (zoom 0.22: 6-24 fps). So every picture is also kept at half size, and once all are in they are
@@ -1762,6 +1804,9 @@ func _sc_pack() -> void:
 	sc_atl = ImageTexture.create_from_image(big)
 	tex_mb += W * H * 4 * 1.33 / 1048576.0
 	print("scenery atlas: ", ks.size(), " pictures, ", W, "x", H)
+	for j in sc_item:   # khung nào của cây cỏ hoang đang nằm trong atlas
+		if sc_arect.has(j):
+			sc_item[j].ar = [String(sc_item[j].get("on", "")), sc_arect[j]]
 	sc_half.clear()
 	sc_far = -1
 func _sc_mode() -> void:
@@ -3144,12 +3189,14 @@ func _unhandled_input(e: InputEvent) -> void:
 
 # mùa của cây cỏ hoang: cùng khung ảnh món theo mùa (lang_ve.frames_for) như món đặt; đổi mùa thì loại nào đổi khung mới tải
 var sci_sea := -1
+var sci_night := -1
 func _ss_tick() -> void:
 	_sc_item_poll()
 	var sea: int = int(troi.get("season", 1)) if troi.has("season") else 1
-	if sea != sci_sea and sc_tex_have >= sc_tex_n and sc_tex_n > 0:
+	if (sea != sci_sea or night_cur != sci_night) and sc_tex_have >= sc_tex_n and sc_tex_n > 0:
 		sci_sea = sea
-		_sc_item_season()
+		sci_night = night_cur
+		_sc_item_show_all()
 
 # ---------------------------------------------------------------- fallen leaves + footpaths (web NEN2 v777 leaves(), v787 tracks())
 # Leaves: every tree drops a few of its own leaves round its trunk; how many by season (web cnt()), which piece by season
