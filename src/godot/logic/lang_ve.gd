@@ -236,6 +236,28 @@ func sync() -> void:
 				s.queue_free()
 	flags = nodes.filter(func(s): return s.has_meta("flag"))
 	tiles.queue_redraw()
+	_pond_sync(O)
+
+var _pbase = null
+func _pond_sync(O: Array) -> void:   # ao tự đào -> bên nền dựng nước ao, nối với ao, kênh, suối có sẵn (main.pond_dig)
+	if not F.main.has_method("pond_dig"):
+		return
+	var dug := []
+	for o in O:
+		if o.id == "pond":
+			dug.append([int(o.gx), int(o.gy)])
+	if _pbase == null:   # ô nước có sẵn (trừ sông Vàm), ô ruộng: không đổi
+		_pbase = {}
+		var B: Array = LG.M.B
+		var W5: Dictionary = F.G.w_all.WC.W5 if F.G.w_all != null else {}
+		for y in range(int(B[2]), int(B[3])):
+			for x in range(int(B[0]), int(B[1])):
+				if LG.fm(x, y) and not W5.has(LG.fo(x, y)):
+					_pbase[str(x) + "," + str(y)] = 1
+	var plots := []
+	for c in F.G.cells:
+		plots.append([int(c.gx), int(c.gy)])
+	F.main.pond_dig(dug, _pbase, plots)
 
 func _fell() -> Dictionary:   # cây ngã / cháy sau bão (bao.gd): vật cảnh ở đó thôi vẽ, FellNode vẽ thay
 	var tr = LG.G.troi

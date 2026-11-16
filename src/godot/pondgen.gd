@@ -362,3 +362,175 @@ func banks(SP: float) -> Array:
 			wd[j] = d
 		out.append({"p": p, "n": nx, "k": kk, "wd": wd})
 	return out
+
+# ------------------------------------------------------------------ ao tự đào (bản 180)
+# Trường F (bờ), Fm (bùn), Fl (mép cỏ), D (sâu) của các ô nước, tính y như AOW.build bản web, trên một hộp nhỏ (lx0, ly0,
+# rộng tw, cao th ô) quanh ao mới đào. cells: mọi ô nước (ao có sẵn, kênh, suối + ao tự đào), "x,y" -> 1; plots: ô ruộng
+# [x, y] (bờ ao né ra). Trả về [F, Fm, Fl, D], mỗi cái (tw*S) x (th*S) mẫu.
+static func blur(src: PackedFloat32Array, nx: int, ny: int, sg: float) -> PackedFloat32Array:
+	var r := int(ceil(sg * 3.0))
+	var w := PackedFloat32Array()
+	var sw := 0.0
+	for q in range(-r, r + 1):
+		var e := exp(-q * q / (2.0 * sg * sg))
+		w.append(e)
+		sw += e
+	for q in w.size():
+		w[q] /= sw
+	var tmp := PackedFloat32Array()
+	tmp.resize(nx * ny)
+	var o := PackedFloat32Array()
+	o.resize(nx * ny)
+	for y in ny:
+		for x in nx:
+			var a := 0.0
+			for k in range(maxi(-r, -x), mini(r, nx - 1 - x) + 1):
+				a += src[y * nx + x + k] * w[k + r]
+			tmp[y * nx + x] = a
+	for y in ny:
+		for x in nx:
+			var a := 0.0
+			for k in range(maxi(-r, -y), mini(r, ny - 1 - y) + 1):
+				a += tmp[(y + k) * nx + x] * w[k + r]
+			o[y * nx + x] = a
+	return o
+
+static func comps(cells: Dictionary) -> Dictionary:   # ô -> số ô của cụm nước (8 hướng) chứa nó
+	var out := {}
+	var seen := {}
+	for k in cells:
+		if seen.has(k):
+			continue
+		var st := [k]
+		var grp := []
+		seen[k] = 1
+		while st.size():
+			var c: String = st.pop_back()
+			grp.append(c)
+			var p := c.split(",")
+			var x := int(p[0])
+			var y := int(p[1])
+			for dy in range(-1, 2):
+				for dx in range(-1, 2):
+					var kk := str(x + dx) + "," + str(y + dy)
+					if cells.has(kk) and not seen.has(kk):
+						seen[kk] = 1
+						st.append(kk)
+		for c in grp:
+			out[c] = grp.size()
+	return out
+
+func field(cells: Dictionary, cm: Dictionary, plots: Array, lx0: int, ly0: int, tw: int, th: int) -> Array:
+	var Si := int(S)
+	var nx := tw * Si
+	var ny := th * Si
+	var occ := PackedFloat32Array()
+	occ.resize(nx * ny)
+	var core := PackedFloat32Array()
+	core.resize(nx * ny)
+	var sm := PackedFloat32Array()
+	sm.resize(nx * ny)
+	var nc := 0
+	var any_sm := false
+	var put := func(a: PackedFloat32Array, x: int, y: int, val: float) -> void:
+		var ux := (x - lx0) * Si
+		var vy := (y - ly0) * Si
+		if ux < 0 or vy < 0 or ux + Si > nx or vy + Si > ny:
+			return
+		for v in Si:
+			for u in Si:
+				a[(vy + v) * nx + ux + u] = val
+	for k in cells:
+		var p: PackedStringArray = String(k).split(",")
+		var x := int(p[0])
+		var y := int(p[1])
+		if x < lx0 - 1 or y < ly0 - 1 or x > lx0 + tw or y > ly0 + th:
+			continue
+		put.call(occ, x, y, 1.0)
+		for dd in 2:   # hai ô chỉ chạm góc: nước nối theo đường chéo giữa hai tâm, rộng một ô
+			var dx := 1
+			var dy := -1 if dd == 1 else 1
+			if not cells.has(str(x + dx) + "," + str(y + dy)) or cells.has(str(x + dx) + "," + str(y)) or cells.has(str(x) + "," + str(y + dy)):
+				continue
+			var ax := x + 0.5
+			var ay := y + 0.5
+			var gx0 := mini(x, x + dx)
+			var gy0 := mini(y, y + dy)
+			for vv in 2 * Si:
+				for uu in 2 * Si:
+					var px := gx0 + (uu + 0.5) / S
+					var py := gy0 + (vv + 0.5) / S
+					var t := clampf(((px - ax) * dx + (py - ay) * dy) / 2.0, 0.0, 1.0)
+					var qx := ax + dx * t - px
+					var qy := ay + dy * t - py
+					var iu := (gx0 - lx0) * Si + uu
+					var iv := (gy0 - ly0) * Si + vv
+					if qx * qx + qy * qy < 0.25 and iu >= 0 and iv >= 0 and iu < nx and iv < ny:
+						occ[iv * nx + iu] = 1.0
+		var all := true
+		for ey in range(-1, 2):
+			for ex in range(-1, 2):
+				if not cells.has(str(x + ex) + "," + str(y + ey)):
+					all = false
+		if all:
+			nc += 1
+			put.call(core, x, y, 1.0)
+		var cz: int = cm.get(k, 99)
+		if cz <= 16:
+			any_sm = true
+			put.call(sm, x, y, 1.0 if cz <= 6 else 0.6)
+	var F2 := blur(occ, nx, ny, 0.34 * S)
+	var D2 := blur(occ, nx, ny, 1.1 * S)
+	if nc > 0:   # ao rộng: góc tròn hơn kênh một ô
+		var Fb := blur(occ, nx, ny, 0.62 * S)
+		var Wc := blur(core, nx, ny, 1.2 * S)
+		for i in nx * ny:
+			var wq := (Wc[i] - 0.01) / 0.05
+			if wq <= 0.0:
+				continue
+			wq = 1.0 if wq >= 1.0 else wq * wq * (3.0 - 2.0 * wq)
+			F2[i] += (Fb[i] - F2[i]) * wq
+	var Ws := blur(sm, nx, ny, 0.9 * S) if any_sm else PackedFloat32Array()
+	var Fm := PackedFloat32Array()
+	Fm.resize(nx * ny)
+	var Fl := PackedFloat32Array()
+	Fl.resize(nx * ny)
+	for v in ny:   # bờ lượn nhẹ theo đất (bờ đào chứ không thẳng thước), bùn và mép cỏ có nhiễu riêng
+		for u in nx:
+			var ii := v * nx + u
+			var fv := F2[ii]
+			if fv <= 0.0 or fv >= 1.0:
+				Fm[ii] = fv
+				Fl[ii] = fv
+				continue
+			var wx := lx0 + (u + 0.5) / S
+			var wy := ly0 + (v + 0.5) / S
+			var w4 := 4.0 * fv * (1.0 - fv)
+			var wb := 0.2 * (vn(wx * 0.62, wy * 0.62) * 0.7 + vn(wx * 1.5 + 7.1, wy * 1.5 + 3.3) * 0.3 - 0.5) * 2.0 + 0.1 * (vn(wx * 0.31 + 51.7, wy * 0.31 + 3.1) - 0.5) * 2.0
+			if Ws.size() and Ws[ii] > 0.003:
+				wb += 0.24 * minf(1.0, Ws[ii] * 2.2) * (vn(wx * 0.55 + 31.3, wy * 0.55 + 17.9) - 0.5) * 2.0
+			fv = fv + wb * w4
+			F2[ii] = fv
+			Fm[ii] = fv + 0.26 * (vn(wx * 0.9 + 11.3, wy * 0.9 + 5.7) * 0.75 + vn(wx * 2.4 + 1.7, wy * 2.4 + 8.1) * 0.25 - 0.5) * 2.0 * w4
+			Fl[ii] = fv + 0.2 * (vn(wx * 0.7 + 21.1, wy * 0.7 + 9.9) - 0.5) * 2.0 * w4
+	var pm := PackedFloat32Array()   # bờ ao né ruộng kế bên
+	pm.resize(nx * ny)
+	var any_p := false
+	for q in plots:
+		if cells.has(str(q[0]) + "," + str(q[1])):
+			continue
+		var pu := (int(q[0]) - lx0) * Si
+		var pv := (int(q[1]) - ly0) * Si
+		if pu < 0 or pv < 0 or pu + Si > nx or pv + Si > ny:
+			continue
+		any_p = true
+		put.call(pm, int(q[0]), int(q[1]), 1.0)
+	if any_p:
+		var Pb := blur(pm, nx, ny, 0.45 * S)
+		for i in nx * ny:
+			if Pb[i] > 0.001:
+				var dP := 1.25 * Pb[i]
+				F2[i] -= dP
+				Fm[i] -= dP
+				Fl[i] -= dP
+	return [F2, Fm, Fl, D2]

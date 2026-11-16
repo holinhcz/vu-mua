@@ -296,7 +296,7 @@ func _make_ground() -> void:
 		_fetch("n/pond.json", func(b5):
 			var pj = JSON.parse_string(b5.get_string_from_utf8())
 			var bx: Array = pj["box"]
-			mat.set_shader_parameter("uPB", Vector4(bx[0], bx[1], bx[2], bx[3]))
+			mat.set_shader_parameter("uPB", pond_b if pond_G != null else Vector4(bx[0], bx[1], bx[2], bx[3]))
 			for nm5 in ["mid", "mudS", "dpc", "sky", "band", "lip", "mud", "face", "faceW", "faceD"]:
 				var cc: Array = pj[nm5]
 				mat.set_shader_parameter("p" + nm5.substr(0, 1).to_upper() + nm5.substr(1), Vector3(cc[0], cc[1], cc[2]))
@@ -311,6 +311,8 @@ func _make_ground() -> void:
 					return
 				if nmx != "pond.png":
 					im6.generate_mipmaps()
+				elif pond_im != null:   # trường ao đã gộp ao tự đào
+					im6 = pond_im
 				mat.set_shader_parameter({"pond.png": "uPF", "pt1.webp": "uPT1", "pt2.webp": "uPT2", "pt3.png": "uPT3"}[nmx], ImageTexture.create_from_image(im6))
 				gparts += 1)
 		var g := Polygon2D.new()
@@ -968,15 +970,12 @@ func _load_pond() -> void:
 		for a in [G.NH, G.WILD, G.BUSY]:
 			for i in a.size():
 				a[i] = a[i] - 48
-		# (n16) the shore was the bilinear outline of 4 samples a tile: a kink every 8 px ("lởm chởm"). The GPU gets the
-		# field upsampled x2 with a cubic filter in half floats, so the outline bends smoothly (rules keep G.F)
-		var im2 := im.duplicate()
-		im2.convert(Image.FORMAT_RGBAF)
-		im2.resize(im.get_width() * 2, im.get_height() * 2, Image.INTERPOLATE_CUBIC)
-		im2.convert(Image.FORMAT_RGBAH)
 		pond_cols = pj
-		pond_G = G; pond_tex = ImageTexture.create_from_image(im2)
-		pond_b = Vector4(bx[0], bx[1], bx[2], bx[3])
+		pond_im0 = im
+		pond_g0 = [G.X0, G.Y0, G.NX, G.NY, G.NH, G.WILD, G.BUSY]
+		pond_G = G
+		im = _pond_field()   # ao tự đào gộp vô (chưa đào thì là bản gốc)
+		pond_tex = ImageTexture.create_from_image(_pond_up(im))
 		var t0 := Time.get_ticks_msec()
 		var r: Dictionary = G.build()
 		print("pond rules: ", r["items"].size(), " items, ", Time.get_ticks_msec() - t0, " ms")
@@ -985,6 +984,10 @@ func _load_pond() -> void:
 		ni.items = r["items"]; ni.meta = got["meta"]; ni.z_index = -35
 		ni.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		add_child(ni)
+		pond_rules = ni
+		if not pond_dug.is_empty() and ground != null and ground.material != null:
+			ground.material.set_shader_parameter("uPF", ImageTexture.create_from_image(im))
+			ground.material.set_shader_parameter("uPB", pond_b)
 		_build_refl_pond()
 		_build_fall()
 		_build_pondwater()
@@ -2027,11 +2030,13 @@ func _pond_banks() -> void:
 	bk.build()
 	bk.material = song_mat
 	add_child(bk)
+	pond_bk = bk
 	var pl := PondPics.new()
 	pl.material = night_mat
 	pl.items = R.plants; pl.meta = song_got["meta"]; pl.z_index = -35
 	pl.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_child(pl)
+	pond_bpl = pl
 	_pi_load(song_got["meta"].keys(), pl)
 	print("pond banks: ", R.ops.size(), " ops, ", R.plants.size(), " plants, ", Time.get_ticks_msec() - t0, " ms")
 var pond_water: WaterRect = null
@@ -2064,6 +2069,133 @@ func _build_pondwater() -> void:
 	pond_water.z_index = -38
 	add_child(pond_water)
 var pond_G = null
+# ---- ao tự đào (bản 180): ô "Đào ao" thành nước thật, nối liền ao, kênh, suối kế bên. Trường ao gốc (n/pond.png, tính sẵn từ
+# bản web) + trường tính lại quanh ô đào (pondgen.field, y như AOW.build bản web), lấy lớn hơn; hộp trường nới ra nếu đào
+# ngoài hộp. Đổi xong dựng lại: nước ao, đáy (nền), bờ, cây lau / lục bình ven ao, bóng.
+var pond_im0: Image = null   # trường gốc (đã mở cổ suối)
+var pond_im: Image = null    # trường đang dùng (RGBA8: F, Fm, Fl, D)
+var pond_g0 := []            # hộp + cờ gốc [X0, Y0, NX, NY, NH, WILD, BUSY]
+var pond_dug := []           # ô ao tự đào [x, y]
+var pond_base := {}          # mọi ô nước có sẵn (ao, kênh, suối) "x,y" -> 1
+var pond_plots := []         # ô ruộng [x, y]
+var pond_dsig := ""
+var pond_rules: PondPics = null
+var pond_bk: BankPics = null
+var pond_bpl: PondPics = null
+func pond_dig(dug: Array, base: Dictionary, plots: Array) -> void:   # farm gọi khi ao tự đào đổi
+	var sg := str(dug)
+	if sg == pond_dsig:
+		return
+	var first := pond_dsig == ""
+	pond_dsig = sg
+	pond_dug = dug
+	pond_base = base
+	pond_plots = plots
+	if pond_G != null and not (first and dug.is_empty()):
+		_pond_apply()
+func _pond_up(im: Image) -> Image:   # GPU lấy trường phóng x2 bậc ba (bờ cong mượt, n16)
+	var im2 := im.duplicate()
+	im2.convert(Image.FORMAT_RGBAF)
+	im2.resize(im.get_width() * 2, im.get_height() * 2, Image.INTERPOLATE_CUBIC)
+	im2.convert(Image.FORMAT_RGBAH)
+	return im2
+func _pond_field() -> Image:
+	var G = pond_G
+	var X0: int = int(pond_g0[0]); var Y0: int = int(pond_g0[1])
+	var W0: int = int(pond_g0[2]) / 4; var H0: int = int(pond_g0[3]) / 4
+	var x0 := X0; var y0 := Y0; var x1 := X0 + W0; var y1 := Y0 + H0
+	for c in pond_dug:
+		x0 = mini(x0, int(c[0]) - 3); y0 = mini(y0, int(c[1]) - 3)
+		x1 = maxi(x1, int(c[0]) + 4); y1 = maxi(y1, int(c[1]) + 4)
+	var nw := x1 - x0; var nh := y1 - y0
+	var im := pond_im0
+	if nw != W0 or nh != H0:   # đào ngoài hộp: nới hộp, chỗ mới là đất (giá trị 0)
+		im = Image.create(nw * 4, nh * 4, false, Image.FORMAT_RGBA8)
+		im.fill(Color8(20, 20, 20, 20))
+		im.blit_rect(pond_im0, Rect2i(0, 0, W0 * 4, H0 * 4), Vector2i((X0 - x0) * 4, (Y0 - y0) * 4))
+	else:
+		im = pond_im0.duplicate()
+	G.X0 = x0; G.Y0 = y0; G.NX = nw * 4; G.NY = nh * 4
+	var fl0: Array = [pond_g0[4], pond_g0[5], pond_g0[6]]
+	var fl := []
+	for i in 3:   # cờ: NH theo mẫu, WILD / BUSY theo ô
+		var per := 4 if i == 0 else 1
+		var a := PackedByteArray()
+		a.resize(nw * per * nh * per)
+		var o: PackedByteArray = fl0[i]
+		for v in H0 * per:
+			for u in W0 * per:
+				if v * W0 * per + u < o.size():
+					a[(v + (Y0 - y0) * per) * nw * per + u + (X0 - x0) * per] = o[v * W0 * per + u]
+		fl.append(a)
+	G.NH = fl[0]; G.WILD = fl[1]; G.BUSY = fl[2]
+	if not pond_dug.is_empty():
+		var cells := pond_base.duplicate()
+		for c in pond_dug:
+			cells[str(c[0]) + "," + str(c[1])] = 1
+		var cm: Dictionary = G.comps(cells)
+		var bx0 := 1 << 20; var by0 := 1 << 20; var bx1 := -(1 << 20); var by1 := -(1 << 20)
+		var win := {}
+		for c in pond_dug:
+			bx0 = mini(bx0, int(c[0]) - 3); by0 = mini(by0, int(c[1]) - 3)
+			bx1 = maxi(bx1, int(c[0]) + 4); by1 = maxi(by1, int(c[1]) + 4)
+			for dy in range(-3, 4):
+				for dx in range(-3, 4):
+					win[Vector2i(int(c[0]) + dx, int(c[1]) + dy)] = 1
+		var lx0 := bx0 - 4; var ly0 := by0 - 4
+		var tw := bx1 - bx0 + 8; var th := by1 - by0 + 8
+		var R: Array = G.field(cells, cm, pond_plots, lx0, ly0, tw, th)
+		var lnx := tw * 4
+		for tk in win:   # trong vùng quanh ô đào: lấy lớn hơn giữa trường gốc và trường mới
+			var t: Vector2i = tk
+			if t.x < x0 or t.y < y0 or t.x >= x1 or t.y >= y1:
+				continue
+			for v in 4:
+				for u in 4:
+					var li := ((t.y - ly0) * 4 + v) * lnx + (t.x - lx0) * 4 + u
+					var gu := (t.x - x0) * 4 + u
+					var gv := (t.y - y0) * 4 + v
+					var c0 := im.get_pixel(gu, gv)
+					var ch := [c0.r, c0.g, c0.b, c0.a]
+					for k in 4:
+						var nv := clampf((float(R[k][li]) * 200.0 + 20.0) / 255.0, 0.0, 1.0)
+						ch[k] = maxf(ch[k], nv)
+					im.set_pixel(gu, gv, Color(ch[0], ch[1], ch[2], ch[3]))
+	G.F.resize(G.NX * G.NY); G.D.resize(G.NX * G.NY)
+	for v in G.NY:
+		for u in G.NX:
+			var c := im.get_pixel(u, v)
+			G.F[v * G.NX + u] = (c.r * 255.0 - 20.0) / 200.0
+			G.D[v * G.NX + u] = (c.a * 255.0 - 20.0) / 200.0
+	pond_b = Vector4(G.X0, G.Y0, G.NX, G.NY)
+	pond_im = im
+	return im
+func _pond_apply() -> void:   # đào / lấp ao lúc đang chơi: dựng lại mọi thứ của ao
+	var t0 := Time.get_ticks_msec()
+	var im := _pond_field()
+	(pond_tex as ImageTexture).set_image(_pond_up(im))
+	if ground != null and ground.material != null:
+		ground.material.set_shader_parameter("uPF", ImageTexture.create_from_image(im))
+		ground.material.set_shader_parameter("uPB", pond_b)
+	if refl_pond != null:
+		refl_pond.material.set_shader_parameter("uPB", pond_b)
+	if fall_fx != null:
+		fall_fx.mat.set_shader_parameter("uPB", pond_b)
+	if pond_rules != null:
+		pond_rules.items = pond_G.build()["items"]
+		pond_rules.queue_redraw()
+	if pond_water != null:
+		pond_water.queue_free()
+		pond_water = null
+	_build_pondwater()
+	for n in [pond_bk, pond_bpl]:
+		if n != null:
+			n.queue_free()
+	pond_bk = null
+	pond_bpl = null
+	pond_bk_done = false
+	_pond_banks()
+	print("pond dig: ", pond_dug.size(), " ô, ", Time.get_ticks_msec() - t0, " ms")
 var pond_cols := {}
 var pond_tex: Texture2D = null
 var pond_b := Vector4()
