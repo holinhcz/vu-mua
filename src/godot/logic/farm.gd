@@ -165,7 +165,10 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 func _add_sorted(n: Node2D, dk: float) -> void:
 	n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	main.obj_root.add_child(n)
-	sortables.append([n, dk, -2])
+	if player != null and sortables.size() and sortables[-1][0] == player:
+		sortables.insert(sortables.size() - 1, [n, dk, -2])   # nhân vật luôn ở cuối (_resort ghi khoá chân nhân vật vào dòng cuối)
+	else:
+		sortables.append([n, dk, -2])
 
 # ------------------------------------------------------------------ draw state
 var badges: Node2D = null
@@ -764,7 +767,10 @@ func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong m�
 var song = null   # song_ve.gd: bụi ven sông, cụm trôi, bãi bùn, cá búng
 
 func _resort() -> void:   # khoá chân của nhân vật; thứ tự vẽ do main.zorder() lo (một luật cho mọi thứ)
-	sortables[sortables.size() - 1][1] = player.base_y()
+	for i in range(sortables.size() - 1, -1, -1):   # tìm đúng dòng của nhân vật (trước đây ghi mù vào dòng cuối: món đặt sau
+		if sortables[i][0] == player:                # cùng bị lấy khoá chân nhân vật, xếp sai chỗ tới lúc tải lại)
+			sortables[i][1] = player.base_y()
+			break
 
 # ------------------------------------------------------------------ chạm / vuốt (pointerdown/move/up + click của bản web)
 # Chạm xuống ô có việc (gieo/tưới/gặt/bắt sâu): giữ 220 ms rồi kéo = vuốt làm cả loạt (không kéo làng);

@@ -3959,8 +3959,6 @@ static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" s�
 			return float(v)
 	return last
 func _zo_tile(n: Node, sy: float) -> Vector2:   # ô của chân vật (sy: y chân trên màn khi biết)
-	if n is Sprite2D and n.has_meta("b"):   # hình món: chân = chỗ hình đang đứng
-		return _foot_tile((n as Node2D).position)
 	if n.has_meta("ftt"):
 		return n.get_meta("ftt")
 	if n.has_meta("ft"):
@@ -4057,9 +4055,6 @@ func zorder() -> void:
 				_zo_box[b].append(e)
 	for n in dyn:
 		var k := (float(dyn[n]) - 968.0) / 16.0
-		if n is Sprite2D and n.has_meta("b"):   # hình món: khoá theo chỗ hình đang đứng thật (chân = position), không tin khoá cũ
-			var d: float = float(dyn[n]) - (n as Node2D).position.y
-			k = ((n as Node2D).position.y + (d if absf(d) < 4.0 else 0.0) - 968.0) / 16.0
 		L.append([_zo_fix(n, k, _zo_tile(n, dyn[n])) if not _zo_box.is_empty() else k, n])
 	L.sort_custom(func(a, b): return a[0] < b[0])
 	if full:   # xếp lại toàn bộ
