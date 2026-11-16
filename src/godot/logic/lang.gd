@@ -567,6 +567,35 @@ func take_hu(o: Dictionary) -> int:   # Rz
 	changed()
 	return objs().size() - 1
 
+# ------------------------------------------------------------------ chiếm chỗ (bản 200, một luật cho mọi món)
+# Đặt / dời / xây món gì vào ô nào thì cảnh cũ trên các ô đó (cây cỏ hoang, bụi, cây cảnh nền) bị dọn hẳn, lưu vào save
+# (g.clr "t:x,y" + khoá cây hoang), dời món đi chỗ cũ vẫn trống, không mọc lại.
+func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
+	for y in range(gy, gy + fd):
+		for x in range(gx, gx + fw):
+			G.g.clr["t:" + str(x) + "," + str(y)] = 1
+			var h = hu_at(x, y)
+			if h != null:
+				G.g.clr[h.key] = 1
+	ver += 1
+
+func occupy_all() -> void:   # món, nhà có sẵn của làng, xưởng, chuồng đang có (save cũ): chiếm chỗ một lần
+	for o in SO:
+		if not o.wild and not o.ring and int(o.fw) * int(o.fd) > 1 and so_shown(o):
+			occupy(int(o.gx), int(o.gy), int(o.fw), int(o.fd))
+	for o in objs():
+		var t = Pi.get(o.id)
+		if t != null and o.id != "pond":
+			occupy(int(o.gx), int(o.gy), int(t.fw), int(t.fd))
+	if G.xw != null:
+		for k in G.xw.list_built():
+			var e: Dictionary = G.xw.sr[k]
+			occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd))
+	for p in C.Di:
+		if pen_built(p):
+			var q: Vector2i = pen_pos(p)
+			occupy(q.x, q.y, int(C.mo[p].w), int(C.mo[p].h))
+
 # ------------------------------------------------------------------ hoa cỏ nhỏ (g.minis, ô nhỏ = nửa ô)
 func _gq(x: int, y: int, a: int, b: int) -> bool:   # $G: chỗ nhỏ còn trống cạnh hàng rào
 	var k := str(x) + "," + str(y)
@@ -769,4 +798,8 @@ func hidden_rects() -> Dictionary:
 	for o in HU:
 		if G.g.clr.has(o.key):
 			_hr["cl" + String(o.key)] = [o.gx, o.gy, o.fw, o.fd, o.id]
+	for k in G.g.clr:   # ô đã có món chiếm: cảnh nền đứng đó dọn hẳn
+		if String(k).begins_with("t:"):
+			var p: PackedStringArray = String(k).substr(2).split(",")
+			_hr[k] = [int(p[0]), int(p[1]), 1, 1, ""]
 	return _hr

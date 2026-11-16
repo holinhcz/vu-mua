@@ -1305,6 +1305,7 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		var e: Dictionary = L.objs()[move_idx]
 		e.id = id
 		e.gx = gx
+		L.occupy(gx, gy, int(t0.fw), int(t0.fd))
 		e.gy = gy
 		e.seed = seed
 		_vm(t0, gx, gy)
@@ -1340,6 +1341,8 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 	else:
 		G.g.coins = int(G.g.coins) - int(t0.cost)
 	L.objs().append({"id": id, "gx": gx, "gy": gy, "seed": seed, "t": Time.get_unix_time_from_system() * 1000.0})
+	if id != "pond":
+		L.occupy(gx, gy, int(t0.fw), int(t0.fd))
 	L.changed()
 	_vm(t0, gx, gy)
 	G.vib(14)
@@ -1706,6 +1709,7 @@ func mm() -> void:   # MM: xây / dời đến đây
 			G.xw.w(t0).b = 1
 	fmv = ""
 	G.g.fac[t0] = [p.x, p.y]
+	lg().occupy(p.x, p.y, sz.x, sz.y)   # cảnh dưới chỗ xưởng / chuồng: dọn hẳn
 	U.F._xw_sync()
 	lg().changed()
 	var F = U.F
