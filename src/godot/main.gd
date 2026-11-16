@@ -1462,6 +1462,7 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 				s.set_meta("pco", true)
 			lot_spr.append(s)
 		s.set_meta("k", e[0])
+		s.set_meta("j", j)   # loại cảnh (chạm theo điểm ảnh hình gốc khi đang dùng atlas)
 		sc_root.add_child(s)
 		sc_spr[j].append(s)
 		if absf(float(r[1]) - 4636.0) < 1.0 and absf(float(r[2]) - 480.0) < 1.0 and float(v[2]) > 300.0:
@@ -1548,8 +1549,10 @@ func _pump_scenery() -> void:
 			var img := Image.new()
 			if img.load_webp_from_buffer(b) == OK:
 				_sc_keep_half(j, img)
-				img.generate_mipmaps()
 				var tex := ImageTexture.create_from_image(img)
+				_mask_keep(tex, img)
+				img.generate_mipmaps()
+				tex.set_image(img)
 				var v: Array = sc_data["v"][j]
 				var k := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
 				sc_full[j] = [tex, k]
@@ -1672,6 +1675,8 @@ func _sc_night_apply() -> void:
 						return
 					img.generate_mipmaps()
 					sc_ntex[j] = ImageTexture.create_from_image(img)
+					if sc_full.has(j) and _amask.has(sc_full[j][0].get_rid()):   # đêm cùng dáng ngày: dùng chung mặt nạ chạm
+						_amask[sc_ntex[j].get_rid()] = _amask[sc_full[j][0].get_rid()]
 					tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0
 					_sc_night_set(j))
 			else:
@@ -2717,8 +2722,10 @@ func _op2_want(nm: String) -> void:
 			var img := Image.new()
 			if img.load_webp_from_buffer(Marshalls.base64_to_raw(b64)) != OK:
 				return
+			_mask_keep_op(n2, img)
 			img.generate_mipmaps()
 			op_tex[n2] = ImageTexture.create_from_image(img)
+			_mask_bind_op(n2)
 			tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0)
 		jsw.__op2got = op2_cb
 	JavaScriptBridge.eval("(function(n){fetch(window.__op2b+'n/op/'+n+'.webp',{credentials:window.__op2m,mode:'cors'}).then(function(r){if(!r.ok)throw 0;return r.arrayBuffer()}).then(function(a){var u=new Uint8Array(a),s='',k=0;for(;k<u.length;k+=32768)s+=String.fromCharCode.apply(null,u.subarray(k,k+32768));window.__op2got(n,btoa(s))},function(){window.__op2got(n,'')})})(" + JSON.stringify(nm) + ")")
@@ -2733,8 +2740,10 @@ func _op_dec(nm: String, b: PackedByteArray) -> void:
 	var img := Image.new()
 	if img.load_webp_from_buffer(b) != OK:
 		return
+	_mask_keep_op(nm, img)
 	img.generate_mipmaps()
 	op_tex[nm] = ImageTexture.create_from_image(img)
+	_mask_bind_op(nm)
 	tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0
 	if opn_day.is_empty():
 		for k in info.get("opn", {}):
@@ -3441,6 +3450,107 @@ func _foot_tile(p: Vector2) -> Vector2:
 	var dx := p.x - 4268.0
 	var dy := p.y - 968.0
 	return Vector2((dy / 16.0 + dx / 32.0) / 2.0, (dy / 16.0 - dx / 32.0) / 2.0)
+# ---- chạm đúng hình (bản 192, như bản web vẽ thử từng hình quanh ngón tay): mặt nạ điểm ảnh của từng texture (đọc một
+# lần, nửa cỡ), thử chỗ chạm có trúng điểm ảnh thật của hình đang vẽ không. -1 = không biết (chưa có ảnh): bên gọi dùng khung.
+var _amask := {}   # rid texture -> [rộng gốc, cao gốc, ảnh 1/4 cỡ (LA8)]: làm lúc tải hình (đọc ngược từ GPU thì chậm cả giây)
+func _mask_keep(tx: Texture2D, img: Image) -> void:   # gọi ngay sau khi tạo texture từ img
+	var m := _mask_make(img)
+	if not m.is_empty():
+		_amask[tx.get_rid()] = m
+
+func _mask_make(img: Image) -> Array:
+	var w0 := img.get_width()
+	var h0 := img.get_height()
+	if w0 * h0 > 20000000:   # đồi lớn: không cần chạm theo điểm ảnh
+		return []
+	var mi := img.duplicate()
+	if mi.has_mipmaps():
+		mi.clear_mipmaps()
+	if mi.get_format() != Image.FORMAT_RGBA8:
+		mi.convert(Image.FORMAT_RGBA8)
+	mi.resize(maxi(1, w0 / 4), maxi(1, h0 / 4), Image.INTERPOLATE_NEAREST)
+	mi.convert(Image.FORMAT_LA8)
+	return [w0, h0, mi]
+
+var _op_m := {}   # hình làng (n/op) -> mặt nạ, gắn vào texture khi tạo xong
+func _mask_keep_op(nm: String, img: Image) -> void:   # trước generate_mipmaps (ảnh gốc), gắn sau khi có texture
+	var m := _mask_make(img)
+	if not m.is_empty():
+		_op_m[nm] = m
+func _mask_bind_op(nm: String) -> void:
+	if _op_m.has(nm) and op_tex.get(nm) != null:
+		_amask[op_tex[nm].get_rid()] = _op_m[nm]
+		_op_m.erase(nm)
+
+func tex_alpha(tx: Texture2D, px: float, py: float) -> int:   # độ đục chỗ (px, py) theo điểm ảnh gốc; -1 = không có mặt nạ
+	if tx == null:
+		return -1
+	var m = _amask.get(tx.get_rid())
+	if m == null:
+		return -1
+	var mi: Image = m[2]
+	var u := int(px / float(m[0]) * mi.get_width())
+	var v := int(py / float(m[1]) * mi.get_height())
+	if u < 0 or v < 0 or u >= mi.get_width() or v >= mi.get_height():
+		return 0
+	return mi.get_pixel(u, v).a8
+
+func spr_hit(sp: Sprite2D, w: Vector2) -> int:   # 1 trúng, 0 trượt, -1 không biết
+	if sp == null or not is_instance_valid(sp) or sp.texture == null or not sp.is_visible_in_tree():
+		return 0 if sp != null and is_instance_valid(sp) and not sp.is_visible_in_tree() else -1
+	var p: Vector2 = sp.get_global_transform().affine_inverse() * w
+	var r := sp.get_rect()
+	if not r.has_point(p):
+		return 0
+	var uv := (p - r.position) / r.size
+	if sp.flip_h:
+		uv.x = 1.0 - uv.x
+	if sp.flip_v:
+		uv.y = 1.0 - uv.y
+	var ts := sp.texture.get_size()
+	var rr := sp.region_rect if sp.region_enabled else Rect2(Vector2.ZERO, ts)
+	var a := tex_alpha(sp.texture, rr.position.x + uv.x * rr.size.x, rr.position.y + uv.y * rr.size.y)
+	if a < 0 and sp.has_meta("j") and sc_full.has(int(sp.get_meta("j"))):   # xa: hình lấy từ atlas thu nhỏ, mặt nạ của hình gốc
+		var ft: Texture2D = sc_full[int(sp.get_meta("j"))][0]
+		a = tex_alpha(ft, uv.x * ft.get_width(), uv.y * ft.get_height())
+	if a < 0:
+		return -1
+	return 1 if a > 40 else 0
+
+var _kix := {}     # khoá vẽ (meta "k", web) -> [hình cảnh]: tìm đúng hình của cây rừng / cỏ / nhà xa (lang.HU có cùng khoá k)
+var _kix_n := -1
+func sc_pick(k: float, w: Vector2) -> int:   # hình cảnh khoá k: chạm trúng điểm ảnh? 1 / 0, -1 không biết
+	var n := objs.size()
+	for L in sc_spr:
+		n += L.size()
+	if n != _kix_n:
+		_kix_n = n
+		_kix = {}
+		for o in objs:
+			var sp = o.get("spr")
+			if sp is Sprite2D and sp.has_meta("k"):
+				var q := int(round(float(sp.get_meta("k")) * 1000.0))
+				if not _kix.has(q):
+					_kix[q] = []
+				_kix[q].append(sp)
+		for L in sc_spr:
+			for sp in L:
+				if is_instance_valid(sp) and sp.has_meta("k"):
+					var q2 := int(round(float(sp.get_meta("k")) * 1000.0))
+					if not _kix.has(q2):
+						_kix[q2] = []
+					_kix[q2].append(sp)
+	var res := -1
+	for sp in _kix.get(int(round(k * 1000.0)), []):
+		if not is_instance_valid(sp):
+			continue
+		var h := spr_hit(sp, w)
+		if h == 1:
+			return 1
+		if h == 0:
+			res = 0
+	return res
+
 func xuong_set(rects) -> void:
 	if not (rects is Dictionary):
 		return

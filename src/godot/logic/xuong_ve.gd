@@ -264,6 +264,29 @@ func centre() -> Vector2:
 	var cy: float = s.gy + s.fd / 2.0
 	return Vector2(farm.en(cx, cy), farm.nn(cx, cy))
 
+func hit_px(w: Vector2) -> int:   # chạm trúng điểm ảnh thân xưởng (ảnh i / r + mái che): 1 / 0, -1 chưa có ảnh (bản 192)
+	_meta()
+	if A.is_empty():
+		return -1
+	var d: String = farm.dn()
+	var c := centre()
+	var res := 0
+	for name in ["r" if running() else "i", "che"]:
+		var r = A.get(name + d)
+		if r == null:
+			continue
+		var rc := Rect2(c.x + float(r[0]), c.y + float(r[1]), float(r[2]), float(r[3]))
+		if not rc.has_point(w):
+			continue
+		var im: Image = farm.P.img(b, name + "_" + d)
+		if im == null:
+			return -1
+		var x := int((w.x - rc.position.x) / rc.size.x * im.get_width())
+		var y := int((w.y - rc.position.y) / rc.size.y * im.get_height())
+		if x >= 0 and y >= 0 and x < im.get_width() and y < im.get_height() and im.get_pixel(x, y).a8 > 40:
+			return 1
+	return res
+
 func running() -> bool:   # qW: w = đã xây và có món trong hàng đợi
 	var w: Dictionary = farm.G.xw.w(k)
 	return int(w.get("b", 0)) == 1 and w.q.size() > 0

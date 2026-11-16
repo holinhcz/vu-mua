@@ -473,21 +473,46 @@ func so_pick(w: Vector2, strict: bool, pick_px: Callable):   # Oz: vật cảnh 
 			e = o
 	return e
 
-func hu_pick(w: Vector2):   # lM: cây rừng / cỏ hoang bị chạm -> {type: scn|scnlock, o}
+func hu_near(w: Vector2, m := 12.0) -> Array:   # cây rừng / cỏ hoang có khung hình quanh chỗ chạm (nới m)
 	var tl := tile_of(w)
 	var l := int(floor(tl.x))
 	var c := int(floor(tl.y))
-	var f = null
-	for s in 5:
+	var out := []
+	var seen := {}
+	for s in range(-1, 8):
 		for h in 2:
 			for p in 2:
 				var d = hu_at(l + s + h, c + s + p)
-				if d == null or d.hill or (f != null and d.k <= f.k):
+				if d == null or d.hill or seen.has(d.key):
 					continue
+				seen[d.key] = 1
 				var bb: Array = d.bb
-				var x: float = (float(bb[2]) - float(bb[0])) * 0.36
-				if w.x >= d.sx - x and w.x <= d.sx + x and w.y >= d.sy + (float(bb[1]) - d.sy) * 0.9 and w.y <= d.sy + 10:
-					f = d
+				if w.x < float(bb[0]) - m or w.x > float(bb[2]) + m or w.y < float(bb[1]) - m or w.y > float(bb[3]) + m:
+					continue
+				out.append(d)
+	return out
+
+func hu_hit1(d: Dictionary, w: Vector2) -> bool:   # chạm trúng điểm ảnh của cây / cỏ d (chưa có ảnh: khung như cũ)
+	var bb: Array = d.bb
+	if w.x < float(bb[0]) or w.x > float(bb[2]) or w.y < float(bb[1]) or w.y > float(bb[3]):
+		return false
+	var px: int = F.main.sc_pick(float(d.k), w) if F.main.has_method("sc_pick") else -1
+	if px >= 0:
+		return px == 1
+	var x: float = (float(bb[2]) - float(bb[0])) * 0.36
+	return w.x >= d.sx - x and w.x <= d.sx + x and w.y >= d.sy + (float(bb[1]) - d.sy) * 0.9 and w.y <= d.sy + 10
+
+func hu_hits(w: Vector2) -> Array:   # cây rừng / cỏ hoang trúng điểm ảnh chỗ chạm, đứng trước nhất trước (bản 192)
+	var out := hu_near(w, 0.0).filter(func(d): return hu_hit1(d, w))
+	out.sort_custom(func(a, b): return a.k > b.k)
+	return out
+
+func hu_pick(w: Vector2):   # lM: cây rừng / cỏ hoang bị chạm -> {type: scn|scnlock, o}
+	var H := hu_hits(w)
+	var f = H[0] if H.size() else null
+	var tl := tile_of(w)
+	var l := int(floor(tl.x))
+	var c := int(floor(tl.y))
 	if f != null:
 		return {"type": "scn" if ci(f.pc) else "scnlock", "o": f, "id": f.pc}
 	if not n2(l, c) and il(l, c) == "paddy" and not kc(l, c):

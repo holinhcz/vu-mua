@@ -1172,8 +1172,12 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var f := nn(cx, cy)
 		var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
 		var inside: bool = tl.x >= e.gx - 0.1 and tl.x < e.gx + e.fw + 0.1 and tl.y >= e.gy - 0.1 and tl.y < e.gy + e.fd + 0.1
-		var body := func(p: Vector2) -> bool: return absf(p.x - c) < (e.fw + e.fd) * 13 and p.y >= f - bh + 6 and p.y <= f
-		if inside or body.call(w):
+		var xv = xnodes.get(k)
+		var box := func(p: Vector2) -> bool: return absf(p.x - c) < (e.fw + e.fd) * 13 and p.y >= f - bh + 6 and p.y <= f
+		var body := func(p: Vector2) -> bool:   # trúng điểm ảnh thân xưởng (chưa có ảnh thì khung)
+			var hp: int = xv.hit_px(p) if xv != null and is_instance_valid(xv) and xv.has_method("hit_px") else -1
+			return box.call(p) if hp < 0 else hp == 1
+		if inside or box.call(w):
 			_pk_add(L, {"type": "work", "k": k}, 2, f, body, {"gr": 3 if inside else 0})
 	if WR != null:   # chim sáo, gà vịt sổng
 		var fl = WR.flock
@@ -1301,12 +1305,12 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				var ins: bool = tl.x >= so.gx and tl.x < so.gx + so.fw and tl.y >= so.gy and tl.y < so.gy + so.fd
 				var oo: Dictionary = so
 				_pk_add(L, {"type": "sonha", "o": so}, 50, float(so.sy), func(p: Vector2) -> bool: return lang_ve.pick_so(oo, p), {"gr": 3 if ins else 0})
-		var hu = lang.hu_pick(w)   # cây rừng / cỏ hoang (51), ruộng lúa (52, nền gr 1)
-		if hu != null:
-			if hu.type == "paddy" or (hu.type == "scnlock" and not hu.has("o")):
-				_pk_add(L, hu, 52, w.y, null, {"gr": 1})
-			else:
-				_pk_add(L, hu, 51, float(hu.o.sy), func(_p: Vector2) -> bool: return true)
+		for d in lang.hu_near(w):   # cây rừng / cỏ hoang (51): trúng điểm ảnh (cả cây bị che, để chạm lại lùi ra sau)
+			var dd: Dictionary = d
+			_pk_add(L, {"type": "scn" if lang.ci(dd.pc) else "scnlock", "o": dd, "id": dd.pc}, 51, float(dd.sy), func(p: Vector2) -> bool: return lang.hu_hit1(dd, p))
+		var hu = lang.hu_pick(w)   # ruộng lúa hoang (52, nền gr 1)
+		if hu != null and (hu.type == "paddy" or (hu.type == "scnlock" and not hu.has("o"))):
+			_pk_add(L, hu, 52, w.y, null, {"gr": 1})
 	return L
 
 func _crop_hit(i: int, w: Vector2) -> bool:   # chạm trúng hình cây trên ô (khung ảnh thu 15% như khung làng)
@@ -1316,6 +1320,7 @@ func _crop_hit(i: int, w: Vector2) -> bool:   # chạm trúng hình cây trên �
 	var r := Rect2(cs.position + cs.offset * cs.scale, cs.texture.get_size() * cs.scale)
 	return r.grow(-r.size.x * 0.15).has_point(w)
 
+var _cy := {}   # lần chạm trước: chỗ, lúc, danh sách trúng, đang chọn cái thứ mấy (chạm lại lùi ra sau)
 func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trống)
 	var bb = _pk_bubs(w)
 	if bb != null:
@@ -1340,18 +1345,26 @@ func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trố
 			best = c
 	if best != null:
 		return best.h
-	var px = null    # De: trúng hình, trên cùng
 	var mv = null    # we: đồ đang đi, gần nhất
 	var nr = null    # En: gần hình
 	var gd = null    # He: nền
-	for c in L:   # lượt 1: chỉ thử đúng điểm chạm (rẻ)
+	var hits := []
+	for c in L:   # lượt 1: trúng đúng điểm ảnh chỗ chạm
 		if c.hit is Callable and c.hit.call(w):
-			if px == null or c.dep > px.dep or (c.dep == px.dep and c.ord < px.ord):
-				px = c
+			hits.append(c)
 		if c.gr and (gd == null or c.gr > gd.gr or (c.gr == gd.gr and c.ord < gd.ord)):
 			gd = c
-	if px != null:
-		return px.h
+	if not hits.is_empty():
+		# đứng trước nhất thắng; chạm lại đúng chỗ đó trong 1,5 giây: lùi ra cái phía sau (cây bị che kín vẫn bấm được),
+		# hết thì quay về cái trước nhất
+		hits.sort_custom(func(a, b): return a.dep > b.dep or (a.dep == b.dep and a.ord < b.ord))
+		var ks := hits.map(func(c): return str(c.h))
+		var now := Time.get_ticks_msec()
+		var i := 0
+		if _cy.has("t") and now - int(_cy.t) < 1500 and (_cy.p as Vector2).distance_to(w) < 10.0 / ui.cz() and _cy.ks == ks:
+			i = (int(_cy.i) + 1) % hits.size()
+		_cy = {"t": now, "p": w, "ks": ks, "i": i}
+		return hits[i].h
 	for c in L:   # lượt 2: đồ đang đi lố tay 12 px
 		if c.mv and c.hit is Callable:
 			var d := _pk_near(c.hit, w, PK_R)

@@ -433,10 +433,21 @@ func _hit(b: String, k: String, foot: Vector2, w: Vector2, fx: bool) -> bool:
 	var m: Dictionary = F.P.meta(b)
 	var a = m.get(k)
 	if a == null and F.main.has_method("op_box"):
-		a = F.main.op_box(op_name(b, k))   # khung của làng: chỉ xét khung chữ nhật
+		a = F.main.op_box(op_name(b, k))   # khung của làng: thử điểm ảnh của chính hình làng (chưa có ảnh thì khung thu 15%)
 		if a is Array and a.size() >= 4:
 			var ox0 := -(float(a[0]) + float(a[2])) if fx else float(a[0])
-			return Rect2(foot.x + ox0, foot.y + float(a[1]), float(a[2]), float(a[3])).grow(-float(a[2]) * 0.15).has_point(w)
+			var r0 := Rect2(foot.x + ox0, foot.y + float(a[1]), float(a[2]), float(a[3]))
+			if not r0.has_point(w):
+				return false
+			var tx: Texture2D = F.main.op_pic(op_name(b, k))
+			if tx != null and F.main.has_method("tex_alpha"):
+				var u0 := (w.x - r0.position.x) / r0.size.x
+				if fx:
+					u0 = 1.0 - u0
+				var al: int = F.main.tex_alpha(tx, u0 * tx.get_width(), (w.y - r0.position.y) / r0.size.y * tx.get_height())
+				if al >= 0:
+					return al > 40
+			return r0.grow(-float(a[2]) * 0.15).has_point(w)
 		a = null
 	if a == null:
 		return false
