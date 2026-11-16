@@ -1416,7 +1416,10 @@ func _verges(road: Image, meta: Dictionary) -> Array:
 				row.meta = meta
 				row.tex = vg_tex
 				row.set_meta("ftt", Vector2(x + 0.5 + dd.x * 0.5, y + 0.5 + dd.y * 0.5))   # chân hàng cỏ: giữa mép ô (toạ độ ô)
-				out.append([x + y + 1 + (0.47 if sd > 0 else -0.47), row])
+				# khoá hàng cỏ: mép sau ô phía trước (sd > 0): sau chân đường, trước vật trên ô đó; mép trước ô phía sau (sd < 0):
+				# ngay trước vật đứng trên ô phía sau (cây, rơm, người đứng giữa ô vẫn đè lên cỏ; nền nhà / xưởng / chuồng: luật hộp
+				# của zorder đưa cỏ lên trên nền vì cỏ nằm ở ô phía trước hộp)
+				out.append([x + y + 1.47 if sd > 0 else x + y - 0.02, row])
 	return out
 
 # sc.json "i" rows that are NOT wild (logic thread, src/godot/logic/sc_owned_only.json): shown only on an owned lot

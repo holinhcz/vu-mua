@@ -577,6 +577,10 @@ func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
 			var h = hu_at(x, y)
 			if h != null:
 				G.g.clr[h.key] = 1
+			for j in so_at.get(str(x) + "," + str(y), []):   # cây cảnh có sẵn đứng đó: dọn luôn (không vẽ, không ngã)
+				var o: Dictionary = SO[j]
+				if o.sk != "" and int(o.fw) * int(o.fd) == 1:
+					G.g.mv[o.sk] = 1
 	ver += 1
 
 func occupy_all() -> void:   # món, nhà có sẵn của làng, xưởng, chuồng đang có (save cũ): chiếm chỗ một lần
