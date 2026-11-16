@@ -310,7 +310,7 @@ func _ps() -> void:
 
 func _ghost() -> void:
 	var V = U.F.lang_ve
-	if mode == "place" and move_idx < 0:   # dời món: nhấc món thật (_mv_lift), hình ma chỉ cho món mới mua
+	if mode == "place" and move_idx < 0:   # dời món: nhấc món thật (_lift), hình ma chỉ cho món mới mua
 		V.show_ghost(id, seed, gx, gy, why != "")
 	else:
 		V.hide_ghost()
@@ -1568,7 +1568,7 @@ func _spots() -> void:   # mọi chỗ đặt được + ô tô xanh
 				for o in e.y:
 					ftiles[str(x + r) + "," + str(y + o)] = 1
 
-func _yb(k: String, x: int, y: int, full := true) -> void:   # yb: dời chỗ. full = false khi đang kéo: chỉ đổi số, hình dời bằng _flift
+func _yb(k: String, x: int, y: int, full := true) -> void:   # yb: dời chỗ. full = false khi đang kéo: chỉ đổi số, hình dời bằng _lift
 	if is_pen(k):
 		G.g.fac[k] = [x, y]
 	else:
@@ -1586,57 +1586,6 @@ func _fsync(k: String) -> void:   # dựng lại chỗ vẽ thật (nền dọn 
 		U.F.lang_ve.sync()
 	U.F._xw_sync()
 
-# Xưởng / chuồng đang dời: nhấc lên + nhún (như món), kéo thì dời hình theo ngón tay, không dựng lại làng mỗi ô.
-var _fl_nodes := {}      # node đã dời -> chỗ gốc
-func _flift() -> void:
-	var on := mode == "fmove" and fac != "" and fmv == fac
-	var want := {}
-	var wk := {}   # node chuồng -> chênh khoá xếp lớp
-	if on:
-		var p := fpos(fac)
-		var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
-		var up := Vector2(0, -(LIFT + b))
-		if is_pen(fac):   # hình chuồng dựng ở chỗ cũ (khóa theo chỗ): dời theo chênh lệch tới chỗ đang chọn
-			var V = U.F.lang_ve
-			for key in V.cache:
-				if not String(key).begins_with("pen|" + fac + "|"):
-					continue
-				var q: PackedStringArray = String(key).trim_prefix("pen|" + fac + "|").trim_prefix("(").trim_suffix(")").split(",")
-				var d := Vector2(LN.en(p.x, p.y) - LN.en(float(q[0]), float(q[1])), LN.nn(p.x, p.y) - LN.nn(float(q[0]), float(q[1])))
-				var dk := (p.x + p.y - int(q[0]) - int(q[1])) * 16.0   # thứ tự vẽ theo chỗ mới: cây cỏ quanh đó đè / bị đè đúng
-				for grp in V.cache[key]:
-					for sp in grp:
-						if is_instance_valid(sp):
-							want[sp] = d + (up if sp.z_index != -5 else Vector2.ZERO)   # nền chuồng nằm đất, chỉ dời
-							wk[sp] = dk
-		else:   # xưởng vẽ theo số chỗ (s.gx) nên chỉ cần nhấc
-			var xn = U.F.xnodes.get(fac)
-			if xn != null and is_instance_valid(xn):
-				want[xn] = up
-	var rs := false
-	for nd in _fl_nodes.keys():
-		if not is_instance_valid(nd):
-			_fl_nodes.erase(nd)
-			_fl_k.erase(nd)
-		elif not want.has(nd):
-			nd.position = _fl_nodes[nd]
-			_fl_nodes.erase(nd)
-			if _fl_k.has(nd):
-				rs = _sort_set(nd, _fl_k[nd]) or rs
-				_fl_k.erase(nd)
-	for nd in want:
-		if not _fl_nodes.has(nd):
-			_fl_nodes[nd] = nd.position
-		nd.position = _fl_nodes[nd] + want[nd]
-		if wk.has(nd):
-			if not _fl_k.has(nd):
-				_fl_k[nd] = _sort_get(nd)
-			if _fl_k[nd] != null:
-				rs = _sort_set(nd, float(_fl_k[nd]) + float(wk[nd])) or rs
-	if rs:
-		U.F._resort()
-
-var _fl_k := {}   # node chuồng đang dời -> khoá xếp lớp gốc
 func _sort_get(nd: Node) -> Variant:
 	for e in U.F.sortables:
 		if e[0] == nd:
@@ -2074,29 +2023,45 @@ func _shadow(x: float, y: float, w: float, d: float) -> void:   # bóng mờ b�
 		ov_lo.draw_circle(Vector2.ZERO, 1.0, Color(0, 0, 0, 0.07))
 	ov_lo.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-func _lift() -> void:   # món đang cầm nổi lên, nhún nhẹ
+# DỜI ĐỒ: MỘT CÁCH CHO MỌI THỨ (bản 212). Món, xưởng hay chuồng đang dời: nhấc chính các node đang vẽ nó lên (nhún nhẹ),
+# dời theo chênh lệch tới chỗ đang chọn, khoá xếp lớp dời theo, sai chỗ thì ửng đỏ; thả tay / đặt / hủy thì trả lại, làng
+# dựng lại ở chỗ mới. Hình ma chỉ cho món mới mua (chưa có món thật).
+var _mv_n := {}   # node -> [chỗ gốc, khoá gốc, self_modulate gốc]
+func _lift() -> void:
 	var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
 	var up := Vector2(0, -(LIFT + b))
 	var gh: Node2D = U.F.lang_ve.ghost
-	if gh != null and gh.visible and mode == "place":   # món mới mua: hình ma (chưa có món thật)
+	if gh != null and gh.visible and mode == "place":
 		gh.position = gh.get_meta("p0", gh.position) + up
-	_mv_lift(up)
-
-# Dời món: nhấc chính các node đang vẽ món đó (như xưởng / chuồng _flift), dời tới chỗ đang chọn, khoá xếp lớp theo chỗ mới;
-# sai chỗ thì ửng đỏ. Không còn hình ma thứ hai cho món đang dời.
-var _mv_n := {}   # node -> [chỗ gốc, khoá gốc]
-func _mv_lift(up: Vector2) -> void:
-	var want := {}
-	if mode == "place" and move_idx >= 0:
+	var want := {}   # node -> [chênh lệch, nhấc lên?]
+	var bad := false
+	var V = U.F.lang_ve
+	if mode == "place" and move_idx >= 0:   # món
 		var L = lg()
 		var o = L.objs()[move_idx] if move_idx < L.objs().size() else null
 		var a = L.Pi.get(id)
 		if o != null and a != null:
-			var c0 := Vector2(LN.en(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0), LN.nn(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0))
-			var c1 := Vector2(LN.en(gx + a.fw / 2.0, gy + a.fd / 2.0), LN.nn(gx + a.fw / 2.0, gy + a.fd / 2.0))
-			for nd in U.F.lang_ve.obj_nodes.get(move_idx, []):
-				if is_instance_valid(nd):
-					want[nd] = c1 - c0
+			var d := Vector2(LN.en(gx + a.fw / 2.0, gy + a.fd / 2.0) - LN.en(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0),
+				LN.nn(gx + a.fw / 2.0, gy + a.fd / 2.0) - LN.nn(float(o.gx) + a.fw / 2.0, float(o.gy) + a.fd / 2.0))
+			for nd in V.obj_nodes.get(move_idx, []):
+				want[nd] = [d, true]
+		bad = why != ""
+	elif mode == "fmove" and fac != "" and fmv == fac:
+		var p := fpos(fac)
+		if is_pen(fac):   # chuồng: hình dựng ở chỗ cũ (khoá cache theo chỗ)
+			for key in V.cache:
+				if not String(key).begins_with("pen|" + fac + "|"):
+					continue
+				var q: PackedStringArray = String(key).trim_prefix("pen|" + fac + "|").trim_prefix("(").trim_suffix(")").split(",")
+				var d := Vector2(LN.en(p.x, p.y) - LN.en(float(q[0]), float(q[1])), LN.nn(p.x, p.y) - LN.nn(float(q[0]), float(q[1])))
+				for grp in V.cache[key]:
+					for nd in grp:
+						want[nd] = [d, nd.z_index != -5]   # nền chuồng nằm đất: chỉ dời, không nhấc
+		else:   # xưởng: node vẽ theo số chỗ (s.gx) nên chỉ nhấc
+			var xn = U.F.xnodes.get(fac)
+			if xn != null:
+				want[xn] = [Vector2.ZERO, true]
+		bad = fwhy != ""
 	for nd in _mv_n.keys():
 		if not is_instance_valid(nd):
 			_mv_n.erase(nd)
@@ -2106,13 +2071,16 @@ func _mv_lift(up: Vector2) -> void:
 			_sort_set(nd, _mv_n[nd][1])
 			_mv_n.erase(nd)
 	for nd in want:
+		if not is_instance_valid(nd):
+			continue
 		if not _mv_n.has(nd):
 			_mv_n[nd] = [nd.position, _sort_get(nd), nd.self_modulate]   # self_modulate: modulate của cây giữ pha lay (sprite_sway)
-		nd.position = _mv_n[nd][0] + want[nd] + up
+		var e: Array = want[nd]
+		nd.position = _mv_n[nd][0] + e[0] + (up if e[1] else Vector2.ZERO)
 		var m0: Color = _mv_n[nd][2]
-		nd.self_modulate = Color(m0.r, m0.g * 0.55, m0.b * 0.5, m0.a * 0.8) if why != "" else m0
+		nd.self_modulate = Color(m0.r, m0.g * 0.55, m0.b * 0.5, m0.a * 0.8) if bad else m0
 		if _mv_n[nd][1] != null:
-			_sort_set(nd, float(_mv_n[nd][1]) + float(want[nd].y))
+			_sort_set(nd, float(_mv_n[nd][1]) + float(e[0].y))
 
 # ------------------------------------------------------------------ mỗi khung, cuộn
 func step(dt: float) -> void:
@@ -2120,8 +2088,6 @@ func step(dt: float) -> void:
 	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
 	_lift()
-	if mode == "fmove" or not _fl_nodes.is_empty():
-		_flift()
 	_warm(dt)
 	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
