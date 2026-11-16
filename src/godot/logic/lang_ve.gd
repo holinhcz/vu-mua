@@ -7,6 +7,7 @@ extends RefCounted
 # Chuồng: gói g_congtrinh_chuong_<loại> (g nền, b sau, r0/r1/f0/f1 rào), neo ở điểm lưới.
 
 const L = preload("res://logic/lang.gd")
+const BongNuoc = preload("res://logic/bong_nuoc.gd")
 const PXU := 9.0
 
 var F                    # farm.gd
@@ -90,6 +91,7 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 		F.P.load_bundle(b)
 	var fx: bool = p.get("fx", false)
 	var sw: bool = p.get("sw", false)
+	var wat: bool = str(LG.Pi.get(id, {}).get("water", "")) != ""   # sen, súng, thuyền, cầu, bến: có bóng dưới nước
 	var i := 0
 	for k in fr:
 		var s := _spr(b, String(k), foot, sw, fx)
@@ -98,6 +100,8 @@ func _obj(id: String, seed: int, foot: Vector2, dk: float, into_ghost := false) 
 			ghost.add_child(s)
 		else:
 			_add(s, dk + 0.01 * i)
+			if wat:
+				BongNuoc.add(F.main, s, foot)
 		i += 1
 	if p.has("flag"):
 		var fl: Dictionary = p.flag

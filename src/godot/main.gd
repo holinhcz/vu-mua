@@ -2075,6 +2075,7 @@ func _build_refl_pond() -> void:
 	var G = pond_G
 	var wet_p := func(x: float, y: float) -> bool: return G.fs(G.F, x, y) > 0.5
 	refl_pond = _refl_set(wet_p, 0.0, true)
+	_refl_flush()
 func _build_refl() -> void:
 	_build_refl_pond()
 	if refl_root != null or wimg_a == null or sc_data.is_empty() or water == null:
@@ -2096,7 +2097,30 @@ func _build_refl() -> void:
 			return px >= 0 and py >= 0 and px < W and py < H and wimg_f.get_pixel(px, py).r8 > 132
 		refl_fl = _refl_set(wet_f, 1.0)
 		refl_fl.visible = false
+	_refl_flush()
 	if song_cur >= 0: _flood_apply(_flood_on())
+# bóng dưới nước của đồ trên mặt nước (logic/bong_nuoc.gd) mượn vật liệu + lớp của bộ bóng cây: sông (refl_root) hay ao,
+# kênh (refl_pond). at: "r" / "p" / điểm làng để dò. Trả về bộ đó, null = chỗ đó không phải mặt nước, false = bản đồ chưa có
+# (bóng nằm chờ trong refl_wait, dựng xong bộ bóng thì xếp lại).
+var refl_wait := []
+func refl_set_at(at):
+	var rr := wimg_a != null and refl_root != null
+	var pr := pond_G != null and refl_pond != null
+	if at is String:
+		if at == "r":
+			return refl_root if rr else false
+		return refl_pond if pr else false
+	var p: Vector2 = at
+	if rr:
+		var px := int((p.x - wmap.x) * wimg_a.get_width() / wmap.z)
+		var py := int((p.y - wmap.y) * wimg_a.get_height() / wmap.w)
+		if px >= 0 and py >= 0 and px < wimg_a.get_width() and py < wimg_a.get_height() and wimg_a.get_pixel(px, py).g8 > 0:
+			return refl_root
+	if pr and pond_G.fs(pond_G.F, p.x, p.y) > 0.5:
+		return refl_pond
+	return null if rr and pr else false
+func _refl_flush() -> void:
+	refl_wait = refl_wait.filter(func(b): return is_instance_valid(b) and not b.place())
 func _refl_set(wet: Callable, fl: float, pond := false) -> Node2D:
 	var root := Node2D.new()
 	root.z_index = -37 if pond else -20

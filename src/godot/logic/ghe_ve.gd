@@ -8,6 +8,7 @@ extends Node2D
 
 const Snap = preload("res://ui/snap.gd")
 const Css = preload("res://ui/css.gd")
+const BongNuoc = preload("res://logic/bong_nuoc.gd")
 
 var farm
 var G
@@ -68,7 +69,7 @@ class Boat extends Node2D:
 		var l := 0.0 if mo else sin(tt * 0.9) * 0.015
 		position = Vector2(v.farm.en(p.x, p.y), v.farm.nn(p.x, p.y))
 		scale = Vector2(sc, sc)
-		spr.self_modulate.a = al
+		spr.modulate.a = al   # modulate: bóng dưới nước mờ theo
 		piv.position = Vector2(0, o)
 		piv.rotation = l
 		top.position = Vector2(0, o)
@@ -137,6 +138,7 @@ func _boat() -> Boat:
 	var b := Boat.new(self)
 	b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	farm.main.obj_root.add_child(b)
+	BongNuoc.add(farm.main, b.spr, "r", 0.0, b)   # bóng ghe dưới nước, soi quanh chỗ ghe
 	farm.sortables.insert(farm.sortables.size() - 1, [b, 0.0, -2])   # nhân vật luôn ở cuối danh sách
 	return b
 

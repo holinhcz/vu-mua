@@ -6,6 +6,8 @@ extends RefCounted
 #   - bãi bùn lúc nước ròng (w_xuong.v6): mảng bùn ở mép nước, có món để mò; chạm đi tới mò
 #   - cá búng mặt nước: sông, kênh, ao trên màn thỉnh thoảng có cá búng lên, nước bắn, vòng gợn loang (mưa nhiều, đêm ít)
 
+const BongNuoc = preload("res://logic/bong_nuoc.gd")
+
 var F          # farm.gd
 var G
 var fx: Node2D = null       # cá búng + bãi bùn (lớp mặt nước)
@@ -133,6 +135,7 @@ func _clump(kind: String) -> Node2D:
 			s.position = P[i]
 			s.scale *= randf_range(1.6, 2.0)
 			n.add_child(s)
+			BongNuoc.add(F.main, s, "r", 10.0)   # gốc cây chạm nước: 10 px ảnh dưới điểm neo
 		for i in 2 + c / 2:   # bèo trải quanh cụm
 			var s := _spr("beo", _dn() + "beo" + str(randi() % 4))
 			var a := randf() * TAU
