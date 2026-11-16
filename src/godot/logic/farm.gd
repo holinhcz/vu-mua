@@ -225,6 +225,8 @@ func refresh() -> void:
 		badges.queue_redraw()
 	for sg in signs:
 		sg.sync()
+	if lang != null and lang.absorb_so():
+		G.mark()
 	if lang != null and not G.g.has("occ3"):   # save cũ: cảnh dưới món / nhà có sẵn / xưởng / chuồng dọn hẳn một lần
 		G.g["occ3"] = 1
 		lang.occupy_all()

@@ -546,8 +546,39 @@ func clear_paddy(x: int, y: int) -> void:   # Dy: gặt lúa hoang ở khu đã 
 
 const XV := {"banana": "ft_chuoi", "wildbanana": "ft_chuoi", "papaya": "ft_dudu", "coconut": "ft_dua", "mango": "ft_xoai", "jackfruit": "ft_mit", "dieu": "ft_dieu"}
 
+func own_n() -> int:   # số món tính vào giới hạn: không tính vật có sẵn của làng đã gộp vào (f = 1)
+	var n := 0
+	for o in objs():
+		if not o.get("f", 0):
+			n += 1
+	return n
+
+# MỘT LOẠI ĐỒ (bản 202): cây, bụi, đồ một ô có sẵn của làng (chuối, tre, dâm bụt, cau, xoài, sen, rơm...) ở khu đã có gộp
+# thẳng vào đồ của mình (g.objs, f = 1), như đã "nhận": dời, bán, xếp, chiếm chỗ, sét đánh y như món mình đặt. Khu mới mua
+# thì gộp lúc đó. Nhà, đình, cổng có sẵn còn giữ chỗ (đường sân nhà, dân dọn vào ở, đình làng gắn với chúng).
+var _abs_sig := ""
+func absorb_so() -> bool:   # true = có gộp thêm
+	var sg := str(G.g.get("land")) + "/" + str(G.g.mv.size())
+	if sg == _abs_sig:
+		return false
+	_abs_sig = sg
+	var n := 0
+	for o in SO:
+		if o.wild or o.sk == "" or G.g.mv.has(o.sk) or not so_shown(o) or int(o.fw) * int(o.fd) != 1:
+			continue
+		var id: String = XV.get(o.id, o.id)
+		if not Pi.has(id):
+			continue
+		G.g.mv[o.sk] = 1
+		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
+		n += 1
+	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
+	if n > 0:
+		changed()
+	return n > 0
+
 func take_so(o: Dictionary) -> int:   # Hz: nhận vật cảnh có sẵn thành món của mình (rồi dời)
-	if objs().size() >= int(C.V5):
+	if own_n() >= int(C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
 		return -1
 	G.g.mv[o.sk] = 1
@@ -559,7 +590,7 @@ func take_hu(o: Dictionary) -> int:   # Rz
 	if not Pi.has(o.id):
 		G.toast.emit("Bụi cỏ này chỉ dọn được. Thoát Xây dựng rồi chạm để dọn.")
 		return -1
-	if objs().size() >= int(C.V5):
+	if own_n() >= int(C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
 		return -1
 	G.g.clr[o.key] = 1

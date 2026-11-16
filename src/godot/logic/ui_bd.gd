@@ -1316,7 +1316,7 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		G.toast.emit("Đã dời " + String(t0.n).to_lower() + ".")
 		_fl("sel")
 		return
-	if L.objs().size() >= int(L.C.V5):
+	if L.own_n() >= int(L.C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(L.C.V5)) + " món, hãy bán bớt.")
 		return
 	var r: int = L.pg(id)
