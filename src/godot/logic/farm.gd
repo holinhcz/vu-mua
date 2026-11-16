@@ -235,6 +235,7 @@ func refresh() -> void:
 		lang.occupy_all()
 		G.mark()
 	_xw_sync()
+	leaf_sync()
 	if lang_ve != null:
 		lang_ve.sync()
 	if lines != null:
@@ -1653,6 +1654,27 @@ func pc_lv(t: String) -> int:   # hs: cấp còn thiếu (0 = đủ cấp)
 # ------------------------------------------------------------------ xưởng chế biến (xuong.gd, vẽ ở xuong_ve.gd)
 var xnodes := {}       # khoá xưởng -> node
 var _xw_sig := ""
+var _lf_sig := ""
+func leaf_sync(force := false) -> void:   # lá rụng đi theo cây: ô gốc các cây đang đứng gửi sang nền (main.leaf_live)
+	if lang == null or not main.has_method("leaf_live"):
+		return
+	var O: Array = lang.objs()
+	var sig := str(lang.ver) + "/" + str(G.g.clr.size()) + "/" + str(G.g.mv.size()) + "/" + str(O.size()) + "/" + str(G.g.get("land"))
+	if sig == _lf_sig and not force:
+		return
+	_lf_sig = sig
+	var live := {}
+	for o in lang.HU:
+		if not G.g.clr.has(o.key):
+			live[Vector2i(int(o.gx), int(o.gy))] = 1
+	for o in lang.SO:
+		if (o.sk == "" or not G.g.mv.has(o.sk)) and lang.so_shown(o):
+			live[Vector2i(int(o.gx), int(o.gy))] = 1
+	for o in O:
+		if o is Dictionary:
+			live[Vector2i(int(o.gx), int(o.gy))] = 1
+	main.leaf_live(live)
+
 func _xw_sync() -> void:
 	var L: Array = G.xw.list_built()
 	var gh: String = ui.bdp.fmv if ui.bdp != null else ""

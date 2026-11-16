@@ -3209,6 +3209,44 @@ var lf_sea := -1
 var lf_atl: Texture2D = null
 var lf_rect := []     # piece -> [Rect2 normal, Rect2 mirrored, w, h, ax, ay]
 var lf_busy := false
+# lá rụng đi theo cây (bản 222): mỗi nhóm lá là của một cây có sẵn (cây gần tâm nhóm nhất, lang.HU / lang.SO); cây dọn đi, dời
+# đi hay hết hạn thì lá dưới chân cũng mất. lf_gc[nhóm] = ô gốc cây; lf_live = các ô gốc đang có cây (logic gửi, null = chưa biết)
+var lf_gc := []        # nhóm -> tâm lá (thế giới), rồi -> Vector2i ô gốc cây (hoặc null: không thuộc cây nào)
+var lf_live = null
+var _lf_map_ok := false
+func leaf_live(live: Dictionary) -> void:   # logic (farm): ô gốc các cây đang đứng
+	if not _lf_map_ok:
+		var fm = get_node_or_null("Farm")
+		if fm == null or fm.lang == null or lf_gc.is_empty():
+			return
+		var cell := {}   # ô 64 px -> [[chân, ô gốc]]
+		for o in fm.lang.HU:
+			var c := Vector2i(floori(float(o.sx) / 64.0), floori(float(o.sy) / 64.0))
+			if not cell.has(c):
+				cell[c] = []
+			cell[c].append([Vector2(float(o.sx), float(o.sy)), Vector2i(int(o.gx), int(o.gy))])
+		for o in fm.lang.SO:
+			var c := Vector2i(floori(float(o.sx) / 64.0), floori(float(o.sy) / 64.0))
+			if not cell.has(c):
+				cell[c] = []
+			cell[c].append([Vector2(float(o.sx), float(o.sy)), Vector2i(int(o.gx), int(o.gy))])
+		for g in lf_gc.size():
+			var p: Vector2 = lf_gc[g]
+			var c0 := Vector2i(floori(p.x / 64.0), floori(p.y / 64.0))
+			var best = null
+			var bd := 40.0 * 40.0
+			for dx in [-1, 0, 1]:
+				for dy in [-1, 0, 1]:
+					for e in cell.get(c0 + Vector2i(dx, dy), []):
+						var d: float = (e[0] as Vector2).distance_squared_to(p)
+						if d < bd:
+							bd = d
+							best = e[1]
+			lf_gc[g] = best
+		_lf_map_ok = true
+	lf_live = live
+	for ch in lf_chunks:
+		ch.queue_redraw()
 # (b72) ?do : counts draw calls with each group hidden for 3 s (all, -UI, -verges, -built/logic, -scenery), then puts all back
 var do_on := -1
 var do_ph := -1
@@ -3384,6 +3422,11 @@ func _load_leaves() -> void:
 			var n4 := b.slice(o + 1, o + 5)
 			var nl := b.decode_u16(o + 5)
 			o += 7
+			var gid := lf_gc.size()
+			var sm := Vector2.ZERO
+			for i in nl:
+				sm += Vector2(b.decode_float(o + i * 10), b.decode_float(o + i * 10 + 4))
+			lf_gc.append(sm / maxf(1.0, float(nl)))
 			for i in nl:
 				var x := b.decode_float(o)
 				var y := b.decode_float(o + 4)
@@ -3399,11 +3442,15 @@ func _load_leaves() -> void:
 				ch.jk.append(b[o + 8])
 				ch.pc.append(b[o + 9])
 				ch.kd.append(k)
+				ch.gi.append(gid)
 				ch.n4.append_array(n4)
 				o += 10
 		for key in C:
 			lf_root.add_child(C[key])
-			lf_chunks.append(C[key]))
+			lf_chunks.append(C[key])
+		var fm = get_node_or_null("Farm")   # lá về sau logic: xin lại danh sách cây đang đứng
+		if fm != null and fm.has_method("leaf_sync"):
+			fm.leaf_sync(true))
 func _leaf_tick() -> void:
 	if lf_root == null:
 		return
@@ -3456,15 +3503,22 @@ class LeafChunk extends Node2D:
 	var pc := PackedByteArray()
 	var kd := PackedByteArray()
 	var n4 := PackedByteArray()
+	var gi := PackedInt32Array()   # nhóm lá (main.lf_gc) của từng lá
 	func _draw() -> void:
 		var atl: Texture2D = main.lf_atl
 		if atl == null:
 			return
 		var se: int = main.lf_sea
 		var R: Array = main.lf_rect
+		var live = main.lf_live
+		var GC: Array = main.lf_gc
 		for i in xs.size():
 			if jk[i] >= n4[i * 4 + se]:
 				continue
+			if live != null:   # cây của nhóm lá này không còn đứng đó: lá cũng mất
+				var t = GC[gi[i]] if gi[i] < GC.size() else null
+				if t is Vector2i and not (live as Dictionary).has(t):
+					continue
 			var k: int = kd[i]
 			var p: int = pc[i]
 			# mai / đào drop flowers only round Tết (pieces 0-3 flowers, 4-7 leaves)
