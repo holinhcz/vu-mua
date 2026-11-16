@@ -26,7 +26,9 @@ func _init(farm, lang) -> void:
 	tiles = TileLayer.new()
 	tiles.v = self
 	tiles.z_index = -6
-	tiles.material = F.main.night_mat
+	tiles.material = ShaderMaterial.new()   # nen.gdshader: nền lát loang vào nhau theo từng điểm ảnh
+	tiles.material.shader = load("res://nen.gdshader")
+	F.main._nm(tiles.material)
 	F.add_child(tiles)
 	ghost = Node2D.new()
 	ghost.visible = false
@@ -492,59 +494,53 @@ class TileLayer extends Node2D:
 				if not g.road.has(k):
 					rm.append(k)
 			M.road_set(g.road.duplicate(), rm)
-		# nền: lượt 1 lõi từng ô, lượt 2 dải loang sang ô bên cạnh khác loại / ra cỏ
-		for pass_i in 2:
-			for k in g.gt:
-				var p: PackedStringArray = String(k).split(",")
-				_nen_blend(g.gt, String(g.gt[k]), int(p[0]), int(p[1]), pass_i == 1)
+		_nen_all(g.gt)
 
 	var _road_sig := ""
 	func _road(t: String, a: float, n: float, _e: int, _r: int) -> void:   # hình thẻ đường: ô bằng ảnh mặt đường đó
 		tex_dia(t, a, n)
 
-	# NỀN GIÁP NHAU LOANG VÀO NHAU (bản 224): mỗi cạnh ô giáp nền khác loại hoặc giáp cỏ có một dải mờ dần ra hai bên cạnh
-	# (dải song song cạnh, rộng BL_W khoảng tâm-cạnh). Hai nền khác loại: mỗi bên lấn sang bên kia, ở cạnh còn 50/50 -> chuyển màu
-	# mềm. Giáp cỏ: mép nền nhạt dần ra cỏ. Cùng loại: không có dải (ảnh cùng chỗ lặp theo toạ độ làng nên liền một mặt).
-	const BL_W := 0.6   # bề rộng dải loang, tính theo khoảng tâm ô - cạnh
-	const NB := [[Vector2i(0, -1), 0, 1], [Vector2i(1, 0), 1, 2], [Vector2i(0, 1), 2, 3], [Vector2i(-1, 0), 3, 0]]   # ô bên cạnh, 2 góc của cạnh
+	# NỀN LÁT (bản 225): cả vùng nền vẽ một lần bằng nen.gdshader: bản đồ ô (ảnh nhỏ, mỗi điểm = một ô: lớp ảnh + 1) + ảnh mặt
+	# đường của nền làng (uRA); độ loang tính theo từng điểm ảnh nên giáp loại khác / giáp cỏ / góc ngã tư đều mềm như nhau.
+	const LAYER := {"dat": 1, "do": 2, "cat": 3, "soi": 4}
+	var _map_sig := ""
+	var _poly := PackedVector2Array()
 
-	func _nen_blend(gt: Dictionary, t: String, e: int, r: int, ring: bool) -> void:
-		var u = v.LG.ug.get(t)
-		if u == null or not u.has("tx"):
+	func _nen_all(gt: Dictionary) -> void:
+		var mat: ShaderMaterial = material
+		if mat.get_shader_parameter("uRA") == null:
+			var gm = v.F.main.ground.material if v.F.main.ground != null else null
+			var ra = gm.get_shader_parameter("uRA") if gm != null else null
+			if ra == null:   # ảnh mặt đường chưa về: vẽ lại sau
+				get_tree().create_timer(0.5).timeout.connect(queue_redraw)
+				return
+			mat.set_shader_parameter("uRA", ra)
+		if gt.is_empty():
 			return
-		var tex: Texture2D = v.F.main.road_tex.get(String(u.tx))
-		var a := 4268.0 + (e - r) * 32.0
-		var n := 968.0 + (e + r) * 16.0
-		var C := Vector2(a, n + 16.0)
-		var P := [Vector2(a, n - 0.6), Vector2(a + 32.8, n + 16), Vector2(a, n + 32.6), Vector2(a - 32.8, n + 16)]
-		var sc := 96.0 if String(u.tx) == "soi" else 112.0
-		if not ring:   # lõi: cả ô đậm
-			_quad(tex, sc, P, [1.0, 1.0, 1.0, 1.0])
-			return
-		for d in NB:   # dải loang ra ngoài cạnh: chỉ khi bên kia khác loại (nền khác hoặc cỏ)
-			var nb2 = gt.get(str(e + d[0].x) + "," + str(r + d[0].y))
-			if nb2 != null and String(nb2) == t:
-				continue
-			# dải đẩy thẳng ra ngoài cạnh (song song cạnh, không toả theo góc): dải các ô kề nhau cùng hàng nối liền, không chồng
-			var E: Vector2 = P[d[2]] - P[d[1]]
-			var N := Vector2(E.y, -E.x).normalized()
-			if N.dot(P[d[1]] - C) < 0.0:
-				N = -N
-			var w: float = N.dot(P[d[1]] - C) * BL_W
-			var a0 := 0.5 if nb2 != null else 1.0   # giáp nền khác: hai bên lấn nhau, ở cạnh 50/50; giáp cỏ: mép nhạt dần ra cỏ
-			var ww := w if nb2 != null else w * 1.5
-			_quad(tex, sc, [P[d[1]], P[d[2]], P[d[2]] + N * ww, P[d[1]] + N * ww], [a0, a0, 0.0, 0.0])
-
-	func _quad(tex: Texture2D, sc: float, Q: Array, al: Array) -> void:   # tứ giác Q bằng ảnh tex (lặp theo toạ độ làng), độ đậm theo đỉnh
-		var pts := PackedVector2Array()
-		var uv := PackedVector2Array()
-		var col := PackedColorArray()
-		for i in 4:
-			pts.append(Q[i])
-			uv.append(Q[i] / sc)
-			col.append(Color(1, 1, 1, float(al[i])) if tex != null else Color(0.72, 0.64, 0.48, float(al[i])))
-		_cv().texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		_cv().draw_polygon(pts, col, uv, tex)
+		var sig := str(gt.size()) + str(gt.hash())
+		if sig != _map_sig:
+			_map_sig = sig
+			var x0 := 1 << 20
+			var y0 := 1 << 20
+			var x1 := -(1 << 20)
+			var y1 := -(1 << 20)
+			for k in gt:
+				var p: PackedStringArray = String(k).split(",")
+				x0 = mini(x0, int(p[0]))
+				y0 = mini(y0, int(p[1]))
+				x1 = maxi(x1, int(p[0]))
+				y1 = maxi(y1, int(p[1]))
+			var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_R8)
+			for k in gt:
+				var p: PackedStringArray = String(k).split(",")
+				var u = v.LG.ug.get(String(gt[k]))
+				var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
+				im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0))
+			mat.set_shader_parameter("uMap", ImageTexture.create_from_image(im))
+			mat.set_shader_parameter("uBox", Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+			var c := func(x: float, y: float) -> Vector2: return Vector2(4268.0 + (x - y) * 32.0, 968.0 + (x + y) * 16.0)
+			_poly = PackedVector2Array([c.call(x0 - 1, y0 - 1), c.call(x1 + 2, y0 - 1), c.call(x1 + 2, y1 + 2), c.call(x0 - 1, y1 + 2)])
+		draw_colored_polygon(_poly, Color.WHITE)
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
 		var u = v.LG.ug.get(t)
