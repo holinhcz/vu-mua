@@ -492,16 +492,59 @@ class TileLayer extends Node2D:
 				if not g.road.has(k):
 					rm.append(k)
 			M.road_set(g.road.duplicate(), rm)
-		for k in g.gt:
-			var p: PackedStringArray = String(k).split(",")
-			_nen(String(g.gt[k]), int(p[0]), int(p[1]))
+		# nền: lượt 1 lõi từng ô, lượt 2 dải loang sang ô bên cạnh khác loại / ra cỏ
+		for pass_i in 2:
+			for k in g.gt:
+				var p: PackedStringArray = String(k).split(",")
+				_nen_blend(g.gt, String(g.gt[k]), int(p[0]), int(p[1]), pass_i == 1)
 
 	var _road_sig := ""
 	func _road(t: String, a: float, n: float, _e: int, _r: int) -> void:   # hình thẻ đường: ô bằng ảnh mặt đường đó
 		tex_dia(t, a, n)
 
-	func _nen(t: String, e: int, r: int) -> void:
-		_nen_at(t, 4268.0 + (e - r) * 32.0, 968.0 + (e + r) * 16.0, e, r, true)
+	# NỀN GIÁP NHAU LOANG VÀO NHAU (bản 224): mỗi cạnh ô giáp nền khác loại hoặc giáp cỏ có một dải mờ dần ra hai bên cạnh
+	# (dải song song cạnh, rộng BL_W khoảng tâm-cạnh). Hai nền khác loại: mỗi bên lấn sang bên kia, ở cạnh còn 50/50 -> chuyển màu
+	# mềm. Giáp cỏ: mép nền nhạt dần ra cỏ. Cùng loại: không có dải (ảnh cùng chỗ lặp theo toạ độ làng nên liền một mặt).
+	const BL_W := 0.6   # bề rộng dải loang, tính theo khoảng tâm ô - cạnh
+	const NB := [[Vector2i(0, -1), 0, 1], [Vector2i(1, 0), 1, 2], [Vector2i(0, 1), 2, 3], [Vector2i(-1, 0), 3, 0]]   # ô bên cạnh, 2 góc của cạnh
+
+	func _nen_blend(gt: Dictionary, t: String, e: int, r: int, ring: bool) -> void:
+		var u = v.LG.ug.get(t)
+		if u == null or not u.has("tx"):
+			return
+		var tex: Texture2D = v.F.main.road_tex.get(String(u.tx))
+		var a := 4268.0 + (e - r) * 32.0
+		var n := 968.0 + (e + r) * 16.0
+		var C := Vector2(a, n + 16.0)
+		var P := [Vector2(a, n - 0.6), Vector2(a + 32.8, n + 16), Vector2(a, n + 32.6), Vector2(a - 32.8, n + 16)]
+		var sc := 96.0 if String(u.tx) == "soi" else 112.0
+		if not ring:   # lõi: cả ô đậm
+			_quad(tex, sc, P, [1.0, 1.0, 1.0, 1.0])
+			return
+		for d in NB:   # dải loang ra ngoài cạnh: chỉ khi bên kia khác loại (nền khác hoặc cỏ)
+			var nb2 = gt.get(str(e + d[0].x) + "," + str(r + d[0].y))
+			if nb2 != null and String(nb2) == t:
+				continue
+			# dải đẩy thẳng ra ngoài cạnh (song song cạnh, không toả theo góc): dải các ô kề nhau cùng hàng nối liền, không chồng
+			var E: Vector2 = P[d[2]] - P[d[1]]
+			var N := Vector2(E.y, -E.x).normalized()
+			if N.dot(P[d[1]] - C) < 0.0:
+				N = -N
+			var w: float = N.dot(P[d[1]] - C) * BL_W
+			var a0 := 0.5 if nb2 != null else 1.0   # giáp nền khác: hai bên lấn nhau, ở cạnh 50/50; giáp cỏ: mép nhạt dần ra cỏ
+			var ww := w if nb2 != null else w * 1.5
+			_quad(tex, sc, [P[d[1]], P[d[2]], P[d[2]] + N * ww, P[d[1]] + N * ww], [a0, a0, 0.0, 0.0])
+
+	func _quad(tex: Texture2D, sc: float, Q: Array, al: Array) -> void:   # tứ giác Q bằng ảnh tex (lặp theo toạ độ làng), độ đậm theo đỉnh
+		var pts := PackedVector2Array()
+		var uv := PackedVector2Array()
+		var col := PackedColorArray()
+		for i in 4:
+			pts.append(Q[i])
+			uv.append(Q[i] / sc)
+			col.append(Color(1, 1, 1, float(al[i])) if tex != null else Color(0.72, 0.64, 0.48, float(al[i])))
+		_cv().texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		_cv().draw_polygon(pts, col, uv, tex)
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
 		var u = v.LG.ug.get(t)
