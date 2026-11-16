@@ -10,7 +10,7 @@ SITE, OD = sys.argv[1:3]
 G = '/mnt/project-files/nong-trai-chung/godot/'
 KF = {'banana': 'caytrai/chuoi', 'areca': 'caylang/cau', 'bamboo': 'caylang/tre', 'coconut': 'caytrai/dua', 'papaya': 'caytrai/dudu',
       'reed': 'caydai/co_lau', 'haystack': 'caylang/rom', 'shrine': 'congtrinh/shrine', 'banyan': 'caylang/da', 'lotus': 'thuysinh/sen',
-      'lantern': 'congtrinh/lantern', 'dao': 'kieng/dao', 'boat': 'congtrinh/ghe', 'bridge2': 'congtrinh/caukhi'}
+      'lantern': 'congtrinh/lantern', 'boat': 'congtrinh/ghe', 'bridge2': 'congtrinh/caukhi'}
 TOL = 40
 I = json.load(open(SITE + '/info.json'))
 def pm(a):
@@ -20,7 +20,6 @@ def frames(fd):
     for k, f in A['frames'].items():
         day = (k.startswith('d') and not k.startswith('dw')) or (len(k) == 2 and k[1] == 'd')
         if not day: continue
-        if fd == 'kieng/dao' and not (4 <= int(k[1:]) <= 7): continue   # dao: the hạ (summer) frames; seasons come later
         im = Image.open(G + fd + '/' + f['file']).convert('RGBA'); im = im.crop(im.getbbox())
         if ppu != 9: im = im.resize((round(im.width * 9 / ppu), round(im.height * 9 / ppu)), Image.LANCZOS)
         out.append((fd + '/' + f['file'], im, ppu))

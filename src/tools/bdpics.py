@@ -24,7 +24,6 @@ for id_,fold,pre in [('banana','caytrai/chuoi','d'),('coconut','caytrai/dua','d'
     put(id_,fold,seeds(4,lambda s,pre=pre:['%s%d%d'%(pre,s&1,s>>1)]),sway=True)
 put('wildbanana','caytrai/chuoi',seeds(4,lambda s:['dw%d'%(s&3)]),sway=True)
 put('lotus','thuysinh/sen',seeds(4,lambda s:['d%d'%(s&3)]),sway=True)
-put('dao','kieng/dao',{'%d_%d'%(se,s):['d%d'%(s+4*se)] for se in range(4) for s in range(4)},sway=True)   # web dao season:1, khung d<seed+4*mùa>
 put('lantern','congtrinh/lantern',{'0':['d0']},sway=False)
 put('boat','congtrinh/ghe',seeds(4,lambda s:['d%d'%(s&3)]),sway=False)
 put('haystack','caylang/rom',seeds(2,lambda s:['d%d'%(s&1)]),sway=False)

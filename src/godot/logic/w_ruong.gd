@@ -14,7 +14,7 @@ var ui = null              # w_ruong_ui.gd (người ghép gán): CZ / U6
 const K6 := 200            # xu mua 10 nước ngọt
 const Q6 := 4000           # xu xây cống ngăn mặn
 const ZM := 210.0          # giây ra 1 phần mật ong
-const WD := {"hibiscus": 1, "bougainvillea": 1, "mai": 1, "dao": 1, "lotus": 1, "gianbau": 1, "gianbau2": 1}   # wD
+const WD := {"hibiscus": 1, "bougainvillea": 1, "mai": 1, "lotus": 1, "gianbau": 1, "gianbau2": 1}   # wD
 const DM := ["real", "fast", "day", "night"]
 
 var ol := {}               # giống lai

@@ -1,4 +1,4 @@
-# Gói 1 thư mục ảnh 9 px (hinh/<nhóm>/<tên>, khung d*) thành l/<tên gói>.wasm cho Godot: python3 pkdir.py <thư mục> <ra> <tên gói>
+# Gói 1 thư mục ảnh 9 px (hinh/<nhóm>/<tên>, khung d* (ngày) + n* (đêm)) thành l/<tên gói>.wasm cho Godot: python3 pkdir.py <thư mục> <ra> <tên gói>
 import json,io,struct,hashlib,sys
 from PIL import Image
 src,out,name=sys.argv[1],sys.argv[2],sys.argv[3]
@@ -7,7 +7,7 @@ def raw(im):
     b=io.BytesIO();im.save(b,'WEBP',lossless=True,quality=100,method=4,exact=True);return b.getvalue()
 items=[];meta={};idx={};blob=b'';seen={}
 for k in sorted(AA):
-    if not k.startswith('d'): continue
+    if not (k.startswith('d') or k.startswith('n')): continue   # ngày + đêm
     f=AA[k];im=Image.open(src+'/'+f['file']).convert('RGBA')
     meta[k]=[f['ox'],f['oy'],f['gw'],f['gh']]
     items.append((k,raw(im)))

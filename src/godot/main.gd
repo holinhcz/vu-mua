@@ -1118,7 +1118,7 @@ func set_quality(q) -> void:
 func set_motion(_off) -> void:
 	pass   # Link 11-13: motion always on, on every device, no switch
 const SWAY_KIND := {"hibiscus": 1, "banana": 1, "bamboo": 1, "lotus": 1, "bougainvillea": 1, "coconut": 1, "areca": 1, "mango": 1,
-	"reed": 1, "jackfruit": 1, "papaya": 1, "dieu": 1, "mai": 1, "dao": 1, "wildbanana": 1, "wildbush": 1, "tallgrass": 1, "tram": 1}
+	"reed": 1, "jackfruit": 1, "papaya": 1, "dieu": 1, "mai": 1, "wildbanana": 1, "wildbush": 1, "tallgrass": 1, "tram": 1}
 # below zoom .7 (css) the web stops the sway: the sprites go back to the one plain material so far views still batch
 func _sway_tick() -> void:
 	var on := zoom / maxf(dpr, 0.01) >= 0.7 and not sway_off and not motion_off
@@ -1648,7 +1648,6 @@ func _sc_item_map() -> bool:
 		var p := best.split("|")
 		sc_item[j] = {"b": fm.lang_ve.bundle(p[0]), "id": p[0], "seed": int(p[1]), "k": ""}
 	_sci_ok = true
-	print("pond-log wild trees as item pictures: ", sc_item.size(), " kinds")
 	return true
 func _sc_item_k(j: int) -> String:   # khung ảnh món của loại j theo mùa hiện tại
 	var e: Dictionary = sc_item[j]
@@ -3203,8 +3202,6 @@ func _ss_tick() -> void:
 # (n/ls<season>.wasm: 8 pieces per tree kind, each its own lossless picture, 8 px per unit as painted). Places, hashes and
 # flips come from the game itself (tools/lfprep.py, n/lf.wasm); none on water. Drawn in 512-unit chunks, one atlas built
 # in memory so every chunk batches.
-const LF_KINDS := ["da", "xoai", "mit", "dieu", "tram", "tre", "chuoi", "dua", "cau", "dudu", "dambut", "bonggiay", "dao", "mai", "caosu",
-	"me", "nhan", "chomchom", "buoi", "cam", "mangcut", "saurieng", "man", "thanhlong"]
 const LF_SC := 1.25 / 8.0   # world units per piece pixel (web 1.25/6 on its 6 px sheet)
 var lf_root: Node2D = null
 var lf_chunks := []
