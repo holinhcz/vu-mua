@@ -1628,6 +1628,7 @@ func _xw_sync() -> void:
 				if e[0] == xnodes[k]:
 					e[1] = dk
 					e[2] = -2
+		xnodes[k].set_meta("fp", Rect2(s.gx, s.gy, s.fw, s.fd))   # ô chiếm (main.zorder)
 	_resort()
 	# bên nền dọn cây cảnh / đồ trang trí nằm trên chỗ xưởng (web jz: g.mv dời đi)
 	if lang != null:   # chuồng đã xây + vật cảnh đã nhận / cây cỏ đã dọn

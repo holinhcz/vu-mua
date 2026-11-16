@@ -149,13 +149,17 @@ func _keep(key: String, grp: Array) -> void:
 		cache[key] = []
 	cache[key].append(grp)
 
-func _item(old: Dictionary, id: String, seed: int, foot: Vector2, dk: float, sea: String) -> void:
+func _item(old: Dictionary, id: String, seed: int, foot: Vector2, dk: float, sea: String, fp := Rect2()) -> void:
 	var key := id + "|" + str(seed) + "|" + str(foot) + "|" + str(dk) + "|" + sea
 	if _reuse(old, key):
 		return
 	var n0 := nodes.size()
 	_obj(id, seed, foot, dk)
-	_keep(key, nodes.slice(n0))
+	var grp := nodes.slice(n0)
+	if fp.size.x * fp.size.y > 1.0:   # món nhiều ô: ô chiếm (main.zorder xếp đồ quanh nó theo ô, không theo tâm)
+		for s in grp:
+			s.set_meta("fp", fp)
+	_keep(key, grp)
 
 func sync() -> void:
 	var O: Array = LG.objs()
@@ -183,14 +187,14 @@ func sync() -> void:
 			continue
 		var cx: float = float(o.gx) + float(t.fw) / 2.0
 		var cy: float = float(o.gy) + float(t.fd) / 2.0
-		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea)
+		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea, Rect2(float(o.gx), float(o.gy), float(t.fw), float(t.fd)))
 	# vật cảnh có sẵn (lang.SO, trừ cây cỏ hoang): vẽ như đồ đặt, không dùng ảnh chụp của nền, nên dời đi là chỗ cũ trống luôn
 	for o in LG.SO:
 		if o.wild or not PICS.has(o.id) or fell.has(o.sk) or not LG.so_shown(o):
 			continue
 		var cx: float = float(o.gx) + float(o.fw) / 2.0
 		var cy: float = float(o.gy) + float(o.fd) / 2.0
-		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea)
+		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea, Rect2(float(o.gx), float(o.gy), float(o.fw), float(o.fd)))
 	for k in LG.G.g.minis:
 		var p: PackedStringArray = String(k).split(",")
 		var c := int(p[0])
@@ -217,6 +221,7 @@ func sync() -> void:
 				F.add_child(s)
 				nodes.append(s)
 			else:
+				s.set_meta("fp", Rect2(g.x, g.y, float(LG.C.mo[p].w), float(LG.C.mo[p].h)))
 				_add(s, 968.0 + (g.x + g.y + float(e[1])) * 16.0)
 		_keep(key, nodes.slice(n0))
 	# món không còn: gỡ khỏi danh sách xếp lớp một lượt rồi bỏ

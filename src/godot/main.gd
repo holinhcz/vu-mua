@@ -210,6 +210,7 @@ func _start() -> void:
 			od["piv"] = Vector2(float(r[0]) + float(r[2]) * 0.5, float(r[1]) + float(r[3]) * 0.88)
 			s.position = od["piv"]
 			s.self_modulate = Color(1, 1, 1, SWAY_A)
+		od["spr"].set_meta("ft", od["piv"] if od.has("piv") else Vector2(float(r[0]) + float(r[2]) * 0.5, float(r[1]) + float(r[3]) * 0.88))
 		objs.append(od)
 	if info.get("native", false):
 		_make_ground()
@@ -1414,6 +1415,7 @@ func _verges(road: Image, meta: Dictionary) -> Array:
 				row.items = S
 				row.meta = meta
 				row.tex = vg_tex
+				row.set_meta("ftt", Vector2(x + 0.5 + dd.x * 0.5, y + 0.5 + dd.y * 0.5))   # chân hàng cỏ: giữa mép ô (toạ độ ô)
 				out.append([x + y + 1 + (0.47 if sd > 0 else -0.47), row])
 	return out
 
@@ -1460,6 +1462,7 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 				s.set_meta("pco", true)
 			lot_spr.append(s)
 		s.set_meta("k", e[0])
+		s.set_meta("ft", Vector2(r[1], r[2]))   # chân (màn)
 		s.set_meta("j", j)   # loại cảnh (chạm theo điểm ảnh hình gốc khi đang dùng atlas)
 		sc_root.add_child(s)
 		sc_spr[j].append(s)
@@ -3931,22 +3934,47 @@ func _drw_text(frames: int) -> String:
 		o.append("%s %.1f" % [ks[i], drw[ks[i]] / maxf(1.0, frames)])
 	drw.clear()
 	return " · ".join(o)
-# ---- THỨ TỰ VẼ (bản 197, viết lại, một luật duy nhất) ----
-# Mọi thứ đứng trên làng nằm chung obj_root: cảnh, nhà, cây, cỏ ven đường (khoá meta "k"), đồ của logic (farm.sortables:
-# [node, chân y]). Khoá = độ sâu ô của chân = (y chân - 968) / 16. Chân càng gần mình (khoá lớn) càng vẽ sau, đè lên.
-# - Có gì vào / ra obj_root hoặc khoá cảnh đổi: sắp lại TOÀN BỘ theo khoá (y như lúc mở game).
-# - Mỗi khung: chỉ đồ đang đi (người, con vật, ghe...) đổi khoá: chen lại đúng chỗ giữa các cảnh đã xếp.
+# ---- THỨ TỰ VẼ (bản 198, một luật duy nhất cho mọi vật) ----
+# Cái nào đứng trước thì vẽ đè lên. "Đứng trước" tính theo Ô ĐẤT, như hộp đặt trên lưới:
+#  - vật một ô: so độ sâu ô của chân (khoá = x + y của chân, meta "k" / chân y của logic);
+#  - vật nhiều ô (nhà, xưởng, chuồng: meta "fp" = ô chiếm): vật khác nằm ở các ô phía trước hộp (x >= x1 hoặc y >= y1) luôn vẽ
+#    sau hộp, ở các ô phía sau (x < x0 hoặc y < y0) luôn vẽ trước hộp, dù tâm hộp sâu hơn hay nông hơn chân nó. (Lỗi cũ: so
+#    tâm nhà với chân cây: cây đứng trước góc nhà mà vẫn bị nhà đè, cỏ trước nền xưởng bị nền che.)
+# Có gì vào / ra obj_root hoặc làng đổi: xếp lại toàn bộ. Mỗi khung: đồ đang đi (người, con vật, ghe) chen lại theo luật đó.
 var zo_dirty := true
-var zo_keys := PackedFloat32Array()   # khoá cảnh theo thứ tự đang vẽ
-var zo_nodes := []                    # cảnh tương ứng
+var zo_keys := PackedFloat32Array()   # khoá (đã chỉnh theo hộp) của vật đứng yên, theo thứ tự đang vẽ
+var zo_nodes := []
 var _zo_n := -1
 var _zo_hook := false
+var _zo_box := {}                     # int(khoá) -> [[ô chiếm, khoá nhỏ nhất, khoá lớn nhất]] của vật nhiều ô
 static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" số; không có thì đi theo cái trước
 	if n.has_meta("k"):
 		var v = n.get_meta("k")
 		if v is float or v is int:
 			return float(v)
 	return last
+func _zo_tile(n: Node, sy: float) -> Vector2:   # ô của chân vật (sy: y chân trên màn khi biết)
+	if n.has_meta("ftt"):
+		return n.get_meta("ftt")
+	if n.has_meta("ft"):
+		return _foot_tile(n.get_meta("ft"))
+	var x: float = (n as Node2D).position.x if n is Node2D else 0.0
+	return _foot_tile(Vector2(x, sy))
+func _zo_fix(n: Node, k: float, t: Vector2) -> float:   # khoá đã chỉnh theo các hộp nhiều ô quanh đó
+	if n.has_meta("fp"):
+		return k
+	for b in range(int(floor(k)) - 6, int(floor(k)) + 7):
+		for e in _zo_box.get(b, []):
+			var r: Rect2 = e[0]
+			if t.x >= r.position.x and t.y >= r.position.y and t.x < r.end.x and t.y < r.end.y:
+				continue
+			if t.x >= r.end.x - 0.001 or t.y >= r.end.y - 0.001:   # ô phía trước hộp
+				if t.x > r.position.x - 1.5 and t.y > r.position.y - 1.5 and k <= float(e[2]):
+					k = float(e[2]) + 0.0005
+			elif t.x <= r.position.x + 0.001 or t.y <= r.position.y + 0.001:   # ô phía sau hộp
+				if t.x < r.end.x + 1.5 and t.y < r.end.y + 1.5 and k >= float(e[1]):
+					k = float(e[1]) - 0.0005
+	return k
 func zorder() -> void:
 	if sc_data.is_empty() and objs.is_empty():
 		return
@@ -3961,10 +3989,32 @@ func zorder() -> void:
 		for e in fm.sortables:
 			var n = e[0]
 			if is_instance_valid(n) and n.get_parent() == obj_root and not n.is_queued_for_deletion():
-				dyn[n] = true
-				L.append([(float(e[1]) - 968.0) / 16.0, n])
+				dyn[n] = float(e[1])
+	var full: bool = _zo_n != obj_root.get_child_count() - dyn.size() or zo_dirty
+	if full:   # hộp nhiều ô (nhà, xưởng, chuồng) gom lại trước
+		_zo_box = {}
+		var bx := {}
+		for n in dyn:
+			if n.has_meta("fp"):
+				var r: Rect2 = n.get_meta("fp")
+				var k := (float(dyn[n]) - 968.0) / 16.0
+				var key := str(r)
+				if not bx.has(key):
+					bx[key] = [r, k, k]
+				bx[key][1] = minf(bx[key][1], k)
+				bx[key][2] = maxf(bx[key][2], k)
+		for key in bx:
+			var e: Array = bx[key]
+			var r: Rect2 = e[0]
+			for b in range(int(floor(r.position.x + r.position.y)), int(floor(r.end.x + r.end.y)) + 1):
+				if not _zo_box.has(b):
+					_zo_box[b] = []
+				_zo_box[b].append(e)
+	for n in dyn:
+		var k := (float(dyn[n]) - 968.0) / 16.0
+		L.append([_zo_fix(n, k, _zo_tile(n, dyn[n])) if not _zo_box.is_empty() else k, n])
 	L.sort_custom(func(a, b): return a[0] < b[0])
-	if _zo_n != obj_root.get_child_count() - dyn.size() or zo_dirty:   # cảnh đổi: sắp lại toàn bộ
+	if full:   # xếp lại toàn bộ
 		zo_dirty = false
 		var st := []
 		var last := -1.0e9
@@ -3973,7 +4023,10 @@ func zorder() -> void:
 			if dyn.has(n) or n.is_queued_for_deletion():
 				continue
 			last = _zkey(n, last)
-			st.append([last, i, n])
+			var kk := last
+			if not _zo_box.is_empty() and (n.has_meta("ft") or n.has_meta("ftt")):
+				kk = _zo_fix(n, last, _zo_tile(n, 0.0))
+			st.append([kk, i, n])
 			i += 1
 		st.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
 		zo_keys = PackedFloat32Array()
@@ -3995,7 +4048,7 @@ func zorder() -> void:
 				obj_root.move_child(order[k], k)
 		_zo_n = obj_root.get_child_count() - dyn.size()
 		return
-	# đồ của logic: đứng sau cảnh cuối cùng có khoá nhỏ hơn mình, trước cảnh đầu tiên có khoá lớn hơn hoặc bằng
+	# mỗi khung: đồ của logic đứng sau vật đứng yên cuối cùng có khoá nhỏ hơn mình
 	var pt := -1
 	var pn: Node = null
 	for e in L:
