@@ -1413,7 +1413,10 @@ func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòn
 	var rt = rm_gi.get(".rmt")
 	if rt != null:
 		_txt(rt, String(G.lang.Pi[t.id].n))
-		_rm_small(rt, fw > 0.0, tfmt((c - minf(c, fw) * 0.09) if fw > 0.0 else c))
+		var tm := tfmt((c - minf(c, fw) * 0.09) if fw > 0.0 else c)
+		if vf:   # cây có sẵn của làng: cùng dòng giờ, ghi còn mấy ngày thì tự mất (bỏ chữ "Đang ướt" cho vừa chip: vòng nước đã báo)
+			tm += " · Còn " + str(G.lang.days_left(t)) + " ngày"
+		_rm_small(rt, fw > 0.0 and not vf, tm)
 
 func _rm_tree_pos() -> void:   # am (fi.t): vòng nút đứng trên ngọn cây
 	var L = G.lang
