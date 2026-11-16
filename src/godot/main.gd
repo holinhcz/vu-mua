@@ -3979,20 +3979,22 @@ func _zo_tile(n: Node, sy: float) -> Vector2:   # ô của chân vật (sy: y ch
 		return _foot_tile(n.get_meta("ft"))
 	var x: float = (n as Node2D).position.x if n is Node2D else 0.0
 	return _foot_tile(Vector2(x, sy))
-func _zo_fix(n: Node, k: float, t: Vector2) -> float:   # khoá đã chỉnh theo các hộp nhiều ô quanh đó
+func _zo_fix(n: Node, k: float, t: Vector2) -> float:   # khoá đã chỉnh theo ô chân các vật (hộp) sát nó
 	if n.has_meta("fp"):
 		return k
 	for b in range(int(floor(k)) - 6, int(floor(k)) + 7):
 		for e in _zo_box.get(b, []):
 			var r: Rect2 = e[0]
-			if t.x >= r.position.x and t.y >= r.position.y and t.x < r.end.x and t.y < r.end.y:
+			if t.x > r.position.x + 0.001 and t.y > r.position.y + 0.001 and t.x < r.end.x - 0.001 and t.y < r.end.y - 0.001:   # nằm trong hộp
 				continue
-			if t.x >= r.end.x - 0.001 or t.y >= r.end.y - 0.001:   # ô phía trước hộp
-				if t.x > r.position.x - 1.5 and t.y > r.position.y - 1.5 and k <= float(e[2]):
-					k = float(e[2]) + 0.0005
-			elif t.x <= r.position.x + 0.001 or t.y <= r.position.y + 0.001:   # ô phía sau hộp
-				if t.x < r.end.x + 1.5 and t.y < r.end.y + 1.5 and k >= float(e[1]):
-					k = float(e[1]) - 0.0005
+			# một luật cho mọi vật (1 ô hay nhiều ô): chỗ t nằm thẳng phía trước hộp (theo x hoặc theo y, trong bề ngang hộp)
+			# thì vẽ sau hộp; thẳng phía sau thì vẽ trước; nằm chéo thì giữ khoá
+			var inx: bool = t.x > r.position.x and t.x < r.end.x
+			var iny: bool = t.y > r.position.y and t.y < r.end.y
+			if (iny and t.x >= r.end.x - 0.001) or (inx and t.y >= r.end.y - 0.001):
+				k = maxf(k, float(e[2]) + 0.0005)
+			elif (iny and t.x <= r.position.x + 0.001) or (inx and t.y <= r.position.y + 0.001):
+				k = minf(k, float(e[1]) - 0.0005)
 	return k
 # DÒ (tạm, bản 205): chạm đâu thì dòng đồng hồ hiện các hình ở chỗ đó, trên cùng trước: loại, ô chân, ô chiếm, khoá, thứ tự vẽ
 var tap_dbg := ""
