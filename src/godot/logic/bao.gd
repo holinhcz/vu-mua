@@ -2,8 +2,9 @@ extends RefCounted
 # Giông bão: chép module "bao" của bản web.
 # Cây ngã khi giông tới (lQ / LK), sét đánh cây (HK), cháy âm ỉ rồi ngã (PK), cưa cây ngã ra củi (uk),
 # cây con lớn lại sau 8 phút. Cây ngã đè lên ruộng thì ruộng đó ngưng lớn (_B).
-# Danh sách cây (So của bản web, cây có sk và nằm trong Em) ở ui/snap/bao_cay.json.
-# Trạng thái lưu trong G.g.wx = {fell: {sk: {s, p, at, d}}, rung: [], fs}.
+# Cây = cây đang đứng thật trong làng (bản 191): cây cảnh có sẵn chưa dời (lang.SO, khoá sk) + cây mình đặt / đã dời / tự
+# trồng (lang.objs, khoá "o" + số riêng của món). Sét, gió chọn trong đó, cháy / ngã / cây con ở đúng chỗ cây đứng; dời cây
+# thì trạng thái đi theo cây. Trạng thái lưu trong G.g.wx = {fell: {khoá: {s, p, at, d}}, rung: [], fs}.
 
 const EM := {"coconut": 3, "areca": 3, "banana": 2, "mango": 2, "jackfruit": 2, "papaya": 2, "bamboo": 1, "banyan": 1, "caosu": 2, "dieu": 1}
 const SK := 90000.0        # cây bị sét cháy 90 giây rồi ngã
@@ -11,23 +12,61 @@ const ON := 480000.0       # cây con 8 phút lớn lại
 const IG := {"caosu": "cây cao su", "dieu": "cây điều", "mango": "cây xoài", "jackfruit": "cây mít", "coconut": "cây dừa",
 	"banana": "cây chuối", "areca": "cây cau", "bamboo": "bụi tre"}
 
+# món mình đặt -> loài cây của bão (cây ăn trái ft_* là cây cùng loài)
+const OBJ := {"ft_dua": "coconut", "ft_xoai": "mango", "ft_mit": "jackfruit", "ft_dudu": "papaya", "ft_chuoi": "banana", "ft_dieu": "dieu"}
+
 var G
 var farm = null            # farm.gd gắn vào khi dựng: pc_own, onscreen
-var trees := []
-var by := {}
-var ver := 0               # h6: đổi mỗi khi cây đổi trạng thái (để vẽ lại)
+var by := {}               # khoá -> cây {sk, id, gx, gy, fw, fd, pc, ring, wild, own}
+var ver := 0               # h6: đổi mỗi khi cây đổi trạng thái / chỗ (để vẽ lại)
 var bolt = null            # tia sét đang vẽ: {x, y, t, pts} (toạ độ làng)
 var _msg := ""
 var _msg_t := 0.0
 var _pk := 0.0
+var _lsig := ""
 
 func _init(game) -> void:
 	G = game
-	var a = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/bao_cay.json"))
-	if a is Array:
-		trees = a
-	for t in trees:
-		by[t.sk] = t
+
+func live() -> Dictionary:   # dựng lại danh sách cây khi làng đổi (đặt, dời, nhận cây, xây xưởng / chuồng)
+	var L = G.lang
+	if L == null:
+		return by
+	var sg := str(L.ver) + "/" + str(G.g.get("mv", {}).size()) + "/" + str(L.objs().size()) + "/" + str(G.g.get("fac")) + "/" + str(G.g.get("penb"))
+	if sg == _lsig:
+		return by
+	_lsig = sg
+	var R := []   # xưởng, chuồng đã xây: cây cảnh dưới đó đã bị dọn
+	if G.xw != null:
+		for k in G.xw.list_built():
+			var e: Dictionary = G.xw.sr[k]
+			R.append(Rect2(float(e.gx), float(e.gy), float(e.fw), float(e.fd)))
+	for p in L.C.Di:
+		if L.pen_built(p):
+			var q: Vector2i = L.pen_pos(p)
+			R.append(Rect2(q.x, q.y, float(L.C.mo[p].w), float(L.C.mo[p].h)))
+	var out := {}
+	for o in L.SO:
+		if o.sk == "" or not EM.has(o.id) or not L.so_shown(o):
+			continue
+		var c := Vector2(float(o.gx) + float(o.fw) / 2.0, float(o.gy) + float(o.fd) / 2.0)
+		if R.any(func(r): return r.has_point(c)):
+			continue
+		out[o.sk] = {"sk": o.sk, "id": o.id, "gx": o.gx, "gy": o.gy, "fw": o.fw, "fd": o.fd, "pc": o.pc, "ring": o.ring, "wild": o.wild, "own": false}
+	var O: Array = L.objs()
+	for o in O:
+		var id: String = OBJ.get(String(o.id), String(o.id))
+		if not EM.has(id):
+			continue
+		if not o.has("bk"):   # số riêng của món (giữ qua dời chỗ, lưu theo save)
+			G.g["bkn"] = int(G.g.get("bkn", 0)) + 1
+			o["bk"] = int(G.g.bkn)
+		var t = L.Pi.get(o.id)
+		var k := "o" + str(o.bk)
+		out[k] = {"sk": k, "id": id, "gx": o.gx, "gy": o.gy, "fw": t.fw if t != null else 1, "fd": t.fd if t != null else 1, "pc": "", "ring": false, "wild": false, "own": true}
+	by = out
+	ver += 1
+	return by
 
 static func now() -> float:
 	return Time.get_unix_time_from_system() * 1000.0
@@ -44,40 +83,18 @@ func wx() -> Dictionary:   # Tf
 		t.fs = -1
 	return t
 
-func ck(t: Dictionary) -> bool:   # CK: cây trong khu đã mua, không phải cây hoang
-	if not EM.has(t.id) or t.get("ring", false) or t.get("wild", false) or t.get("pc") == null:
+func ck(t: Dictionary) -> bool:   # CK: cây mình đặt, hoặc cây cảnh trong khu đã mua (không phải cây hoang)
+	if t.own:
+		return true
+	if t.ring or t.wild or t.pc == null:
 		return false
 	return farm != null and farm.pc_own(String(t.pc))
-
-func moved(sk: String) -> bool:   # cây không còn đứng chỗ gốc: đã nhận / dời đi (g.mv), hoặc xưởng / chuồng xây đè lên (nền giấu
-	# cây dưới đó). Không ngã, không cháy, không mọc cây con ở đó (trước đây cây con mọc giữa nhà, giữa xưởng)
-	if G.g.get("mv") is Dictionary and G.g.mv.has(sk):
-		return true
-	var t = by.get(sk)
-	if t == null:
-		return true
-	var cx := float(t.gx) + float(t.fw) / 2.0
-	var cy := float(t.gy) + float(t.fd) / 2.0
-	var R := []
-	if G.xw != null:
-		for k in G.xw.list_built():
-			var e: Dictionary = G.xw.sr[k]
-			R.append([float(e.gx), float(e.gy), float(e.fw), float(e.fd)])
-	if G.lang != null:
-		for p in G.lang.C.Di:
-			if G.lang.pen_built(p):
-				var q: Vector2i = G.lang.pen_pos(p)
-				R.append([float(q.x), float(q.y), float(G.lang.C.mo[p].w), float(G.lang.C.mo[p].h)])
-	for r in R:
-		if cx >= r[0] and cy >= r[1] and cx < r[0] + r[2] and cy < r[1] + r[3]:
-			return true
-	return false
 
 func hn() -> Array:   # HN: cây còn đứng, ngã được
 	var f: Dictionary = wx().fell
 	var a := []
-	for t in trees:
-		if not f.has(t.sk) and ck(t) and not moved(String(t.sk)):
+	for t in live().values():
+		if not f.has(t.sk) and ck(t):
 			a.append(t)
 	return a
 
@@ -171,10 +188,7 @@ func pk() -> void:   # PK: cháy xong thì ngã, cây con lớn xong thì về n
 	var n := false
 	for e in t.fell.keys():
 		var r: Dictionary = t.fell[e]
-		if moved(String(e)):   # cây ngã / cháy / cây con ở chỗ gốc của cây đã dời đi: bỏ (trước đây cây con mọc giữa nhà)
-			t.fell.erase(e)
-			n = true
-		elif r.s == "burn" and a - float(r.at) > SK:
+		if r.s == "burn" and a - float(r.at) > SK:
 			t.fell[e] = {"s": "down", "p": -1, "at": a, "d": [[1, 0], [0, 1], [1, 1]].pick_random()}
 			n = true
 		elif r.s == "grow" and a - float(r.at) > ON:
@@ -196,11 +210,13 @@ func step(dt: float) -> void:
 	_pk -= dt
 	if _pk <= 0.0:
 		_pk = 2.0
-		# cây đã mất khỏi danh sách: bỏ (d6)
+		# cây không còn đứng (bán, nhận rồi bỏ, xưởng xây đè): bỏ trạng thái (d6)
 		var f: Dictionary = wx().fell
+		var L0 := live()
 		for k in f.keys():
-			if not by.has(k):
+			if not L0.has(k):
 				f.erase(k)
+				ver += 1
 		pk()
 
 func blocks(i: int) -> bool:   # _B: ruộng bị cây ngã đè

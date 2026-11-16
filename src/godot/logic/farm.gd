@@ -2050,18 +2050,23 @@ func _fell_sync(tt: float, zz: float) -> void:
 			if not B.by.has(k):
 				continue
 			var t: Dictionary = B.by[k]
-			hide[k] = [t.gx, t.gy, t.fw, t.fd, t.id]
+			if not t.own:   # cây cảnh có sẵn: bên nền giấu hình gốc; cây mình đặt thì lang_ve thôi vẽ
+				hide[k] = [t.gx, t.gy, t.fw, t.fd, t.id]
+			var cx := float(t.gx) + float(t.fw) / 2.0
+			var cy := float(t.gy) + float(t.fd) / 2.0
 			if not fells.has(k):
 				var n := FellNode.new()
 				n.farm = self
-				n.t = t
-				var cx := float(t.gx) + float(t.fw) / 2.0
-				var cy := float(t.gy) + float(t.fd) / 2.0
-				n.position = Vector2(en(cx, cy), nn(cx, cy))
 				n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 				main.obj_root.add_child(n)
-				sortables.insert(sortables.size() - 1, [n, nn(cx, cy), -2])   # nhân vật luôn ở cuối danh sách
+				sortables.insert(sortables.size() - 1, [n, 0.0, -2])   # nhân vật luôn ở cuối danh sách
 				fells[k] = n
+			var fn: FellNode = fells[k]   # đứng đúng chỗ cây (dời cây thì đi theo)
+			fn.t = t
+			fn.position = Vector2(en(cx, cy), nn(cx, cy))
+			for e in sortables:
+				if e[0] == fn:
+					e[1] = nn(cx, cy)
 		# bên nền giấu cây gốc (d6 bản web thay hình cây bằng cây ngã / cháy / cây con)
 		if main.has_method("cay_an"):
 			main.cay_an(hide)

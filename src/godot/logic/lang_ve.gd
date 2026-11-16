@@ -179,7 +179,7 @@ func sync() -> void:
 			continue   # đang dời: vẽ bằng hình ma theo chỗ đang chọn
 		var o: Dictionary = O[n]
 		var t = LG.Pi.get(o.id)
-		if t == null or o.id == "pond":
+		if t == null or o.id == "pond" or (o.has("bk") and fell.has("o" + str(o.bk))):   # cây mình đang cháy / ngã / mọc lại: FellNode vẽ thay
 			continue
 		var cx: float = float(o.gx) + float(t.fw) / 2.0
 		var cy: float = float(o.gy) + float(t.fd) / 2.0
