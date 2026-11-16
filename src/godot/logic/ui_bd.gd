@@ -1307,15 +1307,16 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		e.gx = gx
 		e.gy = gy
 		e.seed = seed
+		L.occupy(gx, gy, int(t0.fw), int(t0.fd))   # có thể bỏ bớt cây có sẵn: chỉ số món đổi
 		_vm(t0, gx, gy)
 		G.vib(10)
-		sel = move_idx
+		sel = L.objs().find(e)
 		move_idx = -1
 		L.changed()
 		G.toast.emit("Đã dời " + String(t0.n).to_lower() + ".")
 		_fl("sel")
 		return
-	if L.objs().size() >= int(L.C.V5):
+	if L.own_n() >= int(L.C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(L.C.V5)) + " món, hãy bán bớt.")
 		return
 	var r: int = L.pg(id)
@@ -1340,6 +1341,8 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 	else:
 		G.g.coins = int(G.g.coins) - int(t0.cost)
 	L.objs().append({"id": id, "gx": gx, "gy": gy, "seed": seed, "t": Time.get_unix_time_from_system() * 1000.0})
+	if id != "pond":
+		L.occupy(gx, gy, int(t0.fw), int(t0.fd))
 	L.changed()
 	_vm(t0, gx, gy)
 	G.vib(14)
@@ -1706,6 +1709,7 @@ func mm() -> void:   # MM: xây / dời đến đây
 			G.xw.w(t0).b = 1
 	fmv = ""
 	G.g.fac[t0] = [p.x, p.y]
+	lg().occupy(p.x, p.y, sz.x, sz.y)   # cảnh dưới chỗ xưởng / chuồng: dọn hẳn
 	U.F._xw_sync()
 	lg().changed()
 	var F = U.F
@@ -1828,15 +1832,9 @@ func fz(w: Vector2):   # Fz: món / vật cảnh / xưởng / chuồng / cây r�
 	var n: int = L.obj_at(w, V.pick_obj)
 	if n >= 0:
 		return func(): vj(n)
-	var e = L.so_pick(w, true, V.pick_so)
-	if e != null:
-		return func(): _hz(e)
 	var r := _sj(w)
 	if r != "":
 		return func(): fac = r; sel = -1; G.vib(15); _fl("fsel")
-	var o = L.so_pick(w, false, V.pick_so)
-	if o != null:
-		return func(): _hz(o)
 	var l = L.hu_pick(w)
 	if l != null and l.type == "scn" and L.Pi.has(l.o.id):
 		return func(): _rz(l.o)
@@ -1853,14 +1851,6 @@ func _sj(w: Vector2) -> String:   # Sj: xưởng hoặc chuồng đã xây bị 
 			if tl.x >= q.x and tl.x < q.x + 2 and tl.y >= q.y and tl.y < q.y + 2:
 				return p
 	return ""
-
-func _hz(o: Dictionary) -> void:   # Hz: nhận vật cảnh có sẵn rồi dời
-	var n: int = lg().take_so(o)
-	if n < 0:
-		return
-	_hide_sync()
-	sel = n
-	bm()
 
 func _rz(o: Dictionary) -> void:   # Rz
 	var n: int = lg().take_hu(o)

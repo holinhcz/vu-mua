@@ -419,10 +419,6 @@ func pick_obj(n: int, w: Vector2) -> bool:   # chạm trúng điểm ảnh của
 	var cy: float = float(o.gy) + float(t.fd) / 2.0
 	return _hit_id(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), w)
 
-func pick_so(o: Dictionary, w: Vector2) -> bool:   # vật cảnh có sẵn: hình cùng loại
-	var id: String = L.XV.get(o.id, o.id)
-	return _hit_id(id, 0 if L.XV.has(o.id) else int(o.seed), Vector2(o.sx, o.sy), w)
-
 func _hit_id(id: String, seed: int, foot: Vector2, w: Vector2) -> bool:
 	var p = PICS.get(id)
 	if p == null:

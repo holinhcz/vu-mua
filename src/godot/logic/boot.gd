@@ -169,7 +169,7 @@ func _test_hook() -> void:
 			"lp":
 				var wq: Vector2 = ui.main.cam + Vector2(float(a[1]), float(a[2])) * ui.Css.K / ui.main.zoom
 				var V = farm.lang_ve
-				JavaScriptBridge.eval("window.__ntlp=" + JSON.stringify([ui.bdp.mode, farm.lang.obj_at(wq, V.pick_obj), farm.lang.so_pick(wq, true, V.pick_so) != null, farm.lang.so_pick(wq, false, V.pick_so) != null, ui.bdp.open_at(wq), ui.bdp.mode]))
+				JavaScriptBridge.eval("window.__ntlp=" + JSON.stringify([ui.bdp.mode, farm.lang.obj_at(wq, V.pick_obj), ui.bdp.open_at(wq), ui.bdp.mode]))
 			"chips":
 				var CL := []
 				var ch = ui.bdp.pids.get(".khchips")

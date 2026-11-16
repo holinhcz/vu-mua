@@ -16,6 +16,7 @@ for id_,fold in [('hibiscus','caylang/dambut'),('bougainvillea','kieng/bonggiay'
                  ('hc_bui','caydai/bui_cay'),('hc_co','caydai/bui_co'),('hc_lau','caydai/co_lau')]:
     put(id_,fold,seeds(4,lambda s:['d%d'%(s&3)]),sway=True)
 put('duongxi','kieng/duongxi',seeds(2,lambda s:['d%d'%(s&1)]),sway=True)
+put('duanuoc','caylang/duanuoc',seeds(4,lambda s:['d%d'%(s&3)]),sway=True)   # dừa nước (web at.plants.duanuoc 1x1, sway 1)
 put('banyan','caylang/da',seeds(4,lambda s:['d%d'%(s&3)]),sway=False)   # web at.plants.banyan sway:0, 4 dáng (seed&3)
 # cây cảnh làng của web (at.plants.*, 4 dáng t=0..3, sway 1) -> thư mục 9px làng đã dùng (objpic2 KF của nền)
 for id_,fold,pre in [('banana','caytrai/chuoi','d'),('coconut','caytrai/dua','d'),('papaya','caytrai/dudu','d'),('mango','caytrai/xoai','dx'),

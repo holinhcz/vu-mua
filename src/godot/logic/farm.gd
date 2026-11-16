@@ -165,7 +165,10 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 func _add_sorted(n: Node2D, dk: float) -> void:
 	n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	main.obj_root.add_child(n)
-	sortables.append([n, dk, -2])
+	if player != null and sortables.size() and sortables[-1][0] == player:
+		sortables.insert(sortables.size() - 1, [n, dk, -2])   # nhân vật luôn ở cuối (_resort ghi khoá chân nhân vật vào dòng cuối)
+	else:
+		sortables.append([n, dk, -2])
 
 # ------------------------------------------------------------------ draw state
 var badges: Node2D = null
@@ -225,6 +228,12 @@ func refresh() -> void:
 		badges.queue_redraw()
 	for sg in signs:
 		sg.sync()
+	if lang != null and lang.absorb_so():
+		G.mark()
+	if lang != null and not G.g.has("occ4"):   # save cũ: cảnh dưới món / nhà có sẵn / xưởng / chuồng dọn hẳn một lần
+		G.g["occ4"] = 1
+		lang.occupy_all()
+		G.mark()
 	_xw_sync()
 	if lang_ve != null:
 		lang_ve.sync()
@@ -535,7 +544,7 @@ func _yard_step(dt: float) -> void:
 
 # đường mòn đất (main._load_tracks, n/tr.json): mỗi đường đi từ sân một nhà có sẵn ra đường lớn (hoặc nối tiếp đường khác).
 # Nhà có sẵn dời / dọn đi thì bỏ đường mòn của nó và các đường nối tiếp.
-var _tr := []   # [{L: [Line2D x3], a: điểm đầu, pts, so: chỉ số lang.SO của nhà (-1: nối tiếp đường khác)}]
+var _tr := []   # [{L: [Line2D x3], a: điểm đầu, pts, so: >= 0 đường ra từ sân nhà, -1 nối tiếp đường khác}]
 
 func _tracks_apply() -> void:
 	if _tr.is_empty():
@@ -564,10 +573,32 @@ func _tracks_apply() -> void:
 					bd = d
 					best = j
 			_tr.append({"L": [ls[i], ls[i + 1], ls[i + 2]], "a": a, "pts": P, "so": best})
-	var off := {}
+	var off := {}   # đường từ sân nhà: không còn nhà nào đứng ở đầu đường (dời, bán) thì bỏ
+	var H := []
+	var moving: int = ui.bdp.move_idx if ui != null and ui.bdp != null else -1
+	var O: Array = lang.objs()
+	for n in O.size():
+		var o = O[n]
+		if n != moving and o is Dictionary and YARD.has(String(o.get("id", ""))) and int(YARD[o.id]) > 0:
+			var t = lang.Pi.get(o.id)
+			if t != null:
+				H.append(Rect2(float(o.gx), float(o.gy), float(t.fw), float(t.fd)))
+	for o in lang.SO:
+		if YARD.has(o.id) and not o.wild and lang.so_shown(o):
+			H.append(Rect2(float(o.gx), float(o.gy), float(o.fw), float(o.fd)))
 	for k in _tr.size():
 		var e: Dictionary = _tr[k]
-		if e.so >= 0 and not lang.so_shown(lang.SO[e.so]):
+		if e.so < 0:
+			continue
+		var t: Vector2 = to_tile(e.a)
+		var near := false
+		for r in H:
+			var dx := maxf(0.0, maxf(r.position.x - t.x, t.x - r.end.x))
+			var dy := maxf(0.0, maxf(r.position.y - t.y, t.y - r.end.y))
+			if maxf(dx, dy) < 2.6:
+				near = true
+				break
+		if not near:
 			off[k] = true
 	var more := true
 	while more:   # đường nối tiếp từ một đường đã bỏ
@@ -736,7 +767,10 @@ func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong m�
 var song = null   # song_ve.gd: bụi ven sông, cụm trôi, bãi bùn, cá búng
 
 func _resort() -> void:   # khoá chân của nhân vật; thứ tự vẽ do main.zorder() lo (một luật cho mọi thứ)
-	sortables[sortables.size() - 1][1] = player.base_y()
+	for i in range(sortables.size() - 1, -1, -1):   # tìm đúng dòng của nhân vật (trước đây ghi mù vào dòng cuối: món đặt sau
+		if sortables[i][0] == player:                # cùng bị lấy khoá chân nhân vật, xếp sai chỗ tới lúc tải lại)
+			sortables[i][1] = player.base_y()
+			break
 
 # ------------------------------------------------------------------ chạm / vuốt (pointerdown/move/up + click của bản web)
 # Chạm xuống ô có việc (gieo/tưới/gặt/bắt sâu): giữ 220 ms rồi kéo = vuốt làm cả loạt (không kéo làng);
@@ -947,6 +981,8 @@ func goto(p: Vector2) -> void:   # FR: bỏ việc "goto" cũ, đi tới ô (x, 
 
 func tap(sp: Vector2) -> void:
 	var w := screen_to_world(sp)
+	if main.has_method("dbg_tap"):
+		main.dbg_tap(w)
 	if ui.bdp != null and ui.bdp.active():
 		ui.bdp.world_tap(w)
 		return
@@ -955,8 +991,6 @@ func tap(sp: Vector2) -> void:
 		stop_jobs()
 		return
 	var h := pick(w)
-	if ui.vlp != null and String(h.get("type", "")) != "sonha":
-		ui.vlp.chip_close()
 	match String(h.get("type", "")):
 		"nn", "fl", "bun":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn
 			ui.close_all()
@@ -993,8 +1027,6 @@ func tap(sp: Vector2) -> void:
 		"nha":
 			ui.close_all()
 			ui.vl_open(int(h.u))
-		"sonha":
-			ui.vl_chip(h.o)
 		"cho":   # chạm ghe chợ nổi: nhân vật ra bến rồi mở bảng ghe đó
 			ui.close_all()
 			var ns = G.w_all.WCU.ext.get("Ns")
@@ -1239,16 +1271,6 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
 					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb)
-		if G.w_all != null:   # nhà có sẵn trên làng (vật cảnh, chưa phải nhà ở): chip "Dọn vào ở"
-			for so in lang.SO:
-				if not G.w_all.WL.CX.has(so.id) or so.wild or so.ring or not lang.so_shown(so) or not lang.ci(so.pc):
-					continue
-				var bb: Array = so.bb
-				if w.x < float(bb[0]) - 8.0 or w.x > float(bb[2]) + 8.0 or w.y < float(bb[1]) - 8.0 or w.y > float(bb[3]) + 8.0:
-					continue
-				var ins: bool = tl.x >= so.gx and tl.x < so.gx + so.fw and tl.y >= so.gy and tl.y < so.gy + so.fd
-				var oo: Dictionary = so
-				_pk_add(L, {"type": "sonha", "o": so}, 50, float(so.sy), func(p: Vector2) -> bool: return lang_ve.pick_so(oo, p), {"gr": 3 if ins else 0})
 		for d in lang.hu_near(w):   # cây rừng / cỏ hoang (51): trúng điểm ảnh (cả cây bị che, để chạm lại lùi ra sau)
 			var dd: Dictionary = d
 			_pk_add(L, {"type": "scn" if lang.ci(dd.pc) else "scnlock", "o": dd, "id": dd.pc}, 51, float(dd.sy), func(p: Vector2) -> bool: return lang.hu_hit1(dd, p))

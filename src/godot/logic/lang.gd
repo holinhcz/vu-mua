@@ -458,21 +458,6 @@ func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị ch�
 				r = l
 	return r
 
-func so_pick(w: Vector2, strict: bool, pick_px: Callable):   # Oz: vật cảnh có sẵn bị chạm
-	var e = null
-	for o in SO:
-		if o.wild or o.ring or not Pi.has(o.id) or not so_shown(o) or not ci(o.pc):
-			continue
-		var bb: Array = o.bb
-		if w.x < float(bb[0]) or w.x > float(bb[2]) or w.y < float(bb[1]) or w.y > float(bb[3]):
-			continue
-		var s: bool = pick_px.call(o, w)
-		if not s and not strict:
-			s = absf(w.x - o.sx) < (float(bb[2]) - float(bb[0])) * 0.22 and w.y >= o.sy + (float(bb[1]) - o.sy) * 0.8 and w.y <= o.sy + 8
-		if s and (e == null or o.k > e.k):
-			e = o
-	return e
-
 func hu_near(w: Vector2, m := 12.0) -> Array:   # cây rừng / cỏ hoang có khung hình quanh chỗ chạm (nới m)
 	var tl := tile_of(w)
 	var l := int(floor(tl.x))
@@ -546,26 +531,100 @@ func clear_paddy(x: int, y: int) -> void:   # Dy: gặt lúa hoang ở khu đã 
 
 const XV := {"banana": "ft_chuoi", "wildbanana": "ft_chuoi", "papaya": "ft_dudu", "coconut": "ft_dua", "mango": "ft_xoai", "jackfruit": "ft_mit", "dieu": "ft_dieu"}
 
-func take_so(o: Dictionary) -> int:   # Hz: nhận vật cảnh có sẵn thành món của mình (rồi dời)
-	if objs().size() >= int(C.V5):
-		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
-		return -1
-	G.g.mv[o.sk] = 1
-	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
-	changed()
-	return objs().size() - 1
+func own_n() -> int:   # số món tính vào giới hạn: không tính vật có sẵn của làng đã gộp vào (f = 1)
+	var n := 0
+	for o in objs():
+		if not o.get("f", 0):
+			n += 1
+	return n
+
+# MỘT LOẠI ĐỒ (bản 203): mọi vật có sẵn của làng (cây, bụi, nhà tranh, đình, cổng, cầu, sen, rơm...) ở khu đã có thành
+# đúng món Xây dựng cùng tên (g.objs, f = 1): dời, bán, xếp, chiếm chỗ, sét đánh, dân ở y như món mình đặt. Khu mới mua thì
+# gộp lúc đó. Không còn "vật cảnh có sẵn" riêng.
+var _abs_sig := ""
+func absorb_so() -> bool:   # true = có gộp thêm
+	var sg := str(G.g.get("land")) + "/" + str(G.g.mv.size())
+	if sg == _abs_sig:
+		return false
+	_abs_sig = sg
+	var n := 0
+	for o in SO:
+		if o.wild or o.sk == "" or G.g.mv.has(o.sk) or not so_shown(o):
+			continue
+		var id: String = XV.get(o.id, o.id)
+		if not Pi.has(id):
+			continue
+		G.g.mv[o.sk] = 1
+		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
+		n += 1
+	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
+	if n > 0:
+		changed()
+	return n > 0
 
 func take_hu(o: Dictionary) -> int:   # Rz
 	if not Pi.has(o.id):
 		G.toast.emit("Bụi cỏ này chỉ dọn được. Thoát Xây dựng rồi chạm để dọn.")
 		return -1
-	if objs().size() >= int(C.V5):
+	if own_n() >= int(C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
 		return -1
 	G.g.clr[o.key] = 1
 	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
 	changed()
 	return objs().size() - 1
+
+# ------------------------------------------------------------------ chiếm chỗ (bản 200, một luật cho mọi món)
+# Đặt / dời / xây món gì vào ô nào thì cảnh cũ trên các ô đó (cây cỏ hoang, bụi, cây cảnh nền) bị dọn hẳn, lưu vào save
+# (g.clr "t:x,y" + khoá cây hoang), dời món đi chỗ cũ vẫn trống, không mọc lại.
+func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
+	# ô chiếm + (món nhiều ô: nhà, đình, xưởng, chuồng) một hàng ô sát phía sau / hai bên sau, chỗ hình nền, hiên lấn ra:
+	# cây cỏ, bụi, cây có sẵn của làng ở đó dọn hẳn (cây còn đứng đó thì gốc lòi dưới hiên). Đồ mình tự đặt không đụng tới.
+	var T := []
+	for y in range(gy, gy + fd):
+		for x in range(gx, gx + fw):
+			T.append(Vector2i(x, y))
+	if fw * fd > 1:
+		for y in range(gy - 1, gy + fd):
+			T.append(Vector2i(gx - 1, y))
+		for x in range(gx, gx + fw):
+			T.append(Vector2i(x, gy - 1))
+	var gone := {}
+	for q in T:
+		G.g.clr["t:" + str(q.x) + "," + str(q.y)] = 1
+		var h = hu_at(q.x, q.y)
+		if h != null:
+			G.g.clr[h.key] = 1
+		for j in so_at.get(str(q.x) + "," + str(q.y), []):
+			var o: Dictionary = SO[j]
+			if o.sk != "" and int(o.fw) * int(o.fd) == 1:
+				G.g.mv[o.sk] = 1
+		gone[q] = 1
+	var O: Array = objs() if fw * fd > 1 else []
+	for i in range(O.size() - 1, -1, -1):   # cây / đồ một ô có sẵn của làng (f) đứng trên các ô đó
+		var o = O[i]
+		if o is Dictionary and o.get("f", 0) and gone.has(Vector2i(int(o.gx), int(o.gy))):
+			var t = Pi.get(o.id)
+			if t != null and int(t.fw) * int(t.fd) == 1:
+				O.remove_at(i)
+	ver += 1
+
+func occupy_all() -> void:   # món, nhà có sẵn của làng, xưởng, chuồng đang có (save cũ): chiếm chỗ một lần
+	for o in SO:
+		if not o.wild and not o.ring and int(o.fw) * int(o.fd) > 1 and so_shown(o):
+			occupy(int(o.gx), int(o.gy), int(o.fw), int(o.fd))
+	for o in objs():
+		var t = Pi.get(o.id)
+		if t != null and o.id != "pond":
+			occupy(int(o.gx), int(o.gy), int(t.fw), int(t.fd))
+	if G.xw != null:
+		for k in G.xw.list_built():
+			var e: Dictionary = G.xw.sr[k]
+			occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd))
+	for p in C.Di:
+		if pen_built(p):
+			var q: Vector2i = pen_pos(p)
+			occupy(q.x, q.y, int(C.mo[p].w), int(C.mo[p].h))
 
 # ------------------------------------------------------------------ hoa cỏ nhỏ (g.minis, ô nhỏ = nửa ô)
 func _gq(x: int, y: int, a: int, b: int) -> bool:   # $G: chỗ nhỏ còn trống cạnh hàng rào
@@ -769,4 +828,8 @@ func hidden_rects() -> Dictionary:
 	for o in HU:
 		if G.g.clr.has(o.key):
 			_hr["cl" + String(o.key)] = [o.gx, o.gy, o.fw, o.fd, o.id]
+	for k in G.g.clr:   # ô đã có món chiếm: cảnh nền đứng đó dọn hẳn
+		if String(k).begins_with("t:"):
+			var p: PackedStringArray = String(k).substr(2).split(",")
+			_hr[k] = [int(p[0]), int(p[1]), 1, 1, ""]
 	return _hr
