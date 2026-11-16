@@ -207,19 +207,24 @@ func _free(b: Control) -> void:
 var shop_c := {}   # mục -> {sig, pov, pids, grid, lis, sc_max}
 var card_pool := {}   # thẻ món đã dựng: khoá (mục, thẻ, thiếu xu, chỗ) -> Control; dựng lại bảng thì gắn lại thẻ cũ
 
-func _shop_sig() -> String:
-	return JSON.stringify([cat, _cards(), lg().beauty(), int(G.g.coins), G.lv(), U.vsize()])
+func _shop_sig() -> String:   # xu chỉ đổi thẻ "thiếu xu": lấy cờ đủ / thiếu từng thẻ, xu lên xuống lặt vặt không dựng lại cả mục
+	var C := _cards()
+	var poor := []
+	for c in C:
+		poor.append(c.pr[0] == "c" and int(G.g.coins) < int(c.pr[1]) and c.r == 0)
+	return JSON.stringify([cat, C, poor, lg().beauty(), G.lv(), U.vsize()])
 
 # Như Kho (dựng sẵn mọi thẻ): cửa hàng đang mở thì dựng ngầm các mục chưa có / đã cũ, mỗi lần một mục, cách nhau chút,
 # để bấm sang mục nào cũng chỉ việc hiện bảng có sẵn.
 var warm_t := 0.0
+var in_t := -9.0   # lúc chạm cuối vào cửa hàng (t)
 
 func _warm(dt: float) -> void:
 	if mode != "shop" or pov == null or not is_instance_valid(pov):
 		warm_t = 0.0
 		return
 	warm_t += dt
-	if warm_t < 0.35:
+	if warm_t < 0.35 or drag != null or t - in_t < 0.8:   # đang chạm / vừa chạm: không dựng ngầm (dựng một mục ~15 ms, đt gấp mấy lần: khựng)
 		return
 	warm_t = 0.2
 	var keep := [cat, pov, pids, grid, lis, sc_max, sc]
@@ -2071,6 +2076,7 @@ func step(dt: float) -> void:
 func input(e: InputEvent) -> void:   # cuộn lưới thẻ trong bảng
 	if mode != "shop" or grid == null or not is_instance_valid(grid):
 		return
+	in_t = t
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
 		_scroll(sc + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
 		return
