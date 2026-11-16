@@ -3959,6 +3959,8 @@ static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" s�
 			return float(v)
 	return last
 func _zo_tile(n: Node, sy: float) -> Vector2:   # ô của chân vật (sy: y chân trên màn khi biết)
+	if n is Sprite2D and n.has_meta("b"):   # hình món: chân = chỗ hình đang đứng
+		return _foot_tile((n as Node2D).position)
 	if n.has_meta("ftt"):
 		return n.get_meta("ftt")
 	if n.has_meta("ft"):
