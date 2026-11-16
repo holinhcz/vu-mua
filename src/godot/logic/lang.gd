@@ -446,7 +446,7 @@ func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị ch�
 	for l in O.size():
 		var c: Dictionary = O[l]
 		var t = Pi.get(c.id)
-		if t == null or is_decor(c):   # đồ có sẵn chỉ Dọn: Xây dựng không chọn / dời
+		if t == null or is_fixed(c):   # đồ có sẵn đứng yên (chỉ Dọn / tưới, hái): Xây dựng không chọn / dời
 			continue
 		var d: float = -1e6 + c.gx + c.gy if c.id == "pond" else float(F.main.draw_rank(F.lang_ve.obj_nodes.get(l, []), w))
 		if c.id != "pond" and pick_px.call(l, w):
@@ -558,17 +558,23 @@ func absorb_so() -> bool:   # true = có gộp thêm
 		G.g.mv[o.sk] = 1
 		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if String(XV.get(o.id, "")).begins_with("ft_") else o.seed, "f": 1})
 		n += 1
-	for o in HU:   # cây ăn trái hoang trong khu đất đã mở: thành cây ăn trái của mình (như mua), hái đủ HV lần thì tự mất
-		var fid: String = XV.get(o.id, "")
-		if fid.begins_with("ft_") and Pi.has(fid) and not G.g.clr.has(o.key) and ci(o.pc):
+	var CX: Dictionary = G.w_all.WL.CX if G.w_all != null else {}
+	var now: float = G._now_ms()
+	for o in HU:   # khu đất đã mở: cây ăn trái hoang thành cây của mình (sống SONG rồi tự mất), nhà có sẵn thành nhà dân
+		var fid: String = XV.get(o.id, o.id)
+		var tree: bool = fid.begins_with("ft_")
+		if (tree or CX.has(fid)) and Pi.has(fid) and not G.g.clr.has(o.key) and ci(o.pc):
 			G.g.clr[o.key] = 1
-			objs().append({"id": fid, "gx": o.gx, "gy": o.gy, "seed": int(o.seed) >> 1, "f": 1})   # dáng = seed hình / 2 (khung ft: chín + 2 × dáng)
+			var no := {"id": fid, "gx": o.gx, "gy": o.gy, "seed": (int(o.seed) >> 1) if tree else int(o.seed), "f": 1}   # cây: dáng = seed hình / 2
+			if tree:
+				no["t0"] = now
+			objs().append(no)
 			n += 1
 	for o in SO:
 		var fid2: String = XV.get(o.id, "")
 		if o.wild and o.sk != "" and fid2.begins_with("ft_") and Pi.has(fid2) and not G.g.mv.has(o.sk) and ci(o.pc):
 			G.g.mv[o.sk] = 1
-			objs().append({"id": fid2, "gx": o.gx, "gy": o.gy, "seed": int(o.seed) >> 1, "f": 1})
+			objs().append({"id": fid2, "gx": o.gx, "gy": o.gy, "seed": int(o.seed) >> 1, "f": 1, "t0": now})
 			n += 1
 	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
 	if n > 0:
@@ -577,13 +583,19 @@ func absorb_so() -> bool:   # true = có gộp thêm
 			G.w_all.WL.uf()
 	return n > 0
 
-const HV := 10   # cây ăn trái có sẵn của làng (món f): hái đủ chừng này lần thì cây tự mất
+const SONG := 7.0 * 86400000.0   # cây ăn trái có sẵn của làng (món f): sống 7 ngày (ms, tính từ lúc mở đất) rồi tự mất
 
 func is_decor(o) -> bool:   # đồ có sẵn của làng không có việc gì khác: hoa, đá, cây cảnh, cao su... chỉ Dọn (không dời)
 	if not (o is Dictionary) or not int(o.get("f", 0)):
 		return false
 	var id := String(o.get("id", ""))
 	return not C.Ei.has(id) and not (G.w_all != null and G.w_all.WL.CX.has(id))
+
+func is_fixed(o) -> bool:   # đồ có sẵn đứng yên một chỗ: đồ chỉ Dọn + cây ăn trái có sẵn (tưới, hái) — Xây dựng không dời
+	return is_decor(o) or (o is Dictionary and int(o.get("f", 0)) == 1 and C.Ei.has(String(o.get("id", ""))))
+
+func days_left(o: Dictionary) -> int:   # cây ăn trái có sẵn: còn mấy ngày thì tự mất
+	return maxi(0, int(ceil((float(o.get("t0", G._now_ms())) + SONG - G._now_ms()) / 86400000.0)))
 
 func drop_obj(i: int, pay := true) -> int:   # bỏ món i khỏi làng (Dọn đồ có sẵn / cây hết lần hái): xu như dọn, bụi bay
 	var O: Array = objs()

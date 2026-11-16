@@ -1367,7 +1367,7 @@ func rm_tree(t: int) -> void:   # hg: chạm cây ăn trái
 	_rm_sync()
 	_rm_pos()
 
-func _rm_vf() -> bool:   # cây ăn trái đang mở là cây có sẵn của làng (f): Dọn + Hái, hái đủ HV lần thì cây tự mất
+func _rm_vf() -> bool:   # cây ăn trái đang mở là cây có sẵn của làng (f): Dọn + Hái, sống lang.SONG (7 ngày) rồi tự mất
 	var O: Array = G.lang.objs()
 	return rm_t >= 0 and rm_t < O.size() and int(O[rm_t].get("f", 0)) == 1
 
@@ -1382,7 +1382,7 @@ func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòn
 	rm_g.visible = not ripe or vf
 	rm_r.visible = ripe and not vf
 	if vf:   # chip: còn mấy lần hái
-		var left_n: int = G.lang.HV - int(t.get("hv", 0))
+		var left_n: int = G.lang.days_left(t)
 		var ic := String(R._ei()[t.id].p) if ripe else ""
 		if rm_gi[".fast"].get_meta("vfic", "?") != ic:   # đổi hình nút chỉ khi chín / hết chín
 			rm_gi[".fast"].set_meta("vfic", ic)
@@ -1395,7 +1395,7 @@ func _rm_tree_sync() -> void:   # Rj: vòng trái (đỏ) + số sen đỏ, vòn
 			var rt0 = rm_gi.get(".rmt")
 			if rt0 != null:
 				_txt(rt0, String(G.lang.Pi[t.id].n))
-				_rm_note(rt0, "Còn " + str(left_n) + " lần hái")
+				_rm_note(rt0, "Còn " + str(left_n) + " ngày")
 			return
 	elif ripe:
 		return
