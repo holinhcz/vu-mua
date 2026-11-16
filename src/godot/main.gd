@@ -2881,6 +2881,8 @@ func _update_meter() -> void:
 	meter.text = "bản " + BUILD + " · %d fps · chậm nhất %d ms" % [round(fps_shown), round(ft_worst_shown)]
 	meter.text += "\ncode %.1f ms · vẽ %d lệnh · %d vật" % [pf_code_shown, round(pf_draw_shown), obj_root.get_child_count() if obj_root != null else 0]
 	meter.text += "\n" + pt_shown + "\nchạy: " + pt_proc + "\nvẽ lại/khung: " + pt_drw
+	if tap_dbg != "":
+		meter.text += "\nDÒ: " + tap_dbg
 	if jsw != null and info.has("op2"):
 		var o2 = jsw.__op2t
 		meter.text += "\nkho phụ: " + (str(o2) if o2 != null else "?")
@@ -3978,6 +3980,38 @@ func _zo_fix(n: Node, k: float, t: Vector2) -> float:   # khoá đã chỉnh the
 				if t.x < r.end.x + 1.5 and t.y < r.end.y + 1.5 and k >= float(e[1]):
 					k = float(e[1]) - 0.0005
 	return k
+# DÒ (tạm, bản 205): chạm đâu thì dòng đồng hồ hiện các hình ở chỗ đó, trên cùng trước: loại, ô chân, ô chiếm, khoá, thứ tự vẽ
+var tap_dbg := ""
+func dbg_tap(w: Vector2) -> void:
+	var fm = get_node_or_null("Farm")
+	var dk := {}
+	if fm != null:
+		for e in fm.sortables:
+			dk[e[0]] = float(e[1])
+	var L := []
+	for n in obj_root.get_children():
+		if not (n is Sprite2D) or not n.is_visible_in_tree() or n.texture == null:
+			continue
+		var p: Vector2 = n.get_global_transform().affine_inverse() * w
+		if not n.get_rect().has_point(p):
+			continue
+		var nm := ""
+		if fm != null and fm.lang_ve.nodes.has(n):
+			nm = "món " + str(n.get_meta("b", "")).trim_prefix("g_") + "/" + str(n.get_meta("k", ""))
+		elif n.has_meta("j"):
+			nm = "cảnh " + str(n.get_meta("j"))
+		else:
+			nm = "khác " + str(n.get_class())
+		var k: float = (float(dk[n]) - 968.0) / 16.0 if dk.has(n) else _zkey(n, -999.0)
+		var t := _zo_tile(n, float(dk.get(n, 0.0)))
+		var fp := (" chiếm " + str(n.get_meta("fp"))) if n.has_meta("fp") else ""
+		L.append([n.get_index(), "%s ô(%.1f,%.1f) khoá %.2f #%d%s" % [nm, t.x, t.y, k, n.get_index(), fp]])
+	L.sort_custom(func(a, b): return a[0] > b[0])
+	var out := []
+	for i in mini(5, L.size()):
+		out.append(L[i][1])
+	tap_dbg = ("\nDÒ: ".join(PackedStringArray(out)) if out.size() else "trống").replace("[P: ", "[").replace("), S: (", ")+(")
+
 func zorder() -> void:
 	if sc_data.is_empty() and objs.is_empty():
 		return
