@@ -2,6 +2,8 @@ extends Node2D
 # GHE TRÊN SÔNG (yg bản web): ảnh ghe vẽ sẵn từ chính hàm yg (tools/ghe.js -> ui/img/ghe, 9 px mỗi đơn vị làng;
 # chợ nổi: đúng góc từng ghe; ghe thương hồ: trục u theo góc sông từng 0,05 rad, trục v), nhấp nhô, lắc nhẹ,
 # rồi vẽ thêm phần động: món treo trên đòn gánh của cây sào (offers), bảng tên ghe chợ, câu rao, bảng giờ ghe thương hồ.
+# Xuồng qua lại (Eh / jq / HD bản web): tối đa 3 chiếc, 14-30 giây một chiếc, chạy hai chiều trên khúc sông đã mua, mỗi chiều một
+# làn (lệch tâm sông ±0,9 ô); ảnh xu_{p|m}{mui}_{góc} vẽ từ yg bản web (pole 0, s ±1; tools/ghe.js).
 # Mỗi ghe một node con (Boat) chen vào thứ tự vẽ của làng (farm.sortables).
 
 const Snap = preload("res://ui/snap.gd")
@@ -12,6 +14,9 @@ var G
 var M := {}          # ui/snap/ghe.json: khóa -> [lệch x, lệch y, rộng, cao] (đơn vị làng, tính từ chỗ ghe)
 var cho := []        # 4 Boat chợ nổi
 var ghe = null       # Boat ghe thương hồ
+var xus := []        # xuồng qua lại (Eh bản web): {b, x, y, s, v, lo, hi}
+var xu_t := 8.0
+var _xu_ms := 0
 
 const C := 1.3       # chiều dài nửa ghe (c của yg)
 
@@ -153,6 +158,55 @@ func step() -> void:
 		return
 	_cho(W)
 	_ghe(W)
+	var now := Time.get_ticks_msec()
+	_xus(W, clampf((now - _xu_ms) / 1000.0, 0.0, 0.25) if _xu_ms > 0 else 0.0)
+	_xu_ms = now
+
+func _xu_range(W):   # nT: các cột sông đã mua (ô giữa dòng là nước, khúc sông của mình) -> [đầu, cuối] hoặc null
+	var L = G.lang
+	if L == null or L.M.is_empty() or W.WSG == null:
+		return null
+	var B: Array = L.M.B
+	var lo := 1e9
+	var hi := -1e9
+	for n in range(int(B[0]), int(B[1])):
+		var y: float = W.WSG.c(float(n))
+		if W.WSG.w(float(n), y) and L.ci(String(L.fo(n, int(floor(y))))):
+			lo = minf(lo, n)
+			hi = maxf(hi, n)
+	return [lo, hi] if lo <= hi else null
+
+func _xus(W, dt: float) -> void:   # jq + HD: xuồng chở hàng qua lại hai chiều trên khúc sông đã mua, mỗi chiều một làn
+	for i in range(xus.size() - 1, -1, -1):
+		var a: Dictionary = xus[i]
+		a.x = float(a.x) + float(a.s) * float(a.v) * dt
+		var b: Boat = a.b
+		b.al = minf(1.0, b.al + dt * 0.6)
+		if (float(a.s) > 0.0 and float(a.x) > float(a.hi) + 1.0) or (float(a.s) < 0.0 and float(a.x) < float(a.lo) - 1.0):
+			_free(b)
+			xus.remove_at(i)
+			continue
+		b.p = Vector2(float(a.x), W.WSG.c(float(a.x)) + float(a.y))
+		b.th = atan(W.WSG.sl(float(a.x)))
+		b.set_key("xu_" + ("p" if float(a.s) > 0.0 else "m") + str(a.mui) + "_" + str(clampi(int(round(b.th / 0.1)) * 2, -22, 12)))   # ảnh mỗi 0,1 rad
+		_sort_y(b)
+	if xus.size() >= 3:
+		return
+	xu_t -= dt
+	if xu_t > 0.0:
+		return
+	xu_t = randf_range(14.0, 30.0)
+	var e = _xu_range(W)
+	if e == null:
+		return
+	var r := 1.0 if randf() < 0.5 else -1.0
+	var b := _boat()
+	b.al = 0.0
+	b.s = r
+	b.sc = randf_range(0.8, 0.9)
+	var a := {"b": b, "x": float(e[0]) if r > 0.0 else float(e[1]), "y": (0.9 if r > 0.0 else -0.9) + randf_range(-0.25, 0.25), "s": r,
+		"v": randf_range(0.45, 0.7), "lo": float(e[0]), "hi": float(e[1]), "mui": 1 if randf() < 0.3 else 0}
+	xus.append(a)
 
 func _cho(W) -> void:   # tN: 4 ghe chợ nổi
 	var U = W.WC.Ui

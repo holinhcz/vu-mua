@@ -843,10 +843,10 @@ func Vb() -> Array:   # [{key, kd, gx, gy}]
 		_vb.append({"key": "nn" + str(e.gx) + "," + str(e.gy), "kd": kd, "gx": e.gx, "gy": e.gy})
 	return _vb
 
-# Sông Vàm: ô nước (mặt nước có sẵn thuộc khu sông), trục dòng sông (PCA), dùng chung cho bụi ven sông, bãi bùn, lục bình trôi
+# Sông Vàm: ô nước (mặt nước có sẵn thuộc khu sông), trục dòng sông (PCA), dùng chung cho bụi ven sông, bãi bùn
 var _rv_sig := ""
 var _rv := {}
-func river() -> Dictionary:   # {tiles: {Vector2i: 1}, c, ax, nx, path: [[điểm (ô), nửa bề ngang]]}
+func river() -> Dictionary:   # {tiles: {Vector2i: 1}, c, ax, nx}
 	var L = G.lang
 	if L == null or L.M.is_empty():
 		return {}
@@ -878,27 +878,7 @@ func river() -> Dictionary:   # {tiles: {Vector2i: 1}, c, ax, nx, path: [[điể
 	var an := 0.5 * atan2(2.0 * sxy, sxx - syy)
 	var ax := Vector2(cos(an), sin(an))
 	var nx := Vector2(-ax.y, ax.x)
-	# đường giữa dòng: chia theo trục thành đoạn 3 ô, mỗi đoạn lấy trọng tâm + bề ngang
-	var bins := {}
-	for k in riv:
-		var d := Vector2(k) - c
-		var bi := int(floor(d.dot(ax) / 3.0))
-		if not bins.has(bi):
-			bins[bi] = []
-		bins[bi].append(d.dot(nx))
-	var ks := bins.keys()
-	ks.sort()
-	var path := []
-	for bi in ks:
-		var A: Array = bins[bi]
-		var lo := 1e9
-		var hi := -1e9
-		for v in A:
-			lo = minf(lo, float(v))
-			hi = maxf(hi, float(v))
-		var mid := (lo + hi) * 0.5
-		path.append([c + ax * (bi * 3.0 + 1.5) + nx * mid + Vector2(0.5, 0.5), maxf(0.5, (hi - lo) * 0.5)])
-	_rv = {"tiles": riv, "c": c, "ax": ax, "nx": nx, "path": path}
+	_rv = {"tiles": riv, "c": c, "ax": ax, "nx": nx}
 	return _rv
 
 func bank_spots(per_side: int, seed: int) -> Array:   # ô nước sát hai bờ khúc sông đã mua, rải đều: mỗi bờ chia per_side đoạn, mỗi đoạn 1 ô

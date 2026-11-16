@@ -1,8 +1,8 @@
 extends RefCounted
 # SÔNG VÀM SỐNG ĐỘNG (bản 176): vẽ + chạm cho các thứ trên sông / mặt nước, bằng bộ ảnh 9 px ui/img/ts (hinh/thuysinh):
 #   - bụi ven sông mùa nước nổi (w_cho.Vb): điên điển, kèo nèo, súng ma ở mép nước hai bờ; chạm đi tới hái
-#   - lục bình + bèo trôi chung từng cụm (to nhỏ khác nhau), rau muống trôi riêng, luôn xuôi dòng (nước lớn trôi chậm, nước nổi
-#     trôi nhanh); chạm vớt (khúc sông đã mua); trôi tới cuối sông thì mờ đi, cụm mới trôi vô từ đầu trên
+#   - lục bình + bèo trôi chung từng cụm (to nhỏ khác nhau), rau muống trôi riêng, theo lòng sông (sgeo), luôn xuôi dòng (nước
+#     lớn trôi chậm, nước nổi trôi nhanh); chạm vớt (khúc sông đã mua); tới cuối sông thì mờ đi, cụm mới trôi vô từ đầu trên
 #   - bãi bùn lúc nước ròng (w_xuong.v6): mảng bùn ở mép nước, có món để mò; chạm đi tới mò
 #   - cá búng mặt nước: sông, kênh, ao trên màn thỉnh thoảng có cá búng lên, nước bắn, vòng gợn loang (mưa nhiều, đêm ít)
 
@@ -146,59 +146,76 @@ func _clump(kind: String) -> Node2D:
 		n.add_child(s)
 	return n
 
-func _fl_put(f: Dictionary, path: Array) -> void:   # đặt node theo vị trí trên dòng sông
-	var m := path.size()
-	var s := clampf(float(f.s), 0.0, float(m - 1))
-	var i := int(floor(s))
-	var j := mini(i + 1, m - 1)
-	var u := s - i
-	var p: Vector2 = Vector2(path[i][0]).lerp(Vector2(path[j][0]), u)
-	var w: float = lerpf(float(path[i][1]), float(path[j][1]), u)
-	var R: Dictionary = G.w_all.WC.river()
-	var tl: Vector2 = p + Vector2(R.nx) * float(f.off) * w * 0.65
+# Dòng sông lấy từ hình học sông Vàm (sgeo: tâm c(x), nửa bề ngang trên hw·k1, dưới hs·k1): cụm trôi theo x, nằm trong lòng sông,
+# không cắt lên bờ. Khúc sông x0..x1: các cột có tâm sông là nước, trong làng.
+var _xr := []
+func _x_range() -> Array:
+	if not _xr.is_empty():
+		return _xr
+	var L = G.lang
+	var S = G.w_all.WSG
+	if L == null or L.M.is_empty() or S == null:
+		return []
+	var B: Array = L.M.B
+	var lo := 1e9
+	var hi := -1e9
+	for n in range(int(B[0]), int(B[1])):
+		if S.w(float(n), S.c(float(n))):
+			lo = minf(lo, n)
+			hi = maxf(hi, n)
+	if lo < hi:
+		_xr = [lo, hi]
+	return _xr
+
+func _fl_put(f: Dictionary) -> void:   # đặt node theo vị trí trên dòng sông
+	var S = G.w_all.WSG
+	var x: float = f.x
+	var o: float = f.off
+	var y: float = S.c(x) + (o * S.hw(x) if o < 0.0 else o * S.hs(x)) * S.k1(x) * 0.6
+	if not S.w(x, y):   # chỗ hẹp / cù lao: vô gần giữa dòng
+		y = S.c(x) + (y - S.c(x)) * 0.3
+	var tl := Vector2(x, y)
 	f.tl = tl
 	var bob := sin(float(f.ph)) * 0.6
 	f.n.position = Vector2(F.en(tl.x, tl.y), F.nn(tl.x, tl.y) + bob)
 	f.e[1] = f.n.position.y
-	var edge := minf(s, float(m - 1) - s)   # tới đầu sông thì mờ đi
-	f.n.modulate.a = clampf(edge / 2.0, 0.0, 1.0) * clampf(float(f.a), 0.0, 1.0)
+	var R := _x_range()
+	var edge := minf(x - float(R[0]), float(R[1]) - x)   # tới đầu sông thì mờ đi
+	f.n.modulate.a = clampf(edge / 4.0, 0.0, 1.0) * clampf(float(f.a), 0.0, 1.0)
 
-func _fl_new(kind: String, path: Array, s: float) -> Dictionary:
+func _fl_new(kind: String, x: float) -> Dictionary:
 	var n := _clump(kind)
 	n.position = Vector2(0, -99999)
-	var f := {"n": n, "e": _sorted(n), "s": s, "off": randf_range(-1.0, 1.0), "kind": kind, "a": 0.0, "ph": randf() * TAU,
+	var f := {"n": n, "e": _sorted(n), "x": x, "off": randf_range(-1.0, 1.0), "kind": kind, "a": 0.0, "ph": randf() * TAU,
 		"v": randf_range(0.18, 0.3) * (0.7 if kind == "rau" else 1.0), "key": "fl" + str(randi())}
-	_fl_put(f, path)
+	_fl_put(f)
 	return f
 
 func _float_step(dt: float) -> void:
-	var R: Dictionary = G.w_all.WC.river()
-	if R.is_empty() or R.path.size() < 4:
+	var R := _x_range()
+	if R.is_empty():
 		return
-	var path: Array = R.path
-	var m := float(path.size() - 1)
 	if _fl_dn != _dn():   # ngày / đêm: dựng lại cụm bằng ảnh đúng buổi
 		_fl_dn = _dn()
 		for f in fl:
 			_unsort(f.n)
 		fl = []
 	while fl.size() < N_LB + N_RAU:
-		var f := _fl_new("lb" if fl.size() < N_LB else "rau", path, randf() * m)
+		var f := _fl_new("lb" if fl.size() < N_LB else "rau", randf_range(float(R[0]), float(R[1])))
 		f.a = 1.0
 		fl.append(f)
-	# luôn trôi xuôi dòng (về phía +trục sông); nước lớn thì nước dồn lên nên trôi chậm gần như đứng, nước nổi trôi nhanh
-	var dir := 1.0
+	# luôn trôi xuôi dòng (về phía +x); nước lớn thì nước dồn lên nên trôi chậm gần như đứng, nước nổi trôi nhanh
 	var sk := 1.3 if G.w_all.WR.qs() else (0.25 if G.w_all.WX.FN() else 1.0)
 	for i in fl.size():
 		var f: Dictionary = fl[i]
 		f.ph = float(f.ph) + dt * 1.3
 		f.a = minf(1.0, float(f.a) + dt * 0.5)
-		f.s = float(f.s) + dir * sk * float(f.v) * dt / 3.0   # path cách nhau 3 ô
-		if f.s < 0.0 or f.s > m:   # trôi khỏi sông: cụm mới từ đầu kia
+		f.x = float(f.x) + sk * float(f.v) * dt
+		if f.x > float(R[1]):   # trôi khỏi sông: cụm mới từ đầu trên
 			_unsort(f.n)
-			fl[i] = _fl_new(String(f.kind), path, m if dir < 0.0 else 0.0)
+			fl[i] = _fl_new(String(f.kind), float(R[0]))
 			continue
-		_fl_put(f, path)
+		_fl_put(f)
 
 # ------------------------------------------------------------------ chạm: thêm vô danh sách chạm của farm, rồi đi tới làm
 func pick_add(L: Array) -> void:
@@ -255,8 +272,7 @@ func job(j: Dictionary) -> bool:   # tới nơi: hái / vớt / mò
 					G.vib(8)
 					G.mark()
 					_unsort(f.n)   # vớt rồi: cụm mới trôi vô từ đầu sông
-					var R: Dictionary = G.w_all.WC.river()
-					fl[i] = _fl_new(String(f.kind), R.path, 0.0)   # trôi xuôi: vô từ đầu trên
+					fl[i] = _fl_new(String(f.kind), float(_x_range()[0]))   # trôi xuôi: vô từ đầu trên
 					return true
 	return false
 
