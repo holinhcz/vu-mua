@@ -1574,6 +1574,8 @@ func _yb(k: String, x: int, y: int, full := true) -> void:   # yb: dời chỗ. 
 		s.gy = y
 	if full:
 		_fsync(k)
+	elif is_pen(k):   # đang kéo chuồng: dọn cây cỏ dưới chỗ mới (nền chỉ đổi phần đổi, nhẹ), chỗ cũ hiện lại
+		U.F._xw_sync()
 
 func _fsync(k: String) -> void:   # dựng lại chỗ vẽ thật (nền dọn cây dưới xưởng, lớp vẽ): chỉ lúc thả tay / đặt / hủy, không theo từng ô kéo
 	if is_pen(k):
@@ -1586,6 +1588,7 @@ var _fl_nodes := {}      # node đã dời -> chỗ gốc
 func _flift() -> void:
 	var on := mode == "fmove" and fac != "" and fmv == fac
 	var want := {}
+	var wk := {}   # node chuồng -> chênh khoá xếp lớp
 	if on:
 		var p := fpos(fac)
 		var b := 0.0 if G.motion_off() else (0.5 + 0.5 * sin(t * 4.0)) * 3.0
@@ -1597,24 +1600,56 @@ func _flift() -> void:
 					continue
 				var q: PackedStringArray = String(key).trim_prefix("pen|" + fac + "|").trim_prefix("(").trim_suffix(")").split(",")
 				var d := Vector2(LN.en(p.x, p.y) - LN.en(float(q[0]), float(q[1])), LN.nn(p.x, p.y) - LN.nn(float(q[0]), float(q[1])))
+				var dk := (p.x + p.y - int(q[0]) - int(q[1])) * 16.0   # thứ tự vẽ theo chỗ mới: cây cỏ quanh đó đè / bị đè đúng
 				for grp in V.cache[key]:
 					for sp in grp:
 						if is_instance_valid(sp):
 							want[sp] = d + (up if sp.z_index != -5 else Vector2.ZERO)   # nền chuồng nằm đất, chỉ dời
+							wk[sp] = dk
 		else:   # xưởng vẽ theo số chỗ (s.gx) nên chỉ cần nhấc
 			var xn = U.F.xnodes.get(fac)
 			if xn != null and is_instance_valid(xn):
 				want[xn] = up
+	var rs := false
 	for nd in _fl_nodes.keys():
 		if not is_instance_valid(nd):
 			_fl_nodes.erase(nd)
+			_fl_k.erase(nd)
 		elif not want.has(nd):
 			nd.position = _fl_nodes[nd]
 			_fl_nodes.erase(nd)
+			if _fl_k.has(nd):
+				rs = _sort_set(nd, _fl_k[nd]) or rs
+				_fl_k.erase(nd)
 	for nd in want:
 		if not _fl_nodes.has(nd):
 			_fl_nodes[nd] = nd.position
 		nd.position = _fl_nodes[nd] + want[nd]
+		if wk.has(nd):
+			if not _fl_k.has(nd):
+				_fl_k[nd] = _sort_get(nd)
+			if _fl_k[nd] != null:
+				rs = _sort_set(nd, float(_fl_k[nd]) + float(wk[nd])) or rs
+	if rs:
+		U.F._resort()
+
+var _fl_k := {}   # node chuồng đang dời -> khoá xếp lớp gốc
+func _sort_get(nd: Node) -> Variant:
+	for e in U.F.sortables:
+		if e[0] == nd:
+			return e[1]
+	return null
+
+func _sort_set(nd: Node, k) -> bool:   # true = đổi
+	if k == null:
+		return false
+	for e in U.F.sortables:
+		if e[0] == nd:
+			if e[1] == k:
+				return false
+			e[1] = k
+			return true
+	return false
 
 func _y(w: Vector2, snap: bool) -> void:   # _y: theo ngón tay; chạm thì hút về chỗ xanh gần nhất (<= 3 ô)
 	if fac == "" or fmv != fac:

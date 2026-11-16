@@ -1620,7 +1620,7 @@ func _xw_sync() -> void:
 		var s: Dictionary = G.xw.sr[k]
 		sig += k + str(s.gx) + "," + str(s.gy) + ";"
 	if lang != null:
-		sig += "|" + str(lang.ver)
+		sig += "|" + str(lang.ver) + "|" + str(G.g.get("fac"))   # chuồng đang kéo đổi chỗ: dọn cây cỏ theo
 	if sig == _xw_sig:
 		return
 	_xw_sig = sig
