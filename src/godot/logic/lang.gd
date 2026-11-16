@@ -586,17 +586,11 @@ func take_hu(o: Dictionary) -> int:   # Rz
 # Đặt / dời / xây món gì vào ô nào thì cảnh cũ trên các ô đó (cây cỏ hoang, bụi, cây cảnh nền) bị dọn hẳn, lưu vào save
 # (g.clr "t:x,y" + khoá cây hoang), dời món đi chỗ cũ vẫn trống, không mọc lại.
 func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
-	# ô chiếm + (món nhiều ô: nhà, đình, xưởng, chuồng) một hàng ô sát phía sau / hai bên sau, chỗ hình nền, hiên lấn ra:
-	# cây cỏ, bụi, cây có sẵn của làng ở đó dọn hẳn (cây còn đứng đó thì gốc lòi dưới hiên). Đồ mình tự đặt không đụng tới.
+	# đúng các ô món chiếm: cây cỏ, bụi, cây có sẵn của làng ở đó dọn hẳn. Đồ mình tự đặt không đụng tới.
 	var T := []
 	for y in range(gy, gy + fd):
 		for x in range(gx, gx + fw):
 			T.append(Vector2i(x, y))
-	if fw * fd > 1:
-		for y in range(gy - 1, gy + fd):
-			T.append(Vector2i(gx - 1, y))
-		for x in range(gx, gx + fw):
-			T.append(Vector2i(x, gy - 1))
 	var gone := {}
 	for q in T:
 		G.g.clr["t:" + str(q.x) + "," + str(q.y)] = 1

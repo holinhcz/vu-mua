@@ -981,8 +981,6 @@ func goto(p: Vector2) -> void:   # FR: bỏ việc "goto" cũ, đi tới ô (x, 
 
 func tap(sp: Vector2) -> void:
 	var w := screen_to_world(sp)
-	if main.has_method("dbg_tap"):
-		main.dbg_tap(w)
 	if ui.bdp != null and ui.bdp.active():
 		ui.bdp.world_tap(w)
 		return
