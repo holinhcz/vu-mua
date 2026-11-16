@@ -617,24 +617,60 @@ func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
 				O.remove_at(i)
 	ver += 1
 
-func occupy_all() -> void:   # món, nhà có sẵn của làng, xưởng, chuồng đang có (save cũ): chiếm chỗ một lần
-	for o in SO:
-		if not o.wild and not o.ring and int(o.fw) * int(o.fd) > 1 and so_shown(o):
-			occupy(int(o.gx), int(o.gy), int(o.fw), int(o.fd))
-	for o in objs():
-		var t = Pi.get(o.id)
+# ------------------------------------------------------------------ CHỖ ĐẶT: MỘT DANH SÁCH CHO MỌI THỨ (bản 213)
+# Mọi thứ đứng trên làng (món, xưởng, chuồng) đọc / ghi chỗ qua đây. Khoá: "o:<chỉ số món>", "x:<xưởng>", "p:<chuồng>".
+# Chỗ lưu trong save giữ như cũ (g.objs, g.fac như bản web) nên save cũ đọc được, nhưng không chỗ nào khác tự đọc / ghi riêng.
+func places() -> Array:   # [{k, gx, gy, fw, fd}]
+	var out := []
+	var O: Array = objs()
+	for i in O.size():
+		var o = O[i]
+		var t = Pi.get(o.id) if o is Dictionary else null
 		if t != null and o.id != "pond":
-			occupy(int(o.gx), int(o.gy), int(t.fw), int(t.fd))
+			out.append({"k": "o:" + str(i), "gx": int(o.gx), "gy": int(o.gy), "fw": int(t.fw), "fd": int(t.fd)})
 	if G.xw != null:
 		for k in G.xw.list_built():
 			var e: Dictionary = G.xw.sr[k]
-			occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd))
+			out.append({"k": "x:" + k, "gx": int(e.gx), "gy": int(e.gy), "fw": int(e.fw), "fd": int(e.fd)})
 	for p in C.Di:
 		if pen_built(p):
 			var q: Vector2i = pen_pos(p)
-			occupy(q.x, q.y, int(C.mo[p].w), int(C.mo[p].h))
+			out.append({"k": "p:" + p, "gx": q.x, "gy": q.y, "fw": int(C.mo[p].w), "fd": int(C.mo[p].h)})
+	return out
 
-# ------------------------------------------------------------------ hoa cỏ nhỏ (g.minis, ô nhỏ = nửa ô)
+func place_set(k: String, x: int, y: int, commit := true) -> void:   # dời thứ có khoá k tới (x, y); commit: chiếm chỗ + dựng lại
+	var kind := k.substr(0, 1)
+	var id := k.substr(2)
+	var fw := 1
+	var fd := 1
+	if kind == "o":
+		var o: Dictionary = objs()[int(id)]
+		o.gx = x
+		o.gy = y
+		var t = Pi.get(o.id)
+		if t != null:
+			fw = int(t.fw)
+			fd = int(t.fd)
+	else:
+		if not (G.g.get("fac") is Dictionary):
+			G.g.fac = {}
+		G.g.fac[id] = [x, y]
+		if kind == "x" and G.xw != null and G.xw.sr.has(id):
+			G.xw.sr[id].gx = x
+			G.xw.sr[id].gy = y
+			fw = int(G.xw.sr[id].fw)
+			fd = int(G.xw.sr[id].fd)
+		elif kind == "p":
+			fw = int(C.mo[id].w)
+			fd = int(C.mo[id].h)
+	if commit:
+		occupy(x, y, fw, fd)
+		changed()
+
+func occupy_all() -> void:   # mọi thứ đang đứng (save cũ): chiếm chỗ một lần
+	for e in places():
+		occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd))
+
 func _gq(x: int, y: int, a: int, b: int) -> bool:   # $G: chỗ nhỏ còn trống cạnh hàng rào
 	var k := str(x) + "," + str(y)
 	_a1()

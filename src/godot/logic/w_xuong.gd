@@ -90,14 +90,8 @@ func qJ(t: String) -> void:   # qJ: xong cả hàng đợi bằng sen đỏ
 		G.mark()
 
 func ytt(t: String, a: int, n: int) -> void:   # ytt: dời xưởng / chuồng (Th bỏ chỗ cũ, yb, Th chiếm chỗ mới)
-	if G.xw.sr.has(t):
-		G.xw.sr[t].gx = a
-		G.xw.sr[t].gy = n
-	if not (G.g.get("fac") is Dictionary):
-		G.g.fac = {}
-	G.g.fac[t] = [a, n]
 	if G.lang != null:
-		G.lang.changed()
+		G.lang.place_set(("x:" if G.xw.sr.has(t) else "p:") + t, a, n)
 
 # ------------------------------------------------------------------ việc làng nhờ
 func UJ(t: Dictionary) -> bool:   # UJ

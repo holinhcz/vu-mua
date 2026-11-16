@@ -1304,15 +1304,12 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 	if move_idx >= 0:
 		var e: Dictionary = L.objs()[move_idx]
 		e.id = id
-		e.gx = gx
-		e.gy = gy
 		e.seed = seed
-		L.occupy(gx, gy, int(t0.fw), int(t0.fd))   # có thể bỏ bớt cây có sẵn: chỉ số món đổi
+		L.place_set("o:" + str(move_idx), gx, gy)   # chiếm chỗ có thể bỏ bớt cây có sẵn: chỉ số món đổi
 		_vm(t0, gx, gy)
 		G.vib(10)
 		sel = L.objs().find(e)
 		move_idx = -1
-		L.changed()
 		G.toast.emit("Đã dời " + String(t0.n).to_lower() + ".")
 		_fl("sel")
 		return
@@ -1569,12 +1566,7 @@ func _spots() -> void:   # mọi chỗ đặt được + ô tô xanh
 					ftiles[str(x + r) + "," + str(y + o)] = 1
 
 func _yb(k: String, x: int, y: int, full := true) -> void:   # yb: dời chỗ. full = false khi đang kéo: chỉ đổi số, hình dời bằng _lift
-	if is_pen(k):
-		G.g.fac[k] = [x, y]
-	else:
-		var s: Dictionary = G.xw.sr[k]
-		s.gx = x
-		s.gy = y
+	lg().place_set(("p:" if is_pen(k) else "x:") + k, x, y, false)
 	if full:
 		_fsync(k)
 	elif is_pen(k):   # đang kéo chuồng: dọn cây cỏ dưới chỗ mới (nền chỉ đổi phần đổi, nhẹ), chỗ cũ hiện lại
@@ -1657,10 +1649,8 @@ func mm() -> void:   # MM: xây / dời đến đây
 		else:
 			G.xw.w(t0).b = 1
 	fmv = ""
-	G.g.fac[t0] = [p.x, p.y]
-	lg().occupy(p.x, p.y, sz.x, sz.y)   # cảnh dưới chỗ xưởng / chuồng: dọn hẳn
+	lg().place_set(("p:" if is_pen(t0) else "x:") + t0, p.x, p.y)   # chiếm chỗ (dọn cảnh dưới đó) + dựng lại
 	U.F._xw_sync()
-	lg().changed()
 	var F = U.F
 	var cx: float = p.x + sz.x / 2.0
 	var cy: float = p.y + sz.y / 2.0

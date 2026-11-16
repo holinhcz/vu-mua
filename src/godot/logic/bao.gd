@@ -37,14 +37,9 @@ func live() -> Dictionary:   # dựng lại danh sách cây khi làng đổi (đ
 		return by
 	_lsig = sg
 	var R := []   # xưởng, chuồng đã xây: cây cảnh dưới đó đã bị dọn
-	if G.xw != null:
-		for k in G.xw.list_built():
-			var e: Dictionary = G.xw.sr[k]
+	for e in L.places():
+		if not String(e.k).begins_with("o:"):
 			R.append(Rect2(float(e.gx), float(e.gy), float(e.fw), float(e.fd)))
-	for p in L.C.Di:
-		if L.pen_built(p):
-			var q: Vector2i = L.pen_pos(p)
-			R.append(Rect2(q.x, q.y, float(L.C.mo[p].w), float(L.C.mo[p].h)))
 	var out := {}
 	for o in L.SO:
 		if o.sk == "" or not EM.has(o.id) or not L.so_shown(o):
