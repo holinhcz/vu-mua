@@ -227,8 +227,8 @@ func refresh() -> void:
 		sg.sync()
 	if lang != null and lang.absorb_so():
 		G.mark()
-	if lang != null and not G.g.has("occ3"):   # save cũ: cảnh dưới món / nhà có sẵn / xưởng / chuồng dọn hẳn một lần
-		G.g["occ3"] = 1
+	if lang != null and not G.g.has("occ4"):   # save cũ: cảnh dưới món / nhà có sẵn / xưởng / chuồng dọn hẳn một lần
+		G.g["occ4"] = 1
 		lang.occupy_all()
 		G.mark()
 	_xw_sync()

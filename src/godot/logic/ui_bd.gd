@@ -1305,12 +1305,12 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		var e: Dictionary = L.objs()[move_idx]
 		e.id = id
 		e.gx = gx
-		L.occupy(gx, gy, int(t0.fw), int(t0.fd))
 		e.gy = gy
 		e.seed = seed
+		L.occupy(gx, gy, int(t0.fw), int(t0.fd))   # có thể bỏ bớt cây có sẵn: chỉ số món đổi
 		_vm(t0, gx, gy)
 		G.vib(10)
-		sel = move_idx
+		sel = L.objs().find(e)
 		move_idx = -1
 		L.changed()
 		G.toast.emit("Đã dời " + String(t0.n).to_lower() + ".")
