@@ -2042,6 +2042,13 @@ func _pond_banks() -> void:
 var pond_water: WaterRect = null
 # ponds / canal / brook get the river's water (pondwater.gdshader), over the ground's pond (z -38), under the pond's
 # tree reflections (-37), the banks (-36) and the plants and mats (-35)
+func _pond_rect() -> Rect2:   # khung màn của hộp trường ao
+	var x0 := 1e9; var y0 := 1e9; var x1 := -1e9; var y1 := -1e9
+	for c in [Vector2(pond_b.x, pond_b.y), Vector2(pond_b.x + pond_b.z / 4.0, pond_b.y), Vector2(pond_b.x, pond_b.y + pond_b.w / 4.0), Vector2(pond_b.x + pond_b.z / 4.0, pond_b.y + pond_b.w / 4.0)]:
+		var X: float = pond_G.ki + (c.x - c.y) * 32.0
+		var Y: float = pond_G.hi + (c.x + c.y) * 16.0
+		x0 = minf(x0, X); x1 = maxf(x1, X); y0 = minf(y0, Y); y1 = maxf(y1, Y)
+	return Rect2(x0, y0, x1 - x0, y1 - y0)
 func _build_pondwater() -> void:
 	if pond_water != null or pond_tex == null or tile_img == null or not wtex.has("noise.png"):
 		return
@@ -2058,13 +2065,9 @@ func _build_pondwater() -> void:
 	for nm in ["mid", "mudS", "dpc", "sky", "band"]:
 		var cc: Array = pond_cols[nm]
 		m.set_shader_parameter("p" + nm.substr(0, 1).to_upper() + nm.substr(1), Vector3(cc[0], cc[1], cc[2]))
-	var x0 := 1e9; var y0 := 1e9; var x1 := -1e9; var y1 := -1e9
-	for c in [Vector2(pond_b.x, pond_b.y), Vector2(pond_b.x + pond_b.z / 4.0, pond_b.y), Vector2(pond_b.x, pond_b.y + pond_b.w / 4.0), Vector2(pond_b.x + pond_b.z / 4.0, pond_b.y + pond_b.w / 4.0)]:
-		var X: float = pond_G.ki + (c.x - c.y) * 32.0
-		var Y: float = pond_G.hi + (c.x + c.y) * 16.0
-		x0 = minf(x0, X); x1 = maxf(x1, X); y0 = minf(y0, Y); y1 = maxf(y1, Y)
+	m.set_shader_parameter("uRain", maxf(rain_sent.x, 0.0))   # mưa đang rơi lúc dựng: hạt mưa trên mặt ao có ngay
 	pond_water = WaterRect.new()
-	pond_water.rect = Rect2(x0, y0, x1 - x0, y1 - y0)
+	pond_water.rect = _pond_rect()
 	pond_water.material = m
 	pond_water.z_index = -38
 	add_child(pond_water)
@@ -2184,10 +2187,12 @@ func _pond_apply() -> void:   # đào / lấp ao lúc đang chơi: dựng lại 
 	if pond_rules != null:
 		pond_rules.items = pond_G.build()["items"]
 		pond_rules.queue_redraw()
-	if pond_water != null:
-		pond_water.queue_free()
-		pond_water = null
-	_build_pondwater()
+	if pond_water != null:   # giữ nước ao cũ (còn đủ thông số: mưa rơi, đêm...), chỉ đổi hộp
+		pond_water.material.set_shader_parameter("uPB", pond_b)
+		pond_water.rect = _pond_rect()
+		pond_water.queue_redraw()
+	else:
+		_build_pondwater()
 	for n in [pond_bk, pond_bpl]:
 		if n != null:
 			n.queue_free()
