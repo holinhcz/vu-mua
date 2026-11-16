@@ -529,7 +529,8 @@ func clear_paddy(x: int, y: int) -> void:   # Dy: gặt lúa hoang ở khu đã 
 	F.burst(w - Vector2(0, 6), 8, [Color("#e8c84a"), Color("#c9a640"), Color("#8fbf4a")], 70.0, 2.6, 280.0, 2.0, 0.6, 16.0)
 	changed()
 
-const XV := {"banana": "ft_chuoi", "wildbanana": "ft_chuoi", "papaya": "ft_dudu", "coconut": "ft_dua", "mango": "ft_xoai", "jackfruit": "ft_mit", "dieu": "ft_dieu"}
+const XV := {"banana": "ft_chuoi", "wildbanana": "ft_chuoi", "papaya": "ft_dudu", "coconut": "ft_dua", "mango": "ft_xoai", "jackfruit": "ft_mit", "dieu": "ft_dieu",
+	"tallgrass": "hc_co", "wildbush": "hc_bui", "reed": "hc_lau", "stump": "goc_cay", "deadwood": "nhanh_kho"}   # tên vật của làng -> món cùng hình
 
 func own_n() -> int:   # số món tính vào giới hạn: không tính vật có sẵn của làng đã gộp vào (f = 1)
 	var n := 0
@@ -555,7 +556,7 @@ func absorb_so() -> bool:   # true = có gộp thêm
 		if not Pi.has(id):
 			continue
 		G.g.mv[o.sk] = 1
-		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
+		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if String(XV.get(o.id, "")).begins_with("ft_") else o.seed, "f": 1})
 		n += 1
 	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
 	if n > 0:
@@ -563,14 +564,14 @@ func absorb_so() -> bool:   # true = có gộp thêm
 	return n > 0
 
 func take_hu(o: Dictionary) -> int:   # Rz
-	if not Pi.has(o.id):
+	if not Pi.has(XV.get(o.id, o.id)):
 		G.toast.emit("Bụi cỏ này chỉ dọn được. Thoát Xây dựng rồi chạm để dọn.")
 		return -1
 	if own_n() >= int(C.V5):
 		G.toast.emit("Làng đã đủ " + str(int(C.V5)) + " món, hãy bán bớt.")
 		return -1
 	G.g.clr[o.key] = 1
-	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
+	objs().append({"id": XV.get(o.id, o.id), "gx": o.gx, "gy": o.gy, "seed": 0 if String(XV.get(o.id, "")).begins_with("ft_") else o.seed, "f": 1})
 	changed()
 	return objs().size() - 1
 

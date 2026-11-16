@@ -1754,7 +1754,7 @@ func fz(w: Vector2):   # Fz: món / vật cảnh / xưởng / chuồng / cây r�
 	if r != "":
 		return func(): fac = r; sel = -1; G.vib(15); _fl("fsel")
 	var l = L.hu_pick(w)
-	if l != null and l.type == "scn" and L.Pi.has(l.o.id):
+	if l != null and l.type == "scn" and L.Pi.has(L.XV.get(l.o.id, l.o.id)):
 		return func(): _rz(l.o)
 	return null
 

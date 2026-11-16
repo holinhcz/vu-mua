@@ -1543,39 +1543,175 @@ func _pump_scenery() -> void:
 					_sc_pack()
 				_pump_scenery())
 			continue
-		# (b47) kinds that use the very same picture share one file: sc.json "f"[j] = the file it is read from
-		var fj: int = int(sc_data["f"][j]) if sc_data.has("f") else j
-		# v=12 on cao su 31-34: now the godot/caylang/caosu export d0-d3 (b49), the same set as its other seasons
-		_fetch("n/sc/" + str(fj) + (".webp?v=11" if fj == 16 else ".webp?v=12" if fj >= 31 and fj <= 34 else ".webp?v=10"), func(b):   # 16 = the hill, lossless since 11-13   # v=9: pictures at the source's own px/unit (11-12), phones drop the old 6 px copies
-			sc_busy -= 1
+		if _sc_item_map() and sc_item.has(j):   # cây cỏ hoang có ảnh món: vẽ bằng đúng ảnh món (bản 217)
+			var jj: int = j
+			var kk := _sc_item_k(jj)
+			sc_item[jj].k = kk
+			_sc_item_load(jj, kk, func(img, box): _sc_got(jj, img, box))
+		else:
+			_sc_fetch_old(j)
+
+func _sc_fetch_old(j: int) -> void:   # hình cảnh của làng (n/sc): đồi, mép núi... thứ không phải cây cỏ có ảnh món
+	# (b47) kinds that use the very same picture share one file: sc.json "f"[j] = the file it is read from
+	var fj: int = int(sc_data["f"][j]) if sc_data.has("f") else j
+	_fetch("n/sc/" + str(fj) + (".webp?v=11" if fj == 16 else ".webp?v=10"), func(b):   # 16 = the hill, lossless since 11-13
+		var img := Image.new()
+		_sc_got(j, img if img.load_webp_from_buffer(b) == OK else null, null))
+
+func _sc_got(j: int, img, nv) -> void:   # hình của loại cảnh j về (nv: khung mới [ox, oy, w, h] khi là ảnh món)
+	sc_busy -= 1
+	if img != null:
+		if nv != null:
+			_sc_v_set(j, nv)
+		_sc_keep_half(j, img)
+		var tex := ImageTexture.create_from_image(img)
+		_mask_keep(tex, img)
+		img.generate_mipmaps()
+		tex.set_image(img)
+		var v: Array = sc_data["v"][j]
+		var k := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
+		sc_full[j] = [tex, k]
+		for s in sc_spr[j]:
+			s.texture = tex
+			s.scale = k
+			if s.has_meta("sw"):
+				s.offset = Vector2(v[0] / k.x, v[1] / k.y)
+			s.visible = _lot_vis(s)
+		for s in sc_rspr.get(j, []):
+			s.texture = tex
+			s.scale = Vector2(k.x, -k.y)
+			s.visible = _lot_vis(s)
+		sc_rspr.erase(j)
+		tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0
+	sc_done[j] = true
+	sc_tex_have += 1
+	if sc_tex_have == sc_tex_n:
+		_sc_pack()
+		_sc_night_apply()
+	_pump_scenery()
+
+func _sc_v_set(j: int, nv: Array) -> void:   # đổi khung hình của loại j (chân giữ nguyên): dời hình + bóng nước theo
+	var V: Array = sc_data["v"]
+	var d := Vector2(float(nv[0]) - float(V[j][0]), float(nv[1]) - float(V[j][1]))
+	V[j] = [float(nv[0]), float(nv[1]), float(nv[2]), float(nv[3])]
+	for sp in sc_spr[j]:
+		if not sp.has_meta("sw"):
+			sp.position += d
+	for sp in sc_rall.get(j, []):
+		if is_instance_valid(sp):
+			sp.position += Vector2(d.x, -d.y)
+
+# ---------------------------------------------------------------- (bản 217) CÂY CỎ HOANG = ẢNH MÓN
+# Khoảng 9.200 cây cỏ hoang của làng (lang.HU + vật hoang của lang.SO) vẽ bằng ĐÚNG bộ ảnh của món (bd_pics: cao su, tràm,
+# điều, dừa, chuối, xoài, mít, dừa nước, tre, cau, dâm bụt, cỏ dại, bụi cây, lau sậy, gốc cây, nhánh khô...): cùng khung theo
+# dáng + mùa (lang_ve.frames_for), cùng đêm (công thức đêm như món). Mỗi loại cảnh j vẫn là một nhóm hình (giữ lọc màn,
+# atlas khi xa, bóng nước, ẩn khi dọn / dưới xưởng), chỉ đổi nguồn ảnh. Không còn hình cây cỏ riêng của bản web.
+var sc_item := {}   # loại cảnh j -> {b: gói ảnh món, id, seed, k: khung đang dùng}
+var _sci_ok := false
+var _sci_wait := []   # [gói, khung, cb] chờ gói ảnh món tải xong
+func _sc_item_map() -> bool:
+	if _sci_ok:
+		return true
+	var fm = get_node_or_null("Farm")
+	if fm == null or fm.lang == null or fm.lang_ve == null or sc_data.is_empty():
+		return false
+	var LG = fm.lang
+	var byk := {}
+	for o in LG.HU:
+		byk[int(round(float(o.k) * 1000.0))] = o
+	for o in LG.SO:
+		if o.wild:
+			byk[int(round(float(o.k) * 1000.0))] = o
+	var cnt := {}
+	for r in sc_data["i"]:
+		var o = byk.get(int(round(float(r[4]) * 1000.0)))
+		var j := int(r[0])
+		if o == null or j == 16:
+			continue
+		var id: String = LG.XV.get(o.id, o.id)
+		if not fm.lang_ve.has_pic(id):
+			continue
+		var key := id + "|" + str(int(o.seed))
+		if not cnt.has(j):
+			cnt[j] = {}
+		cnt[j][key] = int(cnt[j].get(key, 0)) + 1
+	for j in cnt:
+		var best := ""
+		var bn := -1
+		for key in cnt[j]:
+			if int(cnt[j][key]) > bn:
+				bn = int(cnt[j][key])
+				best = key
+		var p := best.split("|")
+		sc_item[j] = {"b": fm.lang_ve.bundle(p[0]), "id": p[0], "seed": int(p[1]), "k": ""}
+	_sci_ok = true
+	print("pond-log wild trees as item pictures: ", sc_item.size(), " kinds")
+	return true
+func _sc_item_k(j: int) -> String:   # khung ảnh món của loại j theo mùa hiện tại
+	var e: Dictionary = sc_item[j]
+	var fr: Array = get_node("Farm").lang_ve.frames_for(String(e.id), int(e.seed))
+	return "" if fr.is_empty() else String(fr[0])
+func _sc_item_load(j: int, k: String, cb: Callable) -> void:   # cb(Image hoặc null, khung [ox, oy, w, h])
+	var fm = get_node("Farm")
+	var b: String = sc_item[j].b
+	var nm: String = fm.lang_ve.op_name(b, k)
+	var bx = info.get("opb", {}).get(nm)
+	if bx != null:   # ảnh món có sẵn trong n/op (chung với vật của làng)
+		_fetch("n/op/" + nm + ".webp", func(body):
 			var img := Image.new()
-			if img.load_webp_from_buffer(b) == OK:
-				_sc_keep_half(j, img)
-				var tex := ImageTexture.create_from_image(img)
-				_mask_keep(tex, img)
-				img.generate_mipmaps()
-				tex.set_image(img)
-				var v: Array = sc_data["v"][j]
-				var k := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
-				sc_full[j] = [tex, k]
-				for s in sc_spr[j]:
-					s.texture = tex
-					s.scale = k
-					if s.has_meta("sw"):
-						s.offset = Vector2(v[0] / k.x, v[1] / k.y)
-					s.visible = _lot_vis(s)
-				for s in sc_rspr.get(j, []):
-					s.texture = tex
-					s.scale = Vector2(k.x, -k.y)
-					s.visible = _lot_vis(s)
-				sc_rspr.erase(j)
-				tex_mb += img.get_width() * img.get_height() * 4 * 1.33 / 1048576.0
-			sc_done[j] = true
-			sc_tex_have += 1
-			if sc_tex_have == sc_tex_n:
-				_sc_pack()
-				_sc_night_apply()
-			_pump_scenery())
+			cb.call(img if img.load_webp_from_buffer(body) == OK else null, bx))
+		return
+	fm.P.load_bundle(b)   # ảnh món trong gói l/
+	_sci_wait.append([b, k, cb])
+func _sc_item_poll() -> void:   # gói ảnh món về (hoặc lỗi): trả ảnh cho các loại đang chờ
+	if _sci_wait.is_empty():
+		return
+	var P = get_node("Farm").P
+	for i in range(_sci_wait.size() - 1, -1, -1):
+		var w: Array = _sci_wait[i]
+		var b: String = w[0]
+		var st: int = int(P.B[b].get("st", 1)) if P.B.has(b) else 1
+		if st < 2:
+			continue
+		_sci_wait.remove_at(i)
+		var im = P.img(b, w[1]) if st == 2 else null
+		var a = P.meta(b).get(w[1]) if st == 2 else null
+		(w[2] as Callable).call((im as Image).duplicate() if im != null and a != null else null, a)
+func _sc_item_season() -> void:   # mùa đổi: loại nào đổi khung thì lấy ảnh món mới (chỉ lúc đổi mùa)
+	if not _sci_ok:
+		return
+	for j in sc_item:
+		var e: Dictionary = sc_item[j]
+		if String(e.k) == "" or not sc_full.has(j):
+			continue
+		var k := _sc_item_k(j)
+		if k == String(e.k):
+			continue
+		e.k = k
+		var jj: int = j
+		_sc_item_load(jj, k, func(img, box):
+			if img == null or String(sc_item[jj].k) != k:
+				return
+			_sc_v_set(jj, box)
+			var tex := ImageTexture.create_from_image(img)
+			_mask_keep(tex, img)
+			img.generate_mipmaps()
+			tex.set_image(img)
+			var v: Array = sc_data["v"][jj]
+			var sk := Vector2(v[2] / img.get_width(), v[3] / img.get_height())
+			sc_full[jj] = [tex, sk]
+			sc_arect.erase(jj)   # khung mùa mới không có trong atlas xa: hình đủ (có mipmap) ở mọi mức zoom
+			for sp in sc_spr[jj]:
+				sp.texture = tex
+				sp.region_enabled = false
+				sp.scale = sk
+				if sp.has_meta("sw"):
+					sp.offset = Vector2(v[0] / sk.x, v[1] / sk.y)
+			for sp in sc_rall.get(jj, []):
+				if is_instance_valid(sp) and sp.texture != null:
+					sp.texture = tex
+					sp.region_enabled = false
+					sp.scale = Vector2(sk.x, -sk.y))
 
 # Zoomed out, thousands of scenery pictures are on screen and each one has its own texture: the phone makes one draw
 # call per picture (zoom 0.22: 6-24 fps). So every picture is also kept at half size, and once all are in they are
@@ -1666,7 +1802,7 @@ func _sc_night_apply() -> void:
 	var N: Dictionary = sc_data.get("n", {})
 	for j in sc_full.keys():
 		var fj: int = int(sc_data["f"][j]) if sc_data.has("f") else j
-		if not N.has(str(fj)):
+		if not N.has(str(fj)) or sc_item.has(j):   # cây cỏ hoang bằng ảnh món: đêm theo công thức như món
 			continue
 		if night_cur == 1:
 			if not sc_ntex.has(j):
@@ -3006,123 +3142,14 @@ func _unhandled_input(e: InputEvent) -> void:
 		cam += e.delta * 8.0 / zoom
 
 
-# ---------------------------------------------------------------- (b49) trees that change with the season (web: mai, cao su)
-# The pictures are the split exports in godot/ (caylang/caosu, kieng/mai, 9 px/unit, tools/ssprep.py -> n/ss.wasm + n/ss.json).
-# Cao su (scenery kinds 31-34 = seed 0-3): look by season [green, green, turning, bare], frame = seed + 4*look; look 0 is the
-# village's own picture. Mai (objects 104, 141): frame = seed + 4*season (xuân gold flowers, hạ green, thu yellow, mùa khô bare
-# with buds); hạ is the object's own picture.
-var ss_meta := {}
-var ss_sea := -1
-var ss_busy := 0
-var ss_tex := {}
-var cs_base := {}    # kind -> [full, v, atlas rect] of look 0
+# mùa của cây cỏ hoang: cùng khung ảnh món theo mùa (lang_ve.frames_for) như món đặt; đổi mùa thì loại nào đổi khung mới tải
+var sci_sea := -1
 func _ss_tick() -> void:
-	if sc_data.is_empty() or ss_busy > 0:
-		return
-	if ss_meta.is_empty():
-		ss_busy = 1
-		_fetch("n/ss.json?v=1", func(b: PackedByteArray):
-			ss_busy = 0
-			var m = JSON.parse_string(b.get_string_from_utf8())
-			ss_meta = m if m is Dictionary else {"bad": true})
-		return
-	if ss_meta.has("bad"):
-		return
+	_sc_item_poll()
 	var sea: int = int(troi.get("season", 1)) if troi.has("season") else 1
-	if sea == ss_sea:
-		return
-	for js in ss_meta["cs"]["j"]:
-		if not sc_full.has(int(js)):
-			return   # the village's own cao su pictures first (else they would land over this season's later)
-	# every picture this season needs, loaded first; then all of it changes in one frame
-	var need := []
-	var look: int = [0, 0, 1, 2][sea]
-	for js in ss_meta["cs"]["j"]:
-		if look > 0:
-			need.append("cs" + str(int(ss_meta["cs"]["j"][js]) + 4 * look))
-	for jo in ss_meta["mai"]["o"]:
-		if sea != 1:
-			need.append("mai" + str(int(ss_meta["mai"]["o"][jo][0]) + 4 * sea))
-	var miss := []
-	for nm in need:
-		if not ss_tex.has(nm):
-			miss.append(nm)
-	if miss.size() > 0:
-		ss_busy = miss.size()
-		for nm in miss:
-			var nmx: String = nm
-			_fetch_in("ss", nmx, func(b):
-				var img := Image.new()
-				if img.load_webp_from_buffer(b) == OK:
-					img.generate_mipmaps()
-					ss_tex[nmx] = ImageTexture.create_from_image(img)
-				else:
-					ss_tex[nmx] = null
-				ss_busy -= 1)
-		return
-	ss_sea = sea
-	_ss_apply(sea, look)
-func _ss_apply(sea: int, look: int) -> void:
-	var V: Array = sc_data["v"]
-	for js in ss_meta["cs"]["j"]:
-		var j := int(js)
-		if not sc_full.has(j):
-			continue
-		if not cs_base.has(j):
-			cs_base[j] = [sc_full[j], V[j].duplicate(), sc_arect.get(j)]
-		var nv: Array
-		if look == 0:
-			sc_full[j] = cs_base[j][0]
-			nv = cs_base[j][1].duplicate()
-			if cs_base[j][2] != null:
-				sc_arect[j] = cs_base[j][2]
-		else:
-			var nm := "cs" + str(int(ss_meta["cs"]["j"][js]) + 4 * look)
-			var t: Texture2D = ss_tex.get(nm)
-			if t == null:
-				continue
-			var f: Array = ss_meta["cs"]["f"][str(int(ss_meta["cs"]["j"][js]) + 4 * look)]
-			nv = [float(f[0]), float(f[1]), float(f[2]), float(f[3])]
-			sc_full[j] = [t, Vector2(nv[2] / t.get_width(), nv[3] / t.get_height())]
-			sc_arect.erase(j)   # not in the far atlas: the full picture (mipmapped) at every zoom
-		var d := Vector2(float(nv[0]) - float(V[j][0]), float(nv[1]) - float(V[j][1]))
-		V[j] = nv
-		for sp in sc_spr[j]:
-			if not sp.has_meta("sw"):
-				sp.position += d
-		for sp in sc_rall.get(j, []):
-			if is_instance_valid(sp):
-				sp.position += Vector2(d.x, -d.y)
-				sp.texture = sc_full[j][0]
-				sp.region_enabled = false
-				sp.scale = Vector2(sc_full[j][1].x, -sc_full[j][1].y)
-		for sp in sc_spr[j]:
-			sp.texture = sc_full[j][0]
-			sp.region_enabled = false
-			sp.scale = sc_full[j][1]
-			if sp.has_meta("sw"):
-				sp.offset = Vector2(float(nv[0]) / sc_full[j][1].x, float(nv[1]) / sc_full[j][1].y)
-	sc_far = -1
-	_sc_mode()
-	for jo in ss_meta["mai"]["o"]:
-		var j := int(jo)
-		if j >= objs.size():
-			continue
-		var o: Dictionary = objs[j]
-		var e: Array = ss_meta["mai"]["o"][jo]
-		o.erase("sst")
-		o["lev"] = 99
-		if not o.has("piv"):
-			o["spr"].offset = Vector2.ZERO
-		if sea != 1:
-			var k := int(e[0]) + 4 * sea
-			var t: Texture2D = ss_tex.get("mai" + str(k))
-			var f: Array = ss_meta["mai"]["f"][str(k)]
-			if t != null:
-				o["sst"] = [t, Vector2(float(e[1]) + float(f[0]), float(e[2]) + float(f[1]))]
-		if o["spr"].visible:
-			_show_obj(o, 0)
-	print("season pictures: season ", sea)
+	if sea != sci_sea and sc_tex_have >= sc_tex_n and sc_tex_n > 0:
+		sci_sea = sea
+		_sc_item_season()
 
 # ---------------------------------------------------------------- fallen leaves + footpaths (web NEN2 v777 leaves(), v787 tracks())
 # Leaves: every tree drops a few of its own leaves round its trunk; how many by season (web cnt()), which piece by season
