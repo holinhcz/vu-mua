@@ -82,7 +82,7 @@ func _ready() -> void:
 	obj_root.z_index = 0
 	obj_root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_child(obj_root)
-	var zf := ZFixer.new()   # (b56) after the logic's own sort each frame: puts its nodes at their web depth k
+	var zf := ZFixer.new()   # thứ tự vẽ: main.zorder() mỗi khung
 	zf.m = self
 	zf.process_priority = 100
 	add_child(zf)
@@ -1465,8 +1465,7 @@ func _build_scenery(sc: Dictionary, vmeta: Dictionary, road: Image) -> void:
 		sc_spr[j].append(s)
 		if absf(float(r[1]) - 4636.0) < 1.0 and absf(float(r[2]) - 480.0) < 1.0 and float(v[2]) > 300.0:
 			hill_spr = s
-	if sc_root == obj_root:
-		_zsort_all()
+	zo_dirty = true
 	# (logic b164) loại cảnh nào có hình gần chỗ đang nhìn thì tải trước; màn chờ chỉ đợi các loại đang hiện trên màn
 	# (trước đây đợi đủ 179 loại của cả làng: mở game mất 1-2 phút dù trên màn chỉ có vài chục loại)
 	var ctr := cam + get_viewport_rect().size / zoom * 0.5
@@ -3745,32 +3744,21 @@ func road_set(add: Dictionary, rm: Array) -> void:
 		im.set_pixel(q.x, q.y, Color8(c.r8, m, c.b8, c.a8))
 	road_img = im
 	(ground.material as ShaderMaterial).set_shader_parameter("uRD", ImageTexture.create_from_image(im))
-	# verges: the old rows go, the new ones go in at their place in the draw order
+	# verges: the old rows go, the new ones go in (zorder sắp lại toàn bộ theo khoá)
 	for row in vg_rows:
 		if is_instance_valid(row):
 			row.queue_free()
 			sc_root.remove_child(row)
 	vg_rows = []
-	var kids := sc_root.get_children()
-	var keys := PackedFloat32Array()
-	var lk := -1.0e9
-	for n in kids:
-		lk = _zkey(n, lk)
-		keys.append(lk)
-	var add_rows := _verges(im, vg_meta)
-	add_rows.sort_custom(func(a, b): return a[0] > b[0])   # last first, so earlier indexes stay right
-	for e in add_rows:
+	for e in _verges(im, vg_meta):
 		var row = e[1]
 		row.material = night_mat
 		row.set_meta("k", e[0])
 		row.atl = sc_atl if sc_far == 1 else null
 		row.arect = sc_arect
-		var i := keys.bsearch(float(e[0]), false)
 		sc_root.add_child(row)
-		sc_root.move_child(row, mini(i, sc_root.get_child_count() - 1))
 		vg_rows.append(row)
-	zs_count = -1
-	zs_full = true
+	zo_dirty = true
 
 # ---- GIFTCODE (Link 11-13 11:00 "làm chỗ nhập giftcode, mã 1tr xu để test") ----
 # The page has the input box (window.__ntgq = codes typed, window.__ntgr = answer shown under the box); the game
@@ -3865,11 +3853,11 @@ func _lv_night() -> void:
 # Web BE(): scenery t2, objects So, placed things Hr, plots zE, signs, animals go in one array, sorted by k = gx+gy of
 # the thing's foot (= (screen y at the ground - 968) / 16). Godot: obj_root holds all of them; statics carry meta "k";
 # the logic's nodes (farm.sortables [node, dk = ground y]) are moved to their k place every frame after the logic runs.
-class ZFixer extends Node:
+class ZFixer extends Node:   # chạy sau logic mỗi khung (process_priority 100): main.zorder()
 	var m
 	func _process(_d: float) -> void:
 		var t0 := Time.get_ticks_usec()
-		m._zfix()
+		m.zorder()
 		m.pt["xếp"] = m.pt.get("xếp", 0.0) + (Time.get_ticks_usec() - t0)
 # (b70) time markers: first and last node to run _process each frame -> total script time of the whole tree
 class PMark extends Node:
@@ -3943,75 +3931,78 @@ func _drw_text(frames: int) -> String:
 		o.append("%s %.1f" % [ks[i], drw[ks[i]] / maxf(1.0, frames)])
 	drw.clear()
 	return " · ".join(o)
-var zs_ready := false
-var zs_count := -1
-var zs_mine := -1
-var zs_full := false   # logic báo làng đổi: lượt xếp sau sắp lại toàn bộ (giống tải lại)
-var _zs_sig := false
-var zs_keys := PackedFloat32Array()
-var zs_nodes := []
-func _zsort_all() -> void:
-	var kids := obj_root.get_children()
-	var L := []
-	var last := -1.0e9
-	for i in kids.size():
-		var n: Node = kids[i]
-		var kf: float = _zkey(n, last)
-		last = kf
-		L.append([kf, i, n])
-	L.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
-	for i in L.size():
-		var n: Node = L[i][2]
-		if obj_root.get_child(i) != n:
-			obj_root.move_child(n, i)
-	zs_ready = true
-	zs_count = -1
-var zf_off := -1
-func _zfix() -> void:
-	if zf_off < 0:
-		zf_off = 1 if _tflag("__nozf") else 0
-	if zf_off == 1 or not zs_ready:
+# ---- THỨ TỰ VẼ (bản 197, viết lại, một luật duy nhất) ----
+# Mọi thứ đứng trên làng nằm chung obj_root: cảnh, nhà, cây, cỏ ven đường (khoá meta "k"), đồ của logic (farm.sortables:
+# [node, chân y]). Khoá = độ sâu ô của chân = (y chân - 968) / 16. Chân càng gần mình (khoá lớn) càng vẽ sau, đè lên.
+# - Có gì vào / ra obj_root hoặc khoá cảnh đổi: sắp lại TOÀN BỘ theo khoá (y như lúc mở game).
+# - Mỗi khung: chỉ đồ đang đi (người, con vật, ghe...) đổi khoá: chen lại đúng chỗ giữa các cảnh đã xếp.
+var zo_dirty := true
+var zo_keys := PackedFloat32Array()   # khoá cảnh theo thứ tự đang vẽ
+var zo_nodes := []                    # cảnh tương ứng
+var _zo_n := -1
+var _zo_hook := false
+static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" số; không có thì đi theo cái trước
+	if n.has_meta("k"):
+		var v = n.get_meta("k")
+		if v is float or v is int:
+			return float(v)
+	return last
+func zorder() -> void:
+	if sc_data.is_empty() and objs.is_empty():
 		return
+	if not _zo_hook:
+		_zo_hook = true
+		obj_root.child_entered_tree.connect(func(_n): _zo_n = -1)
+		obj_root.child_exiting_tree.connect(func(_n): _zo_n = -1)
 	var fm = get_node_or_null("Farm")
-	if fm == null or not ("sortables" in fm):
-		return
-	var S: Array = fm.sortables
-	if zs_full:   # làng vừa đổi (đặt, dời, bỏ món, đường mới): sắp lại hết như lúc tải lại, rồi mới chen node của logic
-		zs_full = false
-		_zsort_all()
-	var mine := {}
+	var dyn := {}
 	var L := []
-	for e in S:
-		var n = e[0]
-		if is_instance_valid(n) and n.get_parent() == obj_root:
-			mine[n] = true
-			L.append([(float(e[1]) - 968.0) / 16.0, n])
-	if not _zs_sig:   # (bản 195) có node vào / ra obj_root thì dựng lại danh sách khoá (trước chỉ so số con: vào k ra k thì giữ
-		_zs_sig = true   # danh sách cũ, node mới đặt chỗ sai tới khi tải lại)
-		obj_root.child_entered_tree.connect(func(_n): zs_count = -1)
-		obj_root.child_exiting_tree.connect(func(_n): zs_count = -1)
-	if obj_root.get_child_count() != zs_count or S.size() != zs_mine:
-		zs_count = obj_root.get_child_count()
-		zs_mine = S.size()
-		zs_keys = PackedFloat32Array()
-		zs_nodes = []
-		var last := -1.0e9
-		for n in obj_root.get_children():
-			if mine.has(n) or n.is_queued_for_deletion():
-				continue
-			var kf: float = _zkey(n, last)
-			last = kf
-			zs_keys.append(kf)
-			zs_nodes.append(n)
+	if fm != null and "sortables" in fm:
+		for e in fm.sortables:
+			var n = e[0]
+			if is_instance_valid(n) and n.get_parent() == obj_root and not n.is_queued_for_deletion():
+				dyn[n] = true
+				L.append([(float(e[1]) - 968.0) / 16.0, n])
 	L.sort_custom(func(a, b): return a[0] < b[0])
+	if _zo_n != obj_root.get_child_count() - dyn.size() or zo_dirty:   # cảnh đổi: sắp lại toàn bộ
+		zo_dirty = false
+		var st := []
+		var last := -1.0e9
+		var i := 0
+		for n in obj_root.get_children():
+			if dyn.has(n) or n.is_queued_for_deletion():
+				continue
+			last = _zkey(n, last)
+			st.append([last, i, n])
+			i += 1
+		st.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
+		zo_keys = PackedFloat32Array()
+		zo_nodes = []
+		var order := []
+		var j := 0
+		for e in st:
+			while j < L.size() and L[j][0] < e[0]:
+				order.append(L[j][1])
+				j += 1
+			order.append(e[2])
+			zo_keys.append(e[0])
+			zo_nodes.append(e[2])
+		while j < L.size():
+			order.append(L[j][1])
+			j += 1
+		for k in order.size():
+			if obj_root.get_child(k) != order[k]:
+				obj_root.move_child(order[k], k)
+		_zo_n = obj_root.get_child_count() - dyn.size()
+		return
+	# đồ của logic: đứng sau cảnh cuối cùng có khoá nhỏ hơn mình, trước cảnh đầu tiên có khoá lớn hơn hoặc bằng
 	var pt := -1
 	var pn: Node = null
 	for e in L:
 		var n: Node = e[1]
-		n.set_meta("zk", e[0])   # NOT "k": the logic's lang_ve keeps its frame name ("d0") in meta "k"
-		var t := zs_keys.bsearch(e[0], false)
-		var nxt: Node = zs_nodes[t] if t < zs_nodes.size() else null
-		var prv: Node = zs_nodes[t - 1] if t > 0 else null
+		var t := zo_keys.bsearch(e[0], true)
+		var nxt: Node = zo_nodes[t] if t < zo_nodes.size() else null
+		var prv: Node = zo_nodes[t - 1] if t > 0 else null
 		var idx := n.get_index()
 		var ok := (prv == null or prv.get_index() < idx) and (nxt == null or nxt.get_index() > idx)
 		if ok and pt == t and pn != null and pn.get_index() > idx:
@@ -4357,13 +4348,3 @@ class HzPart extends Node2D:
 	func _draw() -> void:
 		h.draw_part(self, x0, x1)
 
-# (b63) draw key of an obj_root child: "zk" (the logic's nodes, set by _zfix), else a numeric "k" (scenery, objects,
-# verges); a string "k" is the logic's frame name, not a key (b56-62 overwrote it: built houses/pens lost their picture)
-static func _zkey(n: Node, last: float) -> float:
-	if n.has_meta("zk"):
-		return float(n.get_meta("zk"))
-	if n.has_meta("k"):
-		var v = n.get_meta("k")
-		if v is float or v is int:
-			return float(v)
-	return last

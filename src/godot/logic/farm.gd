@@ -21,7 +21,6 @@ var plots := []        # mỗi ô: {soil:[dry, m, wet, pud], lock, crop:Sprite2D
 var sortables := []    # node của mình trong obj_root: [node, dk, j]
 var player: PlayerNode
 var floats := []       # [gx, gy, text, t]
-var _resort_t := 0.0
 
 # ------------------------------------------------------------------ helpers
 static func en(x: float, y: float) -> float:
@@ -728,10 +727,7 @@ func _process(dt: float) -> void:
 		f[3] += dt
 	floats = floats.filter(func(f): return f[3] < 1.6)
 	fx.queue_redraw()
-	_resort_t -= dt
-	if _resort_t <= 0.0:
-		_resort_t = 0.1
-		_resort()
+	_resort()
 
 func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong màn (nới m): ngoài màn thì khỏi vẽ lại mỗi khung
 	var vs: Vector2 = get_viewport().get_visible_rect().size / main.zoom
@@ -739,45 +735,8 @@ func on_view(p: Vector2, m := 140.0) -> bool:   # điểm làng p nằm trong m�
 
 var song = null   # song_ve.gd: bụi ven sông, cụm trôi, bãi bùn, cá búng
 
-var _rs_pm := PackedFloat64Array()
-
-func _resort() -> void:
-	# MỘT logic xếp trên dưới (bản 194): nền (main._zfix) xếp mọi thứ mỗi khung theo độ sâu ô như bản web, cả cảnh, cỏ ven
-	# đường lẫn node của logic (khoá ở sortables). Ở đây chỉ cập nhật khoá; chỉ khi nền chưa sẵn sàng mới tự chen tạm.
-	# (Trước đây hai bên cùng xếp, mỗi bên một cách: dời đồ xong lệch, tải lại mới đúng.)
-	var O: Array = main.objs
+func _resort() -> void:   # khoá chân của nhân vật; thứ tự vẽ do main.zorder() lo (một luật cho mọi thứ)
 	sortables[sortables.size() - 1][1] = player.base_y()
-	if main.get("zs_ready") and int(main.get("zf_off")) != 1:
-		return
-	if O.size() != _rs_pm.size():   # đáy lớn nhất tính tới vật k (vật nền không đổi): tìm nhị phân thay vì dò cả ngàn vật cho mỗi node
-		_rs_pm.resize(O.size())
-		var m := -1e30
-		for k in O.size():
-			var o: Dictionary = O[k]
-			if o["x"] >= -50000:
-				m = maxf(m, float(o["y"]) + float(o["h"]))
-			_rs_pm[k] = m
-	var ch := false
-	for s in sortables:
-		var j := _rs_pm.bsearch(float(s[1]), false)   # vật đầu tiên có đáy thấp hơn s
-		if j != s[2]:
-			s[2] = j
-			ch = true
-	if not ch:
-		return
-	var L := sortables.duplicate()
-	L.sort_custom(func(a, b): return a[1] < b[1])
-	var root: Node2D = main.obj_root
-	for s in L:
-		var n: Node2D = s[0]
-		if s[2] >= O.size():
-			root.move_child(n, root.get_child_count() - 1)
-		else:
-			var ref: Node2D = O[s[2]]["spr"]
-			var ti := ref.get_index()
-			var ci := n.get_index()
-			root.move_child(n, ti if ci > ti else ti - 1)
-
 
 # ------------------------------------------------------------------ chạm / vuốt (pointerdown/move/up + click của bản web)
 # Chạm xuống ô có việc (gieo/tưới/gặt/bắt sâu): giữ 220 ms rồi kéo = vuốt làm cả loạt (không kéo làng);
