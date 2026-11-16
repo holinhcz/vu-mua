@@ -558,6 +558,14 @@ func absorb_so() -> bool:   # true = có gộp thêm
 		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
 		n += 1
 	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
+	if F.main.has_method("objs_gone"):   # hình gốc của làng ở chỗ các vật đã thành món: ẩn hẳn
+		var pts := []
+		for o in SO:
+			if o.sk != "" and G.g.mv.has(o.sk) and F.lang_ve != null:
+				var b: String = F.lang_ve.bundle(XV.get(o.id, o.id))
+				if b != "":
+					pts.append([o.sx, o.sy, F.lang_ve.op_name(b, "x").trim_suffix("-x")])
+		F.main.objs_gone(pts)
 	if n > 0:
 		changed()
 	return n > 0

@@ -2586,7 +2586,7 @@ func _update_view() -> void:
 		var r := Rect2(o["x"], o["y"], o["w"], o["h"])
 		if not r.intersects(Rect2(w0 - (w1 - w0) * 0.25, (w1 - w0) * 1.5)):
 			continue
-		if (o["pc"] != "" and not _owned(o["pc"])) or o.get("cay", false) or o.get("xg", false):
+		if (o["pc"] != "" and not _owned(o["pc"])) or o.get("cay", false) or o.get("xg", false) or o.get("gone", false):
 			o["spr"].visible = false   # (n41) the lot's own scenery shows only once it is bought (web tc())
 			continue
 		var nm: String = o["op"][0]
@@ -3555,6 +3555,21 @@ func sc_pick(k: float, w: Vector2) -> int:   # hình cảnh khoá k: chạm trú
 		if h == 0:
 			res = 0
 	return res
+
+# (bản 210) hình gốc của làng (n/op) cho vật có sẵn đã thành món của mình (lang.absorb_so): ẩn hẳn theo đúng chỗ chân của
+# vật đó (sx, sy) và tên hình, không dựa vào khung ô (đình, rơm: chân hình lệch khung ô nên có lúc còn hiện, dời món đi thì
+# thấy hai cái chồng nhau). pts: [[sx, sy, tên gói]]
+func objs_gone(pts: Array) -> void:
+	for o in objs:
+		if o["op"] == null or o.has("hive") or o.get("gone", false):
+			continue
+		var nm: String = str(o["op"][0])
+		var fx: float = float(o["op"][1]) - float(o["op"][3]) * 0.0
+		for p in pts:
+			if nm.begins_with(str(p[2]) + "-") and absf(float(o["x"]) + float(o["w"]) * 0.5 - float(p[0])) < 24.0 and float(p[1]) > float(o["y"]) and float(p[1]) < float(o["y"]) + float(o["h"]) + 24.0:
+				o["gone"] = true
+				o["spr"].visible = false
+				break
 
 func xuong_set(rects) -> void:
 	if not (rects is Dictionary):
