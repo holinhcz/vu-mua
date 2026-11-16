@@ -461,28 +461,14 @@ func _lot_apply() -> void:
 					continue
 				var inn := a >= 0 and b >= 0 and a < int(w[2]) and b < int(w[3])
 				wr[y * W + x] = maxf(wr[y * W + x], 0.95 if inn else 0.62)
-	# swept earth yards round houses, pavilions, shrines (NEN2 put()/YD), only for things that show
-	var yd := PackedByteArray()
-	yd.resize(W * H)
-	for e in lot_info["yd"]:
-		if str(e[6]) != "" and not _owned(str(e[6])):
-			continue
-		var r: int = e[4]
-		var f: int = e[5]
-		for a in range(-r, int(e[2]) + r + f):
-			for b in range(-r, int(e[3]) + r + f):
-				var x: int = int(e[0]) + a - F0
-				var y: int = int(e[1]) + b - vo
-				if x >= 0 and y >= 0 and x < W and y < H:
-					yd[y * W + x] = 1
 	var d := lot_nz.get_data()
 	for y in H:
 		for x in W:
 			var p: int = lot_idx[y * W + x]
 			var v := 1.0
 			if p > 0 and own[p - 1]:
-				v = 0.0 if yd[y * W + x] == 1 else wr[y * W + x]
-			d[(y * 1024 + x) * 4 + 2] = int(round(v * 100.0)) + (128 if yd[y * W + x] == 1 else 0)   # B = wild*100 + 128 on a yard
+				v = wr[y * W + x]
+			d[(y * 1024 + x) * 4 + 2] = int(round(v * 100.0))   # B = wild*100 (bản 227: bỏ sân đất quanh nhà, đình, miếu)
 	lot_nz.set_data(1024, 1024, false, Image.FORMAT_RGBA8, d)
 	if lot_tex == null:
 		lot_tex = ImageTexture.create_from_image(lot_nz)

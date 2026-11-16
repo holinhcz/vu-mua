@@ -4,14 +4,12 @@ shader_type canvas_item;
 // Layer 1 (n41, NEN2.draw): bought land = the game's lawn (n2_co recoloured C.base), unbought land = wild grass (n2_codai,
 // C.wild) as NEN2's zone 2: per-tile value (1 unbought, else the rough round a wild bush still standing), eased between tile
 // centres + the game's own value noise (Me() lattice in uNZ), cut at .5, with the soft outside fade of NEN2 soft().
-// Layer 2: tiles with their own ground (paddy, rubber, tram, cu lao, yard) from per-tile data: kind + the game's tile colour.
+// Layer 2: tiles with their own ground (paddy, rubber, tram, cu lao) from per-tile data: kind + the game's tile colour.
 //   Paddy = TH.pad: tile colour, rice rows (TH rowPat), raised bunds every 3 tiles (bu: t%3==0, bv: a%3==1).
 uniform sampler2D uNZ : filter_nearest;   // R: Me lattice for vn(x/8.5..), G: for vn(x/23..), B: per-tile wild value (run time)
 uniform vec4 uNL = vec4(-1.0, 12.0, 31.0, 8.0);   // lattice origins: /8.5 i0 j0, /23 i0 j0
 uniform vec2 uNL4 = vec2(6.0, 12.0);   // A: /8.5 lattice of the yard zone
-uniform vec3 gY = vec3(1.0173, 1.0118, 1.0097);   // NEN2 C.yard recolour of n2_dat
-uniform vec3 oY = vec3(0.0129, 0.0074, 0.0044);
-uniform float tY = 153.6;      // 128 * 1.2
+uniform vec3 oY = vec3(0.0129, 0.0074, 0.0044);   // màu đất đường mòn (track.gdshader đọc từ đây)
 uniform vec3 gC = vec3(1.06);
 uniform vec3 oC = vec3(0.2453, 0.3123, 0.1303);   // NEN2 lawn (C.base) recolour of n2_co, same +offset as the wild grass
 uniform float tC = 179.2;      // world units per lawn texture repeat (128 * 1.4)
@@ -121,26 +119,13 @@ float vnL(vec2 X, int ch) {
 	float a = nzL(o, ch), b = nzL(o + ivec2(1, 0), ch), c = nzL(o + ivec2(0, 1), ch), d = nzL(o + ivec2(1, 1), ch);
 	return a + (b - a) * f.x + (c - a) * f.y + (a - b - c + d) * f.x * f.y;
 }
-// B: wild value * 100, + 128 on a yard tile
+// B: wild value * 100
 float tB(ivec2 t) {
 	ivec2 q = t - ivec2(uT.zw);
 	if (q.x < 0 || q.y < 0 || q.x >= int(uTN.x) || q.y >= int(uTN.y)) return 100.0;
 	return floor(texelFetch(uNZ, q, 0).b * 255.0 + 0.5);
 }
-float twild(ivec2 t) { float b = tB(t); return min(1.0, mod(b, 128.0) / 100.0); }
-float tyard(ivec2 t) { return tB(t) >= 128.0 ? 1.0 : 0.0; }
-float yardv(vec2 w) {
-	vec2 d = w - uT.xy;
-	float u = (d.y / 16.0 + d.x / 32.0) / 2.0 - 0.5, v = (d.y / 16.0 - d.x / 32.0) / 2.0 - 0.5;
-	vec2 i0 = floor(vec2(u, v)), f = vec2(u, v) - i0;
-	f = f * f * (3.0 - 2.0 * f);
-	ivec2 t = ivec2(i0);
-	float a = tyard(t), b = tyard(t + ivec2(1, 0)), c = tyard(t + ivec2(0, 1)), e = tyard(t + ivec2(1, 1));
-	if (a + b + c + e == 0.0) return 0.0;
-	float base = a + (b - a) * f.x + (c - a) * f.y + (a - b - c + e) * f.x * f.y;
-	float n = vnL(vec2(w.x / 23.0 + 69.2, w.y / 23.0 + 20.4), 1) * 0.9 + vnL(vec2(w.x / 8.5 + 13.2, w.y / 8.5 + 30.8), 2) * 0.1 - 0.5;
-	return base + n * 0.36;
-}
+float twild(ivec2 t) { return min(1.0, tB(t) / 100.0); }
 // NEN2 soft(): the zone filled, plus strokes 18/12/7/3 wide at alpha .14/.18/.22/.28 outside its edge
 float softz(float val, float pw) {
 	float gl = max(length(vec2(dFdx(val), dFdy(val))) / max(pw, 1e-5), 1e-4);
@@ -170,9 +155,6 @@ void fragment() {
 	vec3 cl = texture(uRA, vec3(wp / tC, 7.0)).rgb * gC + oC;
 	float pw = length(vec2(dFdx(wp.x), dFdy(wp.x)));               // world units per screen pixel
 	vec3 c = mix(cl, cw, softz(wildv(wp), pw));
-	// zone 4: swept earth yard round houses, pavilions, shrines (NEN2 YD), the game's n2_dat recoloured C.yard
-	float yv = yardv(wp);
-	c = mix(c, texture(uRA, vec3(wp / tY, 8.0)).rgb * gY + oY, softz(yv, pw));
 	vec2 d = wp - uT.xy;
 	float u = (d.y / 16.0 + d.x / 32.0) / 2.0;
 	float v = (d.y / 16.0 - d.x / 32.0) / 2.0;
