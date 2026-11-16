@@ -126,7 +126,7 @@ func is_pen(k: String) -> bool:
 
 func fsize(k: String) -> Vector2i:
 	if is_pen(k):
-		return Vector2i(2, 2)
+		return Vector2i(int(lg().C.mo[k].w), int(lg().C.mo[k].h))
 	var s: Dictionary = G.xw.sr[k]
 	return Vector2i(int(s.fw), int(s.fd))
 
@@ -148,24 +148,9 @@ func fname(k: String) -> String:
 	var s: Dictionary = G.xw.sr[k]
 	return String(s.name) + (" " + str(int(s.n) + 1) if int(s.get("n", 0)) > 0 else "")
 
-func cg(k: String, x0: int, y0: int) -> String:   # cg: lý do không đặt xưởng / chuồng được
-	var L = lg()
+func cg(k: String, x0: int, y0: int) -> String:   # cg: lý do không đặt xưởng / chuồng được: cùng một hàm kiểm với món (lang.mb)
 	var e := fsize(k)
-	for r in e.x:
-		for o in e.y:
-			var x := x0 + r
-			var y := y0 + o
-			var f: String = L.fo(x, y)
-			if f == "":
-				return "Ra ngoài rìa làng"
-			if not L.ci(f):
-				return "Khu đất này chưa khai hoang"
-			if L.D5(x, y):
-				return "Chỗ này còn cây hoặc lúa, chạm để dọn trước"
-			var s: String = L.zv(x, y, -1)
-			if s != "land":
-				return "Không đặt lên đường làng được" if L.o2(x, y) else ("Không đặt xuống nước được" if s == "water" else "Chỗ này đã có vật khác")
-	return ""
+	return lg().mb({"id": k, "fw": e.x, "fd": e.y}, x0, y0, -1)
 
 # ------------------------------------------------------------------ mở / đóng (Bz / Mh / Fl)
 func active() -> bool:
@@ -1339,8 +1324,9 @@ func mm_put() -> void:   # mM: Đặt / Dời đến đây
 		G.g.coins = int(G.g.coins) - int(t0.cost)
 	L.objs().append({"id": id, "gx": gx, "gy": gy, "seed": seed, "t": Time.get_unix_time_from_system() * 1000.0})
 	if id != "pond":
-		L.occupy(gx, gy, int(t0.fw), int(t0.fd))
-	L.changed()
+		L.place_set("o:" + str(L.objs().size() - 1), gx, gy)   # chiếm chỗ + dựng lại, như mọi lần đặt / dời
+	else:
+		L.changed()
 	_vm(t0, gx, gy)
 	G.vib(14)
 	if int(t0.vars) > 1:
@@ -1455,15 +1441,8 @@ func jz(ty: String) -> void:
 	_spots()
 	var x8 = lg().M.X8.get(ty)
 	if fspots.is_empty() and x8 != null and int(s.n) == 0:
-		# chỗ mặc định của xưởng đầu tiên: dời vật cảnh có sẵn đi (web g.mv)
-		s.gx = int(x8[0])
-		s.gy = int(x8[1])
-		for o in lg().SO:
-			if o.sk == "" or o.wild or o.ring or G.g.mv.has(o.sk):
-				continue
-			if o.gx < s.gx + s.fw and o.gx + o.fw > s.gx and o.gy < s.gy + s.fd and o.gy + o.fd > s.gy:
-				G.g.mv[o.sk] = 1
-		lg().changed()
+		# chỗ mặc định của xưởng đầu tiên: đặt qua place_set như mọi chỗ (chiếm chỗ dọn vật có sẵn của làng ở đó, web g.mv)
+		lg().place_set("x:" + a, int(x8[0]), int(x8[1]))
 		_spots()
 	if fspots.is_empty():
 		_tm()

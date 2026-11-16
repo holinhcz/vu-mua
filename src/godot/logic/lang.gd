@@ -208,7 +208,7 @@ func yc(x: int, y: int) -> Array:   # vật chiếm ô (trừ đồ của mình)
 	for p in C.Di:
 		if pen_built(p) and p != F.ui.bdp.fmv:
 			var q := pen_pos(p)
-			if x >= q.x and x < q.x + 2 and y >= q.y and y < q.y + 2:
+			if x >= q.x and x < q.x + int(C.mo[p].w) and y >= q.y and y < q.y + int(C.mo[p].h):
 				out.append("pen")
 	return out
 
@@ -438,25 +438,25 @@ func count(id: String) -> int:
 			a += 1
 	return a
 
-func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị chạm (ô dưới chân hoặc điểm ảnh của hình)
+func obj_at(w: Vector2, pick_px: Callable) -> int:   # qz: món đặt bị chạm: trúng điểm ảnh trước (như farm.pick), không trúng
+	# hình nào thì món có ô dưới ngón tay; nhiều cái thì cái vẽ sau (đứng trước) thắng, ao nằm dưới mọi thứ
 	var tl := tile_of(w)
-	var r := -1
-	var best := -1e9
 	var O: Array = objs()
+	var best := [-1, -1e9, -1, -1e9]   # [món trúng hình, hạng, món trúng ô, hạng]
 	for l in O.size():
 		var c: Dictionary = O[l]
 		var t = Pi.get(c.id)
 		if t == null:
 			continue
-		var f: bool = tl.x >= c.gx and tl.x < c.gx + t.fw and tl.y >= c.gy and tl.y < c.gy + t.fd
-		if not f and c.id != "pond":
-			f = pick_px.call(l, w)
-		if f:
-			var d: float = c.gx + c.gy + (t.fw + t.fd) / 2.0 - (0.5 if c.id == "pond" else 0.0)
-			if d > best:
-				best = d
-				r = l
-	return r
+		var d: float = -1e6 + c.gx + c.gy if c.id == "pond" else float(F.main.draw_rank(F.lang_ve.obj_nodes.get(l, []), w))
+		if c.id != "pond" and pick_px.call(l, w):
+			if d > best[1]:
+				best[0] = l
+				best[1] = d
+		elif tl.x >= c.gx and tl.x < c.gx + t.fw and tl.y >= c.gy and tl.y < c.gy + t.fd and d > best[3]:
+			best[2] = l
+			best[3] = d
+	return best[0] if best[0] >= 0 else best[2]
 
 func hu_near(w: Vector2, m := 12.0) -> Array:   # cây rừng / cỏ hoang có khung hình quanh chỗ chạm (nới m)
 	var tl := tile_of(w)
@@ -558,14 +558,6 @@ func absorb_so() -> bool:   # true = có gộp thêm
 		objs().append({"id": id, "gx": o.gx, "gy": o.gy, "seed": 0 if XV.has(o.id) else o.seed, "f": 1})
 		n += 1
 	_abs_sig = str(G.g.get("land")) + "/" + str(G.g.mv.size())
-	if F.main.has_method("objs_gone"):   # hình gốc của làng ở chỗ các vật đã thành món: ẩn hẳn
-		var pts := []
-		for o in SO:
-			if o.sk != "" and G.g.mv.has(o.sk) and F.lang_ve != null:
-				var b: String = F.lang_ve.bundle(XV.get(o.id, o.id))
-				if b != "":
-					pts.append([o.sx, o.sy, F.lang_ve.op_name(b, "x").trim_suffix("-x")])
-		F.main.objs_gone(pts)
 	if n > 0:
 		changed()
 	return n > 0
@@ -585,30 +577,27 @@ func take_hu(o: Dictionary) -> int:   # Rz
 # ------------------------------------------------------------------ chiếm chỗ (bản 200, một luật cho mọi món)
 # Đặt / dời / xây món gì vào ô nào thì cảnh cũ trên các ô đó (cây cỏ hoang, bụi, cây cảnh nền) bị dọn hẳn, lưu vào save
 # (g.clr "t:x,y" + khoá cây hoang), dời món đi chỗ cũ vẫn trống, không mọc lại.
-func occupy(gx: int, gy: int, fw: int, fd: int) -> void:
-	# đúng các ô món chiếm: cây cỏ, bụi, cây có sẵn của làng ở đó dọn hẳn. Đồ mình tự đặt không đụng tới.
-	var T := []
+func occupy(gx: int, gy: int, fw: int, fd: int, me = null) -> void:   # me: chính thứ đang đặt (không dọn chính nó)
+	# đúng các ô món chiếm: cây cỏ hoang, vật có sẵn của làng (SO, món f) đứng trên đó dọn hẳn. Đồ mình tự đặt không đụng tới.
+	var R := Rect2i(gx, gy, fw, fd)
 	for y in range(gy, gy + fd):
 		for x in range(gx, gx + fw):
-			T.append(Vector2i(x, y))
-	var gone := {}
-	for q in T:
-		G.g.clr["t:" + str(q.x) + "," + str(q.y)] = 1
-		var h = hu_at(q.x, q.y)
-		if h != null:
-			G.g.clr[h.key] = 1
-		for j in so_at.get(str(q.x) + "," + str(q.y), []):
-			var o: Dictionary = SO[j]
-			if o.sk != "" and int(o.fw) * int(o.fd) == 1:
-				G.g.mv[o.sk] = 1
-		gone[q] = 1
-	var O: Array = objs() if fw * fd > 1 else []
-	for i in range(O.size() - 1, -1, -1):   # cây / đồ một ô có sẵn của làng (f) đứng trên các ô đó
+			G.g.clr["t:" + str(x) + "," + str(y)] = 1
+			var h = hu_at(x, y)
+			if h != null:
+				G.g.clr[h.key] = 1
+			for j in so_at.get(str(x) + "," + str(y), []):
+				var o: Dictionary = SO[j]
+				if o.sk != "" and not o.ring:
+					G.g.mv[o.sk] = 1
+	var O: Array = objs()
+	for i in range(O.size() - 1, -1, -1):
 		var o = O[i]
-		if o is Dictionary and o.get("f", 0) and gone.has(Vector2i(int(o.gx), int(o.gy))):
-			var t = Pi.get(o.id)
-			if t != null and int(t.fw) * int(t.fd) == 1:
-				O.remove_at(i)
+		if not (o is Dictionary) or not o.get("f", 0) or is_same(o, me):
+			continue
+		var t = Pi.get(o.id)
+		if t != null and R.intersects(Rect2i(int(o.gx), int(o.gy), int(t.fw), int(t.fd))):
+			O.remove_at(i)
 	ver += 1
 
 # ------------------------------------------------------------------ CHỖ ĐẶT: MỘT DANH SÁCH CHO MỌI THỨ (bản 213)
@@ -658,12 +647,14 @@ func place_set(k: String, x: int, y: int, commit := true) -> void:   # dời th�
 			fw = int(C.mo[id].w)
 			fd = int(C.mo[id].h)
 	if commit:
-		occupy(x, y, fw, fd)
+		occupy(x, y, fw, fd, objs()[int(id)] if kind == "o" else null)
 		changed()
 
 func occupy_all() -> void:   # mọi thứ đang đứng (save cũ): chiếm chỗ một lần
+	var O: Array = objs()
 	for e in places():
-		occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd))
+		var me = O[int(String(e.k).substr(2))] if String(e.k).begins_with("o:") else null
+		occupy(int(e.gx), int(e.gy), int(e.fw), int(e.fd), me)
 
 func _gq(x: int, y: int, a: int, b: int) -> bool:   # $G: chỗ nhỏ còn trống cạnh hàng rào
 	var k := str(x) + "," + str(y)

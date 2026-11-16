@@ -191,11 +191,12 @@ func sync() -> void:
 		obj_nodes[n] = nodes.slice(n0)
 	# vật cảnh có sẵn (lang.SO, trừ cây cỏ hoang): vẽ như đồ đặt, không dùng ảnh chụp của nền, nên dời đi là chỗ cũ trống luôn
 	for o in LG.SO:
-		if o.wild or not PICS.has(o.id) or fell.has(o.sk) or not LG.so_shown(o):
+		var sid: String = LG.XV.get(o.id, o.id)
+		if o.wild or not PICS.has(sid) or fell.has(o.sk) or not LG.so_shown(o):
 			continue
 		var cx: float = float(o.gx) + float(o.fw) / 2.0
 		var cy: float = float(o.gy) + float(o.fd) / 2.0
-		_item(old, String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea, Rect2(float(o.gx), float(o.gy), float(o.fw), float(o.fd)))
+		_item(old, sid, ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), L.nn(cx, cy) + 0.032 * float(o.gy), sea, Rect2(float(o.gx), float(o.gy), float(o.fw), float(o.fd)))
 	for k in LG.G.g.minis:
 		var p: PackedStringArray = String(k).split(",")
 		var c := int(p[0])
@@ -411,63 +412,12 @@ func obj_rect(n: int) -> Rect2:   # khung hình món n (toạ độ làng, gộp
 			r = q if r.size == Vector2.ZERO else r.merge(q)
 	return r
 
-func pick_obj(n: int, w: Vector2) -> bool:   # chạm trúng điểm ảnh của món n (alpha > 40)
-	var o: Dictionary = LG.objs()[n]
-	var t = LG.Pi.get(o.id)
-	if t == null:
-		return false
-	var cx: float = float(o.gx) + float(t.fw) / 2.0
-	var cy: float = float(o.gy) + float(t.fd) / 2.0
-	return _hit_id(String(o.id), ft_seed(o), Vector2(L.en(cx, cy), L.nn(cx, cy)), w)
-
-func _hit_id(id: String, seed: int, foot: Vector2, w: Vector2) -> bool:
-	var p = PICS.get(id)
-	if p == null:
-		return false
-	for k in frames_for(id, seed):
-		if _hit(String(p.b), String(k), foot, w, p.get("fx", false)):
-			return true
-	return false
-
-func _hit(b: String, k: String, foot: Vector2, w: Vector2, fx: bool) -> bool:
-	var m: Dictionary = F.P.meta(b)
-	var a = m.get(k)
-	if a == null and F.main.has_method("op_box"):
-		a = F.main.op_box(op_name(b, k))   # khung của làng: thử điểm ảnh của chính hình làng (chưa có ảnh thì khung thu 15%)
-		if a is Array and a.size() >= 4:
-			var ox0 := -(float(a[0]) + float(a[2])) if fx else float(a[0])
-			var r0 := Rect2(foot.x + ox0, foot.y + float(a[1]), float(a[2]), float(a[3]))
-			if not r0.has_point(w):
-				return false
-			var tx: Texture2D = F.main.op_pic(op_name(b, k))
-			if tx != null and F.main.has_method("tex_alpha"):
-				var u0 := (w.x - r0.position.x) / r0.size.x
-				if fx:
-					u0 = 1.0 - u0
-				var al: int = F.main.tex_alpha(tx, u0 * tx.get_width(), (w.y - r0.position.y) / r0.size.y * tx.get_height())
-				if al >= 0:
-					return al > 40
-			return r0.grow(-float(a[2]) * 0.15).has_point(w)
-		a = null
-	if a == null:
-		return false
-	var ox := float(a[0])
-	if fx:
-		ox = -(ox + float(a[2]))
-	var r := Rect2(foot.x + ox, foot.y + float(a[1]), float(a[2]), float(a[3]))
-	if not r.has_point(w):
-		return false
-	var im: Image = F.P.img(b, k)
-	if im == null:
-		return true
-	var u := (w.x - r.position.x) / r.size.x
-	if fx:
-		u = 1.0 - u
-	var px := int(u * im.get_width())
-	var py := int((w.y - r.position.y) / r.size.y * im.get_height())
-	if px < 0 or py < 0 or px >= im.get_width() or py >= im.get_height():
-		return false
-	return im.get_pixel(px, py).a * 255.0 > 40.0
+func pick_obj(n: int, w: Vector2) -> bool:   # chạm trúng món n: điểm ảnh của chính các hình đang vẽ món đó (main.node_hit)
+	var h: int = F.main.nodes_hit(obj_nodes.get(n, []), w)
+	if h >= 0:
+		return h == 1
+	var r := obj_rect(n)   # hình chưa tải xong: khung thu 15%
+	return r.grow(-r.size.x * 0.15).has_point(w)
 
 # chữ bảng hiệu (P5 bản web): Nunito, nghiêng theo mặt iso transform(1,.5,0,1); bản lật: chỗ chữ lật, chữ không lật
 class SignNode extends Node2D:

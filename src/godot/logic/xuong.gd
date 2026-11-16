@@ -185,20 +185,6 @@ func step(t: float) -> void:   # fG
 		if e.q.is_empty():
 			e.p = 0.0
 
-func build(k: String, gx := -9999, gy := -9999) -> bool:   # MM (đặt chỗ + trả xu)
-	var s: Dictionary = sr[k]
-	if built(k):
-		return false
-	if gx != -9999:
-		if not (G.g.get("fac") is Dictionary):
-			G.g.fac = {}
-		G.g.fac[k] = [gx, gy]
-		s.gx = gx
-		s.gy = gy
-	w(k).b = 1
-	G.mark()
-	return true
-
 func stand(k: String) -> Vector2:   # GR: chỗ nhân vật đứng làm
 	var a: Dictionary = sr[k]
 	return Vector2(a.gx + a.fw / 2.0, a.gy + a.fd + 0.3)

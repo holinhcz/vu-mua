@@ -1131,7 +1131,20 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 	return null
 
 func _pk_add(L: Array, h: Dictionary, ord: float, dep: float, hit, opt := {}) -> void:   # M(A, h, ord, keys, {gr, mv, bub})
-	L.append({"h": h, "ord": ord, "dep": dep, "hit": hit, "gr": int(opt.get("gr", 0)), "mv": bool(opt.get("mv", false)), "bub": bool(opt.get("bub", false))})
+	L.append({"h": h, "ord": ord, "dep": dep, "hit": hit, "n": opt.get("n", []), "gr": int(opt.get("gr", 0)), "mv": bool(opt.get("mv", false)), "bub": bool(opt.get("bub", false))})
+
+# một luật chạm cho mọi thứ (main.node_hit): có hình đang vẽ (n) thì trúng theo điểm ảnh của hình đó, hình chưa có thì khung
+# riêng (hit); đứng trước = vẽ sau (main.draw_rank), thứ vẽ chung một lớp không có node riêng thì theo chỗ chân trong thứ tự vẽ
+func _pk_hit(c: Dictionary, p: Vector2) -> bool:
+	if not (c.n as Array).is_empty():
+		var h: int = main.nodes_hit(c.n, p)
+		if h >= 0:
+			return h == 1
+	return c.hit is Callable and c.hit.call(p)
+
+func _pk_rank(c: Dictionary, p: Vector2) -> float:
+	var r: float = main.draw_rank(c.n, p)
+	return r if r >= 0.0 else main.key_rank(float(c.dep))
 
 func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 	var L := []
@@ -1148,11 +1161,8 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var inside: bool = tl.x >= e.gx - 0.1 and tl.x < e.gx + e.fw + 0.1 and tl.y >= e.gy - 0.1 and tl.y < e.gy + e.fd + 0.1
 		var xv = xnodes.get(k)
 		var box := func(p: Vector2) -> bool: return absf(p.x - c) < (e.fw + e.fd) * 13 and p.y >= f - bh + 6 and p.y <= f
-		var body := func(p: Vector2) -> bool:   # trúng điểm ảnh thân xưởng (chưa có ảnh thì khung)
-			var hp: int = xv.hit_px(p) if xv != null and is_instance_valid(xv) and xv.has_method("hit_px") else -1
-			return box.call(p) if hp < 0 else hp == 1
 		if inside or box.call(w):
-			_pk_add(L, {"type": "work", "k": k}, 2, f, body, {"gr": 3 if inside else 0})
+			_pk_add(L, {"type": "work", "k": k}, 2, f, box, {"gr": 3 if inside else 0, "n": [xv] if xv != null else []})
 	if WR != null:   # chim sáo, gà vịt sổng
 		var fl = WR.flock
 		if fl != null and not fl.fled:
@@ -1166,7 +1176,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 	var fk: String = B.hit(w)
 	if fk != "" and B.by.has(fk):
 		var t: Dictionary = B.by[fk]
-		_pk_add(L, {"type": "fall", "k": fk}, 7, nn(float(t.gx) + float(t.fw) / 2.0, float(t.gy) + float(t.fd) / 2.0), func(p: Vector2) -> bool: return B.hit(p) == fk)
+		_pk_add(L, {"type": "fall", "k": fk}, 7, nn(float(t.gx) + float(t.fw) / 2.0, float(t.gy) + float(t.fd) / 2.0), func(p: Vector2) -> bool: return B.hit(p) == fk, {"n": [fells[fk]] if fells.has(fk) else []})
 	for t in PC.x1:   # biển khai hoang
 		if pc_own(t) or (PC.G0[t].get("riv", false) and not pc_next(t)):
 			continue
@@ -1186,7 +1196,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 			var hh: float = float(n.H5[n.t]) * n.scale_f()
 			var hb := func(p: Vector2) -> bool: return absf(p.x - ft.x) < 14.0 and p.y <= ft.y + 3.0 and p.y >= ft.y - hh
 			if Rect2(ft.x - 14.0, ft.y - hh, 28.0, hh + 3.0).grow(PK_R / ui.cz()).has_point(w):
-				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, hb, {"mv": true})
+				_pk_add(L, {"type": "animal", "k": n.t, "j": n.j}, 42, ft.y, hb, {"mv": true, "n": [n]})
 		for t in V.DI:
 			if not lang.pen_built(t):
 				continue
@@ -1224,7 +1234,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var dia: bool = absf(w.x - ue) / 32.0 + absf(w.y - ce) / 16.0 <= 1.0
 		var ii: int = i
 		var cr := func(p: Vector2) -> bool: return _crop_hit(ii, p)
-		_pk_add(L, {"type": "plot", "i": i}, 44, nn(c.gx + 0.5, c.gy + 0.5) + 14.0, cr, {"gr": 4 if dia else 0})
+		_pk_add(L, {"type": "plot", "i": i}, 44, nn(c.gx + 0.5, c.gy + 0.5) + 14.0, cr, {"gr": 4 if dia else 0, "n": [plots[i].crop]})
 	if not dans.is_empty():   # dân làng (DD, ord 48): trong khung người
 		var le := sign_le()
 		for x in dans:
@@ -1251,27 +1261,31 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				continue
 			var ix: int = idx
 			var px := func(p: Vector2) -> bool: return lang_ve.pick_obj(ix, p)
+			var on: Array = lang_ve.obj_nodes.get(idx, [])
+			var nL := L.size()
 			var isk: bool = o.id == "kho" or o.id == "kho2"
 			if lang.C.Ei.has(o.id) or isk:
 				var near: bool = lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w)   # loại nhanh theo khung hình
 				if lang.C.Ei.has(o.id):
 					if near and WR != null and WR.ql(idx) != null:
-						_pk_add(L, {"type": "tree", "i": idx}, 45, sy, px)
+						_pk_add(L, {"type": "tree", "i": idx}, 45, sy, px, {"n": on})
 				else:
 					var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 					if inside or near:
-						_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0})
+						_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0, "n": on})
 			elif G.w_all != null and G.w_all.WL.CX.has(o.id) and int(o.get("u", 0)) > 0:   # nhà dân (ord 50)
 				var inside2: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 				if inside2 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
-					_pk_add(L, {"type": "nha", "u": int(o.u)}, 50, sy, px, {"gr": 3 if inside2 else 0})
+					_pk_add(L, {"type": "nha", "u": int(o.u)}, 50, sy, px, {"gr": 3 if inside2 else 0, "n": on})
 			elif o.id == "thungong":
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
-					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb)
+					_pk_add(L, {"type": "hive", "i": idx}, 49, sy, hb, {"n": on})
+			if L.size() == nL and lang_ve.obj_rect(idx).has_point(w):   # món không có việc gì để chạm: vẫn che thứ phía sau nó
+				_pk_add(L, {"type": "none"}, 99, sy, px, {"n": on})
 		for d in lang.hu_near(w):   # cây rừng / cỏ hoang (51): trúng điểm ảnh (cả cây bị che, để chạm lại lùi ra sau)
 			var dd: Dictionary = d
-			_pk_add(L, {"type": "scn" if lang.ci(dd.pc) else "scnlock", "o": dd, "id": dd.pc}, 51, float(dd.sy), func(p: Vector2) -> bool: return lang.hu_hit1(dd, p))
+			_pk_add(L, {"type": "scn" if lang.ci(dd.pc) else "scnlock", "o": dd, "id": dd.pc}, 51, float(dd.sy), func(p: Vector2) -> bool: return lang.hu_hit1(dd, p), {"n": main.sc_nodes(float(dd.k))})
 		var hu = lang.hu_pick(w)   # ruộng lúa hoang (52, nền gr 1)
 		if hu != null and (hu.type == "paddy" or (hu.type == "scnlock" and not hu.has("o"))):
 			_pk_add(L, hu, 52, w.y, null, {"gr": 1})
@@ -1314,21 +1328,22 @@ func pick(w: Vector2) -> Dictionary:   # RE: thứ bị chạm ({} = nền trố
 	var gd = null    # He: nền
 	var hits := []
 	for c in L:   # lượt 1: trúng đúng điểm ảnh chỗ chạm
-		if c.hit is Callable and c.hit.call(w):
+		if _pk_hit(c, w):
+			c["rk"] = _pk_rank(c, w)
 			hits.append(c)
 		if c.gr and (gd == null or c.gr > gd.gr or (c.gr == gd.gr and c.ord < gd.ord)):
 			gd = c
 	if not hits.is_empty():
 		# đứng trước nhất thắng; chạm lại đúng chỗ đó trong 1,5 giây: lùi ra cái phía sau (cây bị che kín vẫn bấm được),
 		# hết thì quay về cái trước nhất
-		hits.sort_custom(func(a, b): return a.dep > b.dep or (a.dep == b.dep and a.ord < b.ord))
+		hits.sort_custom(func(a, b): return a.rk > b.rk or (a.rk == b.rk and a.ord < b.ord))
 		var ks := hits.map(func(c): return str(c.h))
 		var now := Time.get_ticks_msec()
 		var i := 0
 		if _cy.has("t") and now - int(_cy.t) < 1500 and (_cy.p as Vector2).distance_to(w) < 10.0 / ui.cz() and _cy.ks == ks:
 			i = (int(_cy.i) + 1) % hits.size()
 		_cy = {"t": now, "p": w, "ks": ks, "i": i}
-		return hits[i].h
+		return {} if hits[i].h.get("type", "") == "none" else hits[i].h
 	for c in L:   # lượt 2: đồ đang đi lố tay 12 px
 		if c.mv and c.hit is Callable:
 			var d := _pk_near(c.hit, w, PK_R)

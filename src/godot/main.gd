@@ -2585,7 +2585,7 @@ func _update_view() -> void:
 		var r := Rect2(o["x"], o["y"], o["w"], o["h"])
 		if not r.intersects(Rect2(w0 - (w1 - w0) * 0.25, (w1 - w0) * 1.5)):
 			continue
-		if (o["pc"] != "" and not _owned(o["pc"])) or o.get("cay", false) or o.get("xg", false) or o.get("gone", false):
+		if (o["pc"] != "" and not _owned(o["pc"])) or o.get("cay", false) or o.get("xg", false) or _is_item(o):
 			o["spr"].visible = false   # (n41) the lot's own scenery shows only once it is bought (web tc())
 			continue
 		var nm: String = o["op"][0]
@@ -3519,6 +3519,46 @@ func spr_hit(sp: Sprite2D, w: Vector2) -> int:   # 1 trúng, 0 trượt, -1 khô
 		return -1
 	return 1 if a > 40 else 0
 
+# CHẠM TRÚNG VẬT: một luật cho mọi thứ trên map (bản 216): trúng = chạm vào điểm ảnh của chính hình đang vẽ (hình chưa tải
+# xong thì mới dùng khung); đứng trước = vẽ sau trong obj_root (đúng thứ tự main.zorder), không tính riêng theo từng loại.
+func node_hit(n, w: Vector2) -> int:   # 1 trúng, 0 trượt, -1 chưa biết (hình chưa có)
+	if n == null or not is_instance_valid(n) or not (n is CanvasItem):
+		return -1
+	if not n.is_visible_in_tree():
+		return 0
+	if n is Sprite2D:
+		return spr_hit(n, w)
+	if n.has_method("hit_px"):
+		return int(n.hit_px(w))
+	return -1
+func nodes_hit(arr: Array, w: Vector2) -> int:   # 1 trúng hình nào đó; 0 có hình đã biết mà trượt; -1 chưa hình nào biết
+	var res := -1
+	for n in arr:
+		var h := node_hit(n, w)
+		if h == 1:
+			return 1
+		if h == 0:
+			res = 0
+	return res
+func draw_rank(arr: Array, w = null) -> float:   # chỗ trong thứ tự vẽ (lớn = vẽ sau = đứng trước) của hình trúng chỗ chạm w
+	# (hình nào của vật nằm đúng dưới ngón tay, không phải hình vẽ sau cùng của vật); -1 không có node trên obj_root
+	var r := -1.0
+	var any := -1.0
+	for n in arr:
+		if n != null and is_instance_valid(n) and n.get_parent() == obj_root:
+			any = maxf(any, float(n.get_index()))
+			if w != null and node_hit(n, w) == 1:
+				r = maxf(r, float(n.get_index()))
+	return r if r >= 0.0 else any
+func key_rank(sy: float) -> float:   # thứ không có node riêng (vẽ chung một lớp): chỗ của chân sy trong thứ tự vẽ
+	var t := zo_keys.bsearch((sy - 968.0) / 16.0, true)
+	if t < zo_nodes.size() and is_instance_valid(zo_nodes[t]):
+		return float((zo_nodes[t] as Node).get_index()) - 0.5
+	return float(obj_root.get_child_count())
+func sc_nodes(k: float) -> Array:   # hình cảnh có khoá vẽ k (cây rừng, cỏ hoang)
+	sc_pick(k, Vector2(-1e9, -1e9))
+	return _kix.get(int(round(k * 1000.0)), [])
+
 var _kix := {}     # khoá vẽ (meta "k", web) -> [hình cảnh]: tìm đúng hình của cây rừng / cỏ / nhà xa (lang.HU có cùng khoá k)
 var _kix_n := -1
 func sc_pick(k: float, w: Vector2) -> int:   # hình cảnh khoá k: chạm trúng điểm ảnh? 1 / 0, -1 không biết
@@ -3553,20 +3593,20 @@ func sc_pick(k: float, w: Vector2) -> int:   # hình cảnh khoá k: chạm trú
 			res = 0
 	return res
 
-# (bản 210) hình gốc của làng (n/op) cho vật có sẵn đã thành món của mình (lang.absorb_so): ẩn hẳn theo đúng chỗ chân của
-# vật đó (sx, sy) và tên hình, không dựa vào khung ô (đình, rơm: chân hình lệch khung ô nên có lúc còn hiện, dời món đi thì
-# thấy hai cái chồng nhau). pts: [[sx, sy, tên gói]]
-func objs_gone(pts: Array) -> void:
-	for o in objs:
-		if o["op"] == null or o.has("hive") or o.get("gone", false):
-			continue
-		var nm: String = str(o["op"][0])
-		var fx: float = float(o["op"][1]) - float(o["op"][3]) * 0.0
-		for p in pts:
-			if nm.begins_with(str(p[2]) + "-") and absf(float(o["x"]) + float(o["w"]) * 0.5 - float(p[0])) < 24.0 and float(p[1]) > float(o["y"]) and float(p[1]) < float(o["y"]) + float(o["h"]) + 24.0:
-				o["gone"] = true
-				o["spr"].visible = false
-				break
+# Vật có sẵn của làng mà bên logic vẽ thành món (lang_ve: SO có ảnh món, hay đã gộp thành món của mình): hình gốc của bản web
+# cho vật đó không bao giờ hiện, chỉ một chỗ vẽ. Nối đúng vật bằng khoá vẽ k của web (SO.k = khoá của hình gốc).
+var _itk = null
+func _is_item(o: Dictionary) -> bool:
+	if _itk == null:
+		var fm = get_node_or_null("Farm")
+		if fm == null or fm.lang == null or fm.lang_ve == null:
+			return false
+		_itk = {}
+		for so in fm.lang.SO:
+			if not so.wild and fm.lang_ve.has_pic(fm.lang.XV.get(so.id, so.id)):
+				_itk[int(round(float(so.k) * 1000.0))] = 1
+	var sp = o.get("spr")
+	return sp != null and sp.has_meta("k") and _itk.has(int(round(float(sp.get_meta("k")) * 1000.0)))
 
 func xuong_set(rects) -> void:
 	if not (rects is Dictionary):
