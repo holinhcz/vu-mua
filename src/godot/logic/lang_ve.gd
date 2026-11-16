@@ -210,7 +210,9 @@ func sync() -> void:
 		if not _op_has(b, "gd"):
 			F.P.load_bundle(b)
 		var base := Vector2(L.en(g.x, g.y), L.nn(g.x, g.y))
-		for e in [["g", -100.0], ["b", 1.15], ["r0", 2.495], ["f0", 2.495], ["r1", 3.495], ["f1", 3.495]]:
+		# lớp sau (chuồng + rào sau) xếp sau mọi hàng cỏ ven đường phía sau chuồng (hàng cỏ ô sau xa nhất: gx+gy+1,47 với chuồng
+		# 2x2), để cỏ phía sau không đứng trước rào sau
+		for e in [["g", -100.0], ["b", 1.5], ["r0", 2.495], ["f0", 2.495], ["r1", 3.495], ["f1", 3.495]]:
 			var s := _spr(b, String(e[0]) + "d", base, false)
 			if e[0] == "g":
 				s.z_index = -5
