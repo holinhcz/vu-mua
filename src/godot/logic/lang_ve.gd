@@ -236,6 +236,8 @@ func sync() -> void:
 				s.queue_free()
 	flags = nodes.filter(func(s): return s.has_meta("flag"))
 	tiles.queue_redraw()
+	if "zs_full" in F.main:   # đồ đổi: nền sắp lại thứ tự vẽ toàn bộ như lúc tải lại (dời xong không lệch)
+		F.main.zs_full = true
 	_pond_sync(O)
 
 var _pbase = null

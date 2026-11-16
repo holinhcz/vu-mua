@@ -3770,6 +3770,7 @@ func road_set(add: Dictionary, rm: Array) -> void:
 		sc_root.move_child(row, mini(i, sc_root.get_child_count() - 1))
 		vg_rows.append(row)
 	zs_count = -1
+	zs_full = true
 
 # ---- GIFTCODE (Link 11-13 11:00 "làm chỗ nhập giftcode, mã 1tr xu để test") ----
 # The page has the input box (window.__ntgq = codes typed, window.__ntgr = answer shown under the box); the game
@@ -3945,6 +3946,7 @@ func _drw_text(frames: int) -> String:
 var zs_ready := false
 var zs_count := -1
 var zs_mine := -1
+var zs_full := false   # logic báo làng đổi: lượt xếp sau sắp lại toàn bộ (giống tải lại)
 var _zs_sig := false
 var zs_keys := PackedFloat32Array()
 var zs_nodes := []
@@ -3974,6 +3976,9 @@ func _zfix() -> void:
 	if fm == null or not ("sortables" in fm):
 		return
 	var S: Array = fm.sortables
+	if zs_full:   # làng vừa đổi (đặt, dời, bỏ món, đường mới): sắp lại hết như lúc tải lại, rồi mới chen node của logic
+		zs_full = false
+		_zsort_all()
 	var mine := {}
 	var L := []
 	for e in S:
