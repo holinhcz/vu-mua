@@ -3276,7 +3276,7 @@ func _tc_tick(dt: float) -> void:
 func _tc_sharp_cap(sig: String) -> void:   # vẽ vùng đang thấy ở đúng độ nét màn hình, dùng thẳng ảnh của SubViewport (không đọc về)
 	tc_cap = true
 	var vs := get_viewport().get_visible_rect().size
-	while tc_sv.size < 2:
+	while tc_sv.size() < 2:
 		var v := SubViewport.new()
 		v.world_2d = get_viewport().world_2d
 		v.transparent_bg = false
