@@ -2598,8 +2598,6 @@ func _on_http(res, code, _headers, body: PackedByteArray, h: HTTPRequest) -> voi
 # ---------------------------------------------------------------- per frame
 func _process(_dt: float) -> void:
 	frame_no += 1
-	if tc_on:
-		_tc_tick(_dt)
 	var tq := Time.get_ticks_usec()
 	var tq0 := tq
 	if jsw != null and frame_no % 10 == 0:
@@ -3137,37 +3135,35 @@ func _limits() -> void:
 	var vs := get_viewport_rect().size
 	var bx := _view_box()
 	zmin = max(max(vs.x / bx.size.x, vs.y / bx.size.y), vs.x / 5600.0)
-	if tc_on:   # toàn cảnh: kéo xa tới thấy cả làng, gần nhất bằng mức khóa (ảnh chụp chỉ nét tới đó)
-		zmax = maxf(zmin, ZLOCK * dpr)
+	if tc_on and not tc_lv.is_empty():   # toàn cảnh: zoom đúng bằng nấc đang xem (chỉ nhảy nấc)
+		zmin = tc_lv[tc_i][0]
+		zmax = zmin
 		return
 	zmax = max(1.955 * dpr, 2.55)
 	zmin = maxf(zmin, ZLOCK * dpr)   # (bản 244) khóa zoom xa: quá mức này thì vào Toàn cảnh (ảnh chụp)
 	zmin = min(zmin, zmax)
 
-# ---------------------------------------------------------------- TOÀN CẢNH (bản 244)
+# ---------------------------------------------------------------- TOÀN CẢNH (bản 244, 3 nấc bản 246)
 # Chơi thì zoom xa nhất bằng ZLOCK (điểm ảnh CSS mỗi đơn vị làng, mức Link chốt 17-11). Nút Toàn cảnh (trên nút nhà):
-# chụp cả làng một lần thành ảnh (SubViewport dùng chung thế giới 2D của màn, nên không dính nút UI), rồi ẩn hết làng +
-# nút, chỉ vẽ ảnh: kéo / zoom trên ảnh. Chạm một chỗ: bay tới chỗ đó ở zoom gần nhất. Nút X: về đúng chỗ cũ.
-# Game vẫn chạy ngầm (logic, cây lớn, xưởng làm), chỉ không vẽ.
+# chụp sẵn cả làng ở 3 nấc zoom (cả làng vừa màn x1, x1,5, x2), mỗi nấc chụp thẳng ở đúng độ nét màn hình của nấc đó
+# (SubViewport dùng chung thế giới 2D của màn, nên không dính nút UI) và hiện 1:1 -> nấc nào cũng nét. Trong toàn cảnh chỉ
+# nhảy nấc (véo / lăn chuột), không zoom liền. Ẩn hết làng + nút, chỉ vẽ ảnh. Chạm một chỗ: bay tới chỗ đó ở zoom gần nhất.
+# Nút X: về đúng chỗ cũ. Game vẫn chạy ngầm (logic, cây lớn, xưởng làm), chỉ không vẽ.
 const ZLOCK := 0.64
 const TC_T := 2048            # cạnh mỗi mảnh ảnh chụp (điểm ảnh)
-const TC_PX := 12000000.0     # tổng điểm ảnh ảnh chụp tối đa (bộ nhớ điện thoại)
+const TC_K := [1.0, 1.5, 2.0] # 3 nấc, nhân với zoom "cả làng vừa màn"
 var tc_on := false
 var tc_busy := false
-var tc_node: Node2D = null    # các mảnh ảnh, toạ độ làng
+var tc_node: Node2D = null    # gốc ảnh chụp (toạ độ làng)
+var tc_lv := []               # nấc -> [zoom, Node2D các mảnh]
+var tc_i := 0                 # nấc đang xem
 var tc_ui: CanvasLayer = null
 var tc_x: Panel = null
 var tc_msg: Label = null
 var tc_hid := []
 var tc_back := []             # [cam, zoom] lúc vào
 var tc_t0 := {}               # ngón đang chạm: index -> [chỗ, giờ, đã kéo]
-# vùng đang xem chụp lại đúng độ nét màn hình khi dừng tay 0,5 giây (đè lên ảnh nhỏ cả làng), mỗi lần chỉ giữ một tấm
-var tc_sharp: Sprite2D = null
-var tc_sv := []              # 2 SubViewport thay phiên: tấm đang hiện không bị vẽ đè lúc chụp tấm mới
-var tc_si := 0
-var tc_idle := 0.0
-var tc_sig := ""
-var tc_cap := false
+var tc_pin := 1.0             # véo hai ngón: tỉ lệ dồn lại, đủ ngưỡng thì nhảy nấc
 
 func tc_open() -> void:
 	if tc_on or tc_busy or ground == null:
@@ -3179,38 +3175,40 @@ func tc_open() -> void:
 	await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	var bx := _view_box()
-	var s: float = minf(ZLOCK * dpr, sqrt(TC_PX / (bx.size.x * bx.size.y)))
+	var vs := get_viewport_rect().size
+	var z0: float = max(max(vs.x / bx.size.x, vs.y / bx.size.y), vs.x / 5600.0)
 	var sv := SubViewport.new()
 	sv.size = Vector2i(TC_T, TC_T)
 	sv.world_2d = get_viewport().world_2d
 	sv.transparent_bg = false
 	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(sv)
-	var parts := []
-	var nx := ceili(bx.size.x * s / TC_T)
-	var ny := ceili(bx.size.y * s / TC_T)
-	for iy in ny:
-		for ix in nx:
-			var o := bx.position + Vector2(ix, iy) * (TC_T / s)
-			sv.canvas_transform = Transform2D(0.0, Vector2(s, s), 0.0, -o * s)
-			await RenderingServer.frame_post_draw
-			await RenderingServer.frame_post_draw
-			var img: Image = sv.get_texture().get_image()
-			img.generate_mipmaps()   # xem cả làng là thu nhỏ vài lần: không mipmap thì răng cưa
-			parts.append([o, ImageTexture.create_from_image(img)])
-	sv.queue_free()
 	if tc_node != null:
 		tc_node.queue_free()
 	tc_node = Node2D.new()
 	tc_node.z_index = 4000
-	for pq in parts:
-		var sp := Sprite2D.new()
-		sp.centered = false
-		sp.texture = pq[1]
-		sp.position = pq[0]
-		sp.scale = Vector2(1.0 / s, 1.0 / s)
-		sp.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		tc_node.add_child(sp)
+	tc_lv = []
+	for k in TC_K:
+		var z: float = minf(z0 * float(k), ZLOCK * dpr)
+		var ln := Node2D.new()
+		ln.visible = false
+		tc_node.add_child(ln)
+		tc_lv.append([z, ln])
+		var nx := ceili(bx.size.x * z / TC_T)
+		var ny := ceili(bx.size.y * z / TC_T)
+		for iy in ny:
+			for ix in nx:
+				var o := bx.position + Vector2(ix, iy) * (TC_T / z)
+				sv.canvas_transform = Transform2D(0.0, Vector2(z, z), 0.0, -o * z)
+				await RenderingServer.frame_post_draw
+				await RenderingServer.frame_post_draw
+				var sp := Sprite2D.new()
+				sp.centered = false
+				sp.texture = ImageTexture.create_from_image(sv.get_texture().get_image())
+				sp.position = o
+				sp.scale = Vector2(1.0 / z, 1.0 / z)
+				ln.add_child(sp)
+	sv.queue_free()
 	get_parent().add_child(tc_node)
 	# ẩn làng (cả cây node main) + mọi lớp nút; đồng hồ đo giữ lại
 	tc_hid = []
@@ -3218,22 +3216,35 @@ func tc_open() -> void:
 		if c.visible and c != tc_ui and (meter == null or c != meter.get_parent()):
 			c.visible = false
 			tc_hid.append(c)
-	_tc_hide(true)
+	visible = false
 	tc_back = [cam, zoom]
 	tc_on = true
 	tc_busy = false
 	tc_msg.visible = false
 	tc_x.position = Vector2(get_viewport().get_visible_rect().size.x - 60 * dpr, 16 * dpr)
 	tc_x.visible = true
+	var c0 := cam + vs / zoom * 0.5   # giữ tâm đang xem
+	_tc_set(0, c0)
+
+func _tc_set(i: int, ctr: Vector2) -> void:   # sang nấc i, giữ điểm làng ctr ở chỗ cũ trên màn (ctr = tâm hoặc chỗ véo)
+	i = clampi(i, 0, tc_lv.size() - 1)
+	tc_i = i
+	for j in tc_lv.size():
+		tc_lv[j][1].visible = j == i
+	var vs := get_viewport_rect().size
+	var p := (ctr - cam) * zoom   # chỗ trên màn của ctr (nấc cũ)
+	if not (Rect2(Vector2.ZERO, vs).has_point(p)):
+		p = vs * 0.5
+	zoom = tc_lv[i][0]
 	_limits()
-	zoom = zmin
+	cam = ctr - p / zoom
 	_clamp_cam()
 
 func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom gần nhất); null = về chỗ cũ
 	if not tc_on:
 		return
 	tc_on = false
-	_tc_hide(false)
+	visible = true
 	for c in tc_hid:
 		if is_instance_valid(c):
 			c.visible = true
@@ -3241,11 +3252,7 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 	if tc_node != null:
 		tc_node.queue_free()
 		tc_node = null
-	tc_sharp = null
-	for v in tc_sv:
-		v.queue_free()
-	tc_sv = []
-	tc_sig = ""
+	tc_lv = []
 	tc_x.visible = false
 	tc_t0 = {}
 	_limits()
@@ -3256,55 +3263,6 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 		zoom = zmax
 		cam = to - get_viewport_rect().size / zoom * 0.5
 	_clamp_cam()
-
-func _tc_hide(on: bool) -> void:
-	# (bản 246) làng không vẽ ra màn (lớp hiển thị 2, màn chỉ vẽ lớp 1) nhưng ảnh chụp (SubViewport chỉ vẽ lớp 2) vẫn thấy:
-	# chụp vùng nét không phải bật làng lại trên màn (trước đây vẽ cả làng 2 lần mỗi lần chụp)
-	visibility_layer = 2 if on else 1
-	get_viewport().canvas_cull_mask = (0xFFFFF & ~2) if on else 0xFFFFF
-
-func _tc_tick(dt: float) -> void:
-	if tc_busy or tc_node == null:
-		return
-	var sig := "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom]
-	if tc_sharp != null:
-		tc_sharp.visible = sig == tc_sig   # đang kéo: cả màn mờ đều, không khúc mờ khúc nét
-	tc_idle += dt
-	if not tc_cap and tc_idle >= 0.25 and tc_t0.is_empty() and sig != tc_sig:
-		_tc_sharp_cap(sig)
-
-func _tc_sharp_cap(sig: String) -> void:   # vẽ vùng đang thấy ở đúng độ nét màn hình, dùng thẳng ảnh của SubViewport (không đọc về)
-	tc_cap = true
-	var vs := get_viewport().get_visible_rect().size
-	while tc_sv.size() < 2:
-		var v := SubViewport.new()
-		v.world_2d = get_viewport().world_2d
-		v.transparent_bg = false
-		v.canvas_cull_mask = 2
-		v.render_target_update_mode = SubViewport.UPDATE_DISABLED
-		add_child(v)
-		tc_sv.append(v)
-	tc_si = 1 - tc_si
-	var sv: SubViewport = tc_sv[tc_si]
-	sv.size = Vector2i(ceili(vs.x), ceili(vs.y))
-	var c0 := cam
-	var z0 := zoom
-	sv.canvas_transform = Transform2D(0.0, Vector2(z0, z0), 0.0, -c0 * z0)
-	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
-	await RenderingServer.frame_post_draw
-	tc_cap = false
-	if not tc_on or tc_node == null:
-		return
-	if tc_sharp == null:
-		tc_sharp = Sprite2D.new()
-		tc_sharp.centered = false
-		tc_sharp.z_index = 1
-		tc_node.add_child(tc_sharp)
-	tc_sharp.texture = sv.get_texture()
-	tc_sharp.position = c0
-	tc_sharp.scale = Vector2(1.0 / z0, 1.0 / z0)
-	tc_sig = sig
-	tc_sharp.visible = "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom] == sig
 
 func _tc_ui() -> void:
 	if tc_ui != null:
@@ -3351,9 +3309,33 @@ func _tc_ui() -> void:
 	tc_msg.visible = false
 	tc_x.visible = false
 
+func _tc_pin_step(at: Vector2) -> void:
+	if tc_pin > 1.35 or tc_pin < 0.74:
+		var j := tc_i + (1 if tc_pin > 1.0 else -1)
+		tc_pin = 1.0
+		if j >= 0 and j < tc_lv.size():
+			_tc_set(j, cam + at / zoom)
+
 func _tc_input(e: InputEvent) -> void:   # toàn cảnh: kéo / véo / lăn chuột trên ảnh, chạm = bay tới, X = về
 	get_viewport().set_input_as_handled()
-	tc_idle = 0.0
+	if tc_busy or tc_lv.is_empty():
+		return
+	# nhảy nấc: lăn chuột / véo (dồn tỉ lệ tới ngưỡng) / véo bàn rê máy tính
+	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		_tc_set(tc_i + (1 if e.button_index == MOUSE_BUTTON_WHEEL_UP else -1), cam + e.position / zoom)
+		return
+	if e is InputEventMagnifyGesture:
+		tc_pin *= e.factor
+		_tc_pin_step(e.position)
+		return
+	if e is InputEventScreenDrag and touches.size() >= 2:
+		var ks := touches.keys()
+		var other: Vector2 = touches[ks[1]] if e.index == ks[0] else touches[ks[0]]
+		var prev: Vector2 = tprev.get(e.index, e.position - e.relative)
+		var d0 := prev.distance_to(other)
+		if d0 > 1.0:
+			tc_pin *= e.position.distance_to(other) / d0
+		_tc_pin_step((e.position + other) * 0.5)
 	var p = null
 	var up := false
 	var id := 0
@@ -3366,6 +3348,7 @@ func _tc_input(e: InputEvent) -> void:   # toàn cảnh: kéo / véo / lăn chu�
 		up = not e.pressed
 		id = -1
 	if p != null:
+		tc_pin = 1.0
 		if not up:
 			tc_t0[id] = [p, Time.get_ticks_msec(), false]
 		else:
