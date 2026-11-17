@@ -4,11 +4,11 @@ import os
 from playwright.sync_api import sync_playwright
 OUT=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','godot','ui','img','bong')
 PATH='M3.7 9.29 A10 10 0 1 0 -3.7 9.29 Q-1.2 11.6 -0.55 13.6 Q0 14.6 0.55 13.6 Q1.2 11.6 3.7 9.29 Z'
-def khung(col):   # tròn r10 + đuôi tới y 14,6, viền 0,75 (bản 255; trước 1,5), nền kem, bóng đổ; khung -12,5..12,5 x -12,5..18,61
+def khung(col):   # tròn r10 + đuôi tới y 14,6, viền 1 (bản 256; 255: 0,75; trước 1,5), nền kem, bóng đổ; khung -12,5..12,5 x -12,5..18,61
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12.5 -12.5 25 31.1111" width="225" height="280">
 <defs><radialGradient id="g" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#fbf3e2"/></radialGradient>
 <filter id="s" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.3" stdDeviation="0.9" flood-color="#1a1408" flood-opacity="0.35"/></filter></defs>
-<path d="{PATH}" fill="url(#g)" stroke="{col}" stroke-width=".75" stroke-linejoin="round" filter="url(#s)"/>
+<path d="{PATH}" fill="url(#g)" stroke="{col}" stroke-width="1" stroke-linejoin="round" filter="url(#s)"/>
 <path d="M-6.5 -4.5 A7.8 7.8 0 0 1 -1 -7.6" fill="none" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round" opacity=".9"/></svg>'''
 def vong():   # vòng ô chín: elip 21 x 10,5 nét 2,2 vàng tươi + quầng sáng mềm; khung -24..24 x -13..13 đơn vị
     return '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -13 48 26" width="432" height="234">
