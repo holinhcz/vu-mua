@@ -141,9 +141,14 @@ func _hrl() -> Array:   # Hr: món đặt có hình (gx, gy, fw, fd, idx, id)
 	return _hr
 
 # ------------------------------------------------------------------ mỗi lượt luật (vw) và mỗi khung hình
-func step(t: float, _offline: bool) -> void:   # vw (đuôi: fq, Rq->TD)
+var _fq_acc := 0.0
+func step(t: float, offline: bool) -> void:   # vw (đuôi: fq, Rq->TD)
 	# đuôi vw(t, a): fq(t); Rq -> TD(t) khi có g.lang. Mưa rào ngầm g.rain (uG) bỏ ở bản 169: mưa rào là trận mưa thật của troi.gd
-	fq(t)
+	# (bản 241) cây ra trái cộng dồn, tính mỗi giây một lần (cả nghìn cây: không tính 4 lần/giây); chạy bù thì tính ngay
+	_fq_acc += t
+	if offline or _fq_acc >= 1.0:
+		fq(_fq_acc)
+		_fq_acc = 0.0
 	if G.g.get("lang") is Dictionary:
 		td(t)
 

@@ -1124,7 +1124,6 @@ var night_raw: ShaderMaterial = null
 # cây đung đưa (web: plants with sway:1 turn about their foot, sin(t*1.1+ph)*.017 rad, only at zoom >= .7). One material
 # for every picture (so they still batch): a swaying sprite has its local origin at its foot and alpha 254/255, which the
 # shader reads as "sway" (and draws at full alpha)
-const SWAY_A := 254.0 / 255.0
 # (b238) a swaying picture is marked by a tiny skew of its transform that also carries its fixed phase (skew = 1e-4 *
 # (1 + phase), 0.0001 rad: invisible), NOT by its colour: the phone renderer starts a new draw call whenever the colour
 # (modulate) changes between two pictures, and the old mark (alpha 254 + a phase per tree in blue) made every swaying

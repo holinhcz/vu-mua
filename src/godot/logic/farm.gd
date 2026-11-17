@@ -640,9 +640,7 @@ func _tracks_apply() -> void:
 
 # cây lay (sprite_sway.gdshader): mỗi cây một pha cố định (như t.ph bản web) ghi vào kênh xanh dương của màu,
 # shader đọc pha đó, nên kéo map cây vẫn lay đều như lúc đứng yên (pha cũ tính theo tọa độ trên WebGL đổi theo camera -> giựt)
-const SWAY_A := 254.0 / 255.0
 var _sw_n := -1
-var _sw_t := 0.0
 
 static func sway_ph(p: Vector2) -> float:   # pha 0..1 theo chỗ đứng (cố định)
 	return fposmod(sin(floor(p.x) * 12.9898 + floor(p.y) * 78.233) * 43758.5453, 1.0)
@@ -656,24 +654,6 @@ func _sway_step(dt: float) -> void:
 		if main.night_raw != null:
 			main.night_raw.shader = sh
 		_sw_n = 0
-	_sw_t -= dt
-	if _sw_t > 0.0:
-		return
-	_sw_t = 1.0
-	var roots := [main.obj_root, main.sc_root]
-	var n := 0
-	for r in roots:
-		if r != null:
-			n += r.get_child_count()
-	if n == _sw_n:
-		return
-	_sw_n = n
-	for r in roots:
-		if r == null:
-			continue
-		for c in r.get_children():
-			if c is CanvasItem and absf(c.self_modulate.a - SWAY_A) < 0.002:   # cây lay của nền (main.gd)
-				c.self_modulate = Color(1, 1, sway_ph(c.position), SWAY_A)
 
 var cham: Node = null
 var _pt := 0
@@ -1939,24 +1919,36 @@ func _crit_sync() -> void:
 var dnodes := {}   # khóa -> node dan_ve
 var dans := []     # [{key, u, x, y, lk, mv, ph, face, wave, carry, bob}] khung này
 
+var _dh_t := -1.0
+var _dh_bl: Array = []
 func _dan_list(tt: float) -> Array:
 	var out := []
 	if G.w_all == null or G.g.get("lang") == null:
 		return out
 	var WL = G.w_all.WL
 	var fam: Dictionary = WL._r0().fam
+	# (bản 241) chỉ người đang trong màn mới có node (ngoài màn: luật vẫn chạy ở WL, không vẽ, không xếp, không tạo dict)
+	var vis := func(x: float, y: float) -> bool: return on_view(Vector2(en(x, y), nn(x, y)), 160.0)
 	for n in WL.ac:
 		if WL.tu(n) or not fam.has(n):
 			continue
 		var r: Dictionary = WL.ac[n]
+		if not vis.call(float(r.x), float(r.y)):
+			continue
 		out.append({"key": "a" + str(n), "u": int(r.u), "n": String(fam[n].n), "x": r.x, "y": r.y, "lk": int(fam[n].get("lk", 0)), "mv": int(r.st) == 1 or int(r.st) == 2,
 			"ph": r.ph, "face": r.face, "carry": r.carry, "bob": int(r.st) == 2})
 	if not G.night and not (ui.bdp != null and ui.bdp.mode == "place"):
-		for h in WL.bl():
+		# (bản 241) người đứng trước nhà: danh sách nhà (WL.bl) dò lại nửa giây một lần, không phải mỗi khung
+		if absf(tt - _dh_t) >= 0.5 or _dh_bl.is_empty():
+			_dh_t = tt
+			_dh_bl = WL.bl()
+		for h in _dh_bl:
 			var f = fam.get(str(h.u))
 			if f == null or WL._tr(f.get("job")) or WL.zk(h.u):
 				continue
 			var p: Vector2 = WL._home(h.u)
+			if not vis.call(p.x, p.y):
+				continue
 			out.append({"key": "h" + str(h.u), "u": int(h.u), "n": String(f.n), "x": p.x, "y": p.y, "lk": int(f.get("lk", 0)), "mv": false, "ph": 0.0,
 				"face": 1 if String(h.r.id).ends_with("2") else -1, "wave": WL._tr(f.get("req")) and sin(tt * 0.8 + float(h.u)) > 0.6, "carry": null, "bob": false})
 	var mi: Dictionary = G.w_all.WTH.mi   # ông đưa thư (yU): đạp xe tới / đi, đứng vẫy cầm thư
@@ -1971,6 +1963,8 @@ func _dan_list(tt: float) -> Array:
 		var busy: bool = e.act != "" and e.act != "nha"
 		for j in e.m.size():
 			var o: Dictionary = e.m[j]
+			if not vis.call(float(o.x), float(o.y)):
+				continue
 			out.append({"key": "k" + str(e.id) + "_" + str(j), "u": 0, "n": "", "x": o.x, "y": o.y, "lk": 0, "mv": bool(o.get("mv", false)), "ph": o.ph,
 				"face": o.face, "wave": busy and sin(tt * 1.3 + j) > 0.5, "carry": null, "bob": false, "dl": true, "heart": busy and float(e.happy) > 1.0,
 				"img": "res://ui/img/khach/" + String(e.k) + str(o.j) + ("n" if o.non else "") + ".webp"})
@@ -2098,6 +2092,8 @@ func _tree_bub_want() -> Dictionary:
 			var o = O[i]
 			if not (o is Dictionary):
 				continue
+			if not on_view(Vector2(en(float(o.gx) + 0.5, float(o.gy) + 0.5), nn(float(o.gx) + 0.5, float(o.gy) + 0.5)), 260.0):
+				continue   # (bản 241) ngoài màn: khỏi xét (bong bóng chỉ giữ cái trong màn)
 			if lang.C.Ei.has(o.id):
 				var t = WR.ql(i)
 				if t == null:

@@ -289,14 +289,16 @@ func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), nh
 	if st != _st_sig:
 		_st_sig = st
 		_pend = nodes.duplicate()
-	if not _pend.is_empty():
-		var keep := []
-		for s in _pend:
+	if not _pend.is_empty():   # (bản 241) mỗi khung thử tối đa 300 hình (cả nghìn hình chờ tải không dò hết mỗi khung)
+		var nmax := mini(_pend.size(), 300)
+		var still := []
+		for i in nmax:
+			var s = _pend[i]
 			if is_instance_valid(s) and s is Sprite2D:
 				_tex(s, scr)
 				if s.texture == null or s.get_meta("tk", "") == "":
-					keep.append(s)
-		_pend = keep
+					still.append(s)
+		_pend = _pend.slice(nmax) + still   # xoay vòng: lượt sau thử các hình chưa thử
 	if ghost.visible:
 		for s in ghost.get_children():
 			if s is Sprite2D:
