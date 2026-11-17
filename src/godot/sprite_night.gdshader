@@ -12,6 +12,15 @@ uniform float uSway = 0.0;
 uniform float uFast = 0.0;   // test ?do2 only: plain lookup, to measure what the sharp filter costs   // 1 while the web would sway plants (zoom >= .7)
 void vertex() {
 	vmod = COLOR;
+	// (b238) a swaying plant (local origin = its foot) has skew 1e-4 * (1 + its phase): main.sway_mark
+	float sk = abs(dot(normalize(MODEL_MATRIX[0].xy), normalize(MODEL_MATRIX[1].xy)));
+	if (sk > 0.00005 && sk < 0.00025) {
+		if (uSway > 0.0) {
+			float a = sin(TIME * 1.1 + (sk * 10000.0 - 1.0) * 6.2832) * 0.017;
+			float c = cos(a), s = sin(a);
+			VERTEX = vec2(c * VERTEX.x - s * VERTEX.y, s * VERTEX.x + c * VERTEX.y);
+		}
+	} else
 	if (COLOR.a > 0.993 && COLOR.a < 0.998) {   // a swaying plant (alpha 254/255): local origin = its foot
 		vmod.a = 1.0;
 		if (uSway > 0.0) {

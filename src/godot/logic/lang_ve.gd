@@ -73,7 +73,7 @@ func _spr(b: String, k: String, foot: Vector2, sway: bool, fx := false) -> Sprit
 	s.set_meta("b", b)
 	s.set_meta("k", k)
 	if sway:
-		s.modulate = Color(1, 1, F.sway_ph(foot), 254.0 / 255.0)   # sprite_sway: cây đung đưa quanh chân, pha cố định ở kênh xanh dương
+		s.skew = 1e-4 * (1.0 + F.sway_ph(foot))   # (b238) cây đung đưa quanh chân, pha cố định: ghi trong độ xiên rất nhỏ (main.sway_mark), không qua màu (màu khác nhau = mỗi cây 1 lệnh vẽ)
 	return s
 
 func _add(s: Node2D, dk: float) -> void:
@@ -285,7 +285,7 @@ func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), nh
 			s.set_meta("k", "co_d%02d" % fi)
 			_tex(s, scr)
 	# (bản 234) chỉ đi hết các hình khi mức zoom / ngày đêm / bộ node đổi; còn lại chỉ hình chưa có ảnh (đang tải)
-	var st := str(F.P.level(PXU, scr)) + "|" + str(F.main.night_cur) + "|" + str(_sync_n)
+	var st := str(F.P.level(PXU, scr)) + "|" + str(F.main.night_cur) + "|" + str(_sync_n) + "|" + str(F.main.get("sc_far")) + "|" + str(F.main.get("far_gen"))
 	if st != _st_sig:
 		_st_sig = st
 		_pend = nodes.duplicate()
@@ -323,23 +323,35 @@ func _op(s: Sprite2D) -> bool:   # khung làng đã có (n/op): dùng chung đú
 		return false
 	# ban đêm: ảnh ĐÊM của chính khung đó (info.opn: tên ảnh đêm + chỗ lệch so với ảnh ngày), vẽ không qua công thức đêm
 	var nn = F.main.info.get("opn", {}).get(nm) if F.main.night_cur == 1 else null
-	var tk := ("opn:" if nn != null else "op:") + nm
+	var far: bool = F.main.get("sc_far") == 1 and F.main.has_method("far_op")
+	var tnm := String(nn[0]) if nn != null else nm
+	var fr = F.main.far_op(tnm) if far else null   # (b238) zoomed out: small copy in the scenery atlas, so it batches
+	var tk := ("opn:" if nn != null else "op:") + nm + ("|f" if fr != null else "")
 	if s.get_meta("tk", "") == tk and s.texture != null:
 		return true
-	var tx: Texture2D = F.main.op_pic(String(nn[0]) if nn != null else nm)
+	var tx: Texture2D = F.main.op_pic(tnm)
 	if tx == null:
 		return true
 	var bx := [float(a[0]), float(a[1]), float(a[2]), float(a[3])]
 	if nn != null:
 		bx = [float(a[0]) + float(nn[1]), float(a[1]) + float(nn[2]), float(nn[3]), float(nn[4])]
-	var sc := float(bx[2]) / float(tx.get_width())
+	var sc: float = float(bx[2]) / (float(fr.size.x) if fr != null else float(tx.get_width()))
 	var ox := float(bx[0])
 	if s.flip_h:
 		ox = -(ox + float(bx[2]))
 	var off := Vector2(ox, float(bx[1]))
 	if s.has_meta("fd"):
 		off += s.get_meta("fd")
-	s.texture = tx
+	if fr != null:
+		s.texture = F.main.sc_atl
+		s.region_enabled = true
+		s.region_rect = fr
+		s.set_meta("ft", tx)
+	else:
+		s.texture = tx
+		s.region_enabled = false
+		if s.has_meta("ft"):
+			s.remove_meta("ft")
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
 	s.material = F.main.night_raw if nn != null else F.main.night_mat
@@ -374,6 +386,9 @@ func _tex(s: Sprite2D, scr: float) -> void:
 	if s.has_meta("fd"):
 		off += s.get_meta("fd")
 	s.texture = tx
+	s.region_enabled = false
+	if s.has_meta("ft"):
+		s.remove_meta("ft")
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
 	s.material = F.main.night_raw if night else F.main.night_mat
