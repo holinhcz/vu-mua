@@ -1816,6 +1816,7 @@ var sc_half_t0 := 0
 var atl_all := false
 var atl_dirty := false
 var atl_t := -100000
+var atl_n := 0
 var op_q := {}        # op picture -> small Image (made when the picture is decoded)
 var far_need := {}    # op pictures lang_ve draws while zoomed out
 var far_rect := {}    # op picture -> Rect2 in sc_atl
@@ -1847,6 +1848,7 @@ func _op_small(nm: String, img: Image) -> void:
 		q.resize(maxi(1, int(ceil(q.get_width() * f))), maxi(1, int(ceil(q.get_height() * f))), Image.INTERPOLATE_LANCZOS)
 	op_q[nm] = q
 func far_op(nm: String):   # lang_ve, zoomed out: rect of this picture in sc_atl, or null (not packed yet)
+	return null   # (b239) off: asking for new village pictures repacked the atlas while zooming (phone froze)
 	var r = far_rect.get(nm)
 	if r == null and not far_need.has(nm):
 		far_need[nm] = true
@@ -1963,11 +1965,16 @@ func _far_step() -> void:
 	if not atl_dirty or sc_half.is_empty():
 		return
 	var now := Time.get_ticks_msec()
+	# (b239, Link 11-17 "zoom lên là đứng máy") packing a 4096x7000 atlas stalls the phone: at most TWICE, 6 s after the
+	# first picture and once when all pictures are in; never again while zooming
+	if atl_n >= 2:
+		return
 	if sc_atl == null:
 		if not atl_all and now - sc_half_t0 < 6000:
 			return
-	elif sc_far != 1 or now - atl_t < 5000 or now - far_t < 800:
+	elif not atl_all:
 		return
+	atl_n += 1
 	atl_t = now
 	atl_dirty = false
 	_atl_build()
@@ -3159,7 +3166,6 @@ func _op_dec(nm: String, b: PackedByteArray) -> void:
 	if img.load_webp_from_buffer(b) != OK:
 		return
 	_mask_keep_op(nm, img)
-	_op_small(nm, img)
 	img.generate_mipmaps()
 	op_tex[nm] = ImageTexture.create_from_image(img)
 	_mask_bind_op(nm)

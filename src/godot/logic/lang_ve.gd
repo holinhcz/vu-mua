@@ -285,7 +285,7 @@ func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), nh
 			s.set_meta("k", "co_d%02d" % fi)
 			_tex(s, scr)
 	# (bản 234) chỉ đi hết các hình khi mức zoom / ngày đêm / bộ node đổi; còn lại chỉ hình chưa có ảnh (đang tải)
-	var st := str(F.P.level(PXU, scr)) + "|" + str(F.main.night_cur) + "|" + str(_sync_n) + "|" + str(F.main.get("sc_far")) + "|" + str(F.main.get("far_gen"))
+	var st := str(F.P.level(PXU, scr)) + "|" + str(F.main.night_cur) + "|" + str(_sync_n)
 	if st != _st_sig:
 		_st_sig = st
 		_pend = nodes.duplicate()
@@ -323,7 +323,7 @@ func _op(s: Sprite2D) -> bool:   # khung làng đã có (n/op): dùng chung đú
 		return false
 	# ban đêm: ảnh ĐÊM của chính khung đó (info.opn: tên ảnh đêm + chỗ lệch so với ảnh ngày), vẽ không qua công thức đêm
 	var nn = F.main.info.get("opn", {}).get(nm) if F.main.night_cur == 1 else null
-	var far: bool = F.main.get("sc_far") == 1 and F.main.has_method("far_op")
+	var far := false   # (b239) atlas for village pictures off (repacking froze the phone)
 	var tnm := String(nn[0]) if nn != null else nm
 	var fr = F.main.far_op(tnm) if far else null   # (b238) zoomed out: small copy in the scenery atlas, so it batches
 	var tk := ("opn:" if nn != null else "op:") + nm + ("|f" if fr != null else "")
