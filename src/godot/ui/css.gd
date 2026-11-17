@@ -351,6 +351,10 @@ static func svg_tex(svg: String, w: float, h: float) -> Texture2D:
 	var sc := maxf(w * K / vb.x, h * K / vb.y)
 	if svg_load(img, svg, maxf(0.05, sc)) != OK:
 		return null
+	# (bản 273) chỗ trong suốt quanh hình lấy màu mép hình (không phải đen): lúc vẽ nhỏ / bản mipmap trộn điểm ảnh mép với
+	# chỗ trong suốt kế bên, màu đen ở đó thành vòng tối quanh hình (đồng xu)
+	img.convert(Image.FORMAT_RGBA8)
+	img.fix_alpha_edges()
 	img.generate_mipmaps()
 	var t := ImageTexture.create_from_image(img)
 	_tex[key] = t
