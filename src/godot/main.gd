@@ -3163,7 +3163,8 @@ var tc_back := []             # [cam, zoom] lúc vào
 var tc_t0 := {}               # ngón đang chạm: index -> [chỗ, giờ, đã kéo]
 # vùng đang xem chụp lại đúng độ nét màn hình khi dừng tay 0,5 giây (đè lên ảnh nhỏ cả làng), mỗi lần chỉ giữ một tấm
 var tc_sharp: Sprite2D = null
-var tc_sv: SubViewport = null
+var tc_sv := []              # 2 SubViewport thay phiên: tấm đang hiện không bị vẽ đè lúc chụp tấm mới
+var tc_si := 0
 var tc_idle := 0.0
 var tc_sig := ""
 var tc_cap := false
@@ -3217,7 +3218,7 @@ func tc_open() -> void:
 		if c.visible and c != tc_ui and (meter == null or c != meter.get_parent()):
 			c.visible = false
 			tc_hid.append(c)
-	visible = false
+	_tc_hide(true)
 	tc_back = [cam, zoom]
 	tc_on = true
 	tc_busy = false
@@ -3232,7 +3233,7 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 	if not tc_on:
 		return
 	tc_on = false
-	visible = true
+	_tc_hide(false)
 	for c in tc_hid:
 		if is_instance_valid(c):
 			c.visible = true
@@ -3241,9 +3242,9 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 		tc_node.queue_free()
 		tc_node = null
 	tc_sharp = null
-	if tc_sv != null:
-		tc_sv.queue_free()
-		tc_sv = null
+	for v in tc_sv:
+		v.queue_free()
+	tc_sv = []
 	tc_sig = ""
 	tc_x.visible = false
 	tc_t0 = {}
@@ -3256,46 +3257,54 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 		cam = to - get_viewport_rect().size / zoom * 0.5
 	_clamp_cam()
 
-func _tc_tick(dt: float) -> void:
-	if tc_busy or tc_cap or tc_node == null:
-		return
-	tc_idle += dt
-	var sig := "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom]
-	if tc_idle >= 0.5 and tc_t0.is_empty() and sig != tc_sig:
-		tc_sig = sig
-		_tc_sharp_cap()
+func _tc_hide(on: bool) -> void:
+	# (bản 246) làng không vẽ ra màn (lớp hiển thị 2, màn chỉ vẽ lớp 1) nhưng ảnh chụp (SubViewport chỉ vẽ lớp 2) vẫn thấy:
+	# chụp vùng nét không phải bật làng lại trên màn (trước đây vẽ cả làng 2 lần mỗi lần chụp)
+	visibility_layer = 2 if on else 1
+	get_viewport().canvas_cull_mask = (0xFFFFF & ~2) if on else 0xFFFFF
 
-func _tc_sharp_cap() -> void:   # chụp vùng đang thấy ở đúng độ nét màn hình (làng hiện lại 2 khung, bị ảnh che)
+func _tc_tick(dt: float) -> void:
+	if tc_busy or tc_node == null:
+		return
+	var sig := "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom]
+	if tc_sharp != null:
+		tc_sharp.visible = sig == tc_sig   # đang kéo: cả màn mờ đều, không khúc mờ khúc nét
+	tc_idle += dt
+	if not tc_cap and tc_idle >= 0.25 and tc_t0.is_empty() and sig != tc_sig:
+		_tc_sharp_cap(sig)
+
+func _tc_sharp_cap(sig: String) -> void:   # vẽ vùng đang thấy ở đúng độ nét màn hình, dùng thẳng ảnh của SubViewport (không đọc về)
 	tc_cap = true
 	var vs := get_viewport().get_visible_rect().size
-	if tc_sv == null:
-		tc_sv = SubViewport.new()
-		tc_sv.world_2d = get_viewport().world_2d
-		tc_sv.transparent_bg = false
-		add_child(tc_sv)
-	tc_sv.size = Vector2i(ceili(vs.x), ceili(vs.y))
+	while tc_sv.size < 2:
+		var v := SubViewport.new()
+		v.world_2d = get_viewport().world_2d
+		v.transparent_bg = false
+		v.canvas_cull_mask = 2
+		v.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		add_child(v)
+		tc_sv.append(v)
+	tc_si = 1 - tc_si
+	var sv: SubViewport = tc_sv[tc_si]
+	sv.size = Vector2i(ceili(vs.x), ceili(vs.y))
 	var c0 := cam
 	var z0 := zoom
-	tc_sv.canvas_transform = Transform2D(0.0, Vector2(z0, z0), 0.0, -c0 * z0)
-	tc_sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	visible = true
+	sv.canvas_transform = Transform2D(0.0, Vector2(z0, z0), 0.0, -c0 * z0)
+	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
 	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
+	tc_cap = false
 	if not tc_on or tc_node == null:
-		tc_cap = false
 		return
-	var img: Image = tc_sv.get_texture().get_image()
-	tc_sv.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	visible = false
 	if tc_sharp == null:
 		tc_sharp = Sprite2D.new()
 		tc_sharp.centered = false
 		tc_sharp.z_index = 1
 		tc_node.add_child(tc_sharp)
-	tc_sharp.texture = ImageTexture.create_from_image(img)
+	tc_sharp.texture = sv.get_texture()
 	tc_sharp.position = c0
 	tc_sharp.scale = Vector2(1.0 / z0, 1.0 / z0)
-	tc_cap = false
+	tc_sig = sig
+	tc_sharp.visible = "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom] == sig
 
 func _tc_ui() -> void:
 	if tc_ui != null:
