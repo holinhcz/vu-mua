@@ -368,6 +368,7 @@ func fq(t: float) -> void:   # fq: cây ra trái theo giờ
 				G.lang.drop_obj(a, false)
 				G.toast.emit(nm + " có sẵn của làng đã hết 7 ngày, cây tự mất.")
 	O = _objs()
+	var spd := {}   # (bản 234) tốc độ ra trái mỗi loại cây tính một lần mỗi bước (pu dò cả làng: 3.000 cây x 2 lần = 5 fps)
 	for a in O.size():
 		var n = O[a]
 		var e = _ei().get(n.get("id", "")) if n is Dictionary else null
@@ -381,7 +382,10 @@ func fq(t: float) -> void:   # fq: cây ra trái theo giờ
 			continue
 		var r: float = minf(t, float(n.fw)) if float(n.fw) > 0.0 else 0.0
 		n.fw = maxf(0.0, float(n.fw) - r)
-		n.fp = minf(float(e.time), float(n.fp) + r * pu(String(n.id), true) + (t - r) * pu(String(n.id), false))
+		var sid := String(n.id)
+		if not spd.has(sid):
+			spd[sid] = [pu(sid, true), pu(sid, false)]
+		n.fp = minf(float(e.time), float(n.fp) + r * float(spd[sid][0]) + (t - r) * float(spd[sid][1]))
 
 func zb(t: bool) -> int:   # zb: t = mưa tưới hết cây; không thì tưới cây còn khô (qM)
 	var a := 0

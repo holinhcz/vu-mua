@@ -150,9 +150,7 @@ func _free(b: Boat) -> void:
 	b.queue_free()
 
 func _sort_y(b: Boat) -> void:   # đáy ghe để chen thứ tự vẽ
-	for e in farm.sortables:
-		if e[0] == b:
-			e[1] = farm.nn(b.p.x, b.p.y) + 2.0
+	farm.sort_set(b, farm.nn(b.p.x, b.p.y) + 2.0)
 
 func step() -> void:
 	var W = G.w_all

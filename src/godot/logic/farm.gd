@@ -165,10 +165,29 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 func _add_sorted(n: Node2D, dk: float) -> void:
 	n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	main.obj_root.add_child(n)
+	sort_add(n, dk)
+
+# (bản 234) dòng sortables của mỗi node giữ trong _srow: đổi khoá chân mỗi khung không phải dò cả mảng nghìn dòng
+# (dân, con vật, cây ngã, ghe... trước dò tuyến tính mỗi khung: 5 fps khi làng đông)
+var _srow := {}   # node -> dòng [node, khoá, -2] trong sortables
+func sort_add(n: Node, dk: float) -> void:
+	var row := [n, dk, -2]
 	if player != null and sortables.size() and sortables[-1][0] == player:
-		sortables.insert(sortables.size() - 1, [n, dk, -2])   # nhân vật luôn ở cuối (_resort ghi khoá chân nhân vật vào dòng cuối)
+		sortables.insert(sortables.size() - 1, row)   # nhân vật luôn ở cuối
 	else:
-		sortables.append([n, dk, -2])
+		sortables.append(row)
+	_srow[n] = row
+
+func sort_set(n: Node, dk: float) -> void:   # khoá chân mới cho node đã có dòng
+	var r = _srow.get(n)
+	if r == null:
+		for e in sortables:
+			if e[0] == n:
+				r = e
+				_srow[n] = e
+				break
+	if r != null:
+		r[1] = dk
 
 # ------------------------------------------------------------------ draw state
 var badges: Node2D = null
@@ -1697,7 +1716,7 @@ func leaf_sync(force := false) -> void:   # lá rụng đi theo cây: ô gốc c
 	for o in O:
 		if o is Dictionary:
 			live[Vector2i(int(o.gx), int(o.gy))] = 1
-	main.leaf_live(live)
+	main.leaf_live(live)   # main tự so với lần trước, chỉ vẽ lại mảng lá của ô nào đổi
 
 func _xw_sync() -> void:
 	var L: Array = G.xw.list_built()
@@ -1869,13 +1888,10 @@ func _vn_sync(dt: float) -> void:
 			n.j = j
 			n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 			main.obj_root.add_child(n)
-			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			sort_add(n, dk)
 			anodes[k] = n
 		else:
-			for e in sortables:
-				if e[0] == anodes[k]:
-					e[1] = dk
-					break
+			sort_set(anodes[k], dk)
 
 # ------------------------------------------------------------------ con vật đi lạc (gà vịt sổng, chim sáo): luật ở w_ruong.gd
 var cnodes := []   # [con vật (Dictionary của luật), node thu_ve]
@@ -1914,13 +1930,10 @@ func _crit_sync() -> void:
 			n.farm = self
 			n.a = x
 			main.obj_root.add_child(n)
-			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			sort_add(n, dk)
 			cnodes.append([x, n])
 			continue
-		for e in sortables:
-			if e[0] == n:
-				e[1] = dk
-				break
+		sort_set(n, dk)
 
 # ------------------------------------------------------------------ dân làng trên làng (ID: người làm thuê đi làm, FD: người đứng trước nhà)
 var dnodes := {}   # khóa -> node dan_ve
@@ -1998,14 +2011,11 @@ func _dan_sync(tt: float) -> void:
 			n.farm = self
 			n.d = x
 			main.obj_root.add_child(n)
-			sortables.insert(sortables.size() - 1, [n, dk, -2])
+			sort_add(n, dk)
 			dnodes[x.key] = n
 			continue
 		n.d = x
-		for e in sortables:
-			if e[0] == n:
-				e[1] = dk
-				break
+		sort_set(n, dk)
 	for k in dnodes.keys():
 		if seen.has(k):
 			continue
@@ -2047,6 +2057,12 @@ func _tree_bub_sync(tt: float) -> void:
 	var objs: Array = lang.objs() if lang != null else []
 	for i in want:
 		if i >= objs.size() or not (objs[i] is Dictionary):
+			continue
+		var oq: Dictionary = objs[i]   # (bản 236) ngoài màn: không giữ node bong bóng (làng mở hết: cả nghìn cây)
+		if not on_view(Vector2(en(float(oq.gx) + 0.5, float(oq.gy) + 0.5), nn(float(oq.gx) + 0.5, float(oq.gy) + 0.5)), 200.0):
+			if tbubs.has(i):
+				tbubs[i].queue_free()
+				tbubs.erase(i)
 			continue
 		var b: Bubble = tbubs.get(i)
 		if b == null:
@@ -2155,9 +2171,7 @@ func _fell_sync(tt: float, zz: float) -> void:
 			var fn: FellNode = fells[k]   # đứng đúng chỗ cây (dời cây thì đi theo)
 			fn.t = t
 			fn.position = Vector2(en(cx, cy), nn(cx, cy))
-			for e in sortables:
-				if e[0] == fn:
-					e[1] = nn(cx, cy)
+			sort_set(fn, nn(cx, cy))
 		# bên nền giấu cây gốc (d6 bản web thay hình cây bằng cây ngã / cháy / cây con)
 		if main.has_method("cay_an"):
 			main.cay_an(hide)

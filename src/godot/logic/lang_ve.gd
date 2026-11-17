@@ -177,6 +177,7 @@ func sync() -> void:
 	var old := cache
 	cache = {}
 	nodes = []
+	_sync_n += 1
 	var sea := str(F.G.season())
 	obj_nodes = {}
 	for n in O.size():   # đang dời cũng vẽ như thường: ui_bd nhấc chính các node này lên, như xưởng / chuồng
@@ -273,15 +274,29 @@ func _fell() -> Dictionary:   # cây ngã / cháy sau bão (bao.gd): vật cản
 	var f = tr.bao.wx().get("fell")
 	return f if f is Dictionary else {}
 
+var _st_sig := ""
+var _pend := []      # hình chưa có ảnh đúng mức (đang tải): step() thử lại mỗi khung
+var _sync_n := 0     # sync() dựng lại bao nhiêu lần
 func step() -> void:   # mỗi khung: lấy ảnh đúng mức zoom (P.texz), như xưởng; cờ 10 khung/giây
 	var scr: float = F.main.zoom * F.main.dpr if "dpr" in F.main else F.main.zoom
 	var fi := int(Time.get_ticks_msec() / 100) % 12
-	for s in flags:
+	for s in flags:   # cờ bay: đổi khung 10 lần mỗi giây
 		if is_instance_valid(s):
 			s.set_meta("k", "co_d%02d" % fi)
-	for s in nodes:
-		if is_instance_valid(s) and s is Sprite2D:
 			_tex(s, scr)
+	# (bản 234) chỉ đi hết các hình khi mức zoom / ngày đêm / bộ node đổi; còn lại chỉ hình chưa có ảnh (đang tải)
+	var st := str(F.P.level(PXU, scr)) + "|" + str(F.main.night_cur) + "|" + str(_sync_n)
+	if st != _st_sig:
+		_st_sig = st
+		_pend = nodes.duplicate()
+	if not _pend.is_empty():
+		var keep := []
+		for s in _pend:
+			if is_instance_valid(s) and s is Sprite2D:
+				_tex(s, scr)
+				if s.texture == null or s.get_meta("tk", "") == "":
+					keep.append(s)
+		_pend = keep
 	if ghost.visible:
 		for s in ghost.get_children():
 			if s is Sprite2D:

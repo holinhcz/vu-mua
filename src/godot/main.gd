@@ -3237,6 +3237,7 @@ var lf_busy := false
 var lf_gc := []        # nhóm -> tâm lá (thế giới), rồi -> Vector2i ô gốc cây (hoặc null: không thuộc cây nào)
 var lf_live = null
 var _lf_map_ok := false
+var _lf_tc := {}       # ô gốc cây -> các mảng lá có lá của cây đó
 func leaf_live(live: Dictionary) -> void:   # logic (farm): ô gốc các cây đang đứng
 	if not _lf_map_ok:
 		var fm = get_node_or_null("Farm")
@@ -3267,8 +3268,30 @@ func leaf_live(live: Dictionary) -> void:   # logic (farm): ô gốc các cây �
 							best = e[1]
 			lf_gc[g] = best
 		_lf_map_ok = true
+	# (bản 236) chỉ vẽ lại mảng lá có nhóm lá ở ô vừa đổi (cây mới mất / mới có): trước đây vẽ lại cả hơn nghìn mảng mỗi
+	# lần làng đổi chút gì
+	if _lf_tc.is_empty():
+		for ch in lf_chunks:
+			var seen := {}
+			for gid in ch.gi:
+				var t = lf_gc[gid] if gid < lf_gc.size() else null
+				if t is Vector2i and not seen.has(t):
+					seen[t] = 1
+					if not _lf_tc.has(t):
+						_lf_tc[t] = []
+					_lf_tc[t].append(ch)
+	var old = lf_live
 	lf_live = live
-	for ch in lf_chunks:
+	var dirty := {}
+	if old == null:
+		for ch in lf_chunks:
+			dirty[ch] = 1
+	else:
+		for t in _lf_tc:
+			if (old as Dictionary).has(t) != live.has(t):
+				for ch in _lf_tc[t]:
+					dirty[ch] = 1
+	for ch in dirty:
 		ch.queue_redraw()
 # (b72) ?do : counts draw calls with each group hidden for 3 s (all, -UI, -verges, -built/logic, -scenery), then puts all back
 var do_on := -1
