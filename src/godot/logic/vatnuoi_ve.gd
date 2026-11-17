@@ -9,17 +9,76 @@ const WW := {"ga": 1.0, "cuu": 0.95, "bo": 0.88, "heo": 0.95, "de": 0.92}    # c
 var t := ""
 var j := 0
 
-var _rd := 0.0
+# (bản 243) thân con vật (vẽ bằng mã, nhiều tam giác) chỉ vẽ lại khi hình đổi: đang đi, tim bay, đổi chỗ / hướng / cỡ /
+# zoom / ngày đêm / thanh tiến độ. Bong bóng X0 là nút con riêng (BubN): nhún + phập phồng bằng vị trí / scale của nút,
+# không vẽ lại. Trước đây mỗi con vẽ lại cả thân 15 lần/giây chỉ để bong bóng nhún (32 con ~30 ms mỗi khung trên điện thoại).
+static var _BC := {}   # dáng -> [điểm, màu, chỉ số] tam giác thân
+var bn: BubN = null
+var _sg := ""
+var _bsg := ""
 func _process(dt: float) -> void:
-	# vẽ lại khi đang đi, đang có tim bay; còn lại 15 lần/giây cho bong bóng nhún (đỡ tốn lệnh vẽ)
 	tt += dt
-	_rd -= dt
+	if bn == null:
+		bn = BubN.new()
+		bn.farm = farm
+		add_child(bn)
+	var ft := foot()
+	if not farm.on_view(ft):
+		return
 	var V = farm.G.vn
 	var L: Array = V.mc.get(t, [])
-	var mv: bool = j < L.size() and bool(L[j].mv)
-	if (mv or V.hearts_t.has(t + str(j)) or _rd <= 0.0) and farm.on_view(foot()):
-		_rd = 1.0 / 15.0
+	var e = V.a(t, j)
+	if e == null or j >= L.size():
+		bn.visible = false
+		return
+	var m: Dictionary = L[j]
+	var mv: bool = bool(m.mv)
+	var ht: bool = V.hearts_t.has(t + str(j))
+	var still: bool = farm.G.motion_off()
+	var r: Dictionary = V.Q[t]
+	# bong bóng: món có hàng / món ăn / bệnh
+	var bid := ""
+	var red := false
+	var bar := ""
+	if e.get("s", 0):
+		bid = "@benh"
+		red = true
+		bar = "z" + str(not still and sin(tt * 2 + j) > 0.6)
+	elif float(e.get("b", 0)) > 0.0:
+		bar = "b%d" % int((1.0 - float(e.b) / V.BABY) * 28.0)
+	elif V.ready(t, e):
+		bid = String(r.make)
+	elif V.hungry(e):
+		bid = String(r.feed)
+	else:
+		bar = "p%d" % int(minf(1.0, float(e.p) / float(r.time)) * 36.0)
+	var zm: float = farm.main.zoom
+	var sg := "%s|%s|%s|%d|%s|%.4f|%s|%s|%s" % [ht, ft, m.dir, int(e.get("b", 0) > 0), farm.G.night, zm, still, bar, farm.G.troi.st.get("pal", {}).get("leaf2", "") if farm.G.troi != null else ""]
+	if mv or ht or sg != _sg:
+		_sg = sg
 		queue_redraw()
+	bn.visible = bid != ""
+	if bid != "":
+		var le: float = farm.sign_le()
+		var bs := "%s|%s|%.3f|%.4f" % [bid, red, le, zm]
+		if bs != _bsg:
+			_bsg = bs
+			bn.id = bid
+			bn.red = red
+			bn.le = le
+			bn.queue_redraw()
+		var at := bub_at()
+		bn.position = at + Vector2(0.0, 0.0 if still else sin(tt * 3.0 + j) * 1.2)
+		var pz := 1.0 if still else 1.0 + 0.08 * sin(tt * 5.0 + at.x)
+		bn.scale = Vector2(pz, pz)
+
+class BubN extends "res://logic/ve_aa.gd":   # bong bóng X0 của con vật, vẽ tại (0,0); nút cha dời / phóng
+	var id := ""
+	var red := false
+	var le := 1.0
+	func _draw() -> void:
+		var hinh: Texture2D = Bong.anh(id.substr(1), le * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, 13.6 * le * farm.main.zoom)
+		Bong.ve(self, Vector2.ZERO, le, hinh, red)
 
 func _ga(ph: float, mv: bool) -> void:   # wW
 	var n := absf(sin(ph)) * 1.6 if mv else 0.0
@@ -158,16 +217,30 @@ func _draw_all() -> void:
 	_L(base.x, base.y, 13.0 * f, 13.0 * f * 0.42, Color(0, 0, 0, 0.24))
 	_aa = 1.0 / (zm * f)
 	_tf(base, Vector2(float(m.dir) * f, f))
-	match t:
-		"ga": _ga(float(m.ph), bool(m.mv))
-		"cuu": _cuu(float(m.ph), bool(m.mv))
-		"bo": _bo(float(m.ph), bool(m.mv))
-		"heo": _heo(float(m.ph), bool(m.mv))
-		"de": _de(float(m.ph), bool(m.mv))
+	# (bản 243) thân con vật tính tam giác một lần cho mỗi dáng (loài, 12 nhịp bước, ngày đêm, độ mịn mép) rồi dùng lại:
+	# tam giác hoá ~30 hình mỗi lần vẽ là phần nặng nhất (vài ms một con trên điện thoại)
+	var mvb := bool(m.mv)
+	var phq: int = int(floor(fposmod(float(m.ph), TAU) / TAU * 12.0)) if mvb else -1
+	var ck := "%s|%d|%s|%.2f" % [t, phq, farm.G.night, _aa]
+	var cb = _BC.get(ck)
+	if cb == null:
+		var ph := (float(phq) + 0.5) / 12.0 * TAU if mvb else 0.0
+		match t:
+			"ga": _ga(ph, mvb)
+			"cuu": _cuu(ph, mvb)
+			"bo": _bo(ph, mvb)
+			"heo": _heo(ph, mvb)
+			"de": _de(ph, mvb)
+		if _BC.size() > 400:
+			_BC.clear()
+		_BC[ck] = [_P, _C, _I]
+	else:
+		_P = cb[0]
+		_C = cb[1]
+		_I = cb[2]
 	_tf(Vector2.ZERO, Vector2.ONE)
 	_aa = 1.0 / zm
 	var p := float(H5[t]) * f
-	var d := 0.0 if still else sin(tt * 3.0 + j) * 1.2
 	var x := base.x
 	var c := base.y
 	# ZR: tim bay sau khi vuốt ve
@@ -178,23 +251,18 @@ func _draw_all() -> void:
 		for k in 3:
 			var s := fmod((2.2 - ht) * 0.8 + k * 0.3, 1.0)
 			draw_string(fnt, Vector2(x - 8 + k * 8 - 4, c - p - 8 - s * 18), "♥", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.886, 0.271, 0.227, minf(1.0, ht)))
-	var le: float = farm.sign_le()
-	if e.get("s", 0):   # bệnh: bong bóng đỏ chữ thập + "z"
-		_x0(Vector2(x, c - p - 14 + d), "@benh", true)
+	if e.get("s", 0):   # bệnh: bong bóng đỏ chữ thập (nút BubN) + "z"
 		if not still and sin(tt * 2 + j) > 0.6:
-			draw_string(ThemeDB.fallback_font, Vector2(x + 10, c - p + 2), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(8 * le), Color(80 / 255.0, 80 / 255.0, 120 / 255.0, 0.8))
+			draw_string(ThemeDB.fallback_font, Vector2(x + 10, c - p + 2), "z", HORIZONTAL_ALIGNMENT_LEFT, -1, int(8 * farm.sign_le()), Color(80 / 255.0, 80 / 255.0, 120 / 255.0, 0.8))
 		return
 	if float(e.get("b", 0)) > 0.0:   # con nhỏ: thanh hồng
 		var v: float = 1.0 - float(e.b) / V.BABY
 		draw_rect(Rect2(x - 7, c - p - 4, 14, 3), Color(0, 0, 0, 0.35))
 		draw_rect(Rect2(x - 7, c - p - 4, 14 * v, 3), Color("#f29ab0"))
 		return
-	if V.ready(t, e):
-		_x0(Vector2(x, c - p - 14 + d), String(r.make))
-	elif V.hungry(e):
-		_x0(Vector2(x, c - p - 14 + d), String(r.feed))
-	else:
-		var v2 := minf(1.0, float(e.p) / float(r.time))
-		draw_rect(Rect2(x - 9, c - p - 6, 18, 3.4), Color(0, 0, 0, 0.35))
-		var pal = farm.G.troi.st.get("pal", {}) if farm.G.troi != null else {}
-		draw_rect(Rect2(x - 9, c - p - 6, 18 * v2, 3.4), Color(String(pal.get("leaf2", "#5aa83a"))))
+	if V.ready(t, e) or V.hungry(e):   # bong bóng món (nút BubN)
+		return
+	var v2 := minf(1.0, float(e.p) / float(r.time))
+	draw_rect(Rect2(x - 9, c - p - 6, 18, 3.4), Color(0, 0, 0, 0.35))
+	var pal = farm.G.troi.st.get("pal", {}) if farm.G.troi != null else {}
+	draw_rect(Rect2(x - 9, c - p - 6, 18 * v2, 3.4), Color(String(pal.get("leaf2", "#5aa83a"))))
