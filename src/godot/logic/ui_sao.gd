@@ -14,7 +14,7 @@ var T := {}
 var pop: Control = null
 var sig := ""
 var pi := -1                  # ô đang nâng
-var kind := "plot"            # "plot" | "pen"
+var kind := "plot"            # "plot" | "pen" | "work" (xưởng, bản 281)
 var pt := ""                  # chuồng đang nâng (kind pen)
 var all := false              # n: tab "Cả N ô"
 var star_on := ""
@@ -33,7 +33,7 @@ func _init(ui) -> void:
 	var ids: Array = G.DJ_PLOT.m
 	for j in 3:
 		K.mat_svg[ids[j]] = Snap.find(ch[j + 1], "", "svg").get("svg", "")
-	for m in G.DJ_PEN.m:   # tre, lá dừa, mây: hình món của bản web (ui/svg/mat)
+	for m in G.DJ_PEN.m + G.DJ_WORK.m:   # tre, lá dừa, mây; ván, đinh, gạch: hình món của bản web (ui/svg/mat)
 		if not K.mat_svg.has(m):
 			K.mat_svg[m] = FileAccess.get_file_as_string("res://ui/svg/mat/" + String(m) + ".svg")
 
@@ -52,11 +52,28 @@ func open_pen(t: String) -> void:   # nâng sao chuồng t (lf("pen", t))
 	sig = ""
 	_draw()
 
+func open_work(k: String) -> void:   # nâng sao xưởng k (bản 281): cùng bảng chuồng, 1 tab mang tên xưởng
+	kind = "work"
+	pt = k
+	pi = 0
+	all = false
+	sig = ""
+	_draw()
+
 func _r() -> int:   # sao hiện tại
+	if kind == "work":
+		return G.xw.ks(pt)
 	return G.vn.ps(pt) if kind == "pen" else G.star(G.g.plots[pi])
 
 func _us(a: int) -> String:   # Us(kind, a)
+	if kind == "work":
+		return G.us_work(a)
 	return G.us_pen(a) if kind == "pen" else G.us_plot(a)
+
+func _one() -> String:   # tên một thứ (tab, thông báo): chuồng / xưởng
+	if kind == "work":
+		return String(G.xw.sr[pt].name)
+	return String(G.lang.CO.get(pt, "Chuồng"))
 
 func close() -> void:
 	if K.ns != null and K.ns_hid == pop:
@@ -69,7 +86,7 @@ func close() -> void:
 func _sig() -> String:
 	var o: int = _r()
 	var mm := []
-	for m in (G.DJ_PEN.m if kind == "pen" else G.DJ_PLOT.m):
+	for m in (G.DJ_PEN.m if kind == "pen" else (G.DJ_WORK.m if kind == "work" else G.DJ_PLOT.m)):
 		mm.append(G.mat_n(m))
 	return "|".join([kind, pt, all, o, G.k4(o).size() if kind == "plot" else 1, int(G.g.coins / 50), ",".join(mm), G.lv(), int(G.g.get("ngoc", 0))])
 
@@ -86,8 +103,8 @@ func _tabs(n: Dictionary, l: int) -> void:
 	var q: Dictionary = Snap.moved(src, Vector2(float(tb.r[0]) - float(src.r[0]), float(tb.r[1]) - float(src.r[1])))
 	if l >= 2:
 		K._ctext(q.kids[1], "Cả " + str(l) + " ô")
-	elif kind == "pen":
-		K._ctext(q.kids[0], String(G.lang.CO.get(pt, "Chuồng")))
+	elif kind != "plot":
+		K._ctext(q.kids[0], _one())
 	tb.kids = q.kids
 
 func _draw() -> void:
@@ -185,10 +202,10 @@ func up() -> void:   # click data-up → lf (lớp bọc nâng sớm)
 		return
 	var nd: Dictionary = G.up_need(r + 1, o, kind)
 	var t := pt
-	var go: Callable = (func(): return G.pen_up(t)) if kind == "pen" else ((func(): return G.plot_up_all(r)) if all else (func(): return G.plot_up(pi)))
+	var go: Callable = (func(): return G.work_up(t)) if kind == "work" else ((func(): return G.pen_up(t)) if kind == "pen" else ((func(): return G.plot_up_all(r)) if all else (func(): return G.plot_up(pi))))
 	if G.lv() < int(nd.lv):   # e$ + zF
 		if G.early_ok(int(nd.lv)):
-			K.ns_show({"t": (String(G.lang.CO.get(pt, "Chuồng")).to_lower() if kind == "pen" else ((str(o) + " ô ruộng") if all else "ô ruộng")) + " lên " + str(r) + "★", "nd": nd,
+			K.ns_show({"t": (_one().to_lower() if kind != "plot" else ((str(o) + " ô ruộng") if all else "ô ruộng")) + " lên " + str(r) + "★", "nd": nd,
 				"fee": G.NS_FEE[r + 1] * G.early_lv(int(nd.lv)) * o, "go": go, "hide": pop,
 				"done": func():
 					sig = ""

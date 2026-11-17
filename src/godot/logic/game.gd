@@ -1284,9 +1284,10 @@ const HJ := [0, 0, 3, 7, 12, 25, 40]
 const NS_FEE := [0, 0, 2, 3, 4, 6, 10]   # n$
 
 const DJ_PEN := {"m": ["tre", "la", "may"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 0], [3, 2, 1], [4, 3, 2], [6, 6, 5], [10, 10, 8]]}
+const DJ_WORK := {"m": ["van", "dinh", "gach"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 0], [3, 2, 1], [4, 3, 3], [6, 6, 8], [10, 10, 15]]}   # nang_sao.json "work" (bản 281)
 
 func up_need(a: int, n := 1, kind := "plot") -> Dictionary:   # hl(kind, a, n): ô ruộng / chuồng
-	var D2: Dictionary = DJ_PEN if kind == "pen" else DJ_PLOT
+	var D2: Dictionary = DJ_PEN if kind == "pen" else (DJ_WORK if kind == "work" else DJ_PLOT)
 	var r: Array = D2.q[a]
 	var m := []
 	for l in 3:
@@ -1327,6 +1328,23 @@ static func us_pen(a: int) -> String:   # Us("pen", a)
 	if a <= 1:
 		return "Chưa nâng"
 	return "Ra hàng nhanh +" + str(6 * (a - 1)) + "%" + (" · 25% lần cho ăn không tốn đồ ăn" if a >= 4 else "")
+
+static func us_work(a: int) -> String:   # sao xưởng: làm nhanh 5% mỗi sao (xuong.speed)
+	if a <= 1:
+		return "Chưa nâng"
+	return "Làm nhanh +" + str(5 * (a - 1)) + "%"
+
+func work_up(k: String) -> bool:   # (bản 281) nâng sao xưởng k: xu + ván, đinh, gạch
+	var n: int = xw.ks(k)
+	if n >= 6:
+		return false
+	if not _pay(up_need(n + 1, 1, "work")):
+		return false
+	xw.w(k).st = n + 1
+	toast.emit(String(xw.sr[k].name) + " lên " + str(n) + "★: " + us_work(n + 1) + ".")
+	vib(15)
+	mark()
+	return true
 
 func pen_up(t: String) -> bool:   # lf("pen", t)
 	if vn == null:

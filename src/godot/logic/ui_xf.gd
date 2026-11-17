@@ -775,7 +775,7 @@ func _do(act: String, b = null) -> void:
 				return
 			_ask(b if b != null else top, G.xw.fin_cost(key), "Xong ngay " + G.item_name(w.q[0]).to_lower() + "?", "", func(): G.xw.finish_now(key); sig = "")
 		"star":
-			U.say("Nâng sao " + String(G.xw.sr[key].name).to_lower() + ": phần này đang chuyển qua bản Godot.")
+			U.spp.open_work(key)   # (bản 281) bảng nâng sao dùng chung với ô ruộng / chuồng
 		"collect":
 			U.F.xw_job(key, "workc")
 			sig = ""
