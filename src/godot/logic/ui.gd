@@ -992,6 +992,7 @@ func _gv_locked() -> String:
 	return "Cấp " + str(best) + " mở: " + ", ".join(names)
 
 func gv_open(i: int) -> void:
+	gv_sc.s = 0.0
 	pc_close()
 	lock_close()
 	rm_close()
@@ -1106,7 +1107,10 @@ func _gv_sync() -> void:
 			if gn != null:
 				gn.modulate.a = 0.6
 		var cc: String = c
-		_click(sb, func(): _gv_pick(cc), "scale92")
+		_click(sb, func():
+			if gv_sc.moved():
+				return   # vừa kéo cuộn, không phải chạm
+			_gv_pick(cc), "scale92")
 		gv_seeds.append(sb)
 		idx += 1
 	var rows := int(ceil(idx / 5.0))
@@ -1125,13 +1129,18 @@ func _gv_sync() -> void:
 		e.text("Hết giống rồi! Mua ở Chợ phiên, nhà hàng xóm hoặc chợ nổi sáng sớm.", Rect2(0, 0, gv_bar0.size.x - 20, 76), 14, 600, Color.WHITE, "center", [], true)
 		gv_bar.add(e)
 		rows = maxi(rows, 1)
-	var h := minf(256.0, 16.0 + rows * 76.0 + maxf(0, rows - 1) * 6.0)
+	var full := 16.0 + rows * 76.0 + maxf(0, rows - 1) * 6.0
+	var h := minf(256.0, full)
 	gv_bar.place(Rect2(Vector2((vw - gv_bar0.size.x) * 0.5, vh - 12.0 - h), Vector2(gv_bar0.size.x, h)))
+	gv_sc.setup(gv_bar, full, h)
 
 func _gv_fill(nd: Dictionary, c: String, n: int) -> void:
 	# đổi nút mẫu thành nút của giống c: hình, tên, số hạt, lá hợp mùa
 	var gi := Snap.find(nd, "gvi")
-	var sv: String = FileAccess.get_file_as_string("res://ui/svg/gv/" + c + ".svg")
+	# (bản 276) hình giống = hình món trong Kho (ui/svg/kh, ảnh mới), món chưa có hình thì hình giống cũ (ui/svg/gv)
+	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + c + ".svg")
+	if sv == "":
+		sv = FileAccess.get_file_as_string("res://ui/svg/gv/" + c + ".svg")
 	for k in gi.get("kids", []):
 		if k.tag == "svg" and sv != "":
 			k.svg = sv
@@ -1883,7 +1892,7 @@ func _build_kho() -> void:
 				var cat: String = KH_CAT[q][0] if q < KH_CAT.size() else "khac"
 				kh_chips.append([L[q], cat, sn])
 				var cc := cat
-				_click(L[q], func(): kh_f = cc; kh_sig = ""; kh_scroll = 0.0; _kho_chips(), "scale94")
+				_click(L[q], func(): kh_f = cc; kh_sig = ""; kh_sc.s = 0.0; _kho_chips(), "scale94")
 	# Vật liệu: chạm ô để xem
 	for b in _qall(kho_roots[1], "u2vt", []):
 		var bb: Control = b
@@ -1916,7 +1925,7 @@ func kho_open() -> void:
 	lock_close()
 	kho_on = true
 	kh_sig = ""
-	kh_scroll = 0.0
+	kh_sc.s = 0.0
 	_kho_tab(kho_tab)
 
 func _kho_full(n: int, cap: int) -> void:
@@ -2081,7 +2090,7 @@ func _kho_sync() -> void:
 			var tt: String = t
 			if btn != null:
 				_click(btn, func():
-					if kh_drag != null and kh_drag.moved:
+					if kh_sc.moved():
 						return   # vừa kéo cuộn, không phải chạm
 					kh_sel = "" if kh_sel == tt else tt
 					kh_q = 1
@@ -2104,12 +2113,7 @@ func _kho_sync() -> void:
 	var rows := int(ceil(idx / float(col)))
 	# lưới cuộn dọc (.khgrid overflow-y auto bản web): khung giữ cỡ gốc, cắt phần dư, kéo / lăn chuột để cuộn
 	grid.place(Rect2(grid.r.position, Vector2(grid.r.size.x, grid0.size.y)))
-	grid._kids.clip_contents = true
-	kh_grid = grid
-	kh_hmax = maxf(0.0, rows * dy + 8.0 - grid0.size.y)
-	kh_scroll = clampf(kh_scroll, 0.0, kh_hmax)
-	kh_off = 0.0
-	_kh_scroll_to(kh_scroll)
+	kh_sc.setup(grid, rows * dy + 8.0, grid0.size.y)
 	if selm:
 		_det_sync()
 	# Bán hết +N (chạm 2 lần), giữ 4 hạt mỗi thứ
@@ -3179,45 +3183,9 @@ func _lack_close() -> void:
 		od_lk.queue_free()
 		od_lk = null
 
-var kh_scroll := 0.0
-var kh_hmax := 0.0
-var kh_off := 0.0          # các ô trong lưới đang dời lên bao nhiêu
-var kh_grid: Control = null
-var kh_drag = null
-
-func _kh_scroll_to(v: float) -> void:
-	kh_scroll = clampf(v, 0.0, kh_hmax)
-	if kh_grid == null or not is_instance_valid(kh_grid):
-		return
-	var d := kh_scroll - kh_off
-	if d == 0.0:
-		return
-	for k in kh_grid.kids():
-		k.position.y -= d * Css.K
-	kh_off = kh_scroll
-
-func _kho_input(e: InputEvent) -> void:   # kéo / lăn chuột cuộn lưới Kho
-	if not kho_on or kh_grid == null or not is_instance_valid(kh_grid) or not kh_grid.is_visible_in_tree():
-		kh_drag = null
-		return
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		if kh_grid.get_global_rect().has_point(e.position):
-			_kh_scroll_to(kh_scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
-		return
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return
-		if e.pressed:
-			kh_drag = {"y0": e.position.y / Css.K, "s0": kh_scroll, "moved": false} if kh_grid.get_global_rect().has_point(e.position) and kh_hmax > 0.0 else null
-		elif kh_drag != null:
-			var dd = kh_drag
-			get_tree().create_timer(0.05).timeout.connect(func(): if kh_drag == dd: kh_drag = null)
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and kh_drag != null:
-		var d: float = e.position.y / Css.K - kh_drag.y0
-		if absf(d) > 6.0:
-			kh_drag.moved = true
-		if kh_drag.moved:
-			_kh_scroll_to(kh_drag.s0 - d)
+const VScroll = preload("res://logic/vscroll.gd")
+var kh_sc = VScroll.new()   # cuộn lưới Kho (dùng chung vscroll.gd)
+var gv_sc = VScroll.new()   # cuộn khay giống ô ruộng (bản 276: nhiều giống quá 3 hàng thì kéo được)
 
 func _od_input(e: InputEvent) -> void:
 	# kéo dọc danh sách đơn khi nhiều hơn 2 hàng thẻ
@@ -3706,7 +3674,9 @@ func _input(e: InputEvent) -> void:
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
 	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or _pans().any(func(p): return p != null and p.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
 	_od_input(e)
-	_kho_input(e)
+	if kho_on:
+		kh_sc.input(e)
+	gv_sc.input(e)
 	if nvp != null:
 		nvp.input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
