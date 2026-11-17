@@ -116,9 +116,11 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 		var src: String = n.get("src", "")
 		if src == "pearl":
 			# sen đỏ (sh()): hình ngọc trong khung 64, như svg <image> ở dưới
-			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/pearl.webp"), R[2], R[3]), Rect2(0, 0, R[2], R[3]))
+			var gp: float = float(R[2]) * (512.0 / 430.0 - 1.0) * 0.5
+			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/pearl.webp"), R[2] + gp * 2.0, R[3] + gp * 2.0), Rect2(-gp, -gp, R[2] + gp * 2.0, R[3] + gp * 2.0))
 		elif src.find("xui") >= 0:
-			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/coin.webp"), R[2], R[3]), Rect2(0, 0, R[2], R[3]))
+			var gc: float = float(R[2]) * (512.0 / 430.0 - 1.0) * 0.5
+			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/coin.webp"), R[2] + gc * 2.0, R[3] + gc * 2.0), Rect2(-gc, -gc, R[2] + gc * 2.0, R[3] + gc * 2.0))
 	# an icon put in front of the text by a css ::before (Kho tabs: basket/leaf/pot)
 	var icon := {}
 	var bef: Dictionary = n.get("::before", {})
@@ -268,7 +270,9 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 			ir = Rect2(float(mm.get_string(1)), float(mm.get_string(2)), float(mm.get_string(3)), float(mm.get_string(4)))
 		var pic := "res://ui/img/coin.webp" if absf(ir.position.x - 11.0) < 0.5 else "res://ui/img/pearl.webp"
 		# đi chung đường hình món (Css.img_svg -> svg_tex); không bóng đổ (bản 264)
-		b.pic(Css.svg_tex(Css.img_svg(pic), ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q))
+		var ip := Rect2(ir.position * q, ir.size * q)
+		ip = ip.grow(ip.size.x * (512.0 / 430.0 - 1.0) * 0.5)   # ảnh chừa lề trong suốt như hình món (84% khung): ô to ra cho hình giữ cỡ
+		b.pic(Css.svg_tex(Css.img_svg(pic), ip.size.x, ip.size.y), ip)
 		return
 	var stx := _svg_texts(sv)
 	var t := Css.svg_tex(stx.svg, R[2], R[3])
