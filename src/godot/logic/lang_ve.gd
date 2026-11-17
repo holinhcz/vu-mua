@@ -504,16 +504,12 @@ class TileLayer extends Node2D:
 	var _map_sig := "?"
 
 	func _nen_all(gt: Dictionary) -> void:
-		var gr = v.F.main.ground
-		var mat: ShaderMaterial = gr.material if gr != null else null
-		if mat == null:
-			return
 		var sig := str(gt.size()) + str(gt.hash())
 		if sig == _map_sig:
 			return
 		_map_sig = sig
 		if gt.is_empty():
-			mat.set_shader_parameter("uNB", Vector4(0, 0, 0, 0))
+			v.F.main.set_nen(null, Vector4.ZERO)
 			return
 		var x0 := 1 << 20
 		var y0 := 1 << 20
@@ -531,8 +527,7 @@ class TileLayer extends Node2D:
 			var u = v.LG.ug.get(String(gt[k]))
 			var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
 			im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0))
-		mat.set_shader_parameter("uNM", ImageTexture.create_from_image(im))
-		mat.set_shader_parameter("uNB", Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+		v.F.main.set_nen(ImageTexture.create_from_image(im), Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
 		var u = v.LG.ug.get(t)

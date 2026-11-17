@@ -328,7 +328,22 @@ func _make_ground() -> void:
 		g.z_index = -40
 		add_child(g)
 		ground = g
+		_nen_apply()
 		_road_retry())
+
+# nền đất người chơi lát (bản 229): logic gửi bản đồ ô bất cứ lúc nào (kể cả trước khi nền làng tải xong), nền làng có thì gắn
+var nen_map: Texture2D = null
+var nen_box := Vector4.ZERO
+func set_nen(tex: Texture2D, box: Vector4) -> void:
+	nen_map = tex
+	nen_box = box
+	_nen_apply()
+func _nen_apply() -> void:
+	if ground == null or ground.material == null:
+		return
+	if nen_map != null:
+		ground.material.set_shader_parameter("uNM", nen_map)
+	ground.material.set_shader_parameter("uNB", nen_box)
 
 # ---------------------------------------------------------------- bought land (n41, web ci()/tc() + NEN2 own()/tv())
 # Which lot every tile belongs to (n/parcel.png), the lots' names and aliases, and the wild things that stand on unbought
