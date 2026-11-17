@@ -1211,8 +1211,10 @@ func _build_rm() -> void:
 	root.add_child(rm_r)
 	for k in [".fast", ".water"]:
 		rm_x0[k] = rm_gi[k].r.position
-	for k in [".star", ".water"]:
-		rm_in0[k] = rm_gi[k].kids()[-1].get_meta("snap", {}).get("svg", "")
+	# (bản 257) nút sao + nút tưới: dùng ảnh bong bóng (ui/img/bong sao, nuoc) thay hình vẽ của bản web, giọt nước
+	# cùng một hình với bong bóng cần tưới trên làng
+	rm_in0[".star"] = _img_svg("res://ui/img/bong/sao.png")
+	rm_in0[".water"] = _img_svg("res://ui/img/bong/nuoc.png")
 	var th: Control = ids2.get(".rmth")
 	rm_in0[".rmth"] = th.kids()[-1].get_meta("snap", {}).get("svg", "")
 	rm_in0["rmth_ring"] = th.kids()[0].get_meta("snap", {}).get("svg", "")
@@ -1313,13 +1315,17 @@ func _rm_reset() -> void:   # trả vòng nút về như ô ruộng (hình trong
 	if sm != null:
 		sm.visible = true
 
+static func _img_svg(path: String) -> String:   # ảnh PNG bọc thành SVG khung 64 (đi chung đường hình SVG; Css.svg_load giải + làm mịn)
+	return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><image x="0" y="0" width="64" height="64" href="data:image/png;base64,' + Marshalls.raw_to_base64(FileAccess.get_file_as_bytes(path)) + '"/></svg>'
+
 func _rm_ic(k: String, svg: String, big := false) -> void:   # hình trong của nút k ("" = ẩn); big: hình món (khung 64 có chừa lề) 40 thay 28
 	var b: Control = rm_gi[k].kids()[-1]
 	b.visible = svg != ""
 	if not b.has_meta("r0"):
 		b.set_meta("r0", b.r)
 	var r0: Rect2 = b.get_meta("r0")
-	var r1 := r0.grow(6.0) if big else r0
+	# ảnh sao / giọt nước (bản 257) to hơn hình gốc một chút (28 -> 38)
+	var r1 := r0.grow(6.0) if big else (r0.grow(5.0) if svg != "" and (svg == rm_in0.get(".star") or svg == rm_in0.get(".water")) else r0)
 	if b.r != r1:
 		b.place(r1)
 		if not b.pics.is_empty():
