@@ -4186,6 +4186,8 @@ var _zo_last := {}   # đồ logic -> (x, chân) lần xếp trước
 var zo_keys := PackedFloat32Array()   # khoá (đã chỉnh theo hộp) của vật đứng yên, theo thứ tự đang vẽ
 var zo_nodes := []
 var _zo_n := -1
+var _zo_new := []   # (bản 237) vật vừa vào obj_root, chờ chèn đúng chỗ
+var _zo_rm := 0     # số vật đã ra từ lần gom rác trước
 var _zo_hook := false
 var _zo_box := {}                     # int(khoá) -> [[ô chiếm, khoá nhỏ nhất, khoá lớn nhất]] của vật nhiều ô
 static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" số; không có thì đi theo cái trước
@@ -4223,8 +4225,10 @@ func zorder() -> void:
 		return
 	if not _zo_hook:
 		_zo_hook = true
-		obj_root.child_entered_tree.connect(func(_n): _zo_n = -1)
-		obj_root.child_exiting_tree.connect(func(_n): _zo_n = -1)
+		# (bản 237) vật mới vào / ra không bắt xếp lại cả làng nữa (trước: 60-80 ms mỗi nửa giây trên điện thoại): vật mới chèn
+		# đúng chỗ theo khoá, vật ra để lại chỗ trống trong danh sách, gom rác khi đủ nhiều
+		obj_root.child_entered_tree.connect(func(n): _zo_new.append(n))
+		obj_root.child_exiting_tree.connect(func(_n): _zo_rm += 1)
 	var fm = get_node_or_null("Farm")
 	var dyn := {}
 	var L := []
@@ -4236,9 +4240,46 @@ func zorder() -> void:
 	# (bản 235) xếp lại toàn bộ (14 nghìn vật, sort) tốn cả chục ms trên điện thoại: khi số vật đổi thì gom lại, tối đa 2 lần/giây;
 	# zo_dirty (làng đổi hẳn) thì làm ngay
 	var nowm := Time.get_ticks_msec()
-	var full: bool = zo_dirty or (_zo_n != obj_root.get_child_count() - dyn.size() and nowm - _zo_full_t > 500)
+	var full: bool = zo_dirty or zo_nodes.is_empty()
 	if full:
 		_zo_full_t = nowm
+		_zo_new.clear()
+		_zo_rm = 0
+	else:
+		if _zo_rm > 300:   # gom rác: bỏ vật đã ra khỏi danh sách đứng yên (không xếp lại)
+			_zo_rm = 0
+			var k2 := PackedFloat32Array()
+			var n2 := []
+			for q in zo_nodes.size():
+				var zn = zo_nodes[q]
+				if is_instance_valid(zn) and zn.get_parent() == obj_root and not zn.is_queued_for_deletion():
+					k2.append(zo_keys[q])
+					n2.append(zn)
+			zo_keys = k2
+			zo_nodes = n2
+		if not _zo_new.is_empty():
+			var nw := _zo_new
+			_zo_new = []
+			for n in nw:
+				if not is_instance_valid(n) or n.get_parent() != obj_root or n.is_queued_for_deletion() or dyn.has(n):
+					continue   # đồ của logic: phần "vừa đổi chỗ" bên dưới lo
+				if not n.has_meta("k"):
+					continue   # không có khoá: để nguyên chỗ logic thêm vào
+				var kk := _zkey(n, 0.0)
+				if not _zo_box.is_empty() and (n.has_meta("ft") or n.has_meta("ftt")):
+					kk = _zo_fix(n, kk, _zo_tile(n, 0.0))
+				var t := zo_keys.bsearch(kk, false)
+				var nxt = zo_nodes[t] if t < zo_nodes.size() else null
+				if nxt != null and (not is_instance_valid(nxt) or nxt.get_parent() != obj_root):
+					nxt = null
+				zo_keys.insert(t, kk)
+				zo_nodes.insert(t, n)
+				var idx: int = n.get_index()
+				if nxt == null:
+					obj_root.move_child(n, -1)
+				else:
+					var ni: int = nxt.get_index()
+					obj_root.move_child(n, ni if idx > ni else ni - 1)
 	if full:   # hộp nhiều ô (nhà, xưởng, chuồng) gom lại trước
 		_zo_box = {}
 		var bx := {}
