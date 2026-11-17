@@ -398,6 +398,9 @@ static func emoji(code: int) -> Texture2D:
 		_emo[code] = image(path) if FileAccess.file_exists(path) else null
 	return _emo[code]
 
+static func image_dev(path: String, pw: int, ph: int) -> Texture2D:   # (bản 266) như image_px nhưng số điểm ảnh thật trên màn
+	return image_px(path, float(pw) / K, float(ph) / K)
+
 static func image_px(path: String, w: float, h: float) -> Texture2D:
 	# (bản 261) ảnh thu sẵn đúng số điểm ảnh màn hình (Lanczos, mỗi cỡ một lần): ảnh to vẽ nhỏ trong giao diện không
 	# qua mipmap (giao diện vẽ lọc thường) nên vỡ / răng cưa

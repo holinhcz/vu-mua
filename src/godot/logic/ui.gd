@@ -1037,6 +1037,7 @@ func _set_svg(b: Control, svg: String) -> void:
 	if b == null or b.pics.is_empty():
 		return
 	var t := Css.svg_tex(svg, b.r.size.x, b.r.size.y)
+	b.pics[0].path = ""   # hình mới thay ảnh tệp (sao / xu / sen) của bản chụp
 	if t != null and b.pics[0].tex != t:
 		b.pics[0].tex = t
 		b.redraw()
