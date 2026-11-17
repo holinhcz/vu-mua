@@ -2626,8 +2626,13 @@ func _process(_dt: float) -> void:
 		ft_worst_shown = ft_worst
 		pf_code_shown = pf_code / maxf(1.0, ft_count)
 		var po := []
-		for k in ["trước", "tổng", "sau", "main", "xếp", "đêm", "sông", "lắc", "nhìn", "tải", "đồng hồ"]:
+		for k in ["tổng", "sau", "main", "xếp"]:
 			po.append("%s %.1f" % [k, pt.get(k, 0.0) / 1000.0 / maxf(1.0, ft_count)])
+		# (bản 234) các bước nặng nhất (farm đo từng bước: f:<tên>, và các phần của main)
+		var hk := pt.keys().filter(func(x): return not (x in ["tổng", "sau", "main", "xếp", "trước"]))
+		hk.sort_custom(func(x, y): return pt[x] > pt[y])
+		for q in mini(6, hk.size()):
+			po.append("%s %.1f" % [hk[q], pt[hk[q]] / 1000.0 / maxf(1.0, ft_count)])
 		pt_shown = " · ".join(po)
 		pt.clear()
 		if do_on <= 0 and do2_on <= 0:

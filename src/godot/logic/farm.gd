@@ -657,15 +657,25 @@ func _sway_step(dt: float) -> void:
 				c.self_modulate = Color(1, 1, sway_ph(c.position), SWAY_A)
 
 var cham: Node = null
+var _pt := 0
+func _ptk(nm: String, t0: int) -> int:   # (bản 234) đo từng bước của farm, đồng hồ của nền hiện bước nặng nhất
+	var t1 := Time.get_ticks_usec()
+	if "pt" in main:
+		main.pt["f:" + nm] = main.pt.get("f:" + nm, 0.0) + (t1 - t0)
+	return t1
 func _process(dt: float) -> void:
+	_pt = Time.get_ticks_usec()
 	if cham == null:   # chạm điện thoại: zoom 2 ngón, bỏ chuột giả (cham.gd); cuối cây để nhận sự kiện trước
 		cham = Node.new()
 		cham.set_script(load("res://logic/cham.gd"))
 		cham.farm = self
 		get_tree().root.add_child.call_deferred(cham)
 	_web_prune()
+	_pt = _ptk("web_prune", _pt)
 	_land_sync()
+	_pt = _ptk("land_sync", _pt)
 	_chk_step(dt)
+	_pt = _ptk("chk_step", _pt)
 	# Cài đặt: Chất lượng hình (0 Tiết kiệm, 1 Cân bằng, 2 Nét) và Chuyển động (true = đứng yên) cho bên nền
 	var cfs := str(G.cfg.q) + str(G.motion_off())
 	if cfs != _cfg_sig:
@@ -683,10 +693,14 @@ func _process(dt: float) -> void:
 	var tt := Time.get_ticks_msec() / 1000.0
 	var zz: float = main.zoom / maxf(1.0, main.dpr)
 	_sway_step(dt)
+	_pt = _ptk("sway_step", _pt)
 	_yard_step(dt)
+	_pt = _ptk("yard_step", _pt)
 	if lang_ve != null:
 		lang_ve.step()
+	_pt = _ptk("lang_ve", _pt)
 	_lp_step()
+	_pt = _ptk("lp_step", _pt)
 	if (zz > 0.55) != _bz and badges != null:
 		badges.queue_redraw()
 	var hs := 0   # gốc rạ (g.plots[i].hu) đổi: vẽ lại lớp sát đất
@@ -701,6 +715,7 @@ func _process(dt: float) -> void:
 	if lz != _lz:
 		_lz = lz
 		refresh()
+	_pt = _ptk("dau", _pt)
 	for i in G.B0:
 		var v: Dictionary = plots[i]
 		var cs: Sprite2D = v.crop
@@ -739,21 +754,30 @@ func _process(dt: float) -> void:
 		var b: Bubble = v.bub
 		if b.visible and b.kind != "lock" and b.kind != "":
 			# X0: phập phồng 1 + .08 sin(5t + x), nhân le (làng nhỏ lại thì to lên cho dễ đọc)
-			b.k = (1.0 + 0.08 * sin(tt * 5.0 + b.position.x)) * sign_le()
-			b.zoom = main.zoom
-			b.queue_redraw()
+			_bub_set(b, tt)
+	_pt = _ptk("o_ruong", _pt)
 	_fell_sync(tt, zz)
+	_pt = _ptk("fell_sync", _pt)
 	_vn_sync(dt)
+	_pt = _ptk("vn_sync", _pt)
 	_crit_sync()
+	_pt = _ptk("crit_sync", _pt)
 	_dan_sync(tt)
+	_pt = _ptk("dan_sync", _pt)
 	_hop_sync()
+	_pt = _ptk("hop_sync", _pt)
 	_tree_bub_sync(tt)
+	_pt = _ptk("tree_bub_sync", _pt)
 	if song == null:
 		song = load("res://logic/song_ve.gd").new(self)
 	song.step(dt)
+	_pt = _ptk("song", _pt)
 	_parts_step(dt)
+	_pt = _ptk("parts_step", _pt)
 	_jobs(dt)
+	_pt = _ptk("jobs", _pt)
 	player.step(dt)
+	_pt = _ptk("player", _pt)
 	G.ppos = Vector2(player.x, player.y)
 	for f in floats:
 		f[3] += dt
@@ -1996,7 +2020,58 @@ func _dan_sync(tt: float) -> void:
 # ------------------------------------------------------------------ bong bóng trên cây ăn trái (Ij) và thùng ong (Aq)
 var tbubs := {}    # idx g.objs -> Bubble (dùng chung bong bóng ô ruộng)
 
+var _tb_want := {}
+var _tb_t := 0.0
+func _bub_set(b: Bubble, tt: float) -> void:
+	# (bản 234) phập phồng X0 bằng scale của node, không vẽ lại bong bóng mỗi khung; chỉ vẽ lại khi cỡ/zoom/hình đổi
+	var k := sign_le()
+	var sig := "%s|%s|%s|%.3f|%.4f" % [b.kind, b.id, b.text, k, main.zoom]
+	if b.get_meta("bsig", "") != sig:
+		b.set_meta("bsig", sig)
+		b.k = k
+		b.zoom = main.zoom
+		b.queue_redraw()
+	var p := 1.0 + 0.08 * sin(tt * 5.0 + b.position.x)
+	b.scale = Vector2(p, p)
 func _tree_bub_sync(tt: float) -> void:
+	_tb_t -= get_process_delta_time()
+	if _tb_t <= 0.0:
+		_tb_t = 0.25
+		_tb_want = _tree_bub_want()
+	var want: Dictionary = _tb_want
+	for i in tbubs.keys():
+		if not want.has(i):
+			tbubs[i].queue_free()
+			tbubs.erase(i)
+	var still: bool = G.motion_off()
+	var objs: Array = lang.objs() if lang != null else []
+	for i in want:
+		if i >= objs.size() or not (objs[i] is Dictionary):
+			continue
+		var b: Bubble = tbubs.get(i)
+		if b == null:
+			b = Bubble.new()
+			b.fnt = fnt
+			b.farm = self
+			b.z_index = 40
+			add_child(b)
+			tbubs[i] = b
+		var o: Dictionary = objs[i]
+		var tp = lang.Pi.get(o.id)
+		var cx: float = float(o.gx) + (float(tp.fw) if tp != null else 1.0) / 2.0
+		var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
+		var bob := 0.0 if still else sin(tt * 3.0 + i) * 1.2
+		var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
+		if G.w_all.WL.CX.has(o.id):
+			top = lang_ve.top_of(o) + 18.0   # FD: sy + Jo().y + 18
+		b.position = Vector2(en(cx, cy), nn(cx, cy) + top + bob)
+		b.kind = want[i][0]
+		b.id = want[i][1]
+		b.text = ""
+		b.can = true
+		b.visible = true
+		_bub_set(b, tt)
+func _tree_bub_want() -> Dictionary:
 	var want := {}
 	var WR = G.w_all.WR if G.w_all != null else null
 	var off: bool = ui.bdp == null or ui.bdp.mode == "off"
@@ -2022,37 +2097,7 @@ func _tree_bub_sync(tt: float) -> void:
 					want[i] = ["ripe", String(f.req.id)]
 				elif f != null and int(f.get("mo", 0)) == 1 and G.w_all.WL.chat_left(f) > 0:
 					want[i] = ["chat", ""]
-	for i in tbubs.keys():
-		if not want.has(i):
-			tbubs[i].queue_free()
-			tbubs.erase(i)
-	var still: bool = G.motion_off()
-	for i in want:
-		var b: Bubble = tbubs.get(i)
-		if b == null:
-			b = Bubble.new()
-			b.fnt = fnt
-			b.farm = self
-			b.z_index = 40
-			add_child(b)
-			tbubs[i] = b
-		var o: Dictionary = lang.objs()[i]
-		var tp = lang.Pi.get(o.id)
-		var cx: float = float(o.gx) + (float(tp.fw) if tp != null else 1.0) / 2.0
-		var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
-		var bob := 0.0 if still else sin(tt * 3.0 + i) * 1.2
-		var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
-		if G.w_all.WL.CX.has(o.id):
-			top = lang_ve.top_of(o) + 18.0   # FD: sy + Jo().y + 18
-		b.position = Vector2(en(cx, cy), nn(cx, cy) + top + bob)
-		b.kind = want[i][0]
-		b.id = want[i][1]
-		b.text = ""
-		b.can = true
-		b.visible = true
-		b.k = (1.0 + 0.08 * sin(tt * 5.0 + b.position.x)) * sign_le()
-		b.zoom = main.zoom
-		b.queue_redraw()
+	return want
 
 func vn_job(t: String, j: int, act: String) -> bool:   # Ns: nhân vật đi tới con vật rồi làm (0,35 s; vuốt ve 0,8 s)
 	var key := "animal:" + t + ":" + str(j) + ":" + act
