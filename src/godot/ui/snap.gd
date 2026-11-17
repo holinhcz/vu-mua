@@ -252,7 +252,7 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 		# vàng / xám (chưa đạt) / xanh; viền trắng (đặt trên nền màu) thì bản có viền trắng
 		var k := "sao_xam" if sv.find("236, 224, 192") >= 0 else ("sao_xanh" if sv.find("59, 143, 230") >= 0 else ("sao_vien" if sv.find("stroke=\"rgb(255, 255, 255)\"") >= 0 else "sao"))
 		var q2 := float(R[2]) / 40.0
-		b.pic(Css.image("res://ui/img/bong/" + k + ".png"), Rect2(Vector2(1.0, 1.0) * q2, Vector2(38.0, 38.0) * q2), Color.WHITE, sh)
+		b.pic(Css.image_px("res://ui/img/bong/" + k + ".png", 38.0 * q2, 38.0 * q2), Rect2(Vector2(1.0, 1.0) * q2, Vector2(38.0, 38.0) * q2), Color.WHITE, sh)
 		return
 	if sv.find("<image") >= 0 and sv.find("data:image") < 0:
 		# picture inside the svg (64 box): sen đỏ pearl at x 7.9 y 8.9 w 48.3, xu coin at x 11 y 10 w 42
