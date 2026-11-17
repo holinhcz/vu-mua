@@ -30,6 +30,8 @@ func _init() -> void:
 	add_child(_kids)
 	_fg = Control.new()
 	_fg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# (bản 269) hình vẽ ra nhỏ hơn ảnh thì lấy bản thu sẵn (mipmap) gần cỡ nhất: không thu thô -> mép tròn liền, hết răng cưa
+	_fg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_fg.draw.connect(_draw_fg)
 	_kids.add_child(_fg)
 
@@ -199,6 +201,7 @@ func _style_pictures() -> void:
 		return
 	if _deco == null:
 		_deco = Control.new()
+		_deco.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		_deco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_deco.clip_contents = true
 		_deco.draw.connect(_draw_deco)
