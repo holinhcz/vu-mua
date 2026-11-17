@@ -2598,6 +2598,8 @@ func _on_http(res, code, _headers, body: PackedByteArray, h: HTTPRequest) -> voi
 # ---------------------------------------------------------------- per frame
 func _process(_dt: float) -> void:
 	frame_no += 1
+	if tc_on:
+		_tc_tick(_dt)
 	var tq := Time.get_ticks_usec()
 	var tq0 := tq
 	if jsw != null and frame_no % 10 == 0:
@@ -3159,6 +3161,12 @@ var tc_msg: Label = null
 var tc_hid := []
 var tc_back := []             # [cam, zoom] lúc vào
 var tc_t0 := {}               # ngón đang chạm: index -> [chỗ, giờ, đã kéo]
+# vùng đang xem chụp lại đúng độ nét màn hình khi dừng tay 0,5 giây (đè lên ảnh nhỏ cả làng), mỗi lần chỉ giữ một tấm
+var tc_sharp: Sprite2D = null
+var tc_sv: SubViewport = null
+var tc_idle := 0.0
+var tc_sig := ""
+var tc_cap := false
 
 func tc_open() -> void:
 	if tc_on or tc_busy or ground == null:
@@ -3232,6 +3240,11 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 	if tc_node != null:
 		tc_node.queue_free()
 		tc_node = null
+	tc_sharp = null
+	if tc_sv != null:
+		tc_sv.queue_free()
+		tc_sv = null
+	tc_sig = ""
 	tc_x.visible = false
 	tc_t0 = {}
 	_limits()
@@ -3242,6 +3255,47 @@ func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom g�
 		zoom = zmax
 		cam = to - get_viewport_rect().size / zoom * 0.5
 	_clamp_cam()
+
+func _tc_tick(dt: float) -> void:
+	if tc_busy or tc_cap or tc_node == null:
+		return
+	tc_idle += dt
+	var sig := "%.2f,%.2f,%.5f" % [cam.x, cam.y, zoom]
+	if tc_idle >= 0.5 and tc_t0.is_empty() and sig != tc_sig:
+		tc_sig = sig
+		_tc_sharp_cap()
+
+func _tc_sharp_cap() -> void:   # chụp vùng đang thấy ở đúng độ nét màn hình (làng hiện lại 2 khung, bị ảnh che)
+	tc_cap = true
+	var vs := get_viewport().get_visible_rect().size
+	if tc_sv == null:
+		tc_sv = SubViewport.new()
+		tc_sv.world_2d = get_viewport().world_2d
+		tc_sv.transparent_bg = false
+		add_child(tc_sv)
+	tc_sv.size = Vector2i(ceili(vs.x), ceili(vs.y))
+	var c0 := cam
+	var z0 := zoom
+	tc_sv.canvas_transform = Transform2D(0.0, Vector2(z0, z0), 0.0, -c0 * z0)
+	tc_sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	visible = true
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	if not tc_on or tc_node == null:
+		tc_cap = false
+		return
+	var img: Image = tc_sv.get_texture().get_image()
+	tc_sv.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	visible = false
+	if tc_sharp == null:
+		tc_sharp = Sprite2D.new()
+		tc_sharp.centered = false
+		tc_sharp.z_index = 1
+		tc_node.add_child(tc_sharp)
+	tc_sharp.texture = ImageTexture.create_from_image(img)
+	tc_sharp.position = c0
+	tc_sharp.scale = Vector2(1.0 / z0, 1.0 / z0)
+	tc_cap = false
 
 func _tc_ui() -> void:
 	if tc_ui != null:
@@ -3290,6 +3344,7 @@ func _tc_ui() -> void:
 
 func _tc_input(e: InputEvent) -> void:   # toàn cảnh: kéo / véo / lăn chuột trên ảnh, chạm = bay tới, X = về
 	get_viewport().set_input_as_handled()
+	tc_idle = 0.0
 	var p = null
 	var up := false
 	var id := 0
