@@ -3135,7 +3135,193 @@ func _limits() -> void:
 	var vs := get_viewport_rect().size
 	var bx := _view_box()
 	zmin = max(max(vs.x / bx.size.x, vs.y / bx.size.y), vs.x / 5600.0)
+	if tc_on:   # toàn cảnh: kéo xa tới thấy cả làng, gần nhất bằng mức khóa (ảnh chụp chỉ nét tới đó)
+		zmax = maxf(zmin, ZLOCK * dpr)
+		return
+	zmax = max(1.955 * dpr, 2.55)
+	zmin = maxf(zmin, ZLOCK * dpr)   # (bản 244) khóa zoom xa: quá mức này thì vào Toàn cảnh (ảnh chụp)
 	zmin = min(zmin, zmax)
+
+# ---------------------------------------------------------------- TOÀN CẢNH (bản 244)
+# Chơi thì zoom xa nhất bằng ZLOCK (điểm ảnh CSS mỗi đơn vị làng, mức Link chốt 17-11). Nút Toàn cảnh (trên nút nhà):
+# chụp cả làng một lần thành ảnh (SubViewport dùng chung thế giới 2D của màn, nên không dính nút UI), rồi ẩn hết làng +
+# nút, chỉ vẽ ảnh: kéo / zoom trên ảnh. Chạm một chỗ: bay tới chỗ đó ở zoom gần nhất. Nút X: về đúng chỗ cũ.
+# Game vẫn chạy ngầm (logic, cây lớn, xưởng làm), chỉ không vẽ.
+const ZLOCK := 0.64
+const TC_T := 2048            # cạnh mỗi mảnh ảnh chụp (điểm ảnh)
+const TC_PX := 12000000.0     # tổng điểm ảnh ảnh chụp tối đa (bộ nhớ điện thoại)
+var tc_on := false
+var tc_busy := false
+var tc_node: Node2D = null    # các mảnh ảnh, toạ độ làng
+var tc_ui: CanvasLayer = null
+var tc_x: Panel = null
+var tc_msg: Label = null
+var tc_hid := []
+var tc_back := []             # [cam, zoom] lúc vào
+var tc_t0 := {}               # ngón đang chạm: index -> [chỗ, giờ, đã kéo]
+
+func tc_open() -> void:
+	if tc_on or tc_busy or ground == null:
+		return
+	tc_busy = true
+	_tc_ui()
+	tc_msg.visible = true
+	tc_x.visible = false
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var bx := _view_box()
+	var s: float = minf(ZLOCK * dpr, sqrt(TC_PX / (bx.size.x * bx.size.y)))
+	var sv := SubViewport.new()
+	sv.size = Vector2i(TC_T, TC_T)
+	sv.world_2d = get_viewport().world_2d
+	sv.transparent_bg = false
+	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(sv)
+	var parts := []
+	var nx := ceili(bx.size.x * s / TC_T)
+	var ny := ceili(bx.size.y * s / TC_T)
+	for iy in ny:
+		for ix in nx:
+			var o := bx.position + Vector2(ix, iy) * (TC_T / s)
+			sv.canvas_transform = Transform2D(0.0, Vector2(s, s), 0.0, -o * s)
+			await RenderingServer.frame_post_draw
+			await RenderingServer.frame_post_draw
+			var img: Image = sv.get_texture().get_image()
+			img.generate_mipmaps()   # xem cả làng là thu nhỏ vài lần: không mipmap thì răng cưa
+			parts.append([o, ImageTexture.create_from_image(img)])
+	sv.queue_free()
+	if tc_node != null:
+		tc_node.queue_free()
+	tc_node = Node2D.new()
+	tc_node.z_index = 4000
+	for pq in parts:
+		var sp := Sprite2D.new()
+		sp.centered = false
+		sp.texture = pq[1]
+		sp.position = pq[0]
+		sp.scale = Vector2(1.0 / s, 1.0 / s)
+		sp.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		tc_node.add_child(sp)
+	get_parent().add_child(tc_node)
+	# ẩn làng (cả cây node main) + mọi lớp nút; đồng hồ đo giữ lại
+	tc_hid = []
+	for c in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		if c.visible and c != tc_ui and (meter == null or c != meter.get_parent()):
+			c.visible = false
+			tc_hid.append(c)
+	visible = false
+	tc_back = [cam, zoom]
+	tc_on = true
+	tc_busy = false
+	tc_msg.visible = false
+	tc_x.position = Vector2(get_viewport().get_visible_rect().size.x - 60 * dpr, 16 * dpr)
+	tc_x.visible = true
+	_limits()
+	zoom = zmin
+	_clamp_cam()
+
+func tc_close(to = null) -> void:   # to: điểm làng để bay tới (zoom gần nhất); null = về chỗ cũ
+	if not tc_on:
+		return
+	tc_on = false
+	visible = true
+	for c in tc_hid:
+		if is_instance_valid(c):
+			c.visible = true
+	tc_hid = []
+	if tc_node != null:
+		tc_node.queue_free()
+		tc_node = null
+	tc_x.visible = false
+	tc_t0 = {}
+	_limits()
+	if to == null:
+		cam = tc_back[0]
+		zoom = tc_back[1]
+	else:
+		zoom = zmax
+		cam = to - get_viewport_rect().size / zoom * 0.5
+	_clamp_cam()
+
+func _tc_ui() -> void:
+	if tc_ui != null:
+		return
+	tc_ui = CanvasLayer.new()
+	tc_ui.layer = 128
+	add_child(tc_ui)
+	var k := dpr
+	tc_msg = Label.new()
+	tc_msg.text = "Đang chụp làng..."
+	tc_msg.add_theme_font_size_override("font_size", int(18 * k))
+	tc_msg.add_theme_color_override("font_color", Color("#4a3414"))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("#fbf3e1")
+	sb.border_color = Color("#9c7a36")
+	sb.set_border_width_all(int(2 * k))
+	sb.set_corner_radius_all(int(14 * k))
+	sb.content_margin_left = 18 * k
+	sb.content_margin_right = 18 * k
+	sb.content_margin_top = 10 * k
+	sb.content_margin_bottom = 10 * k
+	tc_msg.add_theme_stylebox_override("normal", sb)
+	tc_msg.set_anchors_preset(Control.PRESET_CENTER)
+	tc_msg.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	tc_msg.grow_vertical = Control.GROW_DIRECTION_BOTH
+	tc_ui.add_child(tc_msg)
+	tc_x = Panel.new()
+	var sx: StyleBoxFlat = sb.duplicate()
+	sx.set_corner_radius_all(int(22 * k))
+	tc_x.add_theme_stylebox_override("panel", sx)
+	tc_x.size = Vector2(44, 44) * k
+	tc_x.position = Vector2(get_viewport().get_visible_rect().size.x - 60 * k, 16 * k)
+	tc_x.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var xl := TextureRect.new()   # dấu X: ảnh SVG (phông web không có ký tự ✕)
+	var xi := Image.new()
+	xi.load_svg_from_string('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="96" height="96"><path d="M6 6L18 18M18 6L6 18" stroke="#4a3414" stroke-width="3" stroke-linecap="round"/></svg>', 1.0)
+	xl.texture = ImageTexture.create_from_image(xi)
+	xl.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	xl.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	xl.position = Vector2(11, 11) * k
+	xl.size = Vector2(22, 22) * k
+	tc_x.add_child(xl)
+	tc_ui.add_child(tc_x)
+	tc_msg.visible = false
+	tc_x.visible = false
+
+func _tc_input(e: InputEvent) -> void:   # toàn cảnh: kéo / véo / lăn chuột trên ảnh, chạm = bay tới, X = về
+	get_viewport().set_input_as_handled()
+	var p = null
+	var up := false
+	var id := 0
+	if e is InputEventScreenTouch:
+		p = e.position
+		up = not e.pressed
+		id = e.index
+	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+		p = e.position
+		up = not e.pressed
+		id = -1
+	if p != null:
+		if not up:
+			tc_t0[id] = [p, Time.get_ticks_msec(), false]
+		else:
+			var t0 = tc_t0.get(id)
+			tc_t0.erase(id)
+			if t0 != null and not t0[2] and Time.get_ticks_msec() - int(t0[1]) < 500 and tc_t0.is_empty():
+				tc_x.position = Vector2(get_viewport().get_visible_rect().size.x - 60 * dpr, 16 * dpr)
+				if Rect2(tc_x.position, tc_x.size).grow(8 * dpr).has_point(p):
+					tc_close()
+				else:
+					tc_close(cam + p / zoom)
+				return
+	if e is InputEventScreenDrag or e is InputEventMouseMotion:
+		var ix: int = e.index if e is InputEventScreenDrag else -1
+		if tc_t0.has(ix) and (e.position - tc_t0[ix][0]).length() > 10.0 * dpr:
+			tc_t0[ix][2] = true
+		if tc_t0.size() >= 2:
+			for k2 in tc_t0:
+				tc_t0[k2][2] = true
+	_unhandled_input(e)
 
 func _clamp_cam() -> void:
 	_limits()
@@ -3164,6 +3350,9 @@ func _zoom_at(p: Vector2, nz: float) -> void:
 # else a finger lifted over UI stays "down" and the next one-finger drag pinches around that dead point (jump)
 var tprev := {}
 func _input(e: InputEvent) -> void:
+	if tc_busy:
+		get_viewport().set_input_as_handled()
+		return
 	if e is InputEventScreenTouch:
 		if e.pressed:
 			touches[e.index] = e.position
@@ -3173,6 +3362,8 @@ func _input(e: InputEvent) -> void:
 	elif e is InputEventScreenDrag:
 		tprev[e.index] = touches.get(e.index, e.position - e.relative)
 		touches[e.index] = e.position
+	if tc_on:
+		_tc_input(e)
 
 func _unhandled_input(e: InputEvent) -> void:
 	# (b48) a full-screen panel of the logic UI is open (ui.gd sets the flag): swipes and pinches there scroll the panel,

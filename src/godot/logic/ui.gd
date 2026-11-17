@@ -305,6 +305,27 @@ func goal_w() -> float:
 	# .hudq .goal: width min(66vw, 320px) trong .hudq (zoom s), ra đơn vị số đo
 	return minf(0.66 * vw * U, 320.0) * Khuon.S_SNAP
 
+const TC_SVG := '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.2l5.6-2.2 6.8 2.2 5.6-2.2v13.8l-5.6 2.2-6.8-2.2L3 20z" fill="rgb(242, 211, 168)" stroke="rgb(138, 90, 26)" stroke-width="1.3px" stroke-linejoin="round"/><path d="M8.6 4v13.8M15.4 6.2V20" stroke="rgb(138, 90, 26)" stroke-width="1.1px"/><path d="M3.8 14.5c2-1.6 3.4-.6 4.8-1.6M9.2 10.8c2.2-.4 3.6 1.6 5.6.6M16 12.5c1.4-1.2 2.6-1.8 4.2-1.4" stroke="rgb(90, 150, 60)" stroke-width="1.2px" fill="none" stroke-linecap="round"/><circle cx="12" cy="8.4" r="1.3" fill="rgb(200, 70, 50)"/></svg>'
+func _toan_canh_btn(d: Dictionary) -> void:   # (bản 244) nút Toàn cảnh ngay trên nút nhà (cùng khung #zHome); nút AUTO lên theo
+	if not d.has(".zoomctl"):
+		return
+	var zc: Dictionary = d[".zoomctl"][0]
+	if zc.kids.is_empty():
+		return
+	var hb: Dictionary = zc.kids[0]
+	var st := float(hb.r[3]) + 6.0   # cao nút + gap 6px
+	var tb: Dictionary = hb.duplicate(true)
+	tb.id = "zToan"
+	Snap._move(tb, Vector2(0, -st))
+	for k in tb.kids:
+		if k.get("tag", "") == "svg":
+			k.svg = TC_SVG
+	zc.kids.insert(0, tb)
+	zc.r[1] = float(zc.r[1]) - st
+	zc.r[3] = float(zc.r[3]) + st
+	if d.has(".autob"):
+		Snap._move(d[".autob"][0], Vector2(0, -st))
+
 func _build_hud() -> void:
 	var d: Dictionary = Snap.load_snap("hud").duplicate(true)
 	vw = vsize().x
@@ -317,6 +338,7 @@ func _build_hud() -> void:
 			var dw := goal_built - float(gl.r[2])
 			if absf(dw) > 0.01:
 				_grow_w(q, float(gl.r[0]) + float(gl.r[2]), dw, 16.0)   # thanh tiến độ cách mép phải bằng lề trong
+	_toan_canh_btn(d)
 	for sel in d:
 		for n in d[sel]:
 			var b := _build(n, hid)
@@ -333,6 +355,7 @@ func _build_hud() -> void:
 			focus_hide.append(hid[k])
 	_click(hid.get("#dockBtn"), func(): dock_open(true), "scale")
 	_click(hid.get("#zHome"), func(): F.home() if F.has_method("home") else null)
+	_click(hid.get("#zToan"), func(): main.tc_open() if main != null and main.has_method("tc_open") else null)
 	_click(hid.get("#nvBtn"), func(): nvp.open(), "scale")
 	_click(hid.get("#setBtn"), func(): setp.open(), "scale")
 	_click(hid.get("#pcAv"), func(): pcp.open(), "scale")

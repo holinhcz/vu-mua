@@ -83,7 +83,7 @@ func _quiet_village(m: Node) -> void:
 			c.position = Vector2(8, Y[k]) * m.dpr
 	# HUD hiện khi làng đã nét (che tải xong), như bản web không có HUD đè màn tải
 	if "first_ready" in m:
-		ui.visible = bool(m.first_ready)
+		ui.visible = bool(m.first_ready) and not bool(m.get("tc_on"))   # toàn cảnh (bản 244): ẩn hết nút
 
 func _test_hook() -> void:
 	# cho bản thử tự động: tâm từng ô ruộng trên màn hình (css px) + bảng nào đang mở
