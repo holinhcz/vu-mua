@@ -2045,9 +2045,16 @@ func _bub_set(b: Bubble, tt: float) -> void:
 	b.scale = Vector2(p, p)
 func _tree_bub_sync(tt: float) -> void:
 	_tb_t -= get_process_delta_time()
+	var objs0: Array = lang.objs() if lang != null else []
 	if _tb_t <= 0.0:
 		_tb_t = 0.25
-		_tb_want = _tree_bub_want()
+		var all: Dictionary = _tree_bub_want()
+		_tb_want = {}   # (bản 236) chỉ giữ bong bóng trong màn (xét 4 lần mỗi giây, không phải mỗi khung)
+		for i in all:
+			if i < objs0.size() and objs0[i] is Dictionary:
+				var oq: Dictionary = objs0[i]
+				if on_view(Vector2(en(float(oq.gx) + 0.5, float(oq.gy) + 0.5), nn(float(oq.gx) + 0.5, float(oq.gy) + 0.5)), 260.0):
+					_tb_want[i] = all[i]
 	var want: Dictionary = _tb_want
 	for i in tbubs.keys():
 		if not want.has(i):
@@ -2057,12 +2064,6 @@ func _tree_bub_sync(tt: float) -> void:
 	var objs: Array = lang.objs() if lang != null else []
 	for i in want:
 		if i >= objs.size() or not (objs[i] is Dictionary):
-			continue
-		var oq: Dictionary = objs[i]   # (bản 236) ngoài màn: không giữ node bong bóng (làng mở hết: cả nghìn cây)
-		if not on_view(Vector2(en(float(oq.gx) + 0.5, float(oq.gy) + 0.5), nn(float(oq.gx) + 0.5, float(oq.gy) + 0.5)), 200.0):
-			if tbubs.has(i):
-				tbubs[i].queue_free()
-				tbubs.erase(i)
 			continue
 		var b: Bubble = tbubs.get(i)
 		if b == null:
