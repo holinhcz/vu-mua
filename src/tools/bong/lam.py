@@ -41,20 +41,20 @@ def _round(P,k):
         a=(p1[0]+(p0[0]-p1[0])*k, p1[1]+(p0[1]-p1[1])*k); b=(p1[0]+(p2[0]-p1[0])*k, p1[1]+(p2[1]-p1[1])*k)
         d+=('M' if i==0 else 'L')+f'{a[0]:.2f} {a[1]:.2f} Q{p1[0]:.2f} {p1[1]:.2f} {b[0]:.2f} {b[1]:.2f} '
     return d+'Z'
-def sao(c0,c1,c2,vien,bong,trang=False,R=6.4):
+def sao(c0,c1,c2,vien,bong,trang=False,R=6.4,sang='#fffbe0',vw=.22):
     # ngôi sao (bản 258-260): cánh bo tròn, chuyển màu c0 (giữa trên) -> c1 -> c2 (mép), viền mảnh, bóng đáy, mặt bóng;
     # trang: thêm viền trắng dày ngoài cùng (sao đặt trên nền màu)
     k=R/6.4
     D=_round(_spts(R,3.0*k,-0.3),0.22); inner=_round(_spts(4.3*k,2.0*k,-0.1),0.25)
-    w=f'<path d="{D}" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>' if trang else ''
+    w=f'<path d="{D}" fill="#fff" stroke="#fff" stroke-width=".65" stroke-linejoin="round"/>' if trang else ''
     return hinh(f'<defs><radialGradient id="g" cx="0" cy="-2.5" r="8.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{c0}"/><stop offset=".5" stop-color="{c1}"/><stop offset="1" stop-color="{c2}"/></radialGradient>'
-        '<linearGradient id="h" x1="0" y1="-5" x2="0" y2="1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fffbe0" stop-opacity=".95"/><stop offset="1" stop-color="#fffbe0" stop-opacity="0"/></linearGradient></defs>'
-        + w + f'<path d="{D}" fill="{bong}" transform="translate(0 .3)"/><path d="{D}" fill="url(#g)" stroke="{vien}" stroke-width=".22" stroke-linejoin="round"/><path d="{inner}" fill="url(#h)" opacity=".55"/>')
-SAO={
- 'sao': sao('#ffe25a','#ffc000','#f29b00','#c97f00','#b87200'),            # vàng đậm (bản 260)
- 'sao_vien': sao('#ffe25a','#ffc000','#f29b00','#c97f00','#b87200',True,5.6),
- 'sao_xam': sao('#f4ecd6','#e6dabb','#d6c69e','#bfae84','#b3a27a'),       # sao chưa đạt
- 'sao_xanh': sao('#bfe2ff','#4aa0f0','#2a78d0','#1f5fae','#1a52a0',True,5.6),
+        f'<linearGradient id="h" x1="0" y1="-5" x2="0" y2="1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{sang}" stop-opacity=".95"/><stop offset="1" stop-color="{sang}" stop-opacity="0"/></linearGradient></defs>'
+        + w + f'<path d="{D}" fill="{bong}" transform="translate(0 .3)"/><path d="{D}" fill="url(#g)" stroke="{vien}" stroke-width="{vw}" stroke-linejoin="round"/><path d="{inner}" fill="url(#h)" opacity=".55"/>')
+SAO={   # bản 262: viền chung .3; vàng viền cam đậm (đứng được trên nền cam), xám đậm hơn, xanh như số kinh nghiệm
+ 'sao': sao('#ffe25a','#ffc000','#f5a800','#d98400','#d08a00',vw=.3),
+ 'sao_vien': sao('#ffe25a','#ffc000','#f5a800','#d98400','#d08a00',True,6.0,vw=.3),
+ 'sao_xam': sao('#ece2c6','#d9c9a0','#c8b384','#a8925f','#b09c70',vw=.3),
+ 'sao_xanh': sao('#9fd0ff','#3d8ef0','#2a6fd6','#174fa8','#1a4f9c',False,6.4,'#e4f2ff',.3),
 }
 F={
  'vong': vong(),
