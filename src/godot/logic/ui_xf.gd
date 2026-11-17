@@ -328,6 +328,7 @@ func _build_top(w: Dictionary, pend: Array) -> void:   # st()
 	var ii: int = G.xw.df(k)
 	var sb: Dictionary = T.stb.duplicate(true)
 	Snap.star_big(sb)
+	sb.kids[0].svg = U._ring5(G.xw.ks(k) - 1)   # 5 cung sao quanh nút như ô ruộng (bản 272)
 	var vr := [[sb, "", "", "star"]]
 	if ii > 0:
 		var best := ""

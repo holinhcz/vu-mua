@@ -418,13 +418,14 @@ static func _svg_texts(svg: String) -> Dictionary:
 
 # ---------------------------------------------------------------- templates
 static func star_big(n: Dictionary) -> void:
-	# (bản 271) ngôi sao trong nút tròn (xưởng, ô trống, ...) to như vòng nút ô ruộng: cạnh sao = 68% nút (28 -> 38 trong 56)
+	# (bản 271-272) nút tròn nâng sao (xưởng, ô trống, ...) y như vòng nút ô ruộng: cùng ảnh sao, cạnh sao = 68% nút
 	for k in n.get("kids", []):
 		if k.get("tag", "") == "svg" and String(k.get("svg", "")).find("l5 10.2") >= 0 and float(n.r[2]) >= 40.0 and float(n.r[2]) <= 80.0 and absf(float(n.r[2]) - float(n.r[3])) < 2.0:   # chỉ nút tròn
 			var r: Array = k.r
 			var z: float = float(n.r[2]) * 0.68
 			_move(k, Vector2(-(z - float(r[2])) * 0.5, -(z - float(r[3])) * 0.5))
 			k.r = [k.r[0], k.r[1], z, z]
+			k.svg = Css.img_svg("res://ui/img/bong/sao.png")   # cùng ảnh sao với vòng nút ô ruộng (không bản viền trắng)
 		else:
 			star_big(k)
 
