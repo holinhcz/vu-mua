@@ -292,7 +292,9 @@ func _make_ground() -> void:
 				if nm == "tile":
 					tile_img = im2
 					_build_pondwater()
-				else: road_img = im2
+				else:
+					road_img = im2
+					_rd_upload()
 				gparts += 2 if nm == "tile" else 1
 				_road_retry())
 		# layer 4: ponds, canal, ditches (fields + the game's colours + bank detail textures)
@@ -331,19 +333,31 @@ func _make_ground() -> void:
 		_nen_apply()
 		_road_retry())
 
-# nền đất người chơi lát (bản 229): logic gửi bản đồ ô bất cứ lúc nào (kể cả trước khi nền làng tải xong), nền làng có thì gắn
-var nen_map: Texture2D = null
-var nen_box := Vector4.ZERO
-func set_nen(tex: Texture2D, box: Vector4) -> void:
-	nen_map = tex
-	nen_box = box
-	_nen_apply()
+# nền đất người chơi lát (bản 231): KHÔNG thêm ảnh riêng cho nền làng (điện thoại giới hạn số ảnh một shader, ảnh thứ 9
+# bị bỏ qua: nền không hiện). Gói vào kênh A của bản đồ đường uRD (shader đường không đọc A): A = 100 + lớp (1 đất, 2 đất đỏ,
+# 3 cát, 4 sỏi). road_img giữ nguyên A gốc (cờ hoa ven đường), chỉ bản gửi lên nền làng mới mang mã nền.
+var nen_tiles := {}   # "x,y" -> lớp 1..4
+func set_nen(tiles: Dictionary) -> void:
+	nen_tiles = tiles
+	_rd_upload()
 func _nen_apply() -> void:
-	if ground == null or ground.material == null:
+	_rd_upload()
+func _rd_upload() -> void:
+	if ground == null or ground.material == null or road_img == null:
 		return
-	if nen_map != null:
-		ground.material.set_shader_parameter("uNM", nen_map)
-	ground.material.set_shader_parameter("uNB", nen_box)
+	var im: Image = road_img.duplicate()
+	var N: Array = info["N"]
+	var W := im.get_width()
+	var H := im.get_height()
+	for k in nen_tiles:
+		var p := String(k).split(",")
+		var q := Vector2i(int(p[0]) - int(N[0]), int(p[1]) - int(N[2]))
+		if q.x < 0 or q.y < 0 or q.x >= W or q.y >= H:
+			continue
+		var c := im.get_pixel(q.x, q.y)
+		im.set_pixel(q.x, q.y, Color8(c.r8, c.g8, c.b8, 100 + int(nen_tiles[k])))
+	ground.material.set_shader_parameter("uRD", ImageTexture.create_from_image(im))
+	ground.material.set_shader_parameter("uNen", 1.0 if not nen_tiles.is_empty() else 0.0)
 
 # ---------------------------------------------------------------- bought land (n41, web ci()/tc() + NEN2 own()/tv())
 # Which lot every tile belongs to (n/parcel.png), the lots' names and aliases, and the wild things that stand on unbought
@@ -3066,7 +3080,7 @@ func _update_meter() -> void:
 	meter.text += "\n" + pt_shown + "\nchạy: " + pt_proc + "\nvẽ lại/khung: " + pt_drw
 	var fmn = get_node_or_null("Farm")   # DÒ NỀN (tạm, bản 230): ô nền trong save / bản đồ gửi sang / nền làng đang có
 	if fmn != null and fmn.G != null:
-		meter.text += "\nDÒ NỀN: lưu %d ô · gửi %s · nền làng %s" % [(fmn.G.g.get("gt", {}) as Dictionary).size(), str(nen_box), str(ground.material.get_shader_parameter("uNB")) if ground != null and ground.material != null else "chưa có"]
+		meter.text += "\nDÒ NỀN: lưu %d ô · gửi %d ô · nền làng %s" % [(fmn.G.g.get("gt", {}) as Dictionary).size(), nen_tiles.size(), str(ground.material.get_shader_parameter("uNen")) if ground != null and ground.material != null else "chưa có"]
 	if jsw != null and info.has("op2"):
 		var o2 = jsw.__op2t
 		meter.text += "\nkho phụ: " + (str(o2) if o2 != null else "?")
@@ -3935,7 +3949,7 @@ func road_set(add: Dictionary, rm: Array) -> void:
 				m &= ~(1 << b)
 		im.set_pixel(q.x, q.y, Color8(c.r8, m, c.b8, c.a8))
 	road_img = im
-	(ground.material as ShaderMaterial).set_shader_parameter("uRD", ImageTexture.create_from_image(im))
+	_rd_upload()
 	# verges: the old rows go, the new ones go in (zorder sắp lại toàn bộ theo khoá)
 	for row in vg_rows:
 		if is_instance_valid(row):

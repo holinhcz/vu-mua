@@ -41,10 +41,10 @@ uniform sampler2D uPT3 : repeat_enable, filter_linear_mipmap;   // glint streaks
 uniform vec3 pMid; uniform vec3 pMudS; uniform vec3 pDpc; uniform vec3 pSky; uniform vec3 pBand;
 uniform vec3 pLip; uniform vec3 pMud; uniform vec3 pFace; uniform vec3 pFaceW; uniform vec3 pFaceD;
 uniform float uPond = 0.0;
-// Layer 3b: nền đất người chơi lát (g.gt, bản 228): ảnh mặt đường dat / do / cat / soi (uRA 0-3), loang theo khoảng cách tới
+// Layer 3b: nền đất người chơi lát (g.gt, bản 231): ảnh mặt đường dat / do / cat / soi (uRA 0-3), loang theo khoảng cách tới
 // 3x3 ô quanh điểm ảnh (giáp loại khác 50/50 ở cạnh, mép ra cỏ nhạt dần, góc tròn). Vẽ TRƯỚC ao và đường: nằm dưới hết.
-uniform sampler2D uNM : filter_nearest, repeat_disable;   // ô (x - uNB.x, y - uNB.y): R = lớp ảnh + 1 (0 = không lát)
-uniform vec4 uNB = vec4(0.0);             // ô đầu (x, y), cỡ (w, h); w = 0: chưa lát gì
+// Loại nền mỗi ô nằm ở kênh A của uRD (100 + lớp): không thêm ảnh (điện thoại giới hạn số ảnh mỗi shader).
+uniform float uNen = 0.0;                 // 1: có ô nền lát
 uniform float uNBw = 0.8;                 // bề rộng loang (ô)
 varying vec2 wp;
 void vertex() { wp = VERTEX; }
@@ -60,9 +60,10 @@ vec3 rtex(int k, vec2 w, vec2 t) {
 	return texture(uRA, vec3(t / 2.0, float(k))).rgb;
 }
 int nkind(ivec2 t) {
-	ivec2 q = t - ivec2(uNB.xy);
-	if (q.x < 0 || q.y < 0 || q.x >= int(uNB.z) || q.y >= int(uNB.w)) return 0;
-	return int(texelFetch(uNM, q, 0).r * 255.0 + 0.5);
+	ivec2 q = t - ivec2(uT.zw);
+	if (q.x < 0 || q.y < 0 || q.x >= int(uTN.x) || q.y >= int(uTN.y)) return 0;
+	int a = int(texelFetch(uRD, q, 0).a * 255.0 + 0.5);
+	return (a >= 101 && a <= 104) ? a - 100 : 0;
 }
 vec4 nen(vec2 w) {
 	float u = (w.x - 4268.0) / 32.0, v = (w.y - 968.0) / 16.0;
@@ -241,7 +242,7 @@ void fragment() {
 			}
 		}
 	}
-	if (uNB.z > 0.0) { vec4 nn = nen(wp); c = mix(c, nn.rgb, nn.a); }   // nền lát: dưới ao, dưới đường
+	if (uNen > 0.5) { vec4 nn = nen(wp); c = mix(c, nn.rgb, nn.a); }   // nền lát: dưới ao, dưới đường
 	if (uPond > 0.5) c = pond(c, wp);
 	if (uRoads > 0.5 && ti.x >= 0 && ti.y >= 0 && ti.x < int(uTN.x) && ti.y < int(uTN.y)) {
 		vec4 rd = texelFetch(uRD, ti, 0);

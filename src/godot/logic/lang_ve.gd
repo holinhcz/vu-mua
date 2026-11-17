@@ -498,8 +498,8 @@ class TileLayer extends Node2D:
 	func _road(t: String, a: float, n: float, _e: int, _r: int) -> void:   # hình thẻ đường: ô bằng ảnh mặt đường đó
 		tex_dia(t, a, n)
 
-	# NỀN LÁT (bản 228): vẽ trong nền làng (ground.gdshader lớp 3b), dưới ao và đường; ở đây chỉ gửi bản đồ ô: ảnh nhỏ, mỗi
-	# điểm một ô = lớp ảnh mặt đường + 1 (dat 1, do 2, cat 3, soi 4)
+	# NỀN LÁT (bản 231): vẽ trong nền làng (ground.gdshader lớp 3b), dưới ao và đường; ở đây chỉ gửi danh sách ô -> lớp ảnh
+	# mặt đường (dat 1, do 2, cat 3, soi 4), main gói vào bản đồ đường
 	const LAYER := {"dat": 1, "do": 2, "cat": 3, "soi": 4}
 	var _map_sig := "?"
 
@@ -508,26 +508,13 @@ class TileLayer extends Node2D:
 		if sig == _map_sig:
 			return
 		_map_sig = sig
-		if gt.is_empty():
-			v.F.main.set_nen(null, Vector4.ZERO)
-			return
-		var x0 := 1 << 20
-		var y0 := 1 << 20
-		var x1 := -(1 << 20)
-		var y1 := -(1 << 20)
+		var out := {}
 		for k in gt:
-			var p: PackedStringArray = String(k).split(",")
-			x0 = mini(x0, int(p[0]))
-			y0 = mini(y0, int(p[1]))
-			x1 = maxi(x1, int(p[0]))
-			y1 = maxi(y1, int(p[1]))
-		var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_RGBA8)   # RGBA8: định dạng chắc chắn có trên điện thoại
-		for k in gt:
-			var p: PackedStringArray = String(k).split(",")
 			var u = v.LG.ug.get(String(gt[k]))
 			var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
-			im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0, 255))
-		v.F.main.set_nen(ImageTexture.create_from_image(im), Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+			if l > 0:
+				out[String(k)] = l
+		v.F.main.set_nen(out)
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
 		var u = v.LG.ug.get(t)
