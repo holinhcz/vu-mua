@@ -72,7 +72,7 @@ func sync() -> void:
 		_one("sick", "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><circle cx=\"32\" cy=\"32\" r=\"28.5\" fill=\"#fff\" stroke=\"#d9443a\" stroke-width=\"5\"/></svg>", CROSS, false)
 		return
 	if V.ready(t, e):   # có đồ: một nút thu, hình món ra
-		_one("ready", U.rm_in0["rmth_ring"], _svg(String(r.make)))
+		_one("ready", U.rm_in0["rmth_ring"], _svg(V.out(t, e)))
 		return
 	_st = "grow"
 	U.rm_g.visible = true

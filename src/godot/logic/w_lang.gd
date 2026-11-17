@@ -3754,13 +3754,16 @@ func xx(t: Dictionary, a: bool) -> Variant:   # xx: làm việc vườn / chuồ
 		WR.ql(int(t.i)).fw = WR.f2()
 		return "w"
 	if t.t == "c":
-		var q: Dictionary = G.vn.Q[t.k]
-		var c: String = q.make2 if q.get("make2") and randf() < 0.5 else q.make
+		var fl: Array = G.vn.list(t.k)
+		if int(t.j) >= fl.size():
+			return null
+		var f: Dictionary = fl[int(t.j)]
+		var c: String = G.vn.out(String(t.k), f)
 		if a:
 			return c
-		var f: Dictionary = G.vn.list(t.k)[int(t.j)]
 		G.g.barn[c] = _barn(c) + 1
 		f.p = -1
+		f.erase("m")
 		_qi("collect")
 		return c
 	if t.t == "f" and G.vn.feed(String(t.k), int(t.j), true):

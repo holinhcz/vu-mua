@@ -141,6 +141,18 @@ func feed(t: String, j: int, quiet := false) -> bool:   # pw
 	G.mark()
 	return true
 
+func out(t: String, e: Dictionary) -> String:
+	# (bản 253) con có 2 loại hàng (make / make2): bốc thăm một lần, ghi vào con (e.m) để bong bóng, nút thu, gợi ý
+	# hiện đúng món sẽ thu; thu xong thì xoá, lứa sau bốc lại
+	var r: Dictionary = Q[t]
+	if not r.has("make2"):
+		return String(r.make)
+	var m := String(e.get("m", ""))
+	if m != String(r.make) and m != String(r.make2):
+		m = String(r.make2) if randf() < 0.5 else String(r.make)
+		e.m = m
+	return m
+
 func collect(t: String, j: int) -> String:   # K3: trả về món đã thu ("" = không thu được)
 	var e = a(t, j)
 	var r: Dictionary = Q[t]
@@ -148,9 +160,10 @@ func collect(t: String, j: int) -> String:   # K3: trả về món đã thu ("" 
 		return ""
 	if not G.kho_fit(1):
 		return ""
-	var m: String = r.make2 if r.has("make2") and randf() < 0.5 else r.make
+	var m: String = out(t, e)
 	G.g.barn[m] = int(G.g.barn.get(m, 0)) + 1
 	e.p = -1.0
+	e.erase("m")
 	G.nv.qi("collect")
 	_after(t, j)
 	var at := spot(t, j)

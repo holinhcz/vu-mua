@@ -189,10 +189,10 @@ func fp(t: Dictionary) -> String:   # fp
 			return ""
 		var e: Dictionary = P[int(t.j)]
 		if float(e.p) >= float(n.time):
-			return "[b]" + String(n.name) + "[/b]\nCó " + G.item_name(String(n.make)) + ". Chạm để thu."
+			return "[b]" + String(n.name) + "[/b]\nCó " + G.item_name(V.out(String(t.k), e)) + ". Chạm để thu."
 		if float(e.p) < 0.0:
 			return "[b]" + String(n.name) + " đang đói[/b]\nChạm để cho ăn 1 " + G.item_name(String(n.feed)) + " (kho còn " + str(int(G.g.barn.get(n.feed, 0))) + ")."
-		return "[b]" + String(n.name) + "[/b]\nĐang làm ra " + G.item_name(String(n.make)) + ": " + str(int(round(float(e.p) / float(n.time) * 100.0))) + "%."
+		return "[b]" + String(n.name) + "[/b]\nĐang làm ra " + G.item_name(V.out(String(t.k), e)) + ": " + str(int(round(float(e.p) / float(n.time) * 100.0))) + "%."
 	if ty == "work":
 		var k := String(t.k)
 		var h: Dictionary = G.xw.sr[k]

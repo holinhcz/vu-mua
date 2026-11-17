@@ -47,7 +47,7 @@ func _process(dt: float) -> void:
 	elif float(e.get("b", 0)) > 0.0:
 		bar = "b%d" % int((1.0 - float(e.b) / V.BABY) * 28.0)
 	elif V.ready(t, e):
-		bid = String(r.make)
+		bid = V.out(t, e)
 	elif V.hungry(e):
 		bid = String(r.feed)
 	else:
