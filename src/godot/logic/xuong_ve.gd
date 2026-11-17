@@ -327,8 +327,7 @@ func _process(dt: float) -> void:
 	if ch or fs != _fsg:
 		_fsg = fs
 		front.queue_redraw()
-	var w: Dictionary = farm.G.xw.w(k)
-	if ch or ((farm.G.xw.df(k) > 0 or w.q.size() > 0) and not farm.G.motion_off()):
+	if ch or (farm.G.xw.df(k) > 0 and not farm.G.motion_off()):   # chỉ bong bóng món xong nhún (không còn thanh tiến độ)
 		bub.queue_redraw()
 	if not fx.is_empty():
 		_fx_step()

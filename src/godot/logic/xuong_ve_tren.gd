@@ -1,5 +1,5 @@
 extends Node2D
-# Lớp trên của xưởng (vẽ sau lửa): ảnh che, khung chạy hiện tại; rồi thanh tiến độ / bong bóng món xong (Ey, X0 bản web).
+# Lớp trên của xưởng (vẽ sau lửa): ảnh che, khung chạy hiện tại; rồi bong bóng món xong (X0 bản web).
 const Bong = preload("res://logic/bong.gd")   # bong bóng X0 dùng chung
 
 var xv
@@ -18,7 +18,7 @@ func _draw() -> void:
 				var f := (int(floor(xv.t * float(s[2]))) % int(s[1])) if xv.seq_ok(s) else 0
 				_img(String(s[0]) + str(f))
 		return
-	# Ey: bong bóng / thanh tiến độ ở độ cao bh của xưởng
+	# bong bóng món xong ở độ cao bh của xưởng
 	var k: String = xv.k
 	var sr: Dictionary = G.xw.sr[k]
 	var w: Dictionary = G.xw.w(k)
@@ -30,11 +30,7 @@ func _draw() -> void:
 	var n: int = G.xw.df(k)
 	if n > 0:
 		_x0(Vector2(p.x, p.y + o), String(w.r.keys()[0]))
-	elif w.q.size() > 0:
-		var c := minf(1.0, float(w.p) / float(G.xw.R[w.q[0]].time))
-		draw_rect(Rect2(p.x - 11, p.y + o + 8, 22, 3.6), Color(0, 0, 0, 0.35))
-		var pal = G.troi.st.get("pal", {}) if G.troi != null else {}
-		draw_rect(Rect2(p.x - 11, p.y + o + 8, 22 * c, 3.6), Color(String(pal.get("leaf2", "#5aa83a"))))
+	# (bản 280) bỏ thanh tiến độ lúc xưởng chạy: xưởng chuyển động là biết đang làm
 
 func _img(name: String) -> void:
 	var farm = xv.farm
