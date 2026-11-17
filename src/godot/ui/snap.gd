@@ -112,9 +112,9 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 		var src: String = n.get("src", "")
 		if src == "pearl":
 			# sen đỏ (sh()): hình ngọc trong khung 64, như svg <image> ở dưới
-			b.pic(Css.image("res://ui/img/pearl.webp"), Rect2(0, 0, R[2], R[3]))
+			b.pic(Css.image_px("res://ui/img/pearl.webp", R[2], R[3]), Rect2(0, 0, R[2], R[3]))
 		elif src.find("xui") >= 0:
-			b.pic(Css.image("res://ui/img/coin.webp"), Rect2(0, 0, R[2], R[3]))
+			b.pic(Css.image_px("res://ui/img/coin.webp", R[2], R[3]), Rect2(0, 0, R[2], R[3]))
 	# an icon put in front of the text by a css ::before (Kho tabs: basket/leaf/pot)
 	var icon := {}
 	var bef: Dictionary = n.get("::before", {})
@@ -263,7 +263,7 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 		if mm != null:
 			ir = Rect2(float(mm.get_string(1)), float(mm.get_string(2)), float(mm.get_string(3)), float(mm.get_string(4)))
 		var pic := "res://ui/img/coin.webp" if absf(ir.position.x - 11.0) < 0.5 else "res://ui/img/pearl.webp"
-		b.pic(Css.image(pic), Rect2(ir.position * q, ir.size * q), Color.WHITE, sh)
+		b.pic(Css.image_px(pic, ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q), Color.WHITE, sh)   # thu sẵn đúng px (bản 263)
 		return
 	var stx := _svg_texts(sv)
 	var t := Css.svg_tex(stx.svg, R[2], R[3])
