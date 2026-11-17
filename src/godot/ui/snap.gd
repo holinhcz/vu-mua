@@ -247,8 +247,9 @@ static func _text(b: Control, n: Dictionary, R: Array, z: float, icon: Dictionar
 	b.set_meta("ti", b.texts.size() - 1)
 
 static func _svg(b: Control, sv: String, R: Array, sh) -> void:
-	if sv.find("<image") >= 0:
+	if sv.find("<image") >= 0 and sv.find("data:image") < 0:
 		# picture inside the svg (64 box): sen đỏ pearl at x 7.9 y 8.9 w 48.3, xu coin at x 11 y 10 w 42
+		# (bản 248) svg bọc sẵn ảnh (data:image, hình món ui/svg/kh) thì vẽ thẳng như svg thường, không phải ngọc / xu
 		var q := float(R[2]) / 64.0
 		var mm := RegEx.create_from_string('<image[^>]*\\bx="([0-9.]+)"[^>]*\\by="([0-9.]+)"[^>]*width="([0-9.]+)"[^>]*height="([0-9.]+)"').search(sv)
 		var ir := Rect2(7.9, 8.9, 48.3, 48.3)
