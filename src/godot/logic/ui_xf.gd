@@ -326,7 +326,9 @@ func _build_top(w: Dictionary, pend: Array) -> void:   # st()
 					q.text = str(G.xw.GS[e - 3])
 			slots.append([n, "", "", "q" + str(e)])
 	var ii: int = G.xw.df(k)
-	var vr := [[T.stb.duplicate(true), "", "", "star"]]
+	var sb: Dictionary = T.stb.duplicate(true)
+	Snap.star_big(sb)
+	var vr := [[sb, "", "", "star"]]
 	if ii > 0:
 		var best := ""
 		var bn := -1
@@ -982,3 +984,4 @@ func input(e: InputEvent) -> void:
 			bar_sc = clampf(bar_sc + (40.0 if e.button_index == MOUSE_BUTTON_WHEEL_DOWN else -40.0), 0.0, bar_max)
 			if bar_in != null:
 				bar_in.position = Vector2(0, -bar_sc) * Css.K
+

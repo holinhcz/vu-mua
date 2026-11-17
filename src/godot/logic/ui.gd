@@ -933,6 +933,9 @@ var gv_seeds := []
 
 func _build_gv() -> void:
 	var d: Dictionary = Snap.load_snap("gv").duplicate(true)   # sửa bản sao: mẫu chụp dùng chung khi dựng lại giao diện
+	for sel in d:
+		for nq in d[sel]:
+			Snap.star_big(nq)
 	var n0: Dictionary = d[".gv"][0]
 	var bar: Dictionary = Snap.find(n0, "gvbar")
 	var seeds := []
