@@ -2626,13 +2626,13 @@ func _process(_dt: float) -> void:
 		ft_worst_shown = ft_worst
 		pf_code_shown = pf_code / maxf(1.0, ft_count)
 		var po := []
-		for k in ["tổng", "sau", "main", "xếp"]:
-			po.append("%s %.1f" % [k, pt.get(k, 0.0) / 1000.0 / maxf(1.0, ft_count)])
-		# (bản 234) các bước nặng nhất (farm đo từng bước: f:<tên>, và các phần của main)
-		var hk := pt.keys().filter(func(x): return not (x in ["tổng", "sau", "main", "xếp", "trước"]))
+		# (bản 234/235) các phần nặng nhất trước (farm đo từng bước: f:<tên>), rồi tổng
+		var hk := pt.keys().filter(func(x): return not (x in ["tổng", "sau", "trước"]))
 		hk.sort_custom(func(x, y): return pt[x] > pt[y])
-		for q in mini(6, hk.size()):
+		for q in mini(5, hk.size()):
 			po.append("%s %.1f" % [hk[q], pt[hk[q]] / 1000.0 / maxf(1.0, ft_count)])
+		for k in ["tổng", "sau"]:
+			po.append("%s %.1f" % [k, pt.get(k, 0.0) / 1000.0 / maxf(1.0, ft_count)])
 		pt_shown = " · ".join(po)
 		pt.clear()
 		if do_on <= 0 and do2_on <= 0:
@@ -4158,6 +4158,8 @@ func _drw_text(frames: int) -> String:
 #    tâm nhà với chân cây: cây đứng trước góc nhà mà vẫn bị nhà đè, cỏ trước nền xưởng bị nền che.)
 # Có gì vào / ra obj_root hoặc làng đổi: xếp lại toàn bộ. Mỗi khung: đồ đang đi (người, con vật, ghe) chen lại theo luật đó.
 var zo_dirty := true
+var _zo_full_t := 0
+var _zo_last := {}   # đồ logic -> (x, chân) lần xếp trước
 var zo_keys := PackedFloat32Array()   # khoá (đã chỉnh theo hộp) của vật đứng yên, theo thứ tự đang vẽ
 var zo_nodes := []
 var _zo_n := -1
@@ -4208,7 +4210,12 @@ func zorder() -> void:
 			var n = e[0]
 			if is_instance_valid(n) and n.get_parent() == obj_root and not n.is_queued_for_deletion():
 				dyn[n] = float(e[1])
-	var full: bool = _zo_n != obj_root.get_child_count() - dyn.size() or zo_dirty
+	# (bản 235) xếp lại toàn bộ (14 nghìn vật, sort) tốn cả chục ms trên điện thoại: khi số vật đổi thì gom lại, tối đa 2 lần/giây;
+	# zo_dirty (làng đổi hẳn) thì làm ngay
+	var nowm := Time.get_ticks_msec()
+	var full: bool = zo_dirty or (_zo_n != obj_root.get_child_count() - dyn.size() and nowm - _zo_full_t > 500)
+	if full:
+		_zo_full_t = nowm
 	if full:   # hộp nhiều ô (nhà, xưởng, chuồng) gom lại trước
 		_zo_box = {}
 		var bx := {}
@@ -4228,11 +4235,21 @@ func zorder() -> void:
 				if not _zo_box.has(b):
 					_zo_box[b] = []
 				_zo_box[b].append(e)
+	# (bản 235) mỗi khung chỉ xếp đồ của logic VỪA ĐỔI chỗ (người đi, món dời); đồ đứng yên đã nằm đúng chỗ từ lần trước
+	var moved := {}
 	for n in dyn:
+		var sg := Vector2((n as Node2D).position.x if n is Node2D else 0.0, float(dyn[n]))
+		if full or _zo_last.get(n) != sg:
+			moved[n] = true
+			_zo_last[n] = sg
+	for n in moved:
 		var k := (float(dyn[n]) - 968.0) / 16.0
 		L.append([_zo_fix(n, k, _zo_tile(n, dyn[n])) if not _zo_box.is_empty() else k, n])
 	L.sort_custom(func(a, b): return a[0] < b[0])
 	if full:   # xếp lại toàn bộ
+		for n in _zo_last.keys():
+			if not dyn.has(n):
+				_zo_last.erase(n)
 		zo_dirty = false
 		var st := []
 		var last := -1.0e9
@@ -4272,17 +4289,21 @@ func zorder() -> void:
 	for e in L:
 		var n: Node = e[1]
 		var t := zo_keys.bsearch(e[0], true)
-		var nxt: Node = zo_nodes[t] if t < zo_nodes.size() else null
-		var prv: Node = zo_nodes[t - 1] if t > 0 else null
+		var nxt = zo_nodes[t] if t < zo_nodes.size() else null
+		var prv = zo_nodes[t - 1] if t > 0 else null
+		if nxt != null and (not is_instance_valid(nxt) or nxt.get_parent() != obj_root):
+			nxt = null   # vật đứng yên vừa bị gỡ, chưa tới lần xếp toàn bộ
+		if prv != null and (not is_instance_valid(prv) or prv.get_parent() != obj_root):
+			prv = null
 		var idx := n.get_index()
-		var ok := (prv == null or prv.get_index() < idx) and (nxt == null or nxt.get_index() > idx)
+		var ok: bool = (prv == null or prv.get_index() < idx) and (nxt == null or nxt.get_index() > idx)
 		if ok and pt == t and pn != null and pn.get_index() > idx:
 			ok = false
 		if not ok:
 			if nxt == null:
 				obj_root.move_child(n, -1)
 			else:
-				var ni := nxt.get_index()
+				var ni: int = nxt.get_index()
 				obj_root.move_child(n, ni if idx > ni else ni - 1)
 		pt = t
 		pn = n

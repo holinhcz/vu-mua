@@ -40,11 +40,43 @@ static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := fa
 	var ppu := s * float(ci.get_canvas_transform().get_scale().x)
 	ci.draw_set_transform(at, 0.0, Vector2(s, s))
 	var f := _anh("do" if red else "xanh", ppu)
-	if f != null:
-		ci.draw_texture_rect(f, KHUNG, false)
-	if hinh != null:
-		ci.draw_texture_rect(hinh, Rect2(-cao / 2.0, -cao / 2.0, cao, cao), false)
+	# (bản 235) khung + hình gộp sẵn thành MỘT ảnh (mỗi loại một lần): hàng trăm bong bóng cùng loại vẽ chung một lệnh,
+	# trước đây khung và hình xen kẽ hai ảnh nên mỗi bong bóng tốn hai lệnh vẽ
+	var g := _gop(f, hinh, cao) if f != null and hinh != null else null
+	if g != null:
+		ci.draw_texture_rect(g, KHUNG, false)
+	else:
+		if f != null:
+			ci.draw_texture_rect(f, KHUNG, false)
+		if hinh != null:
+			ci.draw_texture_rect(hinh, Rect2(-cao / 2.0, -cao / 2.0, cao, cao), false)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+static var _gopc := {}   # khung@hình@cao -> ImageTexture
+static func _gop(f: Texture2D, hinh: Texture2D, cao: float) -> Texture2D:
+	var key := str(f.get_rid().get_id()) + "@" + str(hinh.get_rid().get_id()) + "@" + str(cao)
+	if _gopc.has(key):
+		return _gopc[key]
+	_gopc[key] = null
+	var fi: Image = f.get_image()
+	var hi: Image = hinh.get_image()
+	if fi == null or hi == null or fi.is_empty() or hi.is_empty():
+		return null
+	fi = fi.duplicate()
+	if fi.is_compressed() or hi.is_compressed():
+		return null
+	fi.convert(Image.FORMAT_RGBA8)
+	hi = hi.duplicate()
+	hi.convert(Image.FORMAT_RGBA8)
+	var sc := float(fi.get_width()) / KHUNG.size.x   # px ảnh khung mỗi đơn vị
+	var w := maxi(1, int(round(cao * sc)))
+	if hi.get_width() != w or hi.get_height() != w:
+		hi.resize(w, w, Image.INTERPOLATE_LANCZOS)
+	var at := Vector2i(int(round((-cao / 2.0 - KHUNG.position.x) * sc)), int(round((-cao / 2.0 - KHUNG.position.y) * sc)))
+	fi.blend_rect(hi, Rect2i(0, 0, w, w), at)
+	var t := ImageTexture.create_from_image(fi)
+	_gopc[key] = t
+	return t
 
 static func anh(k: String, ppu: float) -> Texture2D:   # ảnh khác trong ui/img/bong: nuoc (cần tưới), gap (!), benh (chữ thập), vong (vòng ô chín); ppu = px màn mỗi đơn vị
 	return _anh(k, ppu)
