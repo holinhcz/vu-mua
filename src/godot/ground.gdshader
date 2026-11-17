@@ -41,6 +41,11 @@ uniform sampler2D uPT3 : repeat_enable, filter_linear_mipmap;   // glint streaks
 uniform vec3 pMid; uniform vec3 pMudS; uniform vec3 pDpc; uniform vec3 pSky; uniform vec3 pBand;
 uniform vec3 pLip; uniform vec3 pMud; uniform vec3 pFace; uniform vec3 pFaceW; uniform vec3 pFaceD;
 uniform float uPond = 0.0;
+// Layer 3b: nền đất người chơi lát (g.gt, bản 228): ảnh mặt đường dat / do / cat / soi (uRA 0-3), loang theo khoảng cách tới
+// 3x3 ô quanh điểm ảnh (giáp loại khác 50/50 ở cạnh, mép ra cỏ nhạt dần, góc tròn). Vẽ TRƯỚC ao và đường: nằm dưới hết.
+uniform sampler2D uNM : filter_nearest;   // ô (x - uNB.x, y - uNB.y): R = lớp ảnh + 1 (0 = không lát)
+uniform vec4 uNB = vec4(0.0);             // ô đầu (x, y), cỡ (w, h); w = 0: chưa lát gì
+uniform float uNBw = 0.8;                 // bề rộng loang (ô)
 varying vec2 wp;
 void vertex() { wp = VERTEX; }
 
@@ -53,6 +58,35 @@ vec3 rtex(int k, vec2 w, vec2 t) {
 	if (k < 3) return texture(uRA, vec3(w / 112.0, float(k))).rgb;
 	if (k == 3) return texture(uRA, vec3(w / 96.0, 3.0)).rgb;
 	return texture(uRA, vec3(t / 2.0, float(k))).rgb;
+}
+int nkind(ivec2 t) {
+	ivec2 q = t - ivec2(uNB.xy);
+	if (q.x < 0 || q.y < 0 || q.x >= int(uNB.z) || q.y >= int(uNB.w)) return 0;
+	return int(texelFetch(uNM, q, 0).r * 255.0 + 0.5);
+}
+vec4 nen(vec2 w) {
+	float u = (w.x - 4268.0) / 32.0, v = (w.y - 968.0) / 16.0;
+	vec2 t = vec2((u + v) * 0.5, (v - u) * 0.5);   // ô (e, r) chiếm [e, e+1] x [r, r+1]
+	ivec2 ti = ivec2(floor(t));
+	vec4 W = vec4(0.0);
+	for (int dy = -1; dy <= 1; dy++) {
+		for (int dx = -1; dx <= 1; dx++) {
+			ivec2 c = ti + ivec2(dx, dy);
+			int k = nkind(c);
+			if (k <= 0 || k > 4) continue;
+			vec2 dd = max(abs(t - (vec2(c) + 0.5)) - 0.5, 0.0);
+			float a = 1.0 - smoothstep(0.0, uNBw, length(dd));
+			W[k - 1] = max(W[k - 1], a);
+		}
+	}
+	float s = W.x + W.y + W.z + W.w;
+	if (s <= 0.0001) return vec4(0.0);
+	vec3 col = vec3(0.0);
+	if (W.x > 0.0) col += texture(uRA, vec3(w / 112.0, 0.0)).rgb * W.x;
+	if (W.y > 0.0) col += texture(uRA, vec3(w / 112.0, 1.0)).rgb * W.y;
+	if (W.z > 0.0) col += texture(uRA, vec3(w / 112.0, 2.0)).rgb * W.z;
+	if (W.w > 0.0) col += texture(uRA, vec3(w / 96.0, 3.0)).rgb * W.w;
+	return vec4(col / s, max(max(W.x, W.y), max(W.z, W.w)));
 }
 // signed distance (tile units, < 0 inside) of a laid road of half width w: a bar from the centre to every connected edge,
 // and a rounded square (|x|^4+|y|^4) at the centre unless the road runs straight through
@@ -203,6 +237,7 @@ void fragment() {
 			}
 		}
 	}
+	if (uNB.z > 0.0) { vec4 nn = nen(wp); c = mix(c, nn.rgb, nn.a); }   // nền lát: dưới ao, dưới đường
 	if (uPond > 0.5) c = pond(c, wp);
 	if (uRoads > 0.5 && ti.x >= 0 && ti.y >= 0 && ti.x < int(uTN.x) && ti.y < int(uTN.y)) {
 		vec4 rd = texelFetch(uRD, ti, 0);

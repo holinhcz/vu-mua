@@ -26,9 +26,7 @@ func _init(farm, lang) -> void:
 	tiles = TileLayer.new()
 	tiles.v = self
 	tiles.z_index = -6
-	tiles.material = ShaderMaterial.new()   # nen.gdshader: nền lát loang vào nhau theo từng điểm ảnh
-	tiles.material.shader = load("res://nen.gdshader")
-	F.main._nm(tiles.material)
+	tiles.material = F.main.night_mat
 	F.add_child(tiles)
 	ghost = Node2D.new()
 	ghost.visible = false
@@ -500,47 +498,41 @@ class TileLayer extends Node2D:
 	func _road(t: String, a: float, n: float, _e: int, _r: int) -> void:   # hình thẻ đường: ô bằng ảnh mặt đường đó
 		tex_dia(t, a, n)
 
-	# NỀN LÁT (bản 225): cả vùng nền vẽ một lần bằng nen.gdshader: bản đồ ô (ảnh nhỏ, mỗi điểm = một ô: lớp ảnh + 1) + ảnh mặt
-	# đường của nền làng (uRA); độ loang tính theo từng điểm ảnh nên giáp loại khác / giáp cỏ / góc ngã tư đều mềm như nhau.
+	# NỀN LÁT (bản 228): vẽ trong nền làng (ground.gdshader lớp 3b), dưới ao và đường; ở đây chỉ gửi bản đồ ô: ảnh nhỏ, mỗi
+	# điểm một ô = lớp ảnh mặt đường + 1 (dat 1, do 2, cat 3, soi 4)
 	const LAYER := {"dat": 1, "do": 2, "cat": 3, "soi": 4}
-	var _map_sig := ""
-	var _poly := PackedVector2Array()
+	var _map_sig := "?"
 
 	func _nen_all(gt: Dictionary) -> void:
-		var mat: ShaderMaterial = material
-		if mat.get_shader_parameter("uRA") == null:
-			var gm = v.F.main.ground.material if v.F.main.ground != null else null
-			var ra = gm.get_shader_parameter("uRA") if gm != null else null
-			if ra == null:   # ảnh mặt đường chưa về: vẽ lại sau
-				get_tree().create_timer(0.5).timeout.connect(queue_redraw)
-				return
-			mat.set_shader_parameter("uRA", ra)
-		if gt.is_empty():
+		var gr = v.F.main.ground
+		var mat: ShaderMaterial = gr.material if gr != null else null
+		if mat == null:
 			return
 		var sig := str(gt.size()) + str(gt.hash())
-		if sig != _map_sig:
-			_map_sig = sig
-			var x0 := 1 << 20
-			var y0 := 1 << 20
-			var x1 := -(1 << 20)
-			var y1 := -(1 << 20)
-			for k in gt:
-				var p: PackedStringArray = String(k).split(",")
-				x0 = mini(x0, int(p[0]))
-				y0 = mini(y0, int(p[1]))
-				x1 = maxi(x1, int(p[0]))
-				y1 = maxi(y1, int(p[1]))
-			var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_R8)
-			for k in gt:
-				var p: PackedStringArray = String(k).split(",")
-				var u = v.LG.ug.get(String(gt[k]))
-				var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
-				im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0))
-			mat.set_shader_parameter("uMap", ImageTexture.create_from_image(im))
-			mat.set_shader_parameter("uBox", Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
-			var c := func(x: float, y: float) -> Vector2: return Vector2(4268.0 + (x - y) * 32.0, 968.0 + (x + y) * 16.0)
-			_poly = PackedVector2Array([c.call(x0 - 1, y0 - 1), c.call(x1 + 2, y0 - 1), c.call(x1 + 2, y1 + 2), c.call(x0 - 1, y1 + 2)])
-		draw_colored_polygon(_poly, Color.WHITE)
+		if sig == _map_sig:
+			return
+		_map_sig = sig
+		if gt.is_empty():
+			mat.set_shader_parameter("uNB", Vector4(0, 0, 0, 0))
+			return
+		var x0 := 1 << 20
+		var y0 := 1 << 20
+		var x1 := -(1 << 20)
+		var y1 := -(1 << 20)
+		for k in gt:
+			var p: PackedStringArray = String(k).split(",")
+			x0 = mini(x0, int(p[0]))
+			y0 = mini(y0, int(p[1]))
+			x1 = maxi(x1, int(p[0]))
+			y1 = maxi(y1, int(p[1]))
+		var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_R8)
+		for k in gt:
+			var p: PackedStringArray = String(k).split(",")
+			var u = v.LG.ug.get(String(gt[k]))
+			var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
+			im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0))
+		mat.set_shader_parameter("uNM", ImageTexture.create_from_image(im))
+		mat.set_shader_parameter("uNB", Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
 		var u = v.LG.ug.get(t)
