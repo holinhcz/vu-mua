@@ -3064,6 +3064,9 @@ func _update_meter() -> void:
 	meter.text = "bản " + BUILD + " · %d fps · chậm nhất %d ms" % [round(fps_shown), round(ft_worst_shown)]
 	meter.text += "\ncode %.1f ms · vẽ %d lệnh · %d vật" % [pf_code_shown, round(pf_draw_shown), obj_root.get_child_count() if obj_root != null else 0]
 	meter.text += "\n" + pt_shown + "\nchạy: " + pt_proc + "\nvẽ lại/khung: " + pt_drw
+	var fmn = get_node_or_null("Farm")   # DÒ NỀN (tạm, bản 230): ô nền trong save / bản đồ gửi sang / nền làng đang có
+	if fmn != null and fmn.G != null:
+		meter.text += "\nDÒ NỀN: lưu %d ô · gửi %s · nền làng %s" % [(fmn.G.g.get("gt", {}) as Dictionary).size(), str(nen_box), str(ground.material.get_shader_parameter("uNB")) if ground != null and ground.material != null else "chưa có"]
 	if jsw != null and info.has("op2"):
 		var o2 = jsw.__op2t
 		meter.text += "\nkho phụ: " + (str(o2) if o2 != null else "?")
