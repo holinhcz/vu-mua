@@ -2560,7 +2560,7 @@ func _fit_svg(id: String) -> String:
 		var v := m.get_string(1).split(" ", false)
 		var img := Image.new()
 		var q := 8.0
-		if v.size() == 4 and img.load_svg_from_string(sv, q * 64.0 / float(v[2])) == OK:
+		if v.size() == 4 and Css.svg_load(img, sv, q * 64.0 / float(v[2])) == OK:
 			var u := img.get_used_rect()
 			if u.size.x > 0:
 				var k: float = float(v[2]) / img.get_width()
@@ -3583,7 +3583,7 @@ func item_ic(id: String, px: float) -> Texture2D:
 		return _icons[key]
 	var svg := FileAccess.get_file_as_string("res://ui/svg/kh/" + id + ".svg")
 	var img := Image.new()
-	if svg == "" or img.load_svg_from_string(svg, n / 64.0) != OK:
+	if svg == "" or Css.svg_load(img, svg, n / 64.0) != OK:
 		_icons[key] = null
 		return null
 	_icons[key] = ImageTexture.create_from_image(img)
@@ -3598,7 +3598,7 @@ func icon(id: String, px: float) -> Texture2D:
 		return _icons[key]
 	var svg := FileAccess.get_file_as_string("res://icons/" + id + ".svg")
 	var img := Image.new()
-	if svg == "" or img.load_svg_from_string(svg, n / 64.0) != OK:
+	if svg == "" or Css.svg_load(img, svg, n / 64.0) != OK:
 		return null
 	_icons[key] = ImageTexture.create_from_image(img)
 	return _icons[key]

@@ -316,6 +316,30 @@ static func _gradient(g: String, w: float, h: float) -> Dictionary:
 		r.merge(_stops(args, L))
 	return r
 
+static func svg_load(img: Image, svg: String, sc: float) -> Error:
+	# (bản 254) mọi chỗ dựng hình từ SVG đi qua đây. SVG bọc sẵn ảnh (hình món ui/svg/kh: <image href="data:image/webp;
+	# base64,...">) thì giải ảnh rồi thu nhỏ bằng Lanczos: ThorVG phóng ảnh bên trong không lọc -> răng cưa.
+	var i0 := svg.find("data:image/")
+	if i0 < 0:
+		return img.load_svg_from_string(svg, sc)
+	var b0 := svg.find("base64,", i0)
+	var b1 := svg.find("\"", b0)
+	if b0 < 0 or b1 < 0:
+		return img.load_svg_from_string(svg, sc)
+	var raw := Marshalls.base64_to_raw(svg.substr(b0 + 7, b1 - b0 - 7))
+	var src := Image.new()
+	var e: Error = src.load_webp_from_buffer(raw) if svg.substr(i0, 16).begins_with("data:image/webp") else src.load_png_from_buffer(raw)
+	if e != OK:
+		return e
+	var vb := svg_aspect(svg)   # khung viewBox (64 x 64), ảnh phủ kín khung
+	var w := maxi(1, int(round(vb.x * sc)))
+	var h := maxi(1, int(round(vb.y * sc)))
+	src.convert(Image.FORMAT_RGBA8)
+	if src.get_width() != w or src.get_height() != h:
+		src.resize(w, h, Image.INTERPOLATE_LANCZOS)
+	img.copy_from(src)
+	return OK
+
 static func svg_tex(svg: String, w: float, h: float) -> Texture2D:
 	# rasterise at screen resolution so it is sharp
 	var key := str(svg.hash()) + "_" + str(int(w * K)) + "x" + str(int(h * K))
@@ -324,7 +348,7 @@ static func svg_tex(svg: String, w: float, h: float) -> Texture2D:
 	var img := Image.new()
 	var vb := svg_aspect(svg)
 	var sc := maxf(w * K / vb.x, h * K / vb.y)
-	if img.load_svg_from_string(svg, maxf(0.05, sc)) != OK:
+	if svg_load(img, svg, maxf(0.05, sc)) != OK:
 		return null
 	img.generate_mipmaps()
 	var t := ImageTexture.create_from_image(img)

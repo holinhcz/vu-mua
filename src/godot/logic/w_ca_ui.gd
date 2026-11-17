@@ -396,7 +396,7 @@ func _bait_tex(k: String) -> Texture2D:   # FY: ốc, tép = Ai(k); còn lại H
 	var svg := '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' + String(BAIT_IC.get(k, "")) + "</svg>"
 	var px := int(pow(2.0, ceil(log(maxf(16.0, _k(28))) / log(2.0))))
 	var tex: Texture2D = null
-	if img.load_svg_from_string(svg, px / 64.0) == OK:
+	if Css.svg_load(img, svg, px / 64.0) == OK:
 		tex = ImageTexture.create_from_image(img)
 	_bait_ic[k] = tex
 	return tex

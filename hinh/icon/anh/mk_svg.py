@@ -15,8 +15,8 @@ MAP = {  # mã món trong game <- ảnh cắt
 }
 for kid, f in MAP.items():
     assert os.path.exists(os.path.join(khdir, kid + '.svg')), kid
-    im = Image.open(os.path.join(outdir, f + '.png')).resize((256, 256), Image.LANCZOS)
-    b = io.BytesIO(); im.save(b, 'WEBP', quality=90, method=6)
+    im = Image.open(os.path.join(outdir, f + '.png'))   # 512 gốc (bản 254: trước thu 256)
+    b = io.BytesIO(); im.save(b, 'WEBP', quality=92, method=6)
     svg = ('<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><image x="0" y="0" width="64" height="64" '
            'href="data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode() + '"/></svg>')
     open(os.path.join(khdir, kid + '.svg'), 'w').write(svg)

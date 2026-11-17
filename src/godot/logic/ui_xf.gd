@@ -155,7 +155,7 @@ func _svg(id: String, sc: float, bottom: bool) -> String:
 	if m != null:
 		var v := m.get_string(1).split(" ", false)
 		var img := Image.new()
-		if v.size() == 4 and img.load_svg_from_string(sv, 8.0 * 64.0 / float(v[2])) == OK:
+		if v.size() == 4 and Css.svg_load(img, sv, 8.0 * 64.0 / float(v[2])) == OK:
 			var u := img.get_used_rect()
 			if u.size.x > 0:
 				var q: float = float(v[2]) / img.get_width()
