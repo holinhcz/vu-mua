@@ -8,6 +8,10 @@ NAMES = {
  'nongsan1': "Bắp,Lúa,Khoai lang,Khoai mì,Khoai môn,Đậu phộng,Đậu xanh,Đậu nành,Đậu đũa,Đậu bắp,Cà tím,Khổ qua,Bí đỏ,Bí đao,Bầu,Mướp,Dưa leo,Ớt",
  'rauthom1': "Rau răm,Lá é,Húng quế,Húng lủi,Tía tô,Diếp cá,Ngò rí,Ngò gai,Rau om,Hành lá,Hẹ,Sả,Đậu que,Đậu rồng,Đậu đen,Đậu đỏ,Gừng,Nghệ",
  'traicay2': "Ổi,Mãng cầu xiêm,Mãng cầu ta,Sapôchê,Vú sữa,Cóc,Khế,Sơ ri,Táo ta,Dâu da,Bòn bon,Chùm ruột,Cà na,Bình bát,Ô môi,Lê-ki-ma,Khóm,Chanh dây",
+ 'cay2': ("Bông vải,Chàm,Thốt nốt,Xà lách", 2, 2),
+ 'thit1': ("Thịt gà,Trứng gà,Thịt bò,Sữa bò", 2, 2),
+ 'thit2': ("Thịt cừu,Lông cừu,Thịt vịt,Trứng vịt", 2, 2),
+ 'thit3': ("Thịt heo,Sườn heo,Thịt dê,Sữa dê", 2, 2),
 }
 def slug(s):
     s = unicodedata.normalize('NFD', s.replace('đ','d').replace('Đ','D'))
@@ -16,6 +20,9 @@ def slug(s):
 def main(indir, outdir):
     meta = {}
     for sheet, nm in NAMES.items():
+        cols, rows = 6, 3
+        if isinstance(nm, tuple):
+            nm, cols, rows = nm
         im = np.array(Image.open(os.path.join(indir, sheet + '.png')).convert('RGBA')).astype(np.float32)
         H, W = im.shape[:2]
         rgb = im[..., :3]; a = im[..., 3] / 255.0
@@ -43,24 +50,28 @@ def main(indir, outdir):
         m = a > 0.2
         lab, n = nd.label(m, structure=np.ones((3, 3)))
         objs = nd.find_objects(lab)
-        ch = H / 3.0; cw = W / 6.0
+        ch = H / float(rows); cw = W / float(cols)
+        thr = max(30.0, (ch / 54.0) ** 2)
         groups = {}
         for i, sl in enumerate(objs, 1):
             y0, y1 = sl[0].start, sl[0].stop; x0, x1 = sl[1].start, sl[1].stop
             area = int((lab[sl] == i).sum())
-            if area < 30:
+            if area < thr:
                 continue
-            r = int(min(2, (y0 + y1) / 2 // ch))
-            band = (r * ch + 4, r * ch + 56)
-            if y0 >= band[0] - 4 and y1 <= band[1] + 4 and (y1 - y0) < 50:
-                continue   # chữ tên
+            txt = False
+            for r in range(rows):   # chữ tên: nằm gọn trong dải đầu ô (từ hơi trên ranh ô tới 19% ô)
+                band = (r * ch - ch * 0.06, r * ch + ch * 0.19)
+                if y0 >= band[0] - 4 and y1 <= band[1] + 4 and (y1 - y0) < ch * 0.17:
+                    txt = True
+            if txt:
+                continue
             cy, cx = nd.center_of_mass(lab[sl] == i)
             cy += y0; cx += x0
-            rr = int(min(2, cy // ch)); cc = int(min(5, cx // cw))
+            rr = int(min(rows - 1, cy // ch)); cc = int(min(cols - 1, cx // cw))
             groups.setdefault((rr, cc), []).append(i)
         names = nm.split(',')
         for idx, name in enumerate(names):
-            r, c = divmod(idx, 6)
+            r, c = divmod(idx, cols)
             ids = groups.get((r, c), [])
             if not ids:
                 print('THIẾU', sheet, name); continue

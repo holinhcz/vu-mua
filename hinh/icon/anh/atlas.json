@@ -988,5 +988,181 @@
 471,
 443
 ]
+},
+"bongvai": {
+"file": "bongvai.png",
+"name": "Bông vải",
+"sheet": "cay2",
+"bbox": [
+41,
+41,
+471,
+471
+]
+},
+"cham": {
+"file": "cham.png",
+"name": "Chàm",
+"sheet": "cay2",
+"bbox": [
+41,
+56,
+471,
+455
+]
+},
+"thotnot": {
+"file": "thotnot.png",
+"name": "Thốt nốt",
+"sheet": "cay2",
+"bbox": [
+41,
+97,
+471,
+414
+]
+},
+"xalach": {
+"file": "xalach.png",
+"name": "Xà lách",
+"sheet": "cay2",
+"bbox": [
+41,
+75,
+471,
+437
+]
+},
+"thitga": {
+"file": "thitga.png",
+"name": "Thịt gà",
+"sheet": "thit1",
+"bbox": [
+41,
+75,
+471,
+437
+]
+},
+"trungga": {
+"file": "trungga.png",
+"name": "Trứng gà",
+"sheet": "thit1",
+"bbox": [
+41,
+57,
+471,
+455
+]
+},
+"thitbo": {
+"file": "thitbo.png",
+"name": "Thịt bò",
+"sheet": "thit1",
+"bbox": [
+41,
+86,
+471,
+426
+]
+},
+"suabo": {
+"file": "suabo.png",
+"name": "Sữa bò",
+"sheet": "thit1",
+"bbox": [
+145,
+41,
+367,
+471
+]
+},
+"thitcuu": {
+"file": "thitcuu.png",
+"name": "Thịt cừu",
+"sheet": "thit2",
+"bbox": [
+41,
+82,
+471,
+429
+]
+},
+"longcuu": {
+"file": "longcuu.png",
+"name": "Lông cừu",
+"sheet": "thit2",
+"bbox": [
+41,
+88,
+471,
+423
+]
+},
+"thitvit": {
+"file": "thitvit.png",
+"name": "Thịt vịt",
+"sheet": "thit2",
+"bbox": [
+41,
+69,
+471,
+442
+]
+},
+"trungvit": {
+"file": "trungvit.png",
+"name": "Trứng vịt",
+"sheet": "thit2",
+"bbox": [
+41,
+51,
+471,
+460
+]
+},
+"thitheo": {
+"file": "thitheo.png",
+"name": "Thịt heo",
+"sheet": "thit3",
+"bbox": [
+41,
+72,
+471,
+440
+]
+},
+"suonheo": {
+"file": "suonheo.png",
+"name": "Sườn heo",
+"sheet": "thit3",
+"bbox": [
+41,
+103,
+471,
+408
+]
+},
+"thitde": {
+"file": "thitde.png",
+"name": "Thịt dê",
+"sheet": "thit3",
+"bbox": [
+41,
+88,
+471,
+424
+]
+},
+"suade": {
+"file": "suade.png",
+"name": "Sữa dê",
+"sheet": "thit3",
+"bbox": [
+142,
+41,
+370,
+471
+]
 }
 }

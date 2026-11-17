@@ -9,6 +9,9 @@ MAP = {  # mã món trong game <- ảnh cắt
  'bap':'bap','lua':'lua','khoai':'khoailang','khoai_mon':'khoaimon','dauphong':'dauphong','dau_xanh':'dauxanh','dau_nanh':'daunanh',
  'dau_bap':'daubap','catim':'catim','kho_qua':'khoqua','bido':'bido','bi_dao':'bidao','bau':'bau','muop':'muop','dua_leo':'dualeo','ot':'ot',
  'rau_ram':'rauram','hanh':'hanhla','sa':'sa','dau_rong':'daurong','dau_den':'dauden','gung':'gung','nghe':'nghe',
+ 'bong_vai':'bongvai','cham':'cham','xa_lach':'xalach','thit_ga':'thitga','trung':'trungga','thit_bo':'thitbo','sua':'suabo',
+ 'thit_cuu':'thitcuu','len':'longcuu','thit_vit':'thitvit','trung_vit':'trungvit','thit':'thitheo','suon':'suonheo',
+ 'thit_de':'thitde','sua_de':'suade',
 }
 for kid, f in MAP.items():
     assert os.path.exists(os.path.join(khdir, kid + '.svg')), kid
