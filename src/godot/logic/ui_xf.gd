@@ -327,16 +327,17 @@ func _build_top(w: Dictionary, pend: Array) -> void:   # st()
 			slots.append([n, "", "", "q" + str(e)])
 	var ii: int = G.xw.df(k)
 	# (bản 275) nút nâng sao = đúng nút sao của vòng ô ruộng (cùng bản chụp rmg "rmb star", cùng ảnh sao, cùng 5 cung),
-	# chỉ dời vào chỗ nút sao xưởng
+	# dời vào chỗ nút sao xưởng. (bản 282) giữ vỏ ô xslot của xưởng: bấm gắn theo ô xslot, mất vỏ thì bấm sao không ăn
+	var sb: Dictionary = T.stb.duplicate(true)
 	var rmg: Dictionary = Snap.load_snap("rmg")
-	var sb: Dictionary = (Snap.find(rmg[".rm"][0], "star", "button") if rmg.has(".rm") else {}).duplicate(true)
-	if sb.is_empty():
-		sb = T.stb.duplicate(true)
-	else:
-		var c0 := Vector2(float(T.stb.r[0]) + float(T.stb.r[2]) * 0.5, float(T.stb.r[1]) + float(T.stb.r[3]) * 0.5)
-		Snap._move(sb, c0 - Vector2(float(sb.r[0]) + float(sb.r[2]) * 0.5, float(sb.r[1]) + float(sb.r[3]) * 0.5))
-	Snap.star_big(sb)
-	sb.kids[0].svg = U._ring5(G.xw.ks(k) - 1)   # 5 cung sao quanh nút như ô ruộng (bản 272)
+	var rb2: Dictionary = (Snap.find(rmg[".rm"][0], "star", "button") if rmg.has(".rm") else {}).duplicate(true)
+	if not rb2.is_empty():
+		var kd: Dictionary = sb.kids[0]
+		var c0 := Vector2(float(kd.r[0]) + float(kd.r[2]) * 0.5, float(kd.r[1]) + float(kd.r[3]) * 0.5)
+		Snap._move(rb2, c0 - Vector2(float(rb2.r[0]) + float(rb2.r[2]) * 0.5, float(rb2.r[1]) + float(rb2.r[3]) * 0.5))
+		sb.kids[0] = rb2
+	Snap.star_big(sb.kids[0])
+	sb.kids[0].kids[0].svg = U._ring5(G.xw.ks(k) - 1)   # 5 cung sao quanh nút như ô ruộng (bản 272)
 	var vr := [[sb, "", "", "star"]]
 	if ii > 0:
 		var best := ""
