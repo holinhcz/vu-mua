@@ -28,6 +28,11 @@ func to(v: float) -> void:
 		k.position.y -= d * Css.K
 	off = s
 
+func grabbing(e: InputEvent) -> bool:   # (bản 277) ngón tay / chuột đang ở trong khung cuộn: làng không kéo / zoom theo
+	if box == null or not is_instance_valid(box) or not box.is_visible_in_tree():
+		return false
+	return drag != null or (("position" in e) and box.get_global_rect().has_point(e.position))
+
 func moved() -> bool:
 	return drag != null and drag.moved
 
@@ -35,8 +40,9 @@ func input(e: InputEvent) -> void:
 	if box == null or not is_instance_valid(box) or not box.is_visible_in_tree():
 		drag = null
 		return
+	var inside: bool = ("position" in e) and box.get_global_rect().has_point(e.position)
 	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		if box.get_global_rect().has_point(e.position):
+		if inside:
 			to(s + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
 		return
 	if e is InputEventScreenTouch or e is InputEventMouseButton:

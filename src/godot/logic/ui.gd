@@ -3677,6 +3677,8 @@ func _input(e: InputEvent) -> void:
 	if kho_on:
 		kh_sc.input(e)
 	gv_sc.input(e)
+	if gv_sc.grabbing(e):
+		get_tree().set_meta("ui_modal", true)   # kéo khay giống: làng đứng yên (main đọc cờ trong _unhandled_input)
 	if nvp != null:
 		nvp.input(e)
 	# dd: chạm ra ngoài hộp hỏi "Tốn ... sen đỏ" thì đóng (pointerdown bắt trước, không chặn)
