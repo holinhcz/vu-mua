@@ -43,7 +43,7 @@ uniform vec3 pLip; uniform vec3 pMud; uniform vec3 pFace; uniform vec3 pFaceW; u
 uniform float uPond = 0.0;
 // Layer 3b: nền đất người chơi lát (g.gt, bản 228): ảnh mặt đường dat / do / cat / soi (uRA 0-3), loang theo khoảng cách tới
 // 3x3 ô quanh điểm ảnh (giáp loại khác 50/50 ở cạnh, mép ra cỏ nhạt dần, góc tròn). Vẽ TRƯỚC ao và đường: nằm dưới hết.
-uniform sampler2D uNM : filter_nearest;   // ô (x - uNB.x, y - uNB.y): R = lớp ảnh + 1 (0 = không lát)
+uniform sampler2D uNM : filter_nearest, repeat_disable;   // ô (x - uNB.x, y - uNB.y): R = lớp ảnh + 1 (0 = không lát)
 uniform vec4 uNB = vec4(0.0);             // ô đầu (x, y), cỡ (w, h); w = 0: chưa lát gì
 uniform float uNBw = 0.8;                 // bề rộng loang (ô)
 varying vec2 wp;
@@ -76,7 +76,11 @@ vec4 nen(vec2 w) {
 			if (k <= 0 || k > 4) continue;
 			vec2 dd = max(abs(t - (vec2(c) + 0.5)) - 0.5, 0.0);
 			float a = 1.0 - smoothstep(0.0, uNBw, length(dd));
-			W[k - 1] = max(W[k - 1], a);
+			// không ghi W[k - 1] (chỉ số chạy): card điện thoại hay bỏ qua kiểu ghi đó
+			if (k == 1) W.x = max(W.x, a);
+			else if (k == 2) W.y = max(W.y, a);
+			else if (k == 3) W.z = max(W.z, a);
+			else W.w = max(W.w, a);
 		}
 	}
 	float s = W.x + W.y + W.z + W.w;

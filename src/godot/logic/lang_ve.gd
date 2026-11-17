@@ -521,12 +521,12 @@ class TileLayer extends Node2D:
 			y0 = mini(y0, int(p[1]))
 			x1 = maxi(x1, int(p[0]))
 			y1 = maxi(y1, int(p[1]))
-		var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_R8)
+		var im := Image.create(x1 - x0 + 1, y1 - y0 + 1, false, Image.FORMAT_RGBA8)   # RGBA8: định dạng chắc chắn có trên điện thoại
 		for k in gt:
 			var p: PackedStringArray = String(k).split(",")
 			var u = v.LG.ug.get(String(gt[k]))
 			var l: int = LAYER.get(String(u.get("tx", "")), 0) if u != null else 0
-			im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0))
+			im.set_pixel(int(p[0]) - x0, int(p[1]) - y0, Color8(l, 0, 0, 255))
 		v.F.main.set_nen(ImageTexture.create_from_image(im), Vector4(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
 
 	func _nen_at(t: String, a: float, n: float, _e: int, _r: int, _edges: bool) -> void:   # ô nền loại t (bd_cat Yz, ảnh mặt đường .tx)
