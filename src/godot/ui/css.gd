@@ -335,11 +335,28 @@ static func svg_load(img: Image, svg: String, sc: float) -> Error:
 	var w := maxi(1, int(round(vb.x * sc)))
 	var h := maxi(1, int(round(vb.y * sc)))
 	src.convert(Image.FORMAT_RGBA8)
-	src.fix_alpha_edges()   # (bản 264) chỗ trong suốt mang màu mép: thu nhỏ không lẫn màu tối
 	if src.get_width() != w or src.get_height() != h:
+		# (bản 274) thu như các trình xem ảnh (Pillow, trình duyệt): nhân màu với độ trong trước, thu Lanczos, chia lại sau.
+		# Godot thu thẳng không nhân: điểm ảnh mép (nửa trong suốt) bị kéo về màu của chỗ trong suốt -> vòng tối quanh hình
+		src.premultiply_alpha()
 		src.resize(w, h, Image.INTERPOLATE_LANCZOS)
+		_unpremul(src)
 	img.copy_from(src)
 	return OK
+
+static func _unpremul(im: Image) -> void:
+	var d := im.get_data()
+	var n := d.size()
+	var i := 0
+	while i < n:
+		var a := d[i + 3]
+		if a > 0 and a < 255:
+			var f := 255.0 / a
+			d[i] = mini(255, int(d[i] * f + 0.5))
+			d[i + 1] = mini(255, int(d[i + 1] * f + 0.5))
+			d[i + 2] = mini(255, int(d[i + 2] * f + 0.5))
+		i += 4
+	im.set_data(im.get_width(), im.get_height(), false, Image.FORMAT_RGBA8, d)
 
 static func svg_tex(svg: String, w: float, h: float) -> Texture2D:
 	# rasterise at screen resolution so it is sharp
