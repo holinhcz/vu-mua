@@ -6,6 +6,7 @@ extends RefCounted
 
 const KHUNG := Rect2(-12.5, -12.5, 25.0, 31.1111)   # tâm vòng tròn ở (0, 0), r 10, đuôi tới y 14,6
 const GOC := 9.0                                     # px ảnh gốc mỗi đơn vị
+const CAO := 16.0   # (bản 250) cạnh hình trong vòng (đơn vị làng; trước 13,6), vòng r 10
 
 static var _img := {}   # tên -> Image gốc
 static var _tex := {}   # tên@nấc -> ImageTexture
@@ -35,7 +36,7 @@ static func _anh(k: String, ppu: float) -> Texture2D:   # ppu: px màn hình m�
 	_tex[key] = ImageTexture.create_from_image(m)
 	return _tex[key]
 
-static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := false, cao := 13.6) -> void:
+static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := false, cao := CAO) -> void:
 	# at: tâm vòng (toạ độ làng); s: độ to (le x nhún); hinh: hình đặt giữa vòng, cạnh `cao` đơn vị
 	var ppu := s * float(ci.get_canvas_transform().get_scale().x)
 	ci.draw_set_transform(at, 0.0, Vector2(s, s))

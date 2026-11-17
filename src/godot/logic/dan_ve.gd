@@ -70,7 +70,7 @@ func _draw() -> void:
 		var mo: bool = farm.G.motion_off()
 		var bs := (1.0 if mo else 1.0 + 0.08 * sin(tt * 5.0 + foot.x)) * le
 		var at := foot + Vector2(0, -38.0 * r + (0.0 if mo else sin(tt * 3.0) * 1.2))
-		Bong.ve(self, at, bs, farm.ui.item_ic(String(d.bub), 13.6 * bs * farm.main.zoom))
+		Bong.ve(self, at, bs, farm.ui.item_ic(String(d.bub), Bong.CAO * bs * farm.main.zoom))
 	# khách du lịch vui: tim đỏ bay lên trên đầu (J_: r - 40o - (Ke·12 + n·7) % 14)
 	if bool(d.get("heart", false)) and not farm.G.motion_off():
 		var hy := foot.y - 40.0 * r - fposmod(tt * 12.0 + float(d.get("ph", 0.0)) * 7.0, 14.0)

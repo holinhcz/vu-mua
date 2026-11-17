@@ -2663,7 +2663,7 @@ class Bubble extends Node2D:
 		if kind == "lock":   # (bản 242) ổ khóa vẽ chung một lớp (farm.locks), không vẽ từng cái
 			return
 		# X0: khung ảnh dùng chung (bong.gd), xanh = thường, đỏ = sâu / rầy
-		var px := 13.6 * k * zoom
+		var px := Bong.CAO * k * zoom
 		var hinh: Texture2D = null
 		var red := false
 		match kind:

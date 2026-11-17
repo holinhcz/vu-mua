@@ -112,5 +112,5 @@ func _x0(at: Vector2, id: String, red := false) -> void:   # X0: bong bóng dùn
 	var r := 1.0 if farm.G.motion_off() else 1.0 + 0.08 * sin(tt * 5.0 + at.x)
 	var s := r * le
 	_flush()
-	var hinh: Texture2D = Bong.anh(id.substr(1), s * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, 13.6 * s * farm.main.zoom)
+	var hinh: Texture2D = Bong.anh(id.substr(1), s * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, Bong.CAO * s * farm.main.zoom)
 	Bong.ve(self, at, s, hinh, red)

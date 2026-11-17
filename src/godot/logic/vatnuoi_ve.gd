@@ -77,7 +77,7 @@ class BubN extends "res://logic/ve_aa.gd":   # bong bóng X0 của con vật, v�
 	var red := false
 	var le := 1.0
 	func _draw() -> void:
-		var hinh: Texture2D = Bong.anh(id.substr(1), le * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, 13.6 * le * farm.main.zoom)
+		var hinh: Texture2D = Bong.anh(id.substr(1), le * farm.main.zoom) if id.begins_with("@") else farm.ui.item_ic(id, Bong.CAO * le * farm.main.zoom)
 		Bong.ve(self, Vector2.ZERO, le, hinh, red)
 
 func _ga(ph: float, mv: bool) -> void:   # wW
