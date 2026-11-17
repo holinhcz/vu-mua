@@ -1,0 +1,992 @@
+{
+"xoaicat": {
+"file": "xoaicat.png",
+"name": "Xoài cát",
+"sheet": "traicay1",
+"bbox": [
+53,
+41,
+458,
+471
+]
+},
+"quythong": {
+"file": "quythong.png",
+"name": "Quýt hồng",
+"sheet": "traicay1",
+"bbox": [
+61,
+41,
+451,
+471
+]
+},
+"chomchom": {
+"file": "chomchom.png",
+"name": "Chôm chôm",
+"sheet": "traicay1",
+"bbox": [
+41,
+47,
+471,
+465
+]
+},
+"mangcut": {
+"file": "mangcut.png",
+"name": "Măng cụt",
+"sheet": "traicay1",
+"bbox": [
+42,
+41,
+470,
+471
+]
+},
+"buoidaxanh": {
+"file": "buoidaxanh.png",
+"name": "Bưởi da xanh",
+"sheet": "traicay1",
+"bbox": [
+72,
+41,
+440,
+471
+]
+},
+"duabentre": {
+"file": "duabentre.png",
+"name": "Dừa Bến Tre",
+"sheet": "traicay1",
+"bbox": [
+62,
+41,
+450,
+471
+]
+},
+"saurieng": {
+"file": "saurieng.png",
+"name": "Sầu riêng",
+"sheet": "traicay1",
+"bbox": [
+55,
+41,
+456,
+471
+]
+},
+"thanhlong": {
+"file": "thanhlong.png",
+"name": "Thanh long",
+"sheet": "traicay1",
+"bbox": [
+62,
+41,
+450,
+471
+]
+},
+"duahau": {
+"file": "duahau.png",
+"name": "Dưa hấu",
+"sheet": "traicay1",
+"bbox": [
+41,
+57,
+471,
+454
+]
+},
+"nhan": {
+"file": "nhan.png",
+"name": "Nhãn",
+"sheet": "traicay1",
+"bbox": [
+67,
+41,
+444,
+471
+]
+},
+"man": {
+"file": "man.png",
+"name": "Mận",
+"sheet": "traicay1",
+"bbox": [
+76,
+41,
+436,
+471
+]
+},
+"dudu": {
+"file": "dudu.png",
+"name": "Đu đủ",
+"sheet": "traicay1",
+"bbox": [
+98,
+41,
+414,
+471
+]
+},
+"mit": {
+"file": "mit.png",
+"name": "Mít",
+"sheet": "traicay1",
+"bbox": [
+87,
+41,
+425,
+471
+]
+},
+"camsanh": {
+"file": "camsanh.png",
+"name": "Cam sành",
+"sheet": "traicay1",
+"bbox": [
+66,
+41,
+445,
+471
+]
+},
+"chuoi": {
+"file": "chuoi.png",
+"name": "Chuối",
+"sheet": "traicay1",
+"bbox": [
+41,
+74,
+471,
+438
+]
+},
+"dieu": {
+"file": "dieu.png",
+"name": "Điều",
+"sheet": "traicay1",
+"bbox": [
+97,
+41,
+414,
+471
+]
+},
+"me": {
+"file": "me.png",
+"name": "Me",
+"sheet": "traicay1",
+"bbox": [
+47,
+41,
+464,
+471
+]
+},
+"dautay": {
+"file": "dautay.png",
+"name": "Dâu tây",
+"sheet": "traicay1",
+"bbox": [
+69,
+41,
+443,
+471
+]
+},
+"carot": {
+"file": "carot.png",
+"name": "Cà rốt",
+"sheet": "rau1",
+"bbox": [
+41,
+69,
+471,
+443
+]
+},
+"cucaitrang": {
+"file": "cucaitrang.png",
+"name": "Củ cải trắng",
+"sheet": "rau1",
+"bbox": [
+41,
+73,
+471,
+438
+]
+},
+"cuden": {
+"file": "cuden.png",
+"name": "Củ dền",
+"sheet": "rau1",
+"bbox": [
+41,
+57,
+471,
+455
+]
+},
+"khoaitay": {
+"file": "khoaitay.png",
+"name": "Khoai tây",
+"sheet": "rau1",
+"bbox": [
+41,
+91,
+471,
+421
+]
+},
+"hanhtim": {
+"file": "hanhtim.png",
+"name": "Hành tím",
+"sheet": "rau1",
+"bbox": [
+41,
+70,
+471,
+442
+]
+},
+"toi": {
+"file": "toi.png",
+"name": "Tỏi",
+"sheet": "rau1",
+"bbox": [
+41,
+84,
+471,
+427
+]
+},
+"bapcai": {
+"file": "bapcai.png",
+"name": "Bắp cải",
+"sheet": "rau1",
+"bbox": [
+41,
+83,
+471,
+428
+]
+},
+"caithao": {
+"file": "caithao.png",
+"name": "Cải thảo",
+"sheet": "rau1",
+"bbox": [
+66,
+41,
+445,
+471
+]
+},
+"caixanh": {
+"file": "caixanh.png",
+"name": "Cải xanh",
+"sheet": "rau1",
+"bbox": [
+41,
+66,
+471,
+446
+]
+},
+"raumuong": {
+"file": "raumuong.png",
+"name": "Rau muống",
+"sheet": "rau1",
+"bbox": [
+41,
+79,
+471,
+433
+]
+},
+"mongtoi": {
+"file": "mongtoi.png",
+"name": "Mồng tơi",
+"sheet": "rau1",
+"bbox": [
+41,
+69,
+471,
+443
+]
+},
+"rauden": {
+"file": "rauden.png",
+"name": "Rau dền",
+"sheet": "rau1",
+"bbox": [
+41,
+83,
+471,
+428
+]
+},
+"bongdiendien": {
+"file": "bongdiendien.png",
+"name": "Bông điên điển",
+"sheet": "rau1",
+"bbox": [
+41,
+77,
+471,
+435
+]
+},
+"bongsung": {
+"file": "bongsung.png",
+"name": "Bông súng",
+"sheet": "rau1",
+"bbox": [
+41,
+84,
+471,
+428
+]
+},
+"bonbonrau": {
+"file": "bonbonrau.png",
+"name": "Bồn bồn",
+"sheet": "rau1",
+"bbox": [
+41,
+74,
+471,
+437
+]
+},
+"keoneo": {
+"file": "keoneo.png",
+"name": "Kèo nèo",
+"sheet": "rau1",
+"bbox": [
+41,
+93,
+471,
+419
+]
+},
+"raunhut": {
+"file": "raunhut.png",
+"name": "Rau nhút",
+"sheet": "rau1",
+"bbox": [
+41,
+97,
+471,
+414
+]
+},
+"bongbi": {
+"file": "bongbi.png",
+"name": "Bông bí",
+"sheet": "rau1",
+"bbox": [
+41,
+80,
+471,
+431
+]
+},
+"bap": {
+"file": "bap.png",
+"name": "Bắp",
+"sheet": "nongsan1",
+"bbox": [
+41,
+46,
+471,
+465
+]
+},
+"lua": {
+"file": "lua.png",
+"name": "Lúa",
+"sheet": "nongsan1",
+"bbox": [
+41,
+70,
+471,
+441
+]
+},
+"khoailang": {
+"file": "khoailang.png",
+"name": "Khoai lang",
+"sheet": "nongsan1",
+"bbox": [
+41,
+80,
+471,
+432
+]
+},
+"khoaimi": {
+"file": "khoaimi.png",
+"name": "Khoai mì",
+"sheet": "nongsan1",
+"bbox": [
+41,
+84,
+471,
+428
+]
+},
+"khoaimon": {
+"file": "khoaimon.png",
+"name": "Khoai môn",
+"sheet": "nongsan1",
+"bbox": [
+41,
+60,
+471,
+452
+]
+},
+"dauphong": {
+"file": "dauphong.png",
+"name": "Đậu phộng",
+"sheet": "nongsan1",
+"bbox": [
+41,
+93,
+471,
+418
+]
+},
+"dauxanh": {
+"file": "dauxanh.png",
+"name": "Đậu xanh",
+"sheet": "nongsan1",
+"bbox": [
+41,
+117,
+471,
+394
+]
+},
+"daunanh": {
+"file": "daunanh.png",
+"name": "Đậu nành",
+"sheet": "nongsan1",
+"bbox": [
+41,
+101,
+471,
+411
+]
+},
+"daudua": {
+"file": "daudua.png",
+"name": "Đậu đũa",
+"sheet": "nongsan1",
+"bbox": [
+41,
+90,
+471,
+421
+]
+},
+"daubap": {
+"file": "daubap.png",
+"name": "Đậu bắp",
+"sheet": "nongsan1",
+"bbox": [
+41,
+96,
+471,
+416
+]
+},
+"catim": {
+"file": "catim.png",
+"name": "Cà tím",
+"sheet": "nongsan1",
+"bbox": [
+41,
+61,
+471,
+450
+]
+},
+"khoqua": {
+"file": "khoqua.png",
+"name": "Khổ qua",
+"sheet": "nongsan1",
+"bbox": [
+41,
+84,
+471,
+428
+]
+},
+"bido": {
+"file": "bido.png",
+"name": "Bí đỏ",
+"sheet": "nongsan1",
+"bbox": [
+41,
+74,
+471,
+437
+]
+},
+"bidao": {
+"file": "bidao.png",
+"name": "Bí đao",
+"sheet": "nongsan1",
+"bbox": [
+41,
+66,
+471,
+446
+]
+},
+"bau": {
+"file": "bau.png",
+"name": "Bầu",
+"sheet": "nongsan1",
+"bbox": [
+71,
+41,
+440,
+471
+]
+},
+"muop": {
+"file": "muop.png",
+"name": "Mướp",
+"sheet": "nongsan1",
+"bbox": [
+41,
+63,
+471,
+448
+]
+},
+"dualeo": {
+"file": "dualeo.png",
+"name": "Dưa leo",
+"sheet": "nongsan1",
+"bbox": [
+41,
+96,
+471,
+415
+]
+},
+"ot": {
+"file": "ot.png",
+"name": "Ớt",
+"sheet": "nongsan1",
+"bbox": [
+41,
+76,
+471,
+436
+]
+},
+"rauram": {
+"file": "rauram.png",
+"name": "Rau răm",
+"sheet": "rauthom1",
+"bbox": [
+41,
+99,
+471,
+412
+]
+},
+"lae": {
+"file": "lae.png",
+"name": "Lá é",
+"sheet": "rauthom1",
+"bbox": [
+41,
+70,
+471,
+442
+]
+},
+"hungque": {
+"file": "hungque.png",
+"name": "Húng quế",
+"sheet": "rauthom1",
+"bbox": [
+41,
+83,
+471,
+428
+]
+},
+"hunglui": {
+"file": "hunglui.png",
+"name": "Húng lủi",
+"sheet": "rauthom1",
+"bbox": [
+41,
+78,
+471,
+434
+]
+},
+"tiato": {
+"file": "tiato.png",
+"name": "Tía tô",
+"sheet": "rauthom1",
+"bbox": [
+41,
+83,
+471,
+428
+]
+},
+"diepca": {
+"file": "diepca.png",
+"name": "Diếp cá",
+"sheet": "rauthom1",
+"bbox": [
+41,
+68,
+471,
+443
+]
+},
+"ngori": {
+"file": "ngori.png",
+"name": "Ngò rí",
+"sheet": "rauthom1",
+"bbox": [
+41,
+70,
+471,
+441
+]
+},
+"ngogai": {
+"file": "ngogai.png",
+"name": "Ngò gai",
+"sheet": "rauthom1",
+"bbox": [
+41,
+76,
+471,
+436
+]
+},
+"rauom": {
+"file": "rauom.png",
+"name": "Rau om",
+"sheet": "rauthom1",
+"bbox": [
+41,
+64,
+471,
+447
+]
+},
+"hanhla": {
+"file": "hanhla.png",
+"name": "Hành lá",
+"sheet": "rauthom1",
+"bbox": [
+41,
+69,
+471,
+443
+]
+},
+"he": {
+"file": "he.png",
+"name": "Hẹ",
+"sheet": "rauthom1",
+"bbox": [
+41,
+73,
+471,
+438
+]
+},
+"sa": {
+"file": "sa.png",
+"name": "Sả",
+"sheet": "rauthom1",
+"bbox": [
+41,
+72,
+471,
+439
+]
+},
+"dauque": {
+"file": "dauque.png",
+"name": "Đậu que",
+"sheet": "rauthom1",
+"bbox": [
+41,
+102,
+471,
+409
+]
+},
+"daurong": {
+"file": "daurong.png",
+"name": "Đậu rồng",
+"sheet": "rauthom1",
+"bbox": [
+41,
+109,
+471,
+403
+]
+},
+"dauden": {
+"file": "dauden.png",
+"name": "Đậu đen",
+"sheet": "rauthom1",
+"bbox": [
+41,
+116,
+471,
+396
+]
+},
+"daudo": {
+"file": "daudo.png",
+"name": "Đậu đỏ",
+"sheet": "rauthom1",
+"bbox": [
+41,
+116,
+471,
+395
+]
+},
+"gung": {
+"file": "gung.png",
+"name": "Gừng",
+"sheet": "rauthom1",
+"bbox": [
+41,
+107,
+471,
+405
+]
+},
+"nghe": {
+"file": "nghe.png",
+"name": "Nghệ",
+"sheet": "rauthom1",
+"bbox": [
+41,
+124,
+471,
+387
+]
+},
+"oi": {
+"file": "oi.png",
+"name": "Ổi",
+"sheet": "traicay2",
+"bbox": [
+41,
+41,
+471,
+471
+]
+},
+"mangcauxiem": {
+"file": "mangcauxiem.png",
+"name": "Mãng cầu xiêm",
+"sheet": "traicay2",
+"bbox": [
+65,
+41,
+446,
+471
+]
+},
+"mangcauta": {
+"file": "mangcauta.png",
+"name": "Mãng cầu ta",
+"sheet": "traicay2",
+"bbox": [
+56,
+41,
+456,
+471
+]
+},
+"sapoche": {
+"file": "sapoche.png",
+"name": "Sapôchê",
+"sheet": "traicay2",
+"bbox": [
+41,
+49,
+471,
+463
+]
+},
+"vusua": {
+"file": "vusua.png",
+"name": "Vú sữa",
+"sheet": "traicay2",
+"bbox": [
+41,
+47,
+471,
+465
+]
+},
+"coc": {
+"file": "coc.png",
+"name": "Cóc",
+"sheet": "traicay2",
+"bbox": [
+41,
+46,
+471,
+466
+]
+},
+"khe": {
+"file": "khe.png",
+"name": "Khế",
+"sheet": "traicay2",
+"bbox": [
+41,
+64,
+471,
+447
+]
+},
+"sori": {
+"file": "sori.png",
+"name": "Sơ ri",
+"sheet": "traicay2",
+"bbox": [
+41,
+47,
+471,
+464
+]
+},
+"taota": {
+"file": "taota.png",
+"name": "Táo ta",
+"sheet": "traicay2",
+"bbox": [
+41,
+56,
+471,
+455
+]
+},
+"dauda": {
+"file": "dauda.png",
+"name": "Dâu da",
+"sheet": "traicay2",
+"bbox": [
+73,
+41,
+439,
+471
+]
+},
+"bonbon": {
+"file": "bonbon.png",
+"name": "Bòn bon",
+"sheet": "traicay2",
+"bbox": [
+41,
+54,
+471,
+458
+]
+},
+"chumruot": {
+"file": "chumruot.png",
+"name": "Chùm ruột",
+"sheet": "traicay2",
+"bbox": [
+41,
+74,
+471,
+437
+]
+},
+"cana": {
+"file": "cana.png",
+"name": "Cà na",
+"sheet": "traicay2",
+"bbox": [
+41,
+56,
+471,
+456
+]
+},
+"binhbat": {
+"file": "binhbat.png",
+"name": "Bình bát",
+"sheet": "traicay2",
+"bbox": [
+49,
+41,
+462,
+471
+]
+},
+"omoi": {
+"file": "omoi.png",
+"name": "Ô môi",
+"sheet": "traicay2",
+"bbox": [
+41,
+89,
+471,
+423
+]
+},
+"lekima": {
+"file": "lekima.png",
+"name": "Lê-ki-ma",
+"sheet": "traicay2",
+"bbox": [
+41,
+66,
+471,
+445
+]
+},
+"khom": {
+"file": "khom.png",
+"name": "Khóm",
+"sheet": "traicay2",
+"bbox": [
+91,
+41,
+420,
+471
+]
+},
+"chanhday": {
+"file": "chanhday.png",
+"name": "Chanh dây",
+"sheet": "traicay2",
+"bbox": [
+41,
+69,
+471,
+443
+]
+}
+}
