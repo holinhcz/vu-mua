@@ -323,35 +323,23 @@ func _op(s: Sprite2D) -> bool:   # khung làng đã có (n/op): dùng chung đú
 		return false
 	# ban đêm: ảnh ĐÊM của chính khung đó (info.opn: tên ảnh đêm + chỗ lệch so với ảnh ngày), vẽ không qua công thức đêm
 	var nn = F.main.info.get("opn", {}).get(nm) if F.main.night_cur == 1 else null
-	var far := false   # (b239) atlas for village pictures off (repacking froze the phone)
-	var tnm := String(nn[0]) if nn != null else nm
-	var fr = F.main.far_op(tnm) if far else null   # (b238) zoomed out: small copy in the scenery atlas, so it batches
-	var tk := ("opn:" if nn != null else "op:") + nm + ("|f" if fr != null else "")
+	var tk := ("opn:" if nn != null else "op:") + nm
 	if s.get_meta("tk", "") == tk and s.texture != null:
 		return true
-	var tx: Texture2D = F.main.op_pic(tnm)
+	var tx: Texture2D = F.main.op_pic(String(nn[0]) if nn != null else nm)
 	if tx == null:
 		return true
 	var bx := [float(a[0]), float(a[1]), float(a[2]), float(a[3])]
 	if nn != null:
 		bx = [float(a[0]) + float(nn[1]), float(a[1]) + float(nn[2]), float(nn[3]), float(nn[4])]
-	var sc: float = float(bx[2]) / (float(fr.size.x) if fr != null else float(tx.get_width()))
+	var sc := float(bx[2]) / float(tx.get_width())
 	var ox := float(bx[0])
 	if s.flip_h:
 		ox = -(ox + float(bx[2]))
 	var off := Vector2(ox, float(bx[1]))
 	if s.has_meta("fd"):
 		off += s.get_meta("fd")
-	if fr != null:
-		s.texture = F.main.sc_atl
-		s.region_enabled = true
-		s.region_rect = fr
-		s.set_meta("ft", tx)
-	else:
-		s.texture = tx
-		s.region_enabled = false
-		if s.has_meta("ft"):
-			s.remove_meta("ft")
+	s.texture = tx
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
 	s.material = F.main.night_raw if nn != null else F.main.night_mat
@@ -386,9 +374,6 @@ func _tex(s: Sprite2D, scr: float) -> void:
 	if s.has_meta("fd"):
 		off += s.get_meta("fd")
 	s.texture = tx
-	s.region_enabled = false
-	if s.has_meta("ft"):
-		s.remove_meta("ft")
 	s.scale = Vector2(sc, sc)
 	s.offset = off / sc
 	s.material = F.main.night_raw if night else F.main.night_mat

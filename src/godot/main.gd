@@ -1725,11 +1725,8 @@ func _sc_item_show_all() -> void:   # mùa / ngày đêm đổi: mỗi loại l�
 			_sc_v_set(jj, box)
 			var sk := Vector2(float(box[2]) / tex.get_width(), float(box[3]) / tex.get_height())
 			sc_full[jj] = [tex, sk]
-			var ri = sc_arect.get("i:" + String(sc_item[jj].b) + "/" + want)
 			if e.has("ar") and want == String(e.ar[0]):
 				sc_arect[jj] = e.ar[1]   # đúng khung đã xếp vào atlas xa
-			elif ri != null:
-				sc_arect[jj] = ri
 			else:
 				sc_arect.erase(jj)   # khung khác: hình đủ (có mipmap) ở mọi mức zoom
 			var mat: ShaderMaterial = night_raw if ntx else night_mat
@@ -1765,7 +1762,6 @@ func _sc_item_src(j: int, k: String, night: bool, cb: Callable) -> void:   # cb(
 			return
 		var tex := ImageTexture.create_from_image(img)
 		_mask_keep(tex, img)
-		_sc_keep_half("i:" + key, img)   # (b238) zoomed out: this frame from the atlas too
 		img.generate_mipmaps()
 		tex.set_image(img)
 		sc_itex[key] = [tex, box, ntx]
@@ -1786,7 +1782,7 @@ func _sc_item_src(j: int, k: String, night: bool, cb: Callable) -> void:   # cb(
 # call per picture (zoom 0.22: 6-24 fps). So every picture is also kept at half size, and once all are in they are
 # packed into ONE texture in memory (the files stay separate). Below 2.4 screen px per map unit (half size is still
 # sharp there) every sprite and verge row draws from that atlas and batches; closer in, the full pictures come back.
-var sc_half := {}    # picture -> half-size Image (kept: the atlas is packed again when more arrive)
+var sc_half := {}    # picture -> half-size Image, until packed
 var sc_full := {}    # picture j -> [full texture, scale]
 var sc_rall := {}    # picture j -> every reflection sprite of it
 var sc_atl: Texture2D = null
@@ -1794,203 +1790,16 @@ var sc_arect := {}
 var sc_far := -1
 func _sc_keep_half(key, img: Image) -> void:
 	var h := img.duplicate()
-	if h.has_mipmaps():
-		h.clear_mipmaps()
 	h.resize(maxi(1, img.get_width() / 2), maxi(1, img.get_height() / 2), Image.INTERPOLATE_LANCZOS)   # sharp half (Link 11-13 "lớp mờ nào nữa")
 	h.convert(Image.FORMAT_RGBA8)
 	sc_half[key] = h
-	if sc_half_t0 == 0:
-		sc_half_t0 = Time.get_ticks_msec()
-	if key is int and sc_item.has(key):
-		sc_half_on[key] = String(sc_item[key].get("k", ""))
-	atl_dirty = true
-func _sc_pack() -> void:   # every scenery picture is in: pack now (no wait)
-	atl_all = true
-# (b238, Link 11-17 "OK, làm đi") the atlas no longer waits for EVERY picture (one missing file kept ~3100 verge/scenery
-# draw calls for good): it packs what is in 6 s after the first picture, then again (at most every 5 s) when more arrive
-# while zoomed out. The village pictures (lang_ve: cây hoang, cây trái, nhà; files n/op) drawn while zoomed out go in the
-# same atlas as small copies (>= 2.6 px per map unit, more than the screen shows below zoom 2.4), so all of it batches.
-# Files stay one per object; up close the original 9px pictures are drawn.
-var sc_half_on := {}  # wild tree j -> frame its half picture is
-var sc_half_t0 := 0
-var atl_all := false
-var atl_dirty := false
-var atl_t := -100000
-var atl_n := 0
-var op_q := {}        # op picture -> small Image (made when the picture is decoded)
-var far_need := {}    # op pictures lang_ve draws while zoomed out
-var far_rect := {}    # op picture -> Rect2 in sc_atl
-var far_t := 0        # msec of the last new need
-var far_gen := 0
-func _op_small(nm: String, img: Image) -> void:
-	var w_u := 0.0
-	var b = info.get("opb", {}).get(nm)
-	if b is Array and b.size() >= 4:
-		w_u = float(b[2])
-	else:
-		if opn_day.is_empty():
-			for k in info.get("opn", {}):
-				opn_day[info["opn"][k][0]] = k
-		var dn = opn_day.get(nm)
-		if dn != null:
-			var nn = info.get("opn", {}).get(dn)
-			if nn is Array and nn.size() >= 5:
-				w_u = float(nn[3])
-	if w_u <= 0.0 or img.get_width() < 2:
+func _sc_pack() -> void:
+	if sc_atl != null or sc_half.is_empty():
 		return
-	var f := minf(1.0, 2.6 * w_u / float(img.get_width()))
-	var q := img.duplicate()
-	if q.has_mipmaps():
-		q.clear_mipmaps()
-	if q.get_format() != Image.FORMAT_RGBA8:
-		q.convert(Image.FORMAT_RGBA8)
-	if f < 0.95:
-		q.resize(maxi(1, int(ceil(q.get_width() * f))), maxi(1, int(ceil(q.get_height() * f))), Image.INTERPOLATE_LANCZOS)
-	op_q[nm] = q
-func far_op(nm: String):   # lang_ve, zoomed out: rect of this picture in sc_atl, or null (not packed yet)
-	return null   # (b239) off: asking for new village pictures repacked the atlas while zooming (phone froze)
-	var r = far_rect.get(nm)
-	if r == null and not far_need.has(nm):
-		far_need[nm] = true
-		far_t = Time.get_ticks_msec()
-		atl_dirty = true
-	return r
-var _bt := -1
-var _bt_t := 0
-func _bt_report() -> void:   # ?bt (test): obj_root in draw order, how many texture/material switches (= draw calls) and by whom
-	var vr := Rect2(-get_viewport().canvas_transform.origin / zoom, get_viewport().get_visible_rect().size / zoom)
-	var last := ""
-	var n := 0
-	var by := {}
-	for c in obj_root.get_children():
-		if not (c is CanvasItem) or not c.visible:
-			continue
-		var key := ""
-		var who := ""
-		if c is Sprite2D:
-			if c.texture == null or not vr.intersects(c.get_global_transform() * c.get_rect()):
-				continue
-			key = str(c.texture.get_rid().get_id()) + "/" + str(c.material.get_rid().get_id() if c.material != null else 0)
-			who = "spr:" + (str(c.get_meta("b", "")) if c.has_meta("b") else ("sc" if c.texture == sc_atl else c.texture.resource_path.get_file() if c.texture.resource_path != "" else "tex" + str(c.texture.get_width()) + "x" + str(c.texture.get_height()))) + ("|atl" if c.texture == sc_atl else "")
-		elif c is VergeRow and c.atl != null:
-			key = str(c.atl.get_rid().get_id()) + "/" + str(c.material.get_rid().get_id() if c.material != null else 0)
-			who = "verge|atl"
-		else:
-			key = "draw:" + str(c.get_instance_id())
-			var sn: String = c.get_script().resource_path.get_file() if c.get_script() != null else c.get_class()
-			who = "draw:" + sn + ":" + String(c.name).rstrip("0123456789@").left(14) + "/m" + str(c.material.get_rid().get_id() % 1000 if c.material != null else 0)
-		if key != last:
-			n += 1
-			by[who] = by.get(who, 0) + 1
-			last = key
-	var ks := by.keys()
-	ks.sort_custom(func(a, b): return by[a] > by[b])
-	var out := "BT far=" + str(sc_far) + " night=" + str(night_cur) + " switches=" + str(n) + " :"
-	for i in mini(20, ks.size()):
-		out += " " + str(ks[i]) + "=" + str(by[ks[i]])
-	print(out)
-var _bt_q := []
-var _bt_cur = null
-var _bt_f := 0
-var _bt_base := 0
-var _bt_out := ""
-func _bt_plan() -> void:   # hide one group at a time, read the real draw calls
-	_bt_q = ["base"]
-	for c in get_children():
-		if c is CanvasItem and c.visible and c != obj_root:
-			_bt_q.append(c)
-	for c in get_tree().root.get_children():
-		if c != self and c is CanvasItem and c.visible:
-			_bt_q.append(c)
-	for c in get_tree().root.find_children("*", "CanvasLayer", true, false):
-		if c.visible:
-			_bt_q.append(c)
-	_bt_q += ["o:atl", "o:spr", "o:verge", "o:draw", "base"]
-	_bt_out = "BTX"
-	_bt_base = 0
-	_bt_cur = null
-func _bt_set(g, on: bool) -> void:
-	if g is String:
-		if g == "base":
-			return
-		for c in obj_root.get_children():
-			if not (c is CanvasItem):
-				continue
-			var cat := "o:draw"
-			if c is Sprite2D:
-				cat = "o:atl" if c.texture == sc_atl else "o:spr"
-			elif c is VergeRow:
-				cat = "o:verge"
-			if cat == g:
-				if on:
-					if c.has_meta("btv"):
-						c.visible = true
-						c.remove_meta("btv")
-				elif c.visible:
-					c.visible = false
-					c.set_meta("btv", true)
-	elif is_instance_valid(g):
-		g.visible = on
-func _bt_tick() -> void:
-	_bt_f += 1
-	if _bt_cur == null:
-		_bt_cur = _bt_q[0]
-		_bt_set(_bt_cur, false)
-		_bt_f = 0
-		return
-	if _bt_f < 4:
-		return
-	var dc := int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
-	if _bt_cur is String and _bt_cur == "base":
-		if _bt_base == 0:
-			_bt_base = dc
-		_bt_out += " base=" + str(dc)
-	else:
-		var nm: String = _bt_cur if _bt_cur is String else ((_do2_name(_bt_cur) if _bt_cur is CanvasItem else "CL:" + String(_bt_cur.name) + "/" + str(_bt_cur.layer) + "/" + str(_bt_cur.get_child_count())) if is_instance_valid(_bt_cur) else "?")
-		_bt_out += " | " + nm + "=" + str(_bt_base - dc)
-	_bt_set(_bt_cur, true)
-	_bt_q.pop_front()
-	_bt_cur = null
-	if _bt_q.is_empty():
-		print(_bt_out)
-func _far_step() -> void:
-	if _bt < 0:
-		_bt = 1 if _tflag("__bt") else 0
-	if _bt == 1 and Time.get_ticks_msec() - _bt_t > 25000 and _bt_q.is_empty():
-		_bt_t = Time.get_ticks_msec()
-		_bt_report()
-		_bt_plan()
-	if _bt == 1 and not _bt_q.is_empty():
-		_bt_tick()
-	if not atl_dirty or sc_half.is_empty():
-		return
-	var now := Time.get_ticks_msec()
-	# (b239, Link 11-17 "zoom lên là đứng máy") packing a 4096x7000 atlas stalls the phone: at most TWICE, 6 s after the
-	# first picture and once when all pictures are in; never again while zooming
-	if atl_n >= 2:
-		return
-	if sc_atl == null:
-		if not atl_all and now - sc_half_t0 < 6000:
-			return
-	elif not atl_all:
-		return
-	atl_n += 1
-	atl_t = now
-	atl_dirty = false
-	_atl_build()
-func _atl_build() -> void:
 	if _tflag("__noatl"):   # test switch: the headless test GPU runs out of memory on the 4096x6600 atlas
 		return
-	var src := {}
-	for k in sc_half:
-		src[k] = sc_half[k]
-	var opk := []
-	for nm in far_need:
-		if op_q.has(nm):
-			src["op:" + nm] = op_q[nm]
-			opk.append(nm)
-	var ks: Array = src.keys()
-	ks.sort_custom(func(a, b): return src[a].get_height() > src[b].get_height())
+	var ks: Array = sc_half.keys()
+	ks.sort_custom(func(a, b): return sc_half[a].get_height() > sc_half[b].get_height())
 	var W := 4096
 	var G := 8
 	var at := {}
@@ -1999,13 +1808,9 @@ func _atl_build() -> void:
 		var x := G; var y := G; var rowh := 0
 		at.clear()
 		for k in ks:
-			var im: Image = src[k]
-			if im.get_width() + 2 * G > W:
-				continue
+			var im: Image = sc_half[k]
 			if x + im.get_width() + G > W:
 				x = G; y += rowh + G; rowh = 0
-			if y + im.get_height() + G > 16384:
-				continue
 			at[k] = Vector2i(x, y)
 			x += im.get_width() + G
 			rowh = maxi(rowh, im.get_height())
@@ -2014,35 +1819,19 @@ func _atl_build() -> void:
 			break
 		W = 8192
 	var big := Image.create(W, H, false, Image.FORMAT_RGBA8)
-	sc_arect.clear()   # the same dictionary the verge rows hold
-	far_rect.clear()
-	for k in at:
-		var im: Image = src[k]
+	for k in ks:
+		var im: Image = sc_half[k]
 		big.blit_rect(im, Rect2i(0, 0, im.get_width(), im.get_height()), at[k])
-		var r := Rect2(Vector2(at[k]), Vector2(im.get_width(), im.get_height()))
-		if k is String and k.begins_with("op:"):
-			far_rect[k.substr(3)] = r
-		else:
-			sc_arect[k] = r
+		sc_arect[k] = Rect2(Vector2(at[k]), Vector2(im.get_width(), im.get_height()))
 	big.generate_mipmaps()
-	if sc_atl != null:
-		tex_mb -= sc_atl.get_width() * sc_atl.get_height() * 4 * 1.33 / 1048576.0
 	sc_atl = ImageTexture.create_from_image(big)
 	tex_mb += W * H * 4 * 1.33 / 1048576.0
-	print("atlas: ", sc_arect.size(), " scenery + ", far_rect.size(), " village pictures, ", W, "x", H)
+	print("scenery atlas: ", ks.size(), " pictures, ", W, "x", H)
 	for j in sc_item:   # khung nào của cây cỏ hoang đang nằm trong atlas
-		var e: Dictionary = sc_item[j]
 		if sc_arect.has(j):
-			e.ar = [String(sc_half_on.get(j, e.get("on", ""))), sc_arect[j]]
-			if String(e.get("on", "")) != String(e.ar[0]):
-				var ri = sc_arect.get("i:" + String(e.b) + "/" + String(e.get("on", "")))
-				if ri != null:
-					sc_arect[j] = ri   # khung đêm / mùa cũng đã vào atlas
-				else:
-					sc_arect.erase(j)   # đang hiện khung khác: hình đủ
-	far_gen += 1
+			sc_item[j].ar = [String(sc_item[j].get("on", "")), sc_arect[j]]
+	sc_half.clear()
 	sc_far = -1
-	_sc_mode()
 func _sc_mode() -> void:
 	if sc_atl == null:
 		return
@@ -2055,8 +1844,7 @@ func _sc_mode() -> void:
 	sc_far = far
 	for j in sc_full.keys():
 		if night_cur == 1 and sc_ntex.get(j) != null:
-			_sc_night_set(j)   # (b54) drawn from its own night picture (b238: zoomed out, its half in the atlas)
-			continue
+			continue   # (b54) drawn from its own night picture
 		var full: Array = sc_full[j]
 		var r = sc_arect.get(j)
 		var v: Array = sc_data["v"][j]
@@ -2091,7 +1879,6 @@ func _sc_night_apply() -> void:
 					var img := Image.new()
 					if img.load_webp_from_buffer(b) != OK:
 						return
-					_sc_keep_half("n:" + str(j), img)   # (b238) zoomed out at night: from the atlas too
 					img.generate_mipmaps()
 					sc_ntex[j] = ImageTexture.create_from_image(img)
 					if sc_full.has(j) and _amask.has(sc_full[j][0].get_rid()):   # đêm cùng dáng ngày: dùng chung mặt nạ chạm
@@ -2116,12 +1903,12 @@ func _sc_night_set(j) -> void:
 		return
 	var full: Array = sc_full[j]
 	var v: Array = sc_data["v"][j]
-	var r = sc_arect.get("n:" + str(j)) if sc_far == 1 else null
-	var k: Vector2 = Vector2(v[2] / r.size.x, v[3] / r.size.y) if r != null else full[1]
 	for sp in sc_spr[j]:
-		_sc_set(sp, r != null, t, r, k)
+		sp.texture = t
+		sp.region_enabled = false
+		sp.scale = full[1]
 		if sp.has_meta("sw"):
-			sp.offset = Vector2(v[0] / k.x, v[1] / k.y)
+			sp.offset = Vector2(v[0] / full[1].x, v[1] / full[1].y)
 		sp.material = night_raw
 func _sc_set(sp: Sprite2D, use: bool, full: Texture2D, r, k: Vector2) -> void:
 	if use:
@@ -2812,7 +2599,6 @@ func _on_http(res, code, _headers, body: PackedByteArray, h: HTTPRequest) -> voi
 # ---------------------------------------------------------------- per frame
 func _process(_dt: float) -> void:
 	frame_no += 1
-	_far_step()
 	var tq := Time.get_ticks_usec()
 	var tq0 := tq
 	if jsw != null and frame_no % 10 == 0:
@@ -3903,9 +3689,6 @@ func spr_hit(sp: Sprite2D, w: Vector2) -> int:   # 1 trúng, 0 trượt, -1 khô
 	var ts := sp.texture.get_size()
 	var rr := sp.region_rect if sp.region_enabled else Rect2(Vector2.ZERO, ts)
 	var a := tex_alpha(sp.texture, rr.position.x + uv.x * rr.size.x, rr.position.y + uv.y * rr.size.y)
-	if a < 0 and sp.region_enabled and sp.has_meta("ft"):   # xa: hình làng lấy từ atlas, mặt nạ của hình gốc
-		var ft2: Texture2D = sp.get_meta("ft")
-		a = tex_alpha(ft2, uv.x * ft2.get_width(), uv.y * ft2.get_height())
 	if a < 0 and sp.has_meta("j") and sc_full.has(int(sp.get_meta("j"))):   # xa: hình lấy từ atlas thu nhỏ, mặt nạ của hình gốc
 		var ft: Texture2D = sc_full[int(sp.get_meta("j"))][0]
 		a = tex_alpha(ft, uv.x * ft.get_width(), uv.y * ft.get_height())
