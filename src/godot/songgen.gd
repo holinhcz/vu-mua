@@ -297,6 +297,11 @@ static func band(top: PackedVector2Array, bot: PackedVector2Array) -> Array:
 		out.append(PackedVector2Array([top[j], top[j + 1], bot[j + 1], bot[j]]))
 	return out
 
+# band() quads with one colour on the top edge and another on the bottom edge (bản 233: viền cỏ ướt nhạt dần ra cỏ)
+func gband(PS: Array, cA: Color, cB: Color, mode: int = M_PLAIN, amt: float = 1.0) -> void:
+	var CC := PackedColorArray([cA, cA, cB, cB])
+	for P in PS: ops.append([0, CC, P, mode, amt, 0.0])
+
 func sides(f: Callable) -> void:
 	for a in 2:
 		for s in 2:
@@ -376,14 +381,14 @@ func build() -> void:
 		for o in ops: o[3] = int(o[3]) + 32   # bank.gdshader: flood edge pictures, off the roads
 		_stakes()
 		return
-	# the grass lip along both banks, see-through, with the grass texture
-	var LP := []
+	# the grass lip along both banks, see-through, with the grass texture; (bản 233) đậm ở sát bờ, nhạt dần ra ngoài tới hết
+	# (loang vào cỏ như mép nền đất, không còn mép ngoài rõ), dải rộng thêm một chút cho vệt loang
 	sides(func(a: int, nb: bool, i: int):
-		LP.append_array(strip(a, nb, func(x): return EB(a, x, nb) + 0.02,
-			func(x): return EB(a, x, nb) + 0.02 + (0.08 + 0.26 * vn(x * 0.7, i + 1)) * BPf(a, x, nb),
-			func(x): return on(a, x, nb))))
-	polys(LP, col("lip", 0.2))
-	polys(LP, col("lip", 0.6), M_CO, 1.0)
+		var LP: Array = strip(a, nb, func(x): return EB(a, x, nb) + 0.02,
+			func(x): return EB(a, x, nb) + 0.02 + (0.16 + 0.30 * vn(x * 0.7, i + 1)) * BPf(a, x, nb),
+			func(x): return on(a, x, nb))
+		grads(LP, nb, col("lip", 0.2), col("lip", 0.0))
+		grads(LP, nb, col("lip", 0.6), col("lip", 0.0), M_CO, 1.0))
 	_mud()
 	_tips()
 	_faces()

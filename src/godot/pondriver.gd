@@ -71,7 +71,7 @@ func build_ponds(loops: Array) -> void:
 			dd[j] = d0
 			tg[j] = Vector2(d0.y, -d0.x)
 		jobs.append({"p": p, "n": nv, "k": kk, "wd": wd, "xg": xg, "fr": fr2, "d": dd, "t": tg, "i": li})
-	# the grass lip all round, see-through, with the grass texture (river: build())
+	# the grass lip all round, see-through, with the grass texture, fading out into the grass (river: build())
 	var LP := []
 	for J in jobs:
 		_use(J)
@@ -81,12 +81,12 @@ func build_ponds(loops: Array) -> void:
 		for run in _runs(ok):
 			var A := PackedVector2Array(); var B := PackedVector2Array()
 			for j in run:
-				var w := (0.08 + 0.26 * vn(XG[j] * 0.7, J["i"] + 1)) * GU
+				var w := (0.16 + 0.30 * vn(XG[j] * 0.7, J["i"] + 1)) * GU
 				A.append(P[j] - N[j] * 0.7)
 				B.append(P[j] - N[j] * (0.7 + w))
 			LP.append_array(band(A, B))
-	polys(LP, col("lip", 0.2))
-	polys(LP, col("lip", 0.6), M_CO, 1.0)
+	gband(LP, col("lip", 0.2), col("lip", 0.0))   # (bản 233) đậm sát bờ, nhạt dần ra cỏ
+	gband(LP, col("lip", 0.6), col("lip", 0.0), M_CO, 1.0)
 	for J in jobs:
 		_use(J)
 		var kk: PackedFloat32Array = J["k"]
