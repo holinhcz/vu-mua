@@ -22,6 +22,7 @@ static func _svg(id: String) -> String:   # hình món của bản web (ui/svg/k
 	return FileAccess.get_file_as_string("res://ui/svg/kh/" + id + ".svg")
 
 func _put(k: String, svg: String, big := true) -> void:   # hình món: to (40 trong nút 56)
+	U.rm_in0["heart"] = HEART   # (bản 259) tim vuốt ve cùng cỡ sao / giọt nước
 	if _ic.get(k, "?") != svg:
 		_ic[k] = svg
 		U._rm_ic(k, svg, big)

@@ -1325,7 +1325,7 @@ func _rm_ic(k: String, svg: String, big := false) -> void:   # hình trong của
 		b.set_meta("r0", b.r)
 	var r0: Rect2 = b.get_meta("r0")
 	# ảnh sao / giọt nước (bản 257) to hơn hình gốc một chút (28 -> 38)
-	var r1 := r0.grow(6.0) if big else (r0.grow(5.0) if svg != "" and (svg == rm_in0.get(".star") or svg == rm_in0.get(".water")) else r0)
+	var r1 := r0.grow(6.0) if big else (r0.grow(5.0) if svg != "" and (svg == rm_in0.get(".star") or svg == rm_in0.get(".water") or svg == rm_in0.get("heart")) else r0)
 	if b.r != r1:
 		b.place(r1)
 		if not b.pics.is_empty():
