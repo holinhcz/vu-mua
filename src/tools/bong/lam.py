@@ -27,6 +27,35 @@ def raycon(c):   # một con rầy: elip 1,6 x 1,1; khung -2..2 x -1,5..1,5
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -1.5 4 3" width="36" height="27"><ellipse rx="1.6" ry="1.1" fill="{c}"/></svg>'
 def hinh(body):   # ô hình 13,6 x 13,6 đơn vị (-6,8..6,8) -> 128 px
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6.8 -6.8 13.6 13.6" width="128" height="128">{body}</svg>'
+import math
+def _spts(R,r,cy):
+    o=[]
+    for i in range(10):
+        rr=R if i%2==0 else r; a=-math.pi/2+i*math.pi/5
+        o.append((rr*math.cos(a), rr*math.sin(a)+cy))
+    return o
+def _round(P,k):
+    n=len(P); d=''
+    for i in range(n):
+        p0=P[i-1]; p1=P[i]; p2=P[(i+1)%n]
+        a=(p1[0]+(p0[0]-p1[0])*k, p1[1]+(p0[1]-p1[1])*k); b=(p1[0]+(p2[0]-p1[0])*k, p1[1]+(p2[1]-p1[1])*k)
+        d+=('M' if i==0 else 'L')+f'{a[0]:.2f} {a[1]:.2f} Q{p1[0]:.2f} {p1[1]:.2f} {b[0]:.2f} {b[1]:.2f} '
+    return d+'Z'
+def sao(c0,c1,c2,vien,bong,trang=False,R=6.4):
+    # ngôi sao (bản 258-260): cánh bo tròn, chuyển màu c0 (giữa trên) -> c1 -> c2 (mép), viền mảnh, bóng đáy, mặt bóng;
+    # trang: thêm viền trắng dày ngoài cùng (sao đặt trên nền màu)
+    k=R/6.4
+    D=_round(_spts(R,3.0*k,-0.3),0.22); inner=_round(_spts(4.3*k,2.0*k,-0.1),0.25)
+    w=f'<path d="{D}" fill="#fff" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/>' if trang else ''
+    return hinh(f'<defs><radialGradient id="g" cx="0" cy="-2.5" r="8.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="{c0}"/><stop offset=".5" stop-color="{c1}"/><stop offset="1" stop-color="{c2}"/></radialGradient>'
+        '<linearGradient id="h" x1="0" y1="-5" x2="0" y2="1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fffbe0" stop-opacity=".95"/><stop offset="1" stop-color="#fffbe0" stop-opacity="0"/></linearGradient></defs>'
+        + w + f'<path d="{D}" fill="{bong}" transform="translate(0 .3)"/><path d="{D}" fill="url(#g)" stroke="{vien}" stroke-width=".22" stroke-linejoin="round"/><path d="{inner}" fill="url(#h)" opacity=".55"/>')
+SAO={
+ 'sao': sao('#ffe25a','#ffc000','#f29b00','#c97f00','#b87200'),            # vàng đậm (bản 260)
+ 'sao_vien': sao('#ffe25a','#ffc000','#f29b00','#c97f00','#b87200',True,5.6),
+ 'sao_xam': sao('#f4ecd6','#e6dabb','#d6c69e','#bfae84','#b3a27a'),       # sao chưa đạt
+ 'sao_xanh': sao('#bfe2ff','#4aa0f0','#2a78d0','#1f5fae','#1a52a0',True,5.6),
+}
 F={
  'vong': vong(),
  'hat': hat(),
@@ -37,7 +66,7 @@ F={
  'xanh': khung('#2f86d6'),
  'do': khung('#d9443a'),
  'nuoc': hinh('<g transform="scale(.82)"><path d="M0 -6 C2.2 -2.6 4.6 0 4.6 2.4 C4.6 5 2.5 6.4 0 6.4 C-2.5 6.4 -4.6 5 -4.6 2.4 C-4.6 0 -2.2 -2.6 0 -6 Z" fill="#3a8fd6" stroke="#2a6fb0" stroke-width=".5"/><path d="M-2.4 2 C-2.4 3.6 -1.4 4.6 -0.2 4.8" fill="none" stroke="#ffffff" stroke-width=".9" stroke-linecap="round" opacity=".85"/></g>'),   # bản 257: thu 82% (trong bong bóng hơi to)
- 'sao': hinh('<defs><radialGradient id="g" cx="0" cy="-2.5" r="8.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff8c0"/><stop offset=".5" stop-color="#ffdd1f"/><stop offset="1" stop-color="#ffbb00"/></radialGradient><linearGradient id="h" x1="0" y1="-5" x2="0" y2="1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fffbe0" stop-opacity=".95"/><stop offset="1" stop-color="#fffbe0" stop-opacity="0"/></linearGradient></defs><path d="M-0.39 -5.83 Q0.00 -6.70 0.39 -5.83 L1.38 -3.60 Q1.76 -2.73 2.71 -2.63 L5.14 -2.38 Q6.09 -2.28 5.38 -1.64 L3.56 -0.01 Q2.85 0.63 3.05 1.56 L3.56 3.94 Q3.76 4.88 2.93 4.40 L0.83 3.18 Q0.00 2.70 -0.83 3.18 L-2.93 4.40 Q-3.76 4.88 -3.56 3.94 L-3.05 1.56 Q-2.85 0.63 -3.56 -0.01 L-5.38 -1.64 Q-6.09 -2.28 -5.14 -2.38 L-2.71 -2.63 Q-1.76 -2.73 -1.38 -3.60 Z" fill="#d08f00" transform="translate(0 .3)"/><path d="M-0.39 -5.83 Q0.00 -6.70 0.39 -5.83 L1.38 -3.60 Q1.76 -2.73 2.71 -2.63 L5.14 -2.38 Q6.09 -2.28 5.38 -1.64 L3.56 -0.01 Q2.85 0.63 3.05 1.56 L3.56 3.94 Q3.76 4.88 2.93 4.40 L0.83 3.18 Q0.00 2.70 -0.83 3.18 L-2.93 4.40 Q-3.76 4.88 -3.56 3.94 L-3.05 1.56 Q-2.85 0.63 -3.56 -0.01 L-5.38 -1.64 Q-6.09 -2.28 -5.14 -2.38 L-2.71 -2.63 Q-1.76 -2.73 -1.38 -3.60 Z" fill="url(#g)" stroke="#d99a00" stroke-width=".22" stroke-linejoin="round"/><path d="M-0.29 -3.73 Q0.00 -4.40 0.29 -3.73 L0.88 -2.39 Q1.18 -1.72 1.90 -1.65 L3.36 -1.50 Q4.09 -1.43 3.54 -0.94 L2.45 0.03 Q1.90 0.52 2.06 1.23 L2.37 2.66 Q2.53 3.38 1.90 3.01 L0.63 2.27 Q0.00 1.90 -0.63 2.27 L-1.90 3.01 Q-2.53 3.38 -2.37 2.66 L-2.06 1.23 Q-1.90 0.52 -2.45 0.03 L-3.54 -0.94 Q-4.09 -1.43 -3.36 -1.50 L-1.90 -1.65 Q-1.18 -1.72 -0.88 -2.39 Z" fill="url(#h)" opacity=".7"/>'),   # bản 258-259: ngôi sao bo cánh, vàng tươi, bóng khối, canh giữa theo mắt (nhích lên .8)
+ **SAO,
  'chat': hinh('<circle cx="-4.5" cy="0" r="1.6" fill="#6a4a1a"/><circle cx="0" cy="0" r="1.6" fill="#6a4a1a"/><circle cx="4.5" cy="0" r="1.6" fill="#6a4a1a"/>'),   # chatBubble: nhà mời trò chuyện
  'gap': hinh('<path d="M-1.35 -5.6 L1.35 -5.6 L0.9 2 L-0.9 2 Z" fill="#d9443a" stroke="#d9443a" stroke-width=".6" stroke-linejoin="round"/><circle cx="0" cy="4.4" r="1.45" fill="#d9443a"/>'),
  'benh': hinh('<rect x="-1.5" y="-5" width="3" height="10" rx=".6" fill="#d9443a"/><rect x="-5" y="-1.5" width="10" height="3" rx=".6" fill="#d9443a"/>'),

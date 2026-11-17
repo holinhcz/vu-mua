@@ -11,7 +11,7 @@ var key := {}  # {t, j}: j = -1 là chuồng
 var _st := ""  # "grow" | "ready" | "sick"
 var _ic := {}  # hình đang đặt cho mỗi nút (khỏi dựng lại svg mỗi lần)
 
-const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><path d=\"M20 33C9 25 5 19.5 5 14.2 5 9.6 8.6 6 13 6c3 0 5.4 1.6 7 4 1.6-2.4 4-4 7-4 4.4 0 8 3.6 8 8.2 0 5.3-4 10.8-15 18.8z\" fill=\"#e8475f\" stroke=\"#b8283f\" stroke-width=\"1.4\"/><path d=\"M10.5 12.5c.6-1.8 2-3 3.8-3.2\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".7\"/></svg>"
+const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><g transform=\"translate(0 1.6)\"><path d=\"M20 33C9 25 5 19.5 5 14.2 5 9.6 8.6 6 13 6c3 0 5.4 1.6 7 4 1.6-2.4 4-4 7-4 4.4 0 8 3.6 8 8.2 0 5.3-4 10.8-15 18.8z\" fill=\"#e8475f\" stroke=\"#b8283f\" stroke-width=\"1.4\"/><path d=\"M10.5 12.5c.6-1.8 2-3 3.8-3.2\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\".7\"/></g></svg>"
 const CROSS := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><rect x=\"16\" y=\"6\" width=\"8\" height=\"28\" rx=\"2\" fill=\"#d9443a\"/><rect x=\"6\" y=\"16\" width=\"28\" height=\"8\" rx=\"2\" fill=\"#d9443a\"/></svg>"
 
 func _init(ui) -> void:

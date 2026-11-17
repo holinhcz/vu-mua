@@ -203,8 +203,6 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 	_bz = zz > 0.55
 	if not _bz:
 		return
-	var fc := Color("#d8b040") if G.night else Color("#f2c63a")
-	var lc := Color(90 / 255.0, 60 / 255.0, 0, 0.55)
 	var stars := []
 	for i in G.B0:
 		var a: Dictionary = G.p(i)
@@ -218,19 +216,12 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 			var E := M - w * 5.2
 			var C := T - w * 2.6
 			stars.append(Vector2(E, C))
-	# (bản 242) mỗi ngôi sao là một ảnh (vẽ từ SVG một lần): ảnh giống nhau gộp chung một lệnh vẽ; trước đây mỗi ngôi
-	# là một đa giác + một đường viền, mỗi cái một lệnh
-	var st := svg_tex("<svg xmlns='http://www.w3.org/2000/svg' viewBox='-3.5 -3.5 7 7' width='56' height='56'><polygon points='%s' fill='#%s' stroke='#%s' stroke-opacity='%.2f' stroke-width='0.7' stroke-linejoin='round'/></svg>" % [_star_pts(), fc.to_html(false), lc.to_html(false), lc.a])
-	for c in stars:
-		badges.draw_texture_rect(st, Rect2(c - Vector2(3.5, 3.5), Vector2(7, 7)), false)
+	# mỗi ngôi sao là một ảnh: ảnh giống nhau gộp chung một lệnh vẽ (bản 242); ảnh sao dùng chung ui/img/bong/sao (bản 260)
+	var st: Texture2D = Bong.anh("sao", 7.5 / 13.6 * main.zoom)
+	if st != null:
+		for c in stars:
+			badges.draw_texture_rect(st, Rect2(c - Vector2(3.75, 3.75), Vector2(7.5, 7.5)), false)
 
-static func _star_pts() -> String:   # ngôi sao 5 cánh quanh (0,0): bán kính 3 / 1.3
-	var o := []
-	for R in 10:
-		var N := 1.3 if R % 2 else 3.0
-		var z := -PI / 2.0 + R * PI / 5.0
-		o.append("%.3f,%.3f" % [cos(z) * N, sin(z) * N])
-	return " ".join(o)
 static var _svgc := {}
 static func svg_tex(svg: String) -> Texture2D:   # (bản 242) ảnh nhỏ vẽ bằng SVG, mỗi chuỗi một lần
 	if _svgc.has(svg):
