@@ -335,7 +335,7 @@ static func svg_load(img: Image, svg: String, sc: float) -> Error:
 	var w := maxi(1, int(round(vb.x * sc)))
 	var h := maxi(1, int(round(vb.y * sc)))
 	src.convert(Image.FORMAT_RGBA8)
-	src.fix_alpha_edges()   # (bản 264) như image_px: hết viền xám khi thu nhỏ
+	src.fix_alpha_edges()   # (bản 264) chỗ trong suốt mang màu mép: thu nhỏ không lẫn màu tối
 	if src.get_width() != w or src.get_height() != h:
 		src.resize(w, h, Image.INTERPOLATE_LANCZOS)
 	img.copy_from(src)
@@ -398,29 +398,11 @@ static func emoji(code: int) -> Texture2D:
 		_emo[code] = image(path) if FileAccess.file_exists(path) else null
 	return _emo[code]
 
-static func image_dev(path: String, pw: int, ph: int) -> Texture2D:   # (bản 266) như image_px nhưng số điểm ảnh thật trên màn
-	return image_px(path, float(pw) / K, float(ph) / K)
-
-static func image_px(path: String, w: float, h: float) -> Texture2D:
-	# (bản 261) ảnh thu sẵn đúng số điểm ảnh màn hình (Lanczos, mỗi cỡ một lần): ảnh to vẽ nhỏ trong giao diện không
-	# qua mipmap (giao diện vẽ lọc thường) nên vỡ / răng cưa
-	var pw := maxi(1, int(ceil(w * K)))
-	var ph := maxi(1, int(ceil(h * K)))
-	var key := path + "@" + str(pw) + "x" + str(ph)
-	if _tex.has(key):
-		return _tex[key]
-	var img := Image.new()
-	var b := FileAccess.get_file_as_bytes(path)
-	if path.ends_with(".webp"):
-		img.load_webp_from_buffer(b)
-	else:
-		img.load_png_from_buffer(b)
-	img.convert(Image.FORMAT_RGBA8)
-	img.fix_alpha_edges()   # (bản 264) chỗ trong suốt mang màu mép: thu nhỏ không lẫn màu đen -> hết viền xám
-	img.resize(pw, ph, Image.INTERPOLATE_LANCZOS)
-	var t := ImageTexture.create_from_image(img)
-	_tex[key] = t
-	return t
+static func img_svg(path: String) -> String:
+	# ảnh tệp (png / webp) bọc thành SVG khung 64, như hình món ui/svg/kh: mọi ảnh trong giao diện đi chung một đường
+	# (svg_tex -> svg_load: giải ảnh, thu Lanczos đúng số điểm ảnh) (bản 268)
+	var ty := "webp" if path.ends_with(".webp") else "png"
+	return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><image x="0" y="0" width="64" height="64" href="data:image/' + ty + ';base64,' + Marshalls.raw_to_base64(FileAccess.get_file_as_bytes(path)) + '"/></svg>'
 
 static func image(path: String) -> Texture2D:
 	if _tex.has(path):

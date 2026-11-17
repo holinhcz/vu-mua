@@ -116,9 +116,9 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 		var src: String = n.get("src", "")
 		if src == "pearl":
 			# sen đỏ (sh()): hình ngọc trong khung 64, như svg <image> ở dưới
-			b.pic(Css.image_px("res://ui/img/pearl.webp", R[2], R[3]), Rect2(0, 0, R[2], R[3]), Color.WHITE, null, "res://ui/img/pearl.webp")
+			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/pearl.webp"), R[2], R[3]), Rect2(0, 0, R[2], R[3]))
 		elif src.find("xui") >= 0:
-			b.pic(Css.image_px("res://ui/img/coin.webp", R[2], R[3]), Rect2(0, 0, R[2], R[3]), Color.WHITE, null, "res://ui/img/coin.webp")
+			b.pic(Css.svg_tex(Css.img_svg("res://ui/img/coin.webp"), R[2], R[3]), Rect2(0, 0, R[2], R[3]))
 	# an icon put in front of the text by a css ::before (Kho tabs: basket/leaf/pot)
 	var icon := {}
 	var bef: Dictionary = n.get("::before", {})
@@ -256,7 +256,7 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 		# vàng / xám (chưa đạt) / xanh; viền trắng (đặt trên nền màu) thì bản có viền trắng
 		var k := "sao_xam" if sv.find("236, 224, 192") >= 0 else ("sao_xanh" if sv.find("59, 143, 230") >= 0 else ("sao_vien" if sv.find("stroke=\"rgb(255, 255, 255)\"") >= 0 else "sao"))
 		var q2 := float(R[2]) / 40.0
-		b.pic(Css.image_px("res://ui/img/bong/" + k + ".png", 38.0 * q2, 38.0 * q2), Rect2(Vector2(1.0, 1.0) * q2, Vector2(38.0, 38.0) * q2), Color.WHITE, sh, "res://ui/img/bong/" + k + ".png")
+		b.pic(Css.svg_tex(Css.img_svg("res://ui/img/bong/" + k + ".png"), 38.0 * q2, 38.0 * q2), Rect2(Vector2(1.0, 1.0) * q2, Vector2(38.0, 38.0) * q2), Color.WHITE, sh)
 		return
 	if sv.find("<image") >= 0 and sv.find("data:image") < 0:
 		# picture inside the svg (64 box): sen đỏ pearl at x 7.9 y 8.9 w 48.3, xu coin at x 11 y 10 w 42
@@ -267,8 +267,8 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 		if mm != null:
 			ir = Rect2(float(mm.get_string(1)), float(mm.get_string(2)), float(mm.get_string(3)), float(mm.get_string(4)))
 		var pic := "res://ui/img/coin.webp" if absf(ir.position.x - 11.0) < 0.5 else "res://ui/img/pearl.webp"
-		# thu sẵn đúng px (bản 263); không bóng đổ (bản 264): ảnh xu / sen mới không viền đậm, bóng đổ thành vòng xám quanh hình
-		b.pic(Css.image_px(pic, ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q), Color.WHITE, null, pic)
+		# đi chung đường hình món (Css.img_svg -> svg_tex); không bóng đổ (bản 264)
+		b.pic(Css.svg_tex(Css.img_svg(pic), ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q))
 		return
 	var stx := _svg_texts(sv)
 	var t := Css.svg_tex(stx.svg, R[2], R[3])

@@ -324,9 +324,8 @@ func set_text(i: int, s: String) -> void:
 		texts[i].s = s
 		_fg.queue_redraw()
 
-func pic(t: Texture2D, rect: Rect2, mod := Color.WHITE, sh = null, path := "") -> int:
-	# path (bản 266): ảnh tệp, lúc vẽ thu đúng số điểm ảnh thật trên màn (tính cả độ phóng của khung cha) -> mép mịn
-	pics.append({"tex": t, "rect": rect, "mod": mod, "sh": sh, "path": path})
+func pic(t: Texture2D, rect: Rect2, mod := Color.WHITE, sh = null) -> int:
+	pics.append({"tex": t, "rect": rect, "mod": mod, "sh": sh})
 	_fg.queue_redraw()
 	return pics.size() - 1
 
@@ -459,11 +458,7 @@ func _draw_fg() -> void:
 		var w: float = a.w * k
 		_fg.draw_colored_polygon(PackedVector2Array([Vector2(x - w - 0.6 * k, y - 0.5 * k), Vector2(x + w + 0.6 * k, y - 0.5 * k), Vector2(x, y + w + 1.0 * k)]), Color(0.47, 0.32, 0.09, 0.5))
 		_fg.draw_colored_polygon(PackedVector2Array([Vector2(x - w, y - 1.0 * k), Vector2(x + w, y - 1.0 * k), Vector2(x, y + w)]), a.c)
-	var gs: float = absf(_fg.get_global_transform_with_canvas().get_scale().x)
 	for p in pics:
-		if p.get("path", "") != "":
-			var ps: Vector2 = p.rect.size * k * gs
-			p.tex = Css.image_dev(p.path, maxi(1, int(round(ps.x))), maxi(1, int(round(ps.y))))
 		if p.tex == null:
 			continue
 		var rr: Rect2 = p.rect
