@@ -2140,6 +2140,14 @@ func _cat_name(c: String) -> String:
 func _kh_fill(nd: Dictionary, t: String, hx: float) -> void:
 	var ic := Snap.find(nd, "khic")
 	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + t + ".svg")
+	# (bản 249) hình món to hơn bản web (34,5 -> 44): giữ giữa theo ngang, lấn lên lề trên thẻ, chưa chạm dòng tên
+	if not ic.is_empty():
+		var r0: Array = ic.r
+		var nz := 44.0
+		var nr := [float(r0[0]) - (nz - float(r0[2])) * 0.5, float(nd.r[1]) + 5.5, nz, nz]
+		ic.r = nr
+		for k in ic.get("kids", []):
+			k.r = nr.duplicate()
 	for k in ic.get("kids", []):
 		if k.tag == "svg" and sv != "":
 			k.svg = sv
