@@ -16,6 +16,7 @@ var P: Node            # pics.gd
 var main: Node2D       # làng
 var ui: Node           # ui.gd
 var soil: Node2D
+var locks: Node2D = null   # (bản 242) ổ khóa mọi ô chưa mở (LockLayer)
 var fx: Node2D         # chữ bay, vòng chọn (vẽ trên cùng)
 var plots := []        # mỗi ô: {soil:[dry, m, wet, pud], lock, crop:Sprite2D, bub:Bubble, key}
 var sortables := []    # node của mình trong obj_root: [node, dk, j]
@@ -82,6 +83,10 @@ func setup(game: Node, pics: Node, village: Node2D, u: Node) -> void:
 	badges.z_index = -4
 	badges.draw.connect(_draw_badges)
 	add_child(badges)
+	locks = LockLayer.new()
+	locks.farm = self
+	locks.z_index = -4
+	add_child(locks)
 	fx = FxNode.new()
 	fx.farm = self
 	fx.z_index = 50
@@ -200,6 +205,7 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 		return
 	var fc := Color("#d8b040") if G.night else Color("#f2c63a")
 	var lc := Color(90 / 255.0, 60 / 255.0, 0, 0.55)
+	var stars := []
 	for i in G.B0:
 		var a: Dictionary = G.p(i)
 		if not G.owned(i) or not a.u or int(a.get("st", 1)) <= 1:
@@ -211,14 +217,30 @@ func _draw_badges() -> void:   # sao ô (n.st > 1, ba.z > .55): tối đa 5 ngô
 		for w in n:
 			var E := M - w * 5.2
 			var C := T - w * 2.6
-			var pts := PackedVector2Array()
-			for R in 10:
-				var N := 1.3 if R % 2 else 3.0
-				var z := -PI / 2.0 + R * PI / 5.0
-				pts.append(Vector2(E + cos(z) * N, C + sin(z) * N))
-			badges.draw_colored_polygon(pts, fc)
-			pts.append(pts[0])
-			badges.draw_polyline(pts, lc, 0.7, true)
+			stars.append(Vector2(E, C))
+	# (bản 242) mỗi ngôi sao là một ảnh (vẽ từ SVG một lần): ảnh giống nhau gộp chung một lệnh vẽ; trước đây mỗi ngôi
+	# là một đa giác + một đường viền, mỗi cái một lệnh
+	var st := svg_tex("<svg xmlns='http://www.w3.org/2000/svg' viewBox='-3.5 -3.5 7 7' width='56' height='56'><polygon points='%s' fill='#%s' stroke='#%s' stroke-opacity='%.2f' stroke-width='0.7' stroke-linejoin='round'/></svg>" % [_star_pts(), fc.to_html(false), lc.to_html(false), lc.a])
+	for c in stars:
+		badges.draw_texture_rect(st, Rect2(c - Vector2(3.5, 3.5), Vector2(7, 7)), false)
+
+static func _star_pts() -> String:   # ngôi sao 5 cánh quanh (0,0): bán kính 3 / 1.3
+	var o := []
+	for R in 10:
+		var N := 1.3 if R % 2 else 3.0
+		var z := -PI / 2.0 + R * PI / 5.0
+		o.append("%.3f,%.3f" % [cos(z) * N, sin(z) * N])
+	return " ".join(o)
+static var _svgc := {}
+static func svg_tex(svg: String) -> Texture2D:   # (bản 242) ảnh nhỏ vẽ bằng SVG, mỗi chuỗi một lần
+	if _svgc.has(svg):
+		return _svgc[svg]
+	var img := Image.new()
+	var t: Texture2D = null
+	if img.load_svg_from_string(svg, 1.0) == OK:
+		t = ImageTexture.create_from_image(img)
+	_svgc[svg] = t
+	return t
 
 var _hu_sig := 0
 func _draw_hu() -> void:   # tnHu: gốc rạ khô trên ô cây bị thiên tai làm hư (g.plots[i].hu, ô chưa gieo lại)
@@ -279,6 +301,8 @@ func _plot_view(i: int) -> void:
 	for s in L:
 		s.visible = false
 	cs.visible = false
+	if bub.visible and bub.kind == "lock" and locks != null:
+		locks.queue_redraw()
 	bub.visible = false
 	if not G.owned(i):
 		return
@@ -294,7 +318,7 @@ func _plot_view(i: int) -> void:
 		bub.position.y = nn(G.cells[i].gx + 0.5, G.cells[i].gy + 0.5)
 		bub.z_index = -4   # nằm sát đất như bản web (vẽ cùng lượt ô ruộng)
 		bub.visible = true
-		bub.queue_redraw()
+		locks.queue_redraw()   # vẽ ở lớp chung (LockLayer)
 		return
 	# gP: -1 trống (khô), 0 có cây đất khô nứt, >0 độ ướt
 	var t := -1.0
@@ -2028,6 +2052,10 @@ var _tb_want := {}
 var _tb_t := 0.0
 func _bub_set(b: Bubble, tt: float) -> void:
 	# (bản 234) phập phồng X0 bằng scale của node, không vẽ lại bong bóng mỗi khung; chỉ vẽ lại khi cỡ/zoom/hình đổi
+	_bub_sig(b)
+	var p := 1.0 + 0.08 * sin(tt * 5.0 + b.position.x)
+	b.scale = Vector2(p, p)
+func _bub_sig(b: Bubble) -> void:
 	var k := sign_le()
 	var sig := "%s|%s|%s|%.3f|%.4f" % [b.kind, b.id, b.text, k, main.zoom]
 	if b.get_meta("bsig", "") != sig:
@@ -2035,53 +2063,70 @@ func _bub_set(b: Bubble, tt: float) -> void:
 		b.k = k
 		b.zoom = main.zoom
 		b.queue_redraw()
-	var p := 1.0 + 0.08 * sin(tt * 5.0 + b.position.x)
-	b.scale = Vector2(p, p)
+var _tb_base := {}   # idx -> chỗ bong bóng (tính lúc xét lại, không tính mỗi khung)
+var _tb_z := 0.0
 func _tree_bub_sync(tt: float) -> void:
+	# (bản 242) mỗi khung chỉ nhún + phập phồng (vị trí gốc, hình, chữ ký vẽ tính 4 lần/giây hoặc khi đổi zoom)
 	_tb_t -= get_process_delta_time()
-	var objs0: Array = lang.objs() if lang != null else []
+	var re: bool = _tb_t <= 0.0 or _tb_z != main.zoom
 	if _tb_t <= 0.0:
 		_tb_t = 0.25
-		var all: Dictionary = _tree_bub_want()
-		_tb_want = {}   # (bản 236) chỉ giữ bong bóng trong màn (xét 4 lần mỗi giây, không phải mỗi khung)
-		for i in all:
-			if i < objs0.size() and objs0[i] is Dictionary:
-				var oq: Dictionary = objs0[i]
-				if on_view(Vector2(en(float(oq.gx) + 0.5, float(oq.gy) + 0.5), nn(float(oq.gx) + 0.5, float(oq.gy) + 0.5)), 260.0):
-					_tb_want[i] = all[i]
+		_tb_want = _tree_bub_want()   # đã chỉ lấy cái trong màn
 	var want: Dictionary = _tb_want
-	for i in tbubs.keys():
-		if not want.has(i):
-			tbubs[i].queue_free()
-			tbubs.erase(i)
+	if re:
+		_tb_z = main.zoom
+		for i in tbubs.keys():
+			if not want.has(i):
+				tbubs[i].queue_free()
+				tbubs.erase(i)
+				_tb_base.erase(i)
+		var objs: Array = lang.objs() if lang != null else []
+		var ord_ch := false
+		for i in want:
+			if i >= objs.size() or not (objs[i] is Dictionary):
+				continue
+			var b: Bubble = tbubs.get(i)
+			if b == null:
+				b = Bubble.new()
+				b.fnt = fnt
+				b.farm = self
+				b.z_index = 40
+				add_child(b)
+				tbubs[i] = b
+			var o: Dictionary = objs[i]
+			var tp = lang.Pi.get(o.id)
+			var cx: float = float(o.gx) + (float(tp.fw) if tp != null else 1.0) / 2.0
+			var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
+			var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
+			if G.w_all.WL.CX.has(o.id):
+				top = lang_ve.top_of(o) + 18.0   # FD: sy + Jo().y + 18
+			_tb_base[i] = Vector2(en(cx, cy), nn(cx, cy) + top)
+			if b.kind != want[i][0] or b.id != want[i][1]:
+				ord_ch = true
+			b.kind = want[i][0]
+			b.id = want[i][1]
+			b.text = ""
+			b.can = true
+			b.visible = true
+			_bub_sig(b)
+		if ord_ch:
+			# (bản 242) bong bóng cùng hình nằm liền nhau trong cây node: cùng ảnh liền nhau thì gộp chung một lệnh vẽ,
+			# xen kẽ (giọt nước, trái A, trái B...) thì mỗi lần đổi ảnh là một lệnh
+			var bl: Array = tbubs.values()
+			bl.sort_custom(func(x, y): return x.kind + "|" + x.id < y.kind + "|" + y.id)
+			for b in bl:
+				move_child(b, -1)
 	var still: bool = G.motion_off()
-	var objs: Array = lang.objs() if lang != null else []
-	for i in want:
-		if i >= objs.size() or not (objs[i] is Dictionary):
-			continue
-		var b: Bubble = tbubs.get(i)
-		if b == null:
-			b = Bubble.new()
-			b.fnt = fnt
-			b.farm = self
-			b.z_index = 40
-			add_child(b)
-			tbubs[i] = b
-		var o: Dictionary = objs[i]
-		var tp = lang.Pi.get(o.id)
-		var cx: float = float(o.gx) + (float(tp.fw) if tp != null else 1.0) / 2.0
-		var cy: float = float(o.gy) + (float(tp.fd) if tp != null else 1.0) / 2.0
-		var bob := 0.0 if still else sin(tt * 3.0 + i) * 1.2
-		var top: float = (lang_ve.top_of(o) + 2.0) if o.id != "thungong" else -74.0   # Ij: đỉnh hình + 8 - 6; Aq: sy - 74
-		if G.w_all.WL.CX.has(o.id):
-			top = lang_ve.top_of(o) + 18.0   # FD: sy + Jo().y + 18
-		b.position = Vector2(en(cx, cy), nn(cx, cy) + top + bob)
-		b.kind = want[i][0]
-		b.id = want[i][1]
-		b.text = ""
-		b.can = true
-		b.visible = true
-		_bub_set(b, tt)
+	for i in tbubs:
+		var b: Bubble = tbubs[i]
+		var bp: Vector2 = _tb_base.get(i, b.position)
+		if still:
+			b.position = bp
+			b.scale = Vector2.ONE
+		else:
+			b.position = bp + Vector2(0.0, sin(tt * 3.0 + i) * 1.2)
+			var p := 1.0 + 0.08 * sin(tt * 5.0 + bp.x)
+			b.scale = Vector2(p, p)
 func _tree_bub_want() -> Dictionary:
 	var want := {}
 	var WR = G.w_all.WR if G.w_all != null else null
@@ -2561,6 +2606,45 @@ class SignArt extends Node2D:   # nét vẽ biển Khai hoang (như cũ), vẽ t
 			draw_rect(Rect2(-4, -43, 8, 6.4), c)
 			draw_arc(Vector2(0, -43), 3.0, PI, TAU, 20, c, 1.6, true)
 
+class LockLayer extends Node2D:
+	# (bản 242) ổ khóa + giá mở ô (gh bản web) của mọi ô chưa mở vẽ chung một nút, theo lượt: hết ảnh, rồi hết khung
+	# chữ nhật, hết quai, hết chữ. Trước đây mỗi ô một nút xen kẽ ảnh / hình / chữ nên mỗi ô tốn 4-5 lệnh vẽ.
+	var farm
+	func _draw() -> void:
+		var L := []
+		for v in farm.plots:
+			var b: Bubble = v.bub
+			if b.visible and b.kind == "lock":
+				L.append(b)
+		for b in L:
+			if b.tex != null:
+				draw_texture_rect(b.tex, Rect2(b.position + Vector2(-33, -41), Vector2(66, 60)), false)
+		var dy := -6.5
+		var lcs := []
+		var tcs := []
+		for b in L:
+			var lc: Color
+			var tc: Color
+			if b.can:
+				lc = Color("#f0bd3d") if b.night else Color("#dba013")
+				tc = Color("#ffe9a8") if b.night else Color("#4a3006")
+			else:
+				lc = Color(150 / 255.0, 135 / 255.0, 110 / 255.0, 0.85) if b.night else Color(70 / 255.0, 55 / 255.0, 40 / 255.0, 0.6)
+				tc = Color(225 / 255.0, 210 / 255.0, 185 / 255.0, 0.8) if b.night else Color(55 / 255.0, 40 / 255.0, 25 / 255.0, 0.75)
+			lcs.append(lc)
+			tcs.append(tc)
+		for j in L.size():   # ổ khóa nhỏ: một ảnh SVG (thân + quai), cùng màu thì gộp một lệnh
+			var lc: Color = lcs[j]
+			var t: Texture2D = farm.svg_tex("<svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.7 -2.7 7.4 7.6' width='59' height='61'><rect x='0' y='0' width='6' height='4.8' fill='#%s' fill-opacity='%.3f'/><path d='M1,0 A2,2 0 0 1 5,0' fill='none' stroke='#%s' stroke-opacity='%.3f' stroke-width='1.3'/></svg>" % [lc.to_html(false), lc.a, lc.to_html(false), lc.a])
+			if t != null:
+				draw_texture_rect(t, Rect2(L[j].position + Vector2(-10.9, dy - 4.3), Vector2(7.4, 7.6)), false)
+		var fs := 8.5
+		for j in L.size():
+			var b: Bubble = L[j]
+			var w: float = b.fnt.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			var by: float = dy + 0.6 + (b.fnt.get_ascent(fs) - b.fnt.get_descent(fs)) / 2.0
+			draw_string(b.fnt, b.position + Vector2(3.0 - w / 2.0, by), b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcs[j])
+
 class Bubble extends Node2D:
 	var farm
 	var kind := ""
@@ -2576,25 +2660,7 @@ class Bubble extends Node2D:
 	func _draw() -> void:
 		if kind == "":   # chưa có gì để báo (ô trống): không vẽ khung rỗng
 			return
-		if kind == "lock":
-			# ổ khóa + giá mở ô (gh bản web)
-			if tex != null:
-				draw_texture_rect(tex, Rect2(Vector2(-33, -41), Vector2(66, 60)), false)
-			var lc: Color
-			var tc: Color
-			if can:
-				lc = Color("#f0bd3d") if night else Color("#dba013")
-				tc = Color("#ffe9a8") if night else Color("#4a3006")
-			else:
-				lc = Color(150 / 255.0, 135 / 255.0, 110 / 255.0, 0.85) if night else Color(70 / 255.0, 55 / 255.0, 40 / 255.0, 0.6)
-				tc = Color(225 / 255.0, 210 / 255.0, 185 / 255.0, 0.8) if night else Color(55 / 255.0, 40 / 255.0, 25 / 255.0, 0.75)
-			var dy := -6.5
-			draw_rect(Rect2(-10.2, dy - 1.6, 6, 4.8), lc)
-			draw_arc(Vector2(-7.2, dy - 1.6), 2.0, PI, TAU, 24, lc, 1.3, true)
-			var fs := 8.5
-			var w := fnt.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-			var by := dy + 0.6 + (fnt.get_ascent(fs) - fnt.get_descent(fs)) / 2.0
-			draw_string(fnt, Vector2(3.0 - w / 2.0, by), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tc)
+		if kind == "lock":   # (bản 242) ổ khóa vẽ chung một lớp (farm.locks), không vẽ từng cái
 			return
 		# X0: khung ảnh dùng chung (bong.gd), xanh = thường, đỏ = sâu / rầy
 		var px := 13.6 * k * zoom
