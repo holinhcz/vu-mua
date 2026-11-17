@@ -4433,6 +4433,7 @@ var _zo_new := []   # (bản 237) vật vừa vào obj_root, chờ chèn đúng 
 var _zo_rm := 0     # số vật đã ra từ lần gom rác trước
 var _zo_hook := false
 var _zo_box := {}                     # int(khoá) -> [[ô chiếm, khoá nhỏ nhất, khoá lớn nhất]] của vật nhiều ô
+var _zo_fps := 0                      # (bản 279) dấu các hộp lần xếp toàn bộ trước
 static func _zkey(n: Node, last: float) -> float:   # khoá cảnh: meta "k" số; không có thì đi theo cái trước
 	if n.has_meta("k"):
 		var v = n.get_meta("k")
@@ -4483,7 +4484,14 @@ func zorder() -> void:
 	# (bản 235) xếp lại toàn bộ (14 nghìn vật, sort) tốn cả chục ms trên điện thoại: khi số vật đổi thì gom lại, tối đa 2 lần/giây;
 	# zo_dirty (làng đổi hẳn) thì làm ngay
 	var nowm := Time.get_ticks_msec()
-	var full: bool = zo_dirty or zo_nodes.is_empty()
+	# (bản 279) hộp nhiều ô (nhà, xưởng, chuồng) chỉ gom lúc xếp toàn bộ: vật vừa đặt / dời có hộp mới thì cỏ, đá quanh nó
+	# chưa được chỉnh theo hộp (cỏ đè lên nền xưởng) cho tới lần xếp toàn bộ sau (đặt cái khác mới đúng lại). Hộp đổi -> xếp ngay
+	var fps := 0
+	for n in dyn:
+		if n.has_meta("fp"):
+			fps += hash(n.get_meta("fp"))   # cộng: không phụ thuộc thứ tự
+	var full: bool = zo_dirty or zo_nodes.is_empty() or fps != _zo_fps
+	_zo_fps = fps
 	if full:
 		_zo_full_t = nowm
 		_zo_new.clear()
