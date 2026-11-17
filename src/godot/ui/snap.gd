@@ -263,7 +263,8 @@ static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 		if mm != null:
 			ir = Rect2(float(mm.get_string(1)), float(mm.get_string(2)), float(mm.get_string(3)), float(mm.get_string(4)))
 		var pic := "res://ui/img/coin.webp" if absf(ir.position.x - 11.0) < 0.5 else "res://ui/img/pearl.webp"
-		b.pic(Css.image_px(pic, ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q), Color.WHITE, sh)   # thu sẵn đúng px (bản 263)
+		# thu sẵn đúng px (bản 263); không bóng đổ (bản 264): ảnh xu / sen mới không viền đậm, bóng đổ thành vòng xám quanh hình
+		b.pic(Css.image_px(pic, ir.size.x * q, ir.size.y * q), Rect2(ir.position * q, ir.size * q), Color.WHITE, null)
 		return
 	var stx := _svg_texts(sv)
 	var t := Css.svg_tex(stx.svg, R[2], R[3])

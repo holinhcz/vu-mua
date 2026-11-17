@@ -335,6 +335,7 @@ static func svg_load(img: Image, svg: String, sc: float) -> Error:
 	var w := maxi(1, int(round(vb.x * sc)))
 	var h := maxi(1, int(round(vb.y * sc)))
 	src.convert(Image.FORMAT_RGBA8)
+	src.fix_alpha_edges()   # (bản 264) như image_px: hết viền xám khi thu nhỏ
 	if src.get_width() != w or src.get_height() != h:
 		src.resize(w, h, Image.INTERPOLATE_LANCZOS)
 	img.copy_from(src)
@@ -412,6 +413,7 @@ static func image_px(path: String, w: float, h: float) -> Texture2D:
 	else:
 		img.load_png_from_buffer(b)
 	img.convert(Image.FORMAT_RGBA8)
+	img.fix_alpha_edges()   # (bản 264) chỗ trong suốt mang màu mép: thu nhỏ không lẫn màu đen -> hết viền xám
 	img.resize(pw, ph, Image.INTERPOLATE_LANCZOS)
 	var t := ImageTexture.create_from_image(img)
 	_tex[key] = t

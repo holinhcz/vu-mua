@@ -47,6 +47,8 @@ def main(indir, outdir):
             rgb = np.clip((rgb - bg * (1 - a[..., None])) / safe, 0, 255)
         else:
             a = np.where(a < 0.16, 0.0, a)   # quầng mờ còn sót khi tách nền
+            # (bản 264) mép mờ của tấm gốc là màu đã trộn với nền đen: chia lại cho độ trong -> hết viền xám / đen
+            rgb = np.clip(rgb / np.maximum(a, 1e-3)[..., None], 0, 255)
         m = a > 0.2
         lab, n = nd.label(m, structure=np.ones((3, 3)))
         objs = nd.find_objects(lab)
