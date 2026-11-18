@@ -283,7 +283,7 @@ func task_f(t: Dictionary) -> int:   # t.f()
 	var id: String = t.id
 	if t.get("vg", 0):
 		var v: Dictionary = t.v
-		return int(v.q) if v.get("done", 0) else mini(int(v.q), int(G.g.barn.get(v.id, 0)))
+		return int(v.q) if v.get("done", 0) else int(G.g.barn.get(v.id, 0))   # việc giao hàng: số trong kho (bản 285)
 	match id:
 		"cook": return OL("ck")
 		"tharvest": return OL("tharvest")

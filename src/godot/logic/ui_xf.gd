@@ -602,7 +602,7 @@ func _build_card(w: Dictionary, pend: Array) -> void:   # It()
 	ins.kids = []
 	for j in L.size():
 		var a: Array = L[j]
-		var have := mini(int(G.g.barn.get(a[0], 0)), int(a[1]))
+		var have := int(G.g.barn.get(a[0], 0))   # số trong kho (bản 285)
 		var full_in := have >= int(a[1])
 		var tp: Dictionary = (T.xin_ok if full_in else T.xin_no).duplicate(true)
 		if one:

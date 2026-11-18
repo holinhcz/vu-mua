@@ -2827,9 +2827,9 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 		if q < o.items.size():
 			var id: String = o.items[q][0]
 			var need := int(o.items[q][1])
-			var have := int(pl.have[q]) if pl.have != null else mini(int(G.g.barn.get(id, 0)), need)
+			# (bản 284-285) số = đang có trong kho (20/6); kho đủ / dư là xanh, kể cả khi nhiều đơn cùng cần món đó
+			var have := int(G.g.barn.get(id, 0))
 			t = (od_tpl.it_ok if have >= need else od_tpl.it_no).duplicate(true)
-			have = int(G.g.barn.get(id, 0))   # (bản 284) hiện số đang có trong kho (20/6), không chặn ở số cần
 			if G.hot_x(id) > 1.0:
 				t.cls = String(t.cls) + " hot"
 				t["::after"] = od_tpl.hot.duplicate(true)

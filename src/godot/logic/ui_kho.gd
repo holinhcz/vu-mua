@@ -135,7 +135,7 @@ func _chip(c: Dictionary, kind: String, ok: bool, have: int, need: int, svg: Str
 	var sv := Snap.find(o, "", "svg")
 	sv.svg = svg
 	var sp: Dictionary = _kid(o, "span")
-	var bs := str(mini(have, need))
+	var bs := str(have)   # số trong kho (bản 285)
 	var rs := "/" + str(need)
 	var wb: float = U._tw(b, bs)
 	var wr: float = U._tw(sp, rs)

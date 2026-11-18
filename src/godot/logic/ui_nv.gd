@@ -528,7 +528,7 @@ func _day() -> Array:
 			bt.append(["Đi làm", "n", "go:" + String(t.id)])
 		if not dn and not t.get("vg", 0) and not n.sw and not N.is_base(t):
 			bt.append(["Đổi", "n", "sw:" + String(t.id)])
-		rows.append(_row("+" + str(N.pt(t)), String(t.n), G.fmt_n(mini(c2, int(t.m))) + "/" + G.fmt_n(int(t.m)), float(c2) / float(t.m), bt, dn))
+		rows.append(_row("+" + str(N.pt(t)), String(t.n), G.fmt_n(c2 if t.get("vg", 0) else mini(c2, int(t.m))) + "/" + G.fmt_n(int(t.m)), minf(1.0, float(c2) / float(t.m)), bt, dn))
 	out.append(_list(rows))
 	return out
 

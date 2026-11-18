@@ -305,7 +305,7 @@ func _vlod(t: String, list: Array, xu: int, lb: String, act: Callable) -> Dictio
 		var nm: Dictionary = _tag_kids(tx, "small")[0]
 		nm.text = String(W._ae(x[0]).get("name", x[0]))
 		var bq: Dictionary = oq.kids[0]
-		var s1 := str(mini(hv, q))
+		var s1 := str(hv)   # số trong kho (bản 285)
 		var s2 := "/" + str(q)
 		var w1 := _tw(bq, s1)
 		var w2 := _tw(oq, s2)
@@ -413,7 +413,7 @@ func _nan() -> Array:   # aU bọc: nhà đang gặp nạn (thiên tai)
 	for k in nn.need:
 		if k == "xu" or k == "gach":
 			var hv: int = WD._tn_hv(k)
-			tx.append(W._sa(mini(hv, int(nn.need[k]))) + "/" + W._sa(nn.need[k]) + " " + String(WD.TNRES[k]))
+			tx.append(W._sa(hv) + "/" + W._sa(nn.need[k]) + " " + String(WD.TNRES[k]))
 		else:
 			ch.append([String(k), int(nn.need[k])])
 	return [_sec("Gặp nạn: " + String(W.TNNAN.get(nn.k, "")).to_lower() + " sau " + String(WD.TNK[nn.k].n).to_lower(), "Còn " + str(int(nn.d) + 3 - W._vr()) + " ngày. Giúp thì +60 thân, +8 uy tín."),

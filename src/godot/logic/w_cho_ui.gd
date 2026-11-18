@@ -146,7 +146,7 @@ func _note(b: String, rest: String) -> Control:   # .note (<b> đầu dòng + ch
 	return v
 
 func _chip(t: String, a: int) -> Control:   # nc: <span class="chip ok|no">Ai <b>n</b>/a tên</span>
-	var n := mini(int(G.g.barn.get(t, 0)), a)
+	var n := int(G.g.barn.get(t, 0))   # số trong kho (bản 285)
 	var h := HBoxContainer.new()
 	h.add_child(_ic(t, 20))
 	h.add_child(_lbl(str(n) + "/" + str(a) + " " + G.item_name(t), 12, 600, Color8(0x2f, 0x7a, 0x2a) if n >= a else Color8(0xc0, 0x3a, 0x2a), false))
