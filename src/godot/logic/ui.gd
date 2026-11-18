@@ -724,6 +724,24 @@ var dock_b: Control = null
 var dock_btn2: Control = null
 var dock_catch: Control = null
 
+# KIỂU NÚT CHIP CHUNG (bản 302): lấy đúng css chip lọc chưa chọn của Kho (.khchip trong bản chụp kho): nền kem chuyển màu,
+# viền nâu vàng, bóng nhẹ. Nút nào muốn kiểu chip thì gọi đây, không chép tay css.
+static var _CHIP := {}
+static func _chip_look(n: Dictionary, cls: String) -> void:   # mọi nút .cls trong n đổi sang kiểu chip Kho
+	if _CHIP.is_empty():
+		var ch: Dictionary = Snap.find(Snap.load_snap("kho")["#pov"][0], "khchips")
+		for k in ch.kids:
+			if not String(k.cls).split(" ").has("on"):
+				_CHIP = k.css
+				break
+	if String(n.get("cls", "")).split(" ").has(cls):
+		var c: Dictionary = n.css.duplicate()
+		for key in ["background-color", "background-image", "border-top", "border-right", "border-bottom", "border-left", "border-radius", "box-shadow"]:
+			c[key] = _CHIP.get(key, c.get(key, ""))
+		n.css = c
+	for k in n.get("kids", []):
+		_chip_look(k, cls)
+
 func _build_dock() -> void:
 	var d: Dictionary = Snap.load_snap("dock")
 	var ids := {}
@@ -734,6 +752,8 @@ func _build_dock() -> void:
 	root.add_child(dock_catch)
 	for sel in d:
 		for n in d[sel]:
+			if sel == "nav.dock":
+				_chip_look(n, "hb")   # (bản 302) ô chức năng = kiểu chip lọc của Kho, nền popup giữ nguyên
 			var b := _build(n, ids)
 			b.visible = false
 			root.add_child(b)
@@ -746,8 +766,6 @@ func _build_dock() -> void:
 				_click(b, func(): dock_open(false), "scale")
 	# each tile: Kho opens the barn, the rest are not here yet
 	if dock_b != null:
-		for t in _qall(dock_b, "dk", []) + _qall(dock_b, "dkb", []):
-			pass
 		for b in _buttons(dock_b, []):
 			var lab := _label_of(b)
 			var words := lab.split(" ", false)   # ô có huy hiệu số ("10 Kho", "đẹp 0 Xây dựng"): so theo chữ trong ô
