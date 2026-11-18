@@ -1553,5 +1553,46 @@
 ],
 "nguon": "tấm ảnh người dùng (bản 316)",
 "cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"bun_cha_gio": {
+"file": "bun_cha_gio.png",
+"bbox": [
+41,
+48,
+471,
+463
+],
+"nguon": "tấm ảnh người dùng (bản 317)"
+},
+"canh_chua_cc": {
+"file": "canh_chua_cc.png",
+"bbox": [
+41,
+59,
+471,
+452
+],
+"nguon": "tấm ảnh người dùng (bản 317)"
+},
+"hu_tieu_bv": {
+"file": "hu_tieu_bv.png",
+"bbox": [
+41,
+55,
+471,
+457
+],
+"nguon": "tấm ảnh người dùng (bản 317)"
+},
+"hu_tieu_nam_vang": {
+"file": "hu_tieu_nam_vang.png",
+"bbox": [
+41,
+59,
+471,
+452
+],
+"nguon": "tấm ảnh người dùng (bản 317)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
 }
 }

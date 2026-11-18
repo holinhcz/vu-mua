@@ -46,3 +46,4 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | com_chien_hai_san.png | Cơm chiên hải sản |
 | muc_xao.png | Mực xào thập cẩm |
 | rau_muong_xao.png | Rau muống xào tỏi |
+| hu_tieu_nam_vang.png | Hủ tiếu nam vang (bản 317; game đang có "Hủ tiếu" riêng) |
