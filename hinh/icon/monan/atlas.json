@@ -1634,5 +1634,56 @@
 470
 ],
 "nguon": "tấm ảnh người dùng (bản 319)"
+},
+"banh_flan": {
+"file": "banh_flan.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 320)"
+},
+"banh_mi_cha": {
+"file": "banh_mi_cha.png",
+"bbox": [
+41,
+79,
+471,
+432
+],
+"nguon": "tấm ảnh người dùng (bản 320)"
+},
+"banh_mi_cha_ca": {
+"file": "banh_mi_cha_ca.png",
+"bbox": [
+41,
+80,
+471,
+431
+],
+"nguon": "tấm ảnh người dùng (bản 320)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"banh_mi_thit": {
+"file": "banh_mi_thit.png",
+"bbox": [
+41,
+81,
+471,
+430
+],
+"nguon": "tấm ảnh người dùng (bản 320)"
+},
+"tuong_ot": {
+"file": "tuong_ot.png",
+"bbox": [
+58,
+41,
+453,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 320)"
 }
 }
