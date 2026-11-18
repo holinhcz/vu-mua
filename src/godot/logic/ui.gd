@@ -2144,6 +2144,13 @@ func _kho_sync() -> void:
 			xi.visible = sell_n > 0 and kh_conf <= 0.0
 			var tw := Box.text_w(sa.texts[0].s, sa.texts[0].size, sa.texts[0].w)
 			var total = tw + (6.0 + xi.r.size.x if xi.visible else 0.0)
+			# (bản 305) nút rộng theo chữ ("Bán hết mục nông sản +631" dài hơn nút chụp), giữa nút đứng yên, đệm 14 hai bên
+			if not sa.has_meta("r0"):
+				sa.set_meta("r0", sa.r)
+			var r0: Rect2 = sa.get_meta("r0")
+			var bw: float = maxf(r0.size.x, total + 28.0)
+			if absf(bw - sa.r.size.x) > 0.01:
+				sa.place(Rect2(Vector2(r0.get_center().x - bw * 0.5, r0.position.y), Vector2(bw, r0.size.y)))
 			var tx = (sa.r.size.x - total) * 0.5
 			sa.texts[0].rect = Rect2(tx, sa.texts[0].rect.position.y, tw + 2.0, sa.texts[0].rect.size.y)
 			sa.texts[0].al = "left"
