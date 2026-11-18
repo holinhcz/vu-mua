@@ -422,7 +422,7 @@ func tre_help(title: String, text: String) -> void:   # nút ? (treq): hộp gi�
 	var bkb = pid.get(".u2pop")
 	if bkb != null:
 		_stop(bkb)
-		bkb.gui_input.connect(func(e): if _is_tap_down(e): tre_help_close())
+		tap_close(bkb, tre_help_close)
 	var pcb = pid.get(".u2pc")
 	if pcb != null:
 		_stop(pcb)
@@ -729,7 +729,7 @@ func _build_dock() -> void:
 	dock_catch = Control.new()
 	dock_catch.mouse_filter = Control.MOUSE_FILTER_STOP
 	dock_catch.visible = false
-	dock_catch.gui_input.connect(func(e): if _is_tap_down(e): dock_open(false))
+	tap_close(dock_catch, func(): dock_open(false))
 	root.add_child(dock_catch)
 	for sel in d:
 		for n in d[sel]:
@@ -762,6 +762,8 @@ func _build_dock() -> void:
 			elif lab.contains("Sổ làng"):
 				_click(b, func(): dock_open(false); sl_open(), "scale94")
 				sl_bdg = _bdg_make(d, b)
+			elif lab.contains("Câu cá"):
+				_click(b, func(): dock_open(false); pcp.open("cau"), "scale94")
 			elif lab.contains("Hệ Thống"):
 				_click(b, func(): dock_open(false); sys_open(), "scale94")
 				sys_bdg = _bdg_make(d, b)
@@ -850,6 +852,16 @@ func dock_open(on: bool) -> void:
 	var b = hid.get("#dockBtn")
 	if b != null:
 		b.visible = not on and not focus
+
+func tap_close(c: Control, cb: Callable, inner = null) -> void:   # (bản 287) chạm nền c (chạm xuống) thì đóng: một hàm cho mọi bảng
+	# inner: khung bảng (Control hoặc Callable trả Control); chạm trong khung thì không đóng
+	c.gui_input.connect(func(e):
+		if not _is_tap_down(e):
+			return
+		var w = inner.call() if inner is Callable else inner
+		if w != null and is_instance_valid(w) and w.get_global_rect().has_point(c.global_position + e.position):
+			return
+		cb.call())
 
 func _is_tap_down(e: InputEvent) -> bool:
 	return (e is InputEventScreenTouch and e.pressed) or (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT)
@@ -1862,7 +1874,7 @@ func _build_kho() -> void:
 		var bk = ids.get(".pbk")
 		if bk != null:
 			_stop(bk)
-			bk.gui_input.connect(func(e): if _is_tap_down(e): kho_close())
+			tap_close(bk, kho_close)
 		var win = ids.get(".pwin")
 		if win != null:
 			_stop(win)
@@ -2438,9 +2450,13 @@ var od_ul0 := Vector2.ZERO
 var od_shsig := ""
 var od_cards := {}            # i -> {b, sig}
 var od_ud := {"i": -1, "t": 0.0}
-var od_scroll := 0.0
-var od_hmax := 0.0
-var od_drag = null            # {y0, s0, moved}
+var od_sc = preload("res://logic/vscroll.gd").new()   # (bản 287) cuộn danh sách đơn: dùng chung vscroll.gd như Kho
+var od_scroll: float:
+	get: return od_sc.s
+	set(v): od_sc.s = v
+var od_hmax: float:
+	get: return od_sc.hmax
+	set(v): od_sc.hmax = v
 var od_lk: Control = null
 var od_lk_tpl := {}
 var od_xu_span := {}
@@ -2777,7 +2793,7 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	var bk = ids.get(".pbk")
 	if bk != null:
 		_stop(bk)
-		bk.gui_input.connect(func(e): if _is_tap_down(e): ord_close())
+		tap_close(bk, ord_close)
 	var win = ids.get(".pwin")
 	if win != null:
 		_stop(win)
@@ -2972,7 +2988,7 @@ func _od_hook(b: Control, f: int) -> void:
 	_click(_q(b, "odb2"), func(): if not _od_dragged(): G.call_now(f); _ord_sync(), "down")
 
 func _od_dragged() -> bool:
-	return od_drag != null and od_drag.moved
+	return od_sc.moved()
 
 func _od_deliver(f: int) -> void:
 	var r = G.deliver(f)
@@ -3156,7 +3172,7 @@ func _lack_open(items: Array, why: String, go: Callable, xu := 0, mats := []) ->
 	root.add_child(od_lk)
 	anchors.append([od_lk, 0.5, 0.5])
 	_stop(od_lk)
-	od_lk.gui_input.connect(func(e): if _is_tap_down(e): _lack_close())
+	tap_close(od_lk, _lack_close)
 	var box = ids.get(".nglk")
 	if box != null:
 		_stop(box)
@@ -3187,30 +3203,27 @@ func _lack_close() -> void:
 const VScroll = preload("res://logic/vscroll.gd")
 var kh_sc = VScroll.new()   # cuộn lưới Kho (dùng chung vscroll.gd)
 var gv_sc = VScroll.new()   # cuộn khay giống ô ruộng (bản 276: nhiều giống quá 3 hàng thì kéo được)
+var _scs := []              # (bản 287) cuộn của các bảng khối Godot (w_ui_base._panel): ui._input đưa sự kiện vào
+
+func scroll_add(v) -> void:
+	_scs = _scs.filter(func(q): return q.area != null and is_instance_valid(q.area))
+	_scs.append(v)
+
+func scroll_moved() -> bool:   # vừa kéo cuộn một bảng (nhả tay không tính là bấm)
+	for v in [kh_sc, gv_sc, od_sc] + _scs:
+		if v.moved():
+			return true
+	return false
 
 func _od_input(e: InputEvent) -> void:
 	# kéo dọc danh sách đơn khi nhiều hơn 2 hàng thẻ
 	if not od_on or od_ul == null or od_hmax <= 0.0:
+		od_sc.input(e)
 		return
-	var pos := Vector2.ZERO
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return
-		pos = e.position / Css.K
-		if e.pressed:
-			var gr := Rect2(od_ul.get_global_rect().position / Css.K, od_ul.r.size)
-			od_drag = {"y0": pos.y, "s0": od_scroll, "moved": false} if gr.has_point(pos) else null
-		elif od_drag != null:
-			var dd = od_drag
-			get_tree().create_timer(0.05).timeout.connect(func(): if od_drag == dd: od_drag = null)
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and od_drag != null:
-		pos = e.position / Css.K
-		var d: float = pos.y - od_drag.y0
-		if absf(d) > 6.0:
-			od_drag.moved = true
-		if od_drag.moved:
-			od_scroll = clampf(od_drag.s0 - d, 0.0, od_hmax)
-			_ord_sync()
+	if od_sc.area != od_ul:
+		od_sc.area = od_ul
+		od_sc.mover = func(_v): _ord_sync()
+	od_sc.input(e)
 
 
 # ------------------------------------------------------------------ khai hoang: bảng chạm biển (Vm "parcel" + Qm + xC bản web)
@@ -3538,9 +3551,11 @@ func any_open() -> bool:   # (bản 283) đang mở bảng / vòng nút / khay n
 		return true
 	if (spp != null and spp.pop != null) or (khp != null and khp.pop != null):
 		return true
-	for p in _pans() + [ngp, nvp, setp, lvp, pcp]:
+	for p in _pans() + [ngp, nvp, setp, lvp, pcp, vlp]:
 		if p != null and "on" in p and p.on:
 			return true
+	if G != null and G.w_all != null and G.w_all.any_on():
+		return true
 	return false
 
 func close_all() -> void:
@@ -3699,6 +3714,9 @@ func _input(e: InputEvent) -> void:
 	if kho_on:
 		kh_sc.input(e)
 	gv_sc.input(e)
+	for v in _scs:
+		if v.area != null and is_instance_valid(v.area):
+			v.input(e)
 	if gv_sc.grabbing(e):
 		get_tree().set_meta("ui_modal", true)   # kéo khay giống: làng đứng yên (main đọc cờ trong _unhandled_input)
 	if nvp != null:

@@ -35,10 +35,16 @@ var tip_s := ""
 var tip_t := 0.0
 var tip_at := {}           # data-ti -> Box
 var bar_h := 70.0
-var bar_sc := 0.0
-var bar_max := 0.0
-var drag = null
-var dragged := false
+const VScroll = preload("res://logic/vscroll.gd")
+var sc = VScroll.new()      # (bản 287) cuộn khay món: dùng chung vscroll.gd như Kho
+var bar_sc: float:
+	get: return sc.s
+	set(v): sc.s = v
+var bar_max: float:
+	get: return sc.hmax
+	set(v): sc.hmax = v
+var dragged: bool:
+	get: return sc.moved()
 var ask: Control = null
 var ask_cb = null
 var _fit := {}
@@ -972,26 +978,10 @@ func step(dt: float) -> void:
 func input(e: InputEvent) -> void:
 	# kéo khay món khi nhiều hơn 3 hàng
 	if k == "" or bar == null or bar_max <= 0.0:
+		sc.input(e)
 		return
-	var p = null
-	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
-		if e.pressed and bar.get_global_rect().has_point(e.position):
-			drag = [e.position.y, bar_sc]
-			dragged = false
-		elif not e.pressed:
-			drag = null
-			if dragged:
-				(func(): dragged = false).call_deferred()
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		var dy: float = (e.position.y - drag[0]) / Css.K
-		if absf(dy) > 6.0:
-			dragged = true
-		bar_sc = clampf(drag[1] - dy, 0.0, bar_max)
-		if bar_in != null:
-			bar_in.position = Vector2(0, -bar_sc) * Css.K
-	elif e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_DOWN or e.button_index == MOUSE_BUTTON_WHEEL_UP):
-		if bar.get_global_rect().has_point(e.position):
-			bar_sc = clampf(bar_sc + (40.0 if e.button_index == MOUSE_BUTTON_WHEEL_DOWN else -40.0), 0.0, bar_max)
-			if bar_in != null:
-				bar_in.position = Vector2(0, -bar_sc) * Css.K
+	if sc.area != bar:
+		sc.area = bar
+		sc.mover = func(v): if bar_in != null: bar_in.position = Vector2(0, -v) * Css.K
+	sc.input(e)
 

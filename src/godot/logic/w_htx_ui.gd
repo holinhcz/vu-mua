@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://logic/w_ui_base.gd"
 # HỤI, LỄ HỘI (giao diện): phần bảng bản web còn thiếu ở bản Godot. Luật ở w_htx.gd.
 #  - bảng "Hụi làng" dựng từ mẫu chụp ở ui_hui.gd.
 #  - QT: bảng lễ hội ($r.mode === "hoi": #vlName = tên lễ, #vlBody): ghi chú, danh sách lễ vật (.ws-rec li.rec + .tbar, nút Góp),
@@ -6,14 +6,10 @@ extends RefCounted
 #  - bQ: nút viên lễ hội (.ghepill.festpill, .hurry), chạm -> gu("hoi") = open_fest().
 # Dựng bằng Control thường của Godot như w_cho_ui.gd; chỉ dựng lại khi đổi, không vẽ mỗi khung.
 
-const Css = preload("res://ui/css.gd")
 
-var U          # ui.gd
-var G          # game.gd
 var W          # w_htx.gd
 # ext: việc của hệ khác (bộ ráp gán)
 #   Ai(id) -> Texture2D    (thiếu thì U.item_ic)
-var ext := {}
 
 var fest: Control = null    # bảng lễ hội ($r.mode === "hoi")
 var fest_sig := ""          # $r.sig
@@ -27,111 +23,11 @@ func _init(ui, wh) -> void:
 	W.ui = self
 	W.render.connect(_on_render)
 
-func _x(k: String) -> Callable:
-	var c = ext.get(k)
-	return c if c is Callable and (c as Callable).is_valid() else Callable()
-
-static func _k(v: float) -> float:
-	return v * Css.K
-
 func _on_render() -> void:   # kn
 	if fest != null:
 		sync_fest()
 
 # ------------------------------------------------------------------ khối dựng chung (như w_sys_ui.gd)
-func _panel(title: String, on_close: Callable) -> Array:   # .raceov.pcov > .rbox.pcbox: [gốc, thân, nhãn tên]
-	var ov := Control.new()
-	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ov.mouse_filter = Control.MOUSE_FILTER_STOP
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.35)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.gui_input.connect(func(e):
-		if U._is_tap_down(e):
-			on_close.call())
-	ov.add_child(dim)
-	var box := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color8(0xff, 0xfa, 0xf0)
-	sb.set_corner_radius_all(int(_k(18)))
-	sb.content_margin_left = _k(14)
-	sb.content_margin_right = _k(14)
-	sb.content_margin_top = _k(12)
-	sb.content_margin_bottom = _k(14)
-	box.add_theme_stylebox_override("panel", sb)
-	box.custom_minimum_size = Vector2(minf(U.vsize().x - 32.0, 420.0), 0) * Css.K
-	var cc := CenterContainer.new()
-	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
-	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cc.add_child(box)
-	ov.add_child(cc)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", int(_k(8)))
-	box.add_child(col)
-	var hd := HBoxContainer.new()
-	var b := _lbl(title, 17, 800, Color8(0x3a, 0x2a, 0x1a))
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hd.add_child(b)
-	hd.add_child(_btn("×", false, true, on_close))
-	col.add_child(hd)
-	var sc := ScrollContainer.new()
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sc.custom_minimum_size = Vector2(0, minf(U.vsize().y * 0.7, 560.0) * Css.K)
-	col.add_child(sc)
-	var body := VBoxContainer.new()
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", int(_k(6)))
-	sc.add_child(body)
-	U.root.add_child(ov)
-	ov.set_meta("body", body)
-	ov.set_meta("name", b)
-	return [ov, body, b]
-
-func _lbl(s: String, fs: float, w: int, col: Color, wrap := true) -> Label:
-	var l := Label.new()
-	l.text = s
-	l.add_theme_font_override("font", Css.font(w))
-	l.add_theme_font_size_override("font_size", int(_k(fs)))
-	l.add_theme_color_override("font_color", col)
-	if wrap:
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return l
-
-func _btn(s: String, primary: bool, on: bool, cb: Callable) -> Button:   # .btn / .btn.primary (disabled khi !on)
-	var b := Button.new()
-	b.text = s
-	b.disabled = not on
-	b.add_theme_font_override("font", Css.font(700))
-	b.add_theme_font_size_override("font_size", int(_k(14)))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color8(0x3f, 0x9a, 0x3a) if primary else Color8(0xff, 0xff, 0xff)
-	sb.border_color = Color8(0x2f, 0x7a, 0x2a) if primary else Color8(0xd8, 0xc8, 0xa8)
-	sb.set_border_width_all(int(maxf(1.0, _k(1.5))))
-	sb.set_corner_radius_all(int(_k(10)))
-	sb.content_margin_left = _k(12)
-	sb.content_margin_right = _k(12)
-	sb.content_margin_top = _k(6)
-	sb.content_margin_bottom = _k(6)
-	b.add_theme_stylebox_override("normal", sb)
-	b.add_theme_stylebox_override("hover", sb)
-	b.add_theme_stylebox_override("pressed", sb)
-	var sd := sb.duplicate()
-	sd.bg_color = sd.bg_color.lerp(Color(0.85, 0.85, 0.85), 0.55)
-	b.add_theme_stylebox_override("disabled", sd)
-	b.add_theme_color_override("font_color", Color.WHITE if primary else Color8(0x3a, 0x2a, 0x1a))
-	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.7) if primary else Color8(0xa0, 0x90, 0x80))
-	b.pressed.connect(cb)
-	return b
-
-func _ic(id: String, px: float) -> TextureRect:   # Ai(id)
-	var t := TextureRect.new()
-	var f := _x("Ai")
-	t.texture = f.call(id) if f.is_valid() else U.item_ic(id, _k(px))
-	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	t.custom_minimum_size = Vector2(_k(px), _k(px))
-	return t
-
 func _note(b: String, rest: String) -> Control:   # p.note (<b> đầu dòng + chữ thường)
 	var v := VBoxContainer.new()
 	if b != "":

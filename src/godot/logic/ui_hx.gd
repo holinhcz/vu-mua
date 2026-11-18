@@ -41,16 +41,11 @@ func _wire_ov(wsel: String) -> void:   # nút ×, nút ?, bấm ra ngoài hộp 
 	var o = ids.get(".lvov")
 	if o != null:
 		U._stop(o)
-		o.gui_input.connect(_ov_tap.bind(o))
+		U.tap_close(o, close, func(): return ids.get(_wsel))
 	var w = ids.get(wsel)
 	if w != null:
 		U._stop(w)
 	U._layout()
-
-func _ov_tap(e: InputEvent, ov: Control) -> void:   # bấm ra ngoài khung thì đóng
-	var w = ids.get(_wsel)
-	if U._is_tap_down(e) and w != null and not w.get_global_rect().has_point(ov.global_position + e.position):
-		close()
 
 func step(dt: float) -> void:   # dựng lại mỗi giây khi trạng thái đổi
 	if not on:

@@ -96,7 +96,7 @@ func _draw_card(e: float) -> void:
 	var ov = ids.get(".raceov")
 	if ov != null:
 		U._stop(ov)
-		ov.gui_input.connect(func(ev): if U._is_tap_down(ev) and not ids[".rbox"].get_global_rect().has_point(ov.global_position + ev.position): _ok())
+		U.tap_close(ov, _ok, func(): return ids.get(".rbox"))
 	if ids.get(".rbox") != null:
 		U._stop(ids[".rbox"])
 	_wire(box)

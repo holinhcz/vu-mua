@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://logic/w_ui_base.gd"
 # Giao diện câu cá, lờ lọp, thú cưng, tát ao, thả diều: chép nội dung và nút từ bản web.
 #  - tab Câu cá (#pn-fish): #fishc (khung ao: chỗ trống cho lớp vẽ SX), #fishRes, #fishMsg, #fishGo (Xh + lớp bọc),
 #    thanh mồi .caubait (oA), #fishInfo (yE), .fishrod (#fishRodT, #fishRodD + Q4, #fishRod -> fF), Sổ cá #fishDex.
@@ -8,7 +8,6 @@ extends RefCounted
 # Khung canvas (SX, _K, gU) là phần vẽ: ở đây chỉ chừa chỗ (Control) và nhận chạm; lớp vẽ đọc R.fo / R.ai / R.zi.
 # Dựng bằng Control thường (bản web không có bản chụp số đo cho mấy bảng này), cỡ theo Css.K như w_cho_ui.gd.
 
-const Css = preload("res://ui/css.gd")
 
 const BAIT_IC := {   # c1[k].ic (sau = Ze.sau), sinh từ web_all.js
 	"cam": "<path d=\"M14 30Q32 20 50 30L46 50Q32 58 18 50Z\" fill=\"#c9a46a\" stroke=\"#7a5a2a\" stroke-width=\"1.6\"/><ellipse cx=\"32\" cy=\"30\" rx=\"18\" ry=\"6\" fill=\"#e8c88a\"/><circle cx=\"26\" cy=\"29\" r=\"2\" fill=\"#b8884a\"/><circle cx=\"34\" cy=\"31\" r=\"2\" fill=\"#b8884a\"/><circle cx=\"38\" cy=\"28\" r=\"1.6\" fill=\"#b8884a\"/>",
@@ -17,10 +16,7 @@ const BAIT_IC := {   # c1[k].ic (sau = Ze.sau), sinh từ web_all.js
 	"sau": "<path d=\"M14 40Q20 30 28 38Q36 46 44 36Q50 28 54 34\" stroke=\"#5aa832\" stroke-width=\"9\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M14 40Q20 30 28 38Q36 46 44 36Q50 28 54 34\" stroke=\"#8ad05a\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\" stroke-dasharray=\"3 4\"/><circle cx=\"55\" cy=\"33\" r=\"5.5\" fill=\"#4a9a2a\"/><circle cx=\"57\" cy=\"31.5\" r=\"1.4\" fill=\"#1a120c\"/><path d=\"M54 27L52 22M58 28L60 23\" stroke=\"#3a6a1a\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>",
 }
 
-var U          # ui.gd
-var G          # game.gd
 var R          # w_ca.gd
-var ext := {}  # "Ns": func(o: Dictionary) -> void (xếp việc thăm bẫy {type: "lo", key}), "ec": vẽ lại bảng nhân vật, "g2": đóng bảng nhân vật
 
 # tab Câu cá
 var fish: Control = null
@@ -43,62 +39,7 @@ func _init(ui, rules) -> void:
 	R = rules
 	R.ui = self
 
-func _x(k: String) -> Callable:
-	var c = ext.get(k)
-	return c if c is Callable and (c as Callable).is_valid() else Callable()
-
-static func _k(v: float) -> float:
-	return v * Css.K
-
 # ------------------------------------------------------------------ khối dựng chung
-func _lbl(s: String, fs: float, w: int, col: Color, wrap := true) -> Label:
-	var l := Label.new()
-	l.text = s
-	l.add_theme_font_override("font", Css.font(w))
-	l.add_theme_font_size_override("font_size", int(_k(fs)))
-	l.add_theme_color_override("font_color", col)
-	if wrap:
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return l
-
-func _btn(s: String, primary: bool, on: bool, cb: Callable) -> Button:   # .btn / .btn.primary
-	var b := Button.new()
-	b.text = s
-	b.disabled = not on
-	b.add_theme_font_override("font", Css.font(700))
-	b.add_theme_font_size_override("font_size", int(_k(14)))
-	_btn_style(b, primary)
-	if cb.is_valid():
-		b.pressed.connect(cb)
-	return b
-
-func _btn_style(b: Button, primary: bool) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color8(0x3f, 0x9a, 0x3a) if primary else Color8(0xff, 0xff, 0xff)
-	sb.border_color = Color8(0x2f, 0x7a, 0x2a) if primary else Color8(0xd8, 0xc8, 0xa8)
-	sb.set_border_width_all(int(maxf(1.0, _k(1.5))))
-	sb.set_corner_radius_all(int(_k(10)))
-	sb.content_margin_left = _k(12)
-	sb.content_margin_right = _k(12)
-	sb.content_margin_top = _k(6)
-	sb.content_margin_bottom = _k(6)
-	b.add_theme_stylebox_override("normal", sb)
-	b.add_theme_stylebox_override("hover", sb)
-	b.add_theme_stylebox_override("pressed", sb)
-	var sd := sb.duplicate()
-	sd.bg_color = sd.bg_color.lerp(Color(0.85, 0.85, 0.85), 0.55)
-	b.add_theme_stylebox_override("disabled", sd)
-	b.add_theme_color_override("font_color", Color.WHITE if primary else Color8(0x3a, 0x2a, 0x1a))
-	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.7) if primary else Color8(0xa0, 0x90, 0x80))
-
-func _ic(id: String, px: float) -> TextureRect:   # Ai(id)
-	var t := TextureRect.new()
-	t.texture = U.item_ic(id, _k(px))
-	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	t.custom_minimum_size = Vector2(_k(px), _k(px))
-	return t
-
 func _note(s: String) -> Label:   # p.note
 	return _lbl(s, 12, 400, Color8(0x8a, 0x7a, 0x6a))
 
@@ -487,6 +428,13 @@ func _ec() -> void:
 
 func tab_body(id: String) -> Control:   # QQ / zh["dieu"].html / zh["lo"].html (+ click)
 	match id:
+		"cau":   # (bản 287) tab Câu cá: bảng câu đã dựng sẵn (#pn-fish), nối vào bảng Nhân vật
+			if fish != null and (not is_instance_valid(fish) or fish.is_queued_for_deletion()):
+				fish = null
+			if fish != null and fish.get_parent() != null:
+				fish.get_parent().remove_child(fish)
+			R.me_open()
+			return fish_panel()
 		"nuoi": return _qq()
 		"dieu": return _dieu()
 		"lo": return _lo()

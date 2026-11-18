@@ -58,7 +58,7 @@ func _build() -> void:
 	var ov = ids.get(".raceov")
 	if ov != null:
 		U._stop(ov)
-		ov.gui_input.connect(func(e): if U._is_tap_down(e) and not ids[".rbox"].get_global_rect().has_point(ov.global_position + e.position): close())
+		U.tap_close(ov, close, func(): return ids.get(".rbox"))
 	if ids.get(".rbox") != null:
 		U._stop(ids[".rbox"])
 	_wire(box)

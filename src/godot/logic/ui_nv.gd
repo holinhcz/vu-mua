@@ -32,9 +32,14 @@ var body_r := Rect2()
 var cont: Control = null
 var sig := ""
 var shsig := ""
-var scroll := 0.0
-var hmax := 0.0
-var drag = null
+const VScroll = preload("res://logic/vscroll.gd")
+var sc = VScroll.new()      # (bản 287) cuộn dùng chung vscroll.gd như Kho
+var scroll: float:
+	get: return sc.s
+	set(v): sc.s = v
+var hmax: float:
+	get: return sc.hmax
+	set(v): sc.hmax = v
 var wig := []            # rương đang sáng: lắc như nggb
 var _t := 0.0
 var _clock := 0.0
@@ -188,7 +193,7 @@ func _shell() -> void:
 	var bk = ids.get(".pbk")
 	if bk != null:
 		U._stop(bk)
-		bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
+		U.tap_close(bk, close)
 	var win = ids.get(".pwin")
 	if win != null:
 		U._stop(win)
@@ -826,38 +831,22 @@ func _go(tid: String) -> void:
 	close()
 	if tid == "deliver":
 		U.ord_open()
+	elif tid == "fish":
+		U.pcp.open("cau")
 	else:
 		U.say("Phần này đang chuyển qua bản Godot.")
 
 func _dragged() -> bool:
-	return drag != null and drag.moved
+	return sc.moved()
 
 func input(e: InputEvent) -> void:
 	if not on or body == null:
+		sc.input(e)
 		return
-	var pos := Vector2.ZERO
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		scroll = clampf(scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0), 0.0, hmax)
-		U._move(cont, Vector2(0, -scroll))
-		return
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return
-		pos = e.position / Css.K
-		if e.pressed:
-			var gr := Rect2(body.get_global_rect().position / Css.K, body.r.size)
-			drag = {"y0": pos.y, "s0": scroll, "moved": false} if gr.has_point(pos) else null
-		elif drag != null:
-			var dd = drag
-			U.get_tree().create_timer(0.05).timeout.connect(func(): if drag == dd: drag = null)
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		pos = e.position / Css.K
-		var d: float = pos.y - drag.y0
-		if absf(d) > 6.0:
-			drag.moved = true
-		if drag.moved and cont != null:
-			scroll = clampf(drag.s0 - d, 0.0, hmax)
-			U._move(cont, Vector2(0, -scroll))
+	if sc.area != body:
+		sc.area = body
+		sc.mover = func(v): if cont != null: U._move(cont, Vector2(0, -v))
+	sc.input(e)
 
 # ------------------------------------------------------------------ chấm đỏ nút Nhiệm vụ (mY)
 func badge(btn: Control) -> void:

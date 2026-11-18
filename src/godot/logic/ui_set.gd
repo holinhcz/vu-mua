@@ -27,8 +27,11 @@ var ids := {}
 var pn: Control = null
 var _bsig := ""
 var pn0 := Vector2.ZERO
-var scroll := 0.0
-var drag = null
+const VScroll = preload("res://logic/vscroll.gd")
+var sc = VScroll.new()      # (bản 287) cuộn dùng chung vscroll.gd như Kho
+var scroll: float:
+	get: return sc.s
+	set(v): sc.s = v
 var armed := 0.0
 var _tm := false           # toàn màn hình lúc dựng bảng (Esc / vuốt thoát thì dựng lại)
 var _tm_t := 0.0
@@ -201,7 +204,7 @@ func _build() -> void:
 	var bk = ids.get(".pbk")
 	if bk != null:
 		U._stop(bk)
-		bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
+		U.tap_close(bk, close)
 	var win = ids.get(".pwin")
 	if win != null:
 		U._stop(win)
@@ -285,13 +288,16 @@ func close() -> void:   # Zh
 		box.visible = false
 	pn = null
 
-func _scroll_to(s: float) -> void:
-	scroll = clampf(s, 0.0, HMAX)
+func _scroll_to(v: float) -> void:
+	sc.hmax = HMAX
+	scroll = clampf(v, 0.0, HMAX)
 	if pn != null:
 		U._move(pn, pn0 - Vector2(0, scroll))
 
 # ------------------------------------------------------------------ chọn
 func pick(k: String, v) -> void:
+	if sc.moved():
+		return   # vừa kéo cuộn, không phải bấm (bản 287)
 	if k == "fs":   # bật / tắt ngay lúc bấm; trình duyệt đổi xong thì step thấy và dựng lại
 		if int(v) == 1 and not _tm:
 			if not TM.bat():
@@ -362,28 +368,12 @@ func pop_close() -> void:
 func input(e: InputEvent) -> bool:
 	if not on or pn == null or U.help_pop != null:
 		return false
-	var pos := Vector2.ZERO
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		_scroll_to(scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
-		return true
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return false
-		pos = e.position / Css.K
-		if e.pressed:
-			var body: Control = ids.get(".pbody")
-			var gr := Rect2(body.get_global_rect().position / Css.K, body.r.size)
-			drag = {"y0": pos.y, "s0": scroll, "moved": false} if gr.has_point(pos) else null
-		else:
-			drag = null
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		pos = e.position / Css.K
-		var d: float = pos.y - drag.y0
-		if absf(d) > 6.0:
-			drag.moved = true
-		if drag.moved:
-			_scroll_to(drag.s0 - d)
-	return false
+	var body: Control = ids.get(".pbody")
+	if body != null and sc.area != body:
+		sc.area = body
+		sc.mover = func(v): if pn != null: U._move(pn, pn0 - Vector2(0, v))
+	sc.hmax = HMAX
+	return sc.input(e)
 
 func step(dt: float) -> void:
 	if on:

@@ -21,9 +21,14 @@ var box: Control = null
 var ids := {}
 var gifts: Control = null
 var cont: Control = null
-var hmax := 0.0
-var scroll := 0.0
-var drag = null
+var hmax: float:
+	get: return sc.hmax
+	set(v): sc.hmax = v
+const VScroll = preload("res://logic/vscroll.gd")
+var sc = VScroll.new()      # (bản 287) cuộn dùng chung vscroll.gd như Kho
+var scroll: float:
+	get: return sc.s
+	set(v): sc.s = v
 var T := {}
 var Q := {}
 var _wait := 0.0
@@ -260,30 +265,12 @@ func close() -> void:   # iL
 # ------------------------------------------------------------------ cuộn danh sách quà
 func input(e: InputEvent) -> bool:
 	if not on or gifts == null:
+		sc.input(e)
 		return false
-	var pos := Vector2.ZERO
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		scroll = clampf(scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0), 0.0, hmax)
-		U._move(cont, Vector2(0, -scroll))
-		return true
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return false
-		pos = e.position / Css.K
-		if e.pressed:
-			var gr := Rect2(gifts.get_global_rect().position / Css.K, gifts.r.size)
-			drag = {"y0": pos.y, "s0": scroll, "moved": false} if gr.has_point(pos) else null
-		else:
-			drag = null
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		pos = e.position / Css.K
-		var d: float = pos.y - drag.y0
-		if absf(d) > 6.0:
-			drag.moved = true
-		if drag.moved and cont != null:
-			scroll = clampf(drag.s0 - d, 0.0, hmax)
-			U._move(cont, Vector2(0, -scroll))
-	return false
+	if sc.area != gifts:
+		sc.area = gifts
+		sc.mover = func(v): if cont != null: U._move(cont, Vector2(0, -v))
+	return sc.input(e)
 
 func step(dt: float) -> void:
 	lvT = maxf(0.0, lvT - dt)

@@ -65,9 +65,16 @@ var sids := {}
 var help_b: Control = null
 var grid: Control = null
 var lis := []
-var sc := 0.0
-var sc_max := 0.0
-var drag = null
+const VScroll = preload("res://logic/vscroll.gd")
+var vs = VScroll.new()      # (bản 287) cuộn lưới thẻ: dùng chung vscroll.gd như Kho
+var sc: float:
+	get: return vs.s
+	set(v): vs.s = v
+var sc_max: float:
+	get: return vs.hmax
+	set(v): vs.hmax = v
+var drag:
+	get: return vs.drag
 var ov_lo: Node2D = null
 var t := 0.0
 var _gray: ShaderMaterial = null
@@ -519,7 +526,7 @@ func _build_shop() -> void:
 	var bk = pids.get(".pbk")
 	if bk != null:
 		U._stop(bk)
-		bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
+		U.tap_close(bk, close)
 	var win = pids.get(".pwin")
 	if win != null:
 		U._stop(win)
@@ -833,14 +840,14 @@ static func _tx(n: Dictionary, s: String, x = null, cx = null) -> void:   # đ�
 	elif n.has("tr"):
 		n.erase("tr")
 
-func _scroll(s: float) -> void:
-	sc = clampf(s, 0.0, sc_max)
+func _scroll(v: float) -> void:
+	sc = clampf(v, 0.0, sc_max)
 	for e in lis:
 		if is_instance_valid(e[0]):
 			U._move(e[0], e[1] - Vector2(0, sc))
 
 func _dragged() -> bool:
-	return drag != null and drag.moved
+	return vs.moved()
 
 func _cat_name(c: String) -> String:
 	for q in _grp(c).c:
@@ -916,7 +923,7 @@ func _pop(n: Dictionary, title: String, body: String) -> void:
 	var bkb = pid.get(".u2pop")
 	if bkb != null:
 		U._stop(bkb)
-		bkb.gui_input.connect(func(e): if U._is_tap_down(e): _help_close())
+		U.tap_close(bkb, _help_close)
 	U._click(pid.get(".u2px"), _help_close, "scale")
 	U._layout()
 
@@ -2053,21 +2060,7 @@ func input(e: InputEvent) -> void:   # cuộn lưới thẻ trong bảng
 	if mode != "shop" or grid == null or not is_instance_valid(grid):
 		return
 	in_t = t
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		_scroll(sc + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
-		return
-	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
-		var pos: Vector2 = e.position / Css.K
-		if e.pressed:
-			var gr := Rect2(grid.get_global_rect().position / Css.K, grid.r.size)
-			drag = {"y0": pos.y, "s0": sc, "moved": false} if gr.has_point(pos) else null
-		elif drag != null:
-			var d = drag
-			U.get_tree().create_timer(0.05).timeout.connect(func(): if drag == d: drag = null)
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		var pos: Vector2 = e.position / Css.K
-		var dy: float = pos.y - drag.y0
-		if absf(dy) > 6.0:
-			drag.moved = true
-		if drag.moved:
-			_scroll(drag.s0 - dy)
+	if vs.area != grid:
+		vs.area = grid
+		vs.mover = _scroll
+	vs.input(e)

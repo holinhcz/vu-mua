@@ -10,8 +10,8 @@ extends "res://logic/ui_ls.gd"
 #   Tab Nuôi thêm, Diều, Lờ lọp: thân của w_ca_ui (tab_body).
 
 const KDD := "kdd"
-const TABS := [["nv", "Nhân vật"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
-const WTABS := ["nuoi", "dieu", "lo"]
+const TABS := [["nv", "Nhân vật"], ["cau", "Câu cá"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
+const WTABS := ["cau", "nuoi", "dieu", "lo"]
 const LEFT := ["non", "ao", "quan", "dep"]
 const RIGHT := ["binh", "liem", "cuoc", "gui"]
 const BOT := ["xe", "xuong", "bua", "xp"]
@@ -38,6 +38,10 @@ func open(t := "") -> void:
 	_build()
 
 func close() -> void:
+	if tab == "cau" and G.w_all != null:
+		G.w_all.WCA.zo()   # rời tab câu: dừng lượt câu
+	if wc != null and is_instance_valid(wc) and wc.get_parent() != null:
+		wc.get_parent().remove_child(wc)   # bảng câu dùng lại lần sau, không để khung cũ xoá mất
 	wc = null   # hình nhân vật (pic) giữ theo bảng cất
 	super()
 
@@ -64,6 +68,8 @@ func _foods() -> Array:   # fB lọc món có trong kho
 	return out
 
 func _tab_go(k: String) -> void:
+	if tab == "cau" and k != "cau" and G.w_all != null:
+		G.w_all.WCA.zo()
 	if tab != k:
 		tab = k
 		scroll = 0.0

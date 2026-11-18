@@ -226,7 +226,7 @@ func _show(n: Dictionary, box_cls: String, ids: Dictionary, on_close: Callable) 
 	var first: Control = b.kids()[0] if b.kids().size() > 0 else null
 	if first != null:
 		U._stop(first)
-		first.gui_input.connect(func(e): if U._is_tap_down(e): on_close.call())
+		U.tap_close(first, on_close)
 	var bb = ids.get("." + box_cls)
 	if bb != null:
 		U._stop(bb)

@@ -421,6 +421,11 @@ func _ray_pill() -> void:   # l_
 	if rpill.text != tx:
 		rpill.text = tx
 
+func any_on() -> bool:   # (bản 287) bảng cây, hạn mặn, chợ nổi, radio, lễ hội đang mở
+	if WRU == null:
+		return false
+	return WRU.man != null or WCU.cho != null or WCU.rd != null or WHU.fest != null
+
 func close_all() -> void:   # ui.close_all
 	if WRU == null:
 		return

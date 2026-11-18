@@ -17,10 +17,14 @@ var sig := ""
 var _sig_t := 0.0
 var inner: Control = null   # thân cuộn được
 var in0 := Vector2.ZERO
-var scroll := 0.0
-var hmax := 0.0
-var drag = null
-var moved_t := false        # ngón tay vừa kéo cuộn: nhả ra không tính là bấm
+const VScroll = preload("res://logic/vscroll.gd")
+var sc = VScroll.new()      # (bản 287) cuộn thân bảng: dùng chung vscroll.gd như Kho
+var scroll: float:
+	get: return sc.s
+	set(v): sc.s = v
+var hmax: float:
+	get: return sc.hmax
+	set(v): sc.hmax = v
 var B := {}                 # bản chụp #pov của bảng nhà dân (mẫu p.note)
 var T := {}                 # khối mẫu chung (ui/snap/vl_tab.json)
 var _area := ""             # lớp của vùng thân cuộn (.vltab / .lsbody)
@@ -34,7 +38,7 @@ func _init(ui) -> void:
 func close() -> void:   # cất bảng (ẩn, giữ khung + khối): mở lại như Kho, chỉ hiện, cái gì đổi mới dựng
 	_qe_drop()
 	on = false
-	drag = null
+	sc.drag = null
 	if box != null and is_instance_valid(box):
 		U.anchors.erase(U._anchor_of(box))
 		box.visible = false
@@ -46,7 +50,7 @@ func step(_dt: float) -> void:   # bảng con: dựng lại khi đổi
 	pass
 
 func busy() -> bool:   # đang kéo cuộn (dọc hoặc hàng chip): ui hoãn step, khỏi dựng lại bảng giữa lúc kéo (giật, khựng)
-	return (drag != null and drag.moved) or (hd != null and hd.moved)
+	return (sc.drag != null and sc.moved()) or (hd != null and hd.moved)
 
 func _barn(id) -> int:   # g.barn[id] || 0
 	return int(G.g.barn.get(String(id), 0))
@@ -212,7 +216,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 		var bk = ids.get(".pbk")
 		if bk != null:
 			U._stop(bk)
-			bk.gui_input.connect(func(e): if U._is_tap_down(e): close())
+			U.tap_close(bk, close)
 		var win = ids.get(".pwin")
 		if win != null:
 			U._stop(win)
@@ -426,7 +430,7 @@ func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối 
 		_on(n.act)
 
 func _on(cb: Callable) -> void:
-	if moved_t:
+	if sc.moved():
 		return
 	cb.call()
 	_redo()
@@ -692,7 +696,7 @@ func _chips_drag(e: InputEvent, sel := ".khchips") -> bool:   # kéo ngang hàng
 		var d: float = p.x - hd.x0
 		if absf(d) > 6.0:
 			hd.moved = true
-			moved_t = true
+			sc._moved = true   # kéo ngang hàng chip: nhả tay không tính là bấm
 		if hd.moved:
 			var mx := 0.0
 			for c in row.kids():
@@ -763,36 +767,17 @@ func _redo() -> void:
 		_sig_sh.clear()
 	_build()
 
-func _scroll_to(s: float) -> void:
-	scroll = clampf(s, 0.0, hmax)
+func _scroll_to(v: float) -> void:
+	sc.s = clampf(v, 0.0, sc.hmax)
 	if inner != null:
-		U._move(inner, in0 - Vector2(0, scroll))
+		U._move(inner, in0 - Vector2(0, sc.s))
 
 func input(e: InputEvent) -> bool:
-	# ngón tay mới chạm xuống: bỏ cờ "vừa kéo" của lần trước. Trước đây cờ này không bao giờ tắt: kéo cuộn một lần là từ đó
-	# mọi nút trong bảng (tab, nút việc) bấm không ăn, bảng như đứng yên
-	if ((e is InputEventScreenTouch and e.pressed) or (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT)):
-		moved_t = false
-	if not on or inner == null or hmax <= 0.0:
+	if not on or inner == null:
+		sc.input(e)   # vẫn xoá cờ "vừa kéo" khi chạm xuống
 		return false
-	if e is InputEventMouseButton and e.pressed and (e.button_index == MOUSE_BUTTON_WHEEL_UP or e.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		_scroll_to(scroll + (-40.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 40.0))
-		return true
-	# so chỗ ngón tay với khung thân trên màn thật (bảng có thể đang thu nhỏ cho vừa màn: box.scale)
-	var k: float = Css.K * (box.scale.y if box != null else 1.0)
-	if e is InputEventScreenTouch or e is InputEventMouseButton:
-		if e is InputEventMouseButton and e.button_index != MOUSE_BUTTON_LEFT:
-			return false
-		if e.pressed:
-			var vb: Control = ids.get("." + _area)
-			drag = {"y0": e.position.y, "s0": scroll, "moved": false} if vb != null and vb.get_global_rect().has_point(e.position) else null
-		else:
-			drag = null
-	elif (e is InputEventScreenDrag or e is InputEventMouseMotion) and drag != null:
-		var d: float = (e.position.y - float(drag.y0)) / k
-		if absf(d) > 6.0:
-			drag.moved = true
-			moved_t = true
-		if drag.moved:
-			_scroll_to(drag.s0 - d)
-	return false
+	var vb: Control = ids.get("." + _area)
+	if vb != null and sc.area != vb:
+		sc.area = vb
+		sc.mover = _scroll_to
+	return sc.input(e)
