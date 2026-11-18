@@ -33,3 +33,7 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_hai_san.png | Lẩu hải sản |
 | lau_de.png | Lẩu dê |
 | lau_bo.png | Lẩu bò |
+| lau_ca_linh.png | Lẩu cá linh bông điên điển (bản 311) |
+| lau_ca_keo.png | Lẩu cá kèo lá giang |
+| lau_ca_loc.png | Lẩu cá lóc chua cay |
+| lau_thac_lac.png | Lẩu cá thác lác khổ qua |
