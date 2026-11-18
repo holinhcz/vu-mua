@@ -408,6 +408,18 @@ static func _pseudo(b: Control, p: Dictionary, R: Array, z: float, which: String
 		x += float(m[4]) * z
 		y += float(m[5]) * z
 		rot = _rot(tf)
+	if String(p.get("bgi", "")).find("rgba(80, 52, 14, 0.55)") >= 0 and ph <= 14.0 * z and pw > ph * 4.0:
+		# (bản 295) thanh tre ngang trong bảng (dưới hàng tab Kho, trên nút Bán hết...): cùng ảnh cạnh khung tre chung
+		var tb: Control = Box.new()
+		tb.place(Rect2(x, y, pw, ph))
+		var e: float = (Tre.T + Tre.S) * z
+		var Lz: float = Tre.L * z
+		var n := maxi(1, int(round(pw / Lz)))
+		var tw2: float = pw / n
+		var tex: Texture2D = Css.image(Tre.D + "canh_tren.png")
+		for i in n:
+			tb.pic(tex, Rect2(i * tw2, (ph - Tre.T * z) * 0.5, tw2, e))
+		return tb
 	var st := ""
 	for kv in [["background-color", "bg"], ["background-image", "bgi"], ["background-size", "bgs"], ["background-position", "bgp"], ["background-repeat", "bgr"], ["border-radius", "br"], ["box-shadow", "bs"], ["opacity", "op"]]:
 		var v: String = p.get(kv[1], "")
