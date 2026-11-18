@@ -322,5 +322,335 @@
 436
 ],
 "nguon": "tấm ảnh người dùng (bản 308)"
+},
+"banh_beo": {
+"file": "banh_beo.png",
+"bbox": [
+41,
+70,
+471,
+442
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"banh_bido": {
+"file": "banh_bido.png",
+"bbox": [
+41,
+63,
+471,
+449
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"banh_chuoi_nuong": {
+"file": "banh_chuoi_nuong.png",
+"bbox": [
+41,
+71,
+471,
+441
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"banh_duc": {
+"file": "banh_duc.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"banh_khoai_mi": {
+"file": "banh_khoai_mi.png",
+"bbox": [
+41,
+66,
+471,
+446
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"banh_khot": {
+"file": "banh_khot.png",
+"bbox": [
+41,
+77,
+471,
+434
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"banh_trung_thu": {
+"file": "banh_trung_thu.png",
+"bbox": [
+41,
+66,
+471,
+446
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"bap_rang": {
+"file": "bap_rang.png",
+"bbox": [
+41,
+82,
+471,
+429
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"bo_xao": {
+"file": "bo_xao.png",
+"bbox": [
+41,
+92,
+471,
+420
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"bt_phoi": {
+"file": "bt_phoi.png",
+"bbox": [
+41,
+83,
+471,
+428
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"cha_bong": {
+"file": "cha_bong.png",
+"bbox": [
+41,
+72,
+471,
+440
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"cha_lua": {
+"file": "cha_lua.png",
+"bbox": [
+41,
+64,
+471,
+447
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"dieu_muoi": {
+"file": "dieu_muoi.png",
+"bbox": [
+41,
+83,
+471,
+428
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"dieu_rang": {
+"file": "dieu_rang.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"dua_leo_muoi": {
+"file": "dua_leo_muoi.png",
+"bbox": [
+41,
+97,
+471,
+414
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"ga_xao": {
+"file": "ga_xao.png",
+"bbox": [
+41,
+92,
+471,
+420
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"goi_cuon": {
+"file": "goi_cuon.png",
+"bbox": [
+41,
+62,
+471,
+450
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"khoai_say": {
+"file": "khoai_say.png",
+"bbox": [
+41,
+77,
+471,
+434
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"lau_ca_hu": {
+"file": "lau_ca_hu.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_cua_dong": {
+"file": "lau_cua_dong.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_ech": {
+"file": "lau_ech.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_ga_la_giang": {
+"file": "lau_ga_la_giang.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_ga_ot_hiem": {
+"file": "lau_ga_ot_hiem.png",
+"bbox": [
+41,
+76,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_luon": {
+"file": "lau_luon.png",
+"bbox": [
+41,
+78,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_nam": {
+"file": "lau_nam.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_vit_chao": {
+"file": "lau_vit_chao.png",
+"bbox": [
+41,
+77,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 309)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"long_nhan": {
+"file": "long_nhan.png",
+"bbox": [
+41,
+69,
+471,
+442
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"man_lac": {
+"file": "man_lac.png",
+"bbox": [
+41,
+97,
+471,
+414
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"muoi_dp": {
+"file": "muoi_dp.png",
+"bbox": [
+41,
+96,
+471,
+415
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"nem_chua": {
+"file": "nem_chua.png",
+"bbox": [
+41,
+68,
+471,
+444
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"tom_kho": {
+"file": "tom_kho.png",
+"bbox": [
+41,
+66,
+471,
+446
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
+},
+"xoi_gac": {
+"file": "xoi_gac.png",
+"bbox": [
+41,
+68,
+471,
+444
+],
+"nguon": "tấm ảnh người dùng (bản 309)"
 }
 }
