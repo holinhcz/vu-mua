@@ -250,11 +250,22 @@ func _collecting() -> bool:   # M(ya)
 func _ok(rid: String) -> bool:   # t1
 	return G.xw.has_in(rid)
 
-func _rec() -> Array:   # w(ya): món làm được trước, giữ thứ tự gốc
+var tab := {}   # (bản 324) xưởng -> nhóm món đang lọc (mở lại vào đúng nhóm lần trước)
+
+func _tab() -> String:
+	var g: Array = G.xw.groups(k)
+	if g.is_empty():
+		return ""
+	return String(tab.get(k, g[0][0]))
+
+func _rec() -> Array:   # w(ya): món làm được trước, giữ thứ tự gốc; chỉ món của nhóm đang chọn
 	var L: Array = G.xw.sr[k].rec
 	var a := []
 	var b := []
+	var t := _tab()
 	for r in L:
+		if t != "" and G.xw.group_of(k, r) != t:
+			continue
 		(a if _ok(r) else b).append(r)
 	return a + b
 
@@ -280,7 +291,7 @@ func _sync() -> void:   # Wn
 		if s_top != tsig:
 			tsig = s_top
 			_build_top(w, pend)
-		var bk := av + sel + str(_barn_sig())
+		var bk := av + sel + str(_barn_sig()) + _tab()
 		if first or bk != bsig:
 			bsig = bk
 			_build_bar()
@@ -484,9 +495,11 @@ func _pd_slot(id: String) -> Dictionary:   # ne(): món đang chờ nhân vật 
 func _build_bar() -> void:   # ut()
 	var o := Vector2(float(T.xbar.r[0]), float(T.xbar.r[1]))
 	var L := _rec()
+	var gs: Array = G.xw.groups(k)
+	var th: float = 38.0 if not gs.is_empty() else 0.0   # hàng chip nhóm món
 	var rows := int(ceil(L.size() / 5.0))
-	var h := minf(202.0, 16.0 + rows * 54.0 + maxf(0, rows - 1) * 6.0)
-	bar_max = maxf(0.0, 16.0 + rows * 54.0 + maxf(0, rows - 1) * 6.0 - h)
+	var h := minf(202.0 + th, th + 16.0 + rows * 54.0 + maxf(0, rows - 1) * 6.0)
+	bar_max = maxf(0.0, th + 16.0 + rows * 54.0 + maxf(0, rows - 1) * 6.0 - h)
 	bar_sc = clampf(bar_sc, 0.0, bar_max)
 	var nd: Dictionary = T.xbar.duplicate(true)
 	nd.r = [nd.r[0], nd.r[1], nd.r[2], h]
@@ -508,7 +521,7 @@ func _build_bar() -> void:   # ut()
 		var ok := _ok(rid)
 		var key := "xr_" + ("ok" if ok else "no") + ("_sel" if sel == rid else "")
 		var tp: Dictionary = T.get(key, T["xr_ok"])
-		var p := o + Vector2(10.0 + (j % 5) * 60.0, 8.0 + int(j / 5) * 60.0)
+		var p := o + Vector2(10.0 + (j % 5) * 60.0, th + 8.0 + int(j / 5) * 60.0)
 		var n := _at(tp, p)
 		_ic(n, rid, true)
 		var cnt := int(G.g.barn.get(rid, 0))
@@ -531,6 +544,41 @@ func _build_bar() -> void:   # ut()
 				_mat(fi)
 		U._click(b, func(): if not dragged: _pick(rid), "scale")
 	bar_in.position = Vector2(0, -bar_sc) * Css.K
+	if not gs.is_empty():
+		_tabs(o, gs)
+
+func _tabs(o: Vector2, gs: Array) -> void:   # hàng chip nhóm món (kiểu chip lọc Kho), đứng yên khi cuộn khay
+	if _CH.is_empty():
+		var ch: Dictionary = Snap.find(Snap.load_snap("kho")["#pov"][0], "khchips")
+		for c in ch.kids:
+			_CH["on" if String(c.cls).split(" ").has("on") else "off"] = c
+	var x: float = o.x + 10.0
+	var y: float = o.y + 8.0
+	var t := _tab()
+	for g in gs:
+		var src: Dictionary = _CH["on" if g[0] == t else "off"]
+		var c: Dictionary = src.duplicate(true)
+		c.erase("::before")
+		c.kids = []
+		var s: String = g[1]
+		var w: float = Box.text_w(s, Css.px(c.css.get("font-size", "13px")), int(c.css.get("font-weight", "700"))) + 28.0
+		c.r = [x, y, w, 28.0]
+		c.text = s
+		c.tr = [x + 14.0, y + 5.0, w - 28.0, 18.0]
+		var b: Control = U._build(c, {}, o)
+		bar._kids.add_child(b)
+		var code: String = g[0]
+		U._click(b, func():
+			if tab.get(k, "") == code and code == _tab():
+				return
+			tab[k] = code
+			bar_sc = 0.0
+			bsig = ""
+			sig = ""
+			_sync(), "scale")
+		x += w + 6.0
+
+static var _CH := {}
 
 func _mat(b: Control) -> void:
 	b.material = _gray
