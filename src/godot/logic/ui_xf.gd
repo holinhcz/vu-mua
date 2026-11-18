@@ -30,6 +30,7 @@ var top: Control = null
 var card: Control = null
 var bar: Control = null
 var bar_in: Control = null
+var bar_top := 0.0          # cao hàng chip nhóm món (khay món nằm dưới, cắt riêng)
 var tipb: Control = null
 var tip_k := ""
 var tip_s := ""
@@ -514,7 +515,14 @@ func _build_bar() -> void:   # ut()
 	bar._kids.clip_contents = true
 	bar_in = Control.new()
 	bar_in.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar._kids.add_child(bar_in)
+	var clip := Control.new()   # (bản 325) khung cắt dưới hàng chip: món cuộn lên không lọt vào vùng chip
+	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip.clip_contents = true
+	clip.position = Vector2(0, th) * Css.K
+	clip.size = Vector2(float(nd.r[2]), h - th) * Css.K
+	bar._kids.add_child(clip)
+	clip.add_child(bar_in)
+	bar_top = th
 	bar_h = h
 	for j in L.size():
 		var rid: String = L[j]
@@ -543,7 +551,7 @@ func _build_bar() -> void:   # ut()
 			if fi != null:
 				_mat(fi)
 		U._click(b, func(): if not dragged: _pick(rid), "scale")
-	bar_in.position = Vector2(0, -bar_sc) * Css.K
+	bar_in.position = Vector2(0, -bar_top - bar_sc) * Css.K
 	if not gs.is_empty():
 		_tabs(o, gs)
 
@@ -1035,6 +1043,6 @@ func input(e: InputEvent) -> void:
 		return
 	if sc.area != bar:
 		sc.area = bar
-		sc.mover = func(v): if bar_in != null: bar_in.position = Vector2(0, -v) * Css.K
+		sc.mover = func(v): if bar_in != null: bar_in.position = Vector2(0, -bar_top - v) * Css.K
 	sc.input(e)
 
