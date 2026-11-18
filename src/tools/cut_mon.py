@@ -50,6 +50,6 @@ for (i, sl, _, _), name in zip(cs, names):
     c = Image.fromarray(out, 'RGBA'); c = c.crop(c.getbbox())
     s = 430.0 / max(c.size)
     c = c.resize((round(c.size[0] * s), round(c.size[1] * s)), Image.LANCZOS)
-    can = Image.new('RGBA', (512, 512), (0, 0, 0, 0)); can.paste(c, ((512 - c.size[0]) // 2, (512 - c.size[1]) // 2), c)
+    can = Image.new('RGBA', (512, 512), (0, 0, 0, 0)); can.paste(c, ((512 - c.size[0]) // 2, (512 - c.size[1]) // 2))   # dán thẳng: dán kèm mask là nhân alpha 2 lần (mép, thuỷ tinh mờ đi)
     can.save(os.path.join(outdir, name + '.png'))
     print(name, c.size)

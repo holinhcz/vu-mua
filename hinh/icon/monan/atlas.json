@@ -1599,40 +1599,40 @@
 "file": "dua_cai.png",
 "bbox": [
 41,
-44,
+48,
 471,
-468
+463
 ],
-"nguon": "tấm ảnh người dùng (bản 318)"
+"nguon": "tấm ảnh người dùng (bản 319)"
 },
 "ca_muoi": {
 "file": "ca_muoi.png",
 "bbox": [
 41,
-44,
+51,
 471,
-468
+461
 ],
-"nguon": "tấm ảnh người dùng (bản 318)"
+"nguon": "tấm ảnh người dùng (bản 319)"
 },
 "dua_mon": {
 "file": "dua_mon.png",
 "bbox": [
-56,
+44,
 41,
-455,
+468,
 471
 ],
-"nguon": "tấm ảnh người dùng (bản 318)"
+"nguon": "tấm ảnh người dùng (bản 319)"
 },
 "dua_hanh": {
 "file": "dua_hanh.png",
 "bbox": [
 41,
-41,
-470,
-471
+42,
+471,
+470
 ],
-"nguon": "tấm ảnh người dùng (bản 318)"
+"nguon": "tấm ảnh người dùng (bản 319)"
 }
 }
