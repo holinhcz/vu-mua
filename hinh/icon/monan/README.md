@@ -53,3 +53,6 @@ thit_kho (Thịt kho tiêu, vẫn hình thịt kho trứng cũ), ca_keo_kho (ca_
 
 ## Lò nướng (bản 333)
 banh_chuoi_nuong gắn hình thật (làm ở Lò bánh mì). Hình tạm: nem_nuong, catim_mo_hanh (bachi_nuong), muc_nuong, cua_nuong (tom_nuong), ca_keo_nuong (ca_loc_trui), bap_nuong (ga_nuong_sa), khoai_nuong (oc_nuong).
+
+## Hàng chả (bản 334) — hình tạm
+cha_muc (cha_ca), cha_cua (cha_tom), xiu_mai (bo_vien).
