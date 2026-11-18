@@ -415,6 +415,12 @@ static func _pseudo(b: Control, p: Dictionary, R: Array, z: float, which: String
 			v.append(Css.px(q) * z)
 		pd = [v[0], v[1 % v.size()], v[2 % v.size()] if v.size() > 2 else v[0], v[3] if v.size() > 3 else v[1 % v.size()]]
 	var cb: bool = p.get("bxs", "content-box") != "border-box"
+	# (bản 298) có cả left và right (top và bottom) thì bề ngang (cao) theo khung cha: số w/h trình duyệt trả về là theo cỡ
+	# trước khi thu (bảng thu nhỏ cho vừa màn) nên lệch -> viền tab ngắn hơn nền tab, lộ màu nền ở mép phải
+	if p.get("pos", "") == "absolute" and l > -9000.0 and rr > -9000.0 and W - l - rr > 0.0:
+		pw = -1.0
+	if p.get("pos", "") == "absolute" and t > -9000.0 and bo > -9000.0 and H - t - bo > 0.0:
+		ph = -1.0
 	if pw < 0.0:
 		pw = (W - l - rr) if l > -9000.0 and rr > -9000.0 else tw + 8.0 * z
 	elif cb:
