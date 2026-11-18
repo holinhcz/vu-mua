@@ -115,6 +115,9 @@ func _init(ui) -> void:
 	# .bdgrid .khb.locked canvas{filter:grayscale(1);opacity:.45}
 	sh.code = "shader_type canvas_item;\nuniform float a = 1.0;\nuniform float g = 0.0;\nvoid fragment(){ vec4 c = COLOR; float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)); c.rgb = mix(c.rgb, vec3(l), g); c.a *= a; COLOR = c; }"
 	_gray.shader = sh
+	for v in T.values():   # (bản 306) thẻ món Xây dựng (.bcard): kiểu chip Kho chung, như nút Menu / Sổ làng
+		if v is Dictionary:
+			Snap.chip_look(v, "bcard")
 
 static func _coin(n: Dictionary) -> void:
 	if n.get("tag", "") == "img" and String(n.get("cls", "")).split(" ").has("xui"):
