@@ -640,6 +640,7 @@ func _build_card(w: Dictionary, pend: Array) -> void:   # It()
 		bb.text = hs
 		bb.r = [ex, bb.r[1], hw, bb.r[3]]
 		bb.tr = [ex, bb.tr[1], hw, bb.tr[3]]
+		Qty.down(bb)
 		nm.r = [nm.r[0], nm.r[1], ex - 6.0 - float(nm.r[0]), nm.r[3]]
 		ins.kids.append(n)
 	var nd: Dictionary = T.xcard.duplicate(true)

@@ -18,6 +18,14 @@ const PAD := 6.0            # đệm trái / phải ô
 const MINW := 54.0          # ô giá hẹp nhất
 const H := 34.0             # cao ô giá
 const SEP := 5.0            # khoảng giữa các ô
+const DY := 1.2             # (bản 301) chữ số không có dấu / đuôi: hộp chữ canh theo cỡ chữ làm số nằm cao hơn tên món và dấu
+                            # tích ~1,2 css px -> hạ xuống cho thẳng hàng giữa
+
+static func down(n: Dictionary) -> void:   # hạ hộp chữ số có/cần DY cho thẳng hàng giữa với tên món, hình, dấu tích
+	if n.has("tr"):
+		n.tr = [n.tr[0], float(n.tr[1]) + DY, n.tr[2], n.tr[3]]
+	else:
+		n.r = [n.r[0], float(n.r[1]) + DY, n.r[2], n.r[3]]
 
 static func text(have: int, need: int) -> String:
 	return str(have) + "/" + str(need)

@@ -2849,6 +2849,7 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 			var x := r1 - bw
 			_set_t(b0, qs, x, bw)
 			b0.r = [x, b0.r[1], bw, b0.r[3]]
+			Qty.down(b0)
 			oq.text = ""
 			oq.r = [x, oq.r[1], bw, oq.r[3]]
 			var sm := Snap.find(t, "", "small")

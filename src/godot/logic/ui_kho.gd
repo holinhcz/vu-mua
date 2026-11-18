@@ -136,7 +136,7 @@ func _chip(c: Dictionary, kind: String, ok: bool, have: int, need: int, svg: Str
 	var bx: float = ix + Qty.ICON + Qty.GAP
 	b.text = s
 	b.r = [bx, cy - 9.0, w + 0.5, 18.0]
-	b.tr = b.r.duplicate()
+	b.tr = [bx, cy - 9.0 + Qty.DY, w + 0.5, 18.0]
 	sp.r = b.r.duplicate()
 	sp.tr = b.r.duplicate()
 	return o

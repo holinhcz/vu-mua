@@ -315,6 +315,7 @@ func _vlod(t: String, list: Array, xu: int, lb: String, act: Callable) -> Dictio
 		bq.r = [rgt - w1, bq.r[1], w1, bq.r[3]]
 		bq.tr = [rgt - w1, bq.tr[1], w1, bq.tr[3]]
 		bq.text = s1
+		Qty.down(bq)
 		if not good:
 			c.kids = c.kids.filter(func(k): return k.cls != "odck")
 		items.append(c)

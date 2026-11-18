@@ -579,6 +579,7 @@ func _chips(need: Dictionary, chips: Array, x: float, y: float, tok0 := {}) -> D
 		var sx := float(c.r[0]) + pad
 		bb.r = [sx, bb.r[1], w1, bb.r[3]]
 		bb.tr = [sx, bb.tr[1], w1, bb.tr[3]]
+		Qty.down(bb)
 		bb.text = s1
 		sp.r = [sx, sp.r[1], w1 + w2, sp.r[3]]
 		sp.tr = [sx + w1, sp.tr[1], w2, sp.tr[3]]
