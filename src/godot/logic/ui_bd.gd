@@ -117,7 +117,7 @@ func _init(ui) -> void:
 	_gray.shader = sh
 	for v in T.values():   # (bản 306) thẻ món Xây dựng (.bcard): kiểu chip Kho chung, như nút Menu / Sổ làng
 		if v is Dictionary:
-			Snap.chip_look(v, "bcard")
+			Snap.chip_look(v, "bcard", true)
 
 static func _coin(n: Dictionary) -> void:
 	if n.get("tag", "") == "img" and String(n.get("cls", "")).split(" ").has("xui"):
