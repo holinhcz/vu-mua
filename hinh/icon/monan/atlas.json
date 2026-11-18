@@ -1,16 +1,326 @@
 {
- "banhmi": {
-  "file": "banhmi.png",
-  "size": [
-   512,
-   512
-  ],
-  "name": "Bánh mì",
-  "bbox": [
-   41,
-   126,
-   471,
-   386
-  ]
- }
+"banhmi": {
+"file": "banhmi.png",
+"size": [
+512,
+512
+],
+"name": "Bánh mì",
+"bbox": [
+41,
+126,
+471,
+386
+]
+},
+"bo_kho": {
+"file": "bo_kho.png",
+"bbox": [
+41,
+81,
+471,
+431
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"bo_vien": {
+"file": "bo_vien.png",
+"bbox": [
+41,
+78,
+471,
+434
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ca_linh_kho": {
+"file": "ca_linh_kho.png",
+"bbox": [
+41,
+86,
+471,
+426
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ca_loc_trui": {
+"file": "ca_loc_trui.png",
+"bbox": [
+41,
+66,
+471,
+445
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ca_ro_kho": {
+"file": "ca_ro_kho.png",
+"bbox": [
+41,
+87,
+471,
+425
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"cha_ca": {
+"file": "cha_ca.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"cha_tom": {
+"file": "cha_tom.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"cha_trung": {
+"file": "cha_trung.png",
+"bbox": [
+41,
+73,
+471,
+438
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"che_buoi": {
+"file": "che_buoi.png",
+"bbox": [
+41,
+76,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"che_chuoi": {
+"file": "che_chuoi.png",
+"bbox": [
+41,
+77,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"che_dau_xanh": {
+"file": "che_dau_xanh.png",
+"bbox": [
+41,
+63,
+471,
+448
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"che_troi": {
+"file": "che_troi.png",
+"bbox": [
+41,
+73,
+471,
+439
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"de_nuong": {
+"file": "de_nuong.png",
+"bbox": [
+41,
+70,
+471,
+441
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ga_kho": {
+"file": "ga_kho.png",
+"bbox": [
+41,
+83,
+471,
+429
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ga_nuong_mo": {
+"file": "ga_nuong_mo.png",
+"bbox": [
+41,
+76,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"ga_nuong_sa": {
+"file": "ga_nuong_sa.png",
+"bbox": [
+41,
+72,
+471,
+439
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"kho_ca": {
+"file": "kho_ca.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"lx_kho": {
+"file": "lx_kho.png",
+"bbox": [
+41,
+75,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"mit_say": {
+"file": "mit_say.png",
+"bbox": [
+41,
+79,
+471,
+432
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"oc_nuong": {
+"file": "oc_nuong.png",
+"bbox": [
+41,
+63,
+471,
+449
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"sam_bo_luong": {
+"file": "sam_bo_luong.png",
+"bbox": [
+58,
+41,
+454,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"sua_bap": {
+"file": "sua_bap.png",
+"bbox": [
+72,
+41,
+439,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"sua_dau_nanh": {
+"file": "sua_dau_nanh.png",
+"bbox": [
+69,
+41,
+442,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"sua_dau_xanh": {
+"file": "sua_dau_xanh.png",
+"bbox": [
+74,
+41,
+438,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"suon_ram": {
+"file": "suon_ram.png",
+"bbox": [
+41,
+82,
+471,
+430
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"tom_nuong": {
+"file": "tom_nuong.png",
+"bbox": [
+41,
+66,
+471,
+446
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"tom_rim": {
+"file": "tom_rim.png",
+"bbox": [
+41,
+86,
+471,
+426
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"trung_vit_kho": {
+"file": "trung_vit_kho.png",
+"bbox": [
+41,
+83,
+471,
+428
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"vit_kho": {
+"file": "vit_kho.png",
+"bbox": [
+41,
+83,
+471,
+428
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"vit_nuong": {
+"file": "vit_nuong.png",
+"bbox": [
+41,
+80,
+471,
+431
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+},
+"xoai_say": {
+"file": "xoai_say.png",
+"bbox": [
+41,
+75,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 308)"
+}
 }
