@@ -61,3 +61,6 @@ banh_mi_cha_ca gắn hình thật. Hình tạm: banh_mi_xm (banh_mi_cha), banh_m
 
 ## Vại muối dưa (bản 336) — hình tạm
 mam_ca_linh (dua_mon), nuoc_mam, mam_tom (tuong_ot). sua_chua_de chưa có hình.
+
+## Giàn phơi (bản 337) — hình tạm
+kho_muc, kho_ca_ro, bo_kho_say, kho_ga (kho_ca), me_say (xoai_say).
