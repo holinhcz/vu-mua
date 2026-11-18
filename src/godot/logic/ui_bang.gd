@@ -631,7 +631,8 @@ func _nvsh(n: Dictionary, left: String, right: Array, x: float, y: float, W0: fl
 
 static var _TRE := {}
 
-# (bản 293) KHUNG TRE CHUNG = khung ngoài của Kho (.pwin trong kho: nẹp tre 7, góc 16, hai bông hoa, nền giấy vân lá).
+# (bản 293) KHUNG TRE CHUNG = khung ngoài của Kho (.pwin trong kho: hai bông hoa, nền giấy vân lá); nẹp tre là ảnh của
+# ui/tre.gd (bản 294), Snap.build vẽ cho mọi .u2tre.
 # Mọi hộp nổi (nâng sao ruộng / chuồng / xưởng / kho, Điểm danh, 7 ngày...) lấy khung ở đây, không chép khung riêng.
 static func _tre_src() -> Dictionary:
 	if _TRE.is_empty():
@@ -639,28 +640,11 @@ static func _tre_src() -> Dictionary:
 		_TRE = {"win": w, "tre": Snap.find(w, "u2tre"), "hoa": Snap.find(w, "u2hoa"), "body": Snap.find(w, "pbody")}
 	return _TRE
 
-static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:   # lớp trên: nẹp tre + góc + hoa, quanh hộp (x, y, w, h)
+static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:   # lớp trên: khung tre (ảnh, ui/tre.gd qua Snap) + hoa
 	var T: Dictionary = _tre_src()
 	var o: Dictionary = T.tre.duplicate(true)
 	o.r = [x, y, w, h]
-	for k in o.kids:
-		var c := String(k.cls)
-		if c == "t":
-			k.r = [x + 16.0, y - 4.0, w - 33.0, 7.0]
-		elif c == "b":
-			k.r = [x + 16.0, y + h - 7.0, w - 33.0, 7.0]
-		elif c == "l":
-			k.r = [x, y + 12.0, 7.0, h - 29.0]
-		elif c == "r":
-			k.r = [x + w - 7.0, y + 12.0, 7.0, h - 29.0]
-		elif c.find("c1") >= 0:
-			k.r = [x, y - 4.0, 16.0, 16.0]
-		elif c.find("c2") >= 0:
-			k.r = [x + w - 16.0, y - 4.0, 16.0, 16.0]
-		elif c.find("c3") >= 0:
-			k.r = [x, y + h - 16.0, 16.0, 16.0]
-		elif c.find("c4") >= 0:
-			k.r = [x + w - 16.0, y + h - 16.0, 16.0, 16.0]
+	o.kids = []   # Snap.build thay bằng các mảnh ảnh của ui/tre.gd
 	var hoa: Dictionary = T.hoa.duplicate(true)
 	hoa.r = [x, y, w, h]
 	var h1: Dictionary = hoa.kids[0]   # hoa góc trên trái / dưới phải, cùng chỗ so với mép hộp như ở Kho (dời cả hình bên trong)
@@ -674,7 +658,7 @@ static func tre_bg(x: float, y: float, w: float, h: float) -> Dictionary:   # l�
 	b.kids = []
 	b.r = [x, y, w, h]
 	b.css = b.css.duplicate()
-	b.css["border-radius"] = "22px"
+	b.css["border-radius"] = "16px"   # = ui/tre.gd R
 	return b
 
 static func tre_apply(n: Dictionary, box_cls := "u2pc") -> void:   # hộp nổi chụp từ web (.u2pc + .u2tre dày): đổi sang khung Kho
@@ -696,8 +680,9 @@ static func tre_apply(n: Dictionary, box_cls := "u2pc") -> void:   # hộp nổi
 static func tre_box_css(c: Dictionary) -> Dictionary:   # màu nền, bo góc, bóng của hộp = .pwin của Kho
 	var o := c.duplicate()
 	var wc: Dictionary = _tre_src().win.css
-	for k in ["background-color", "border-radius", "box-shadow"]:
+	for k in ["background-color", "box-shadow"]:
 		o[k] = wc[k]
+	o["border-radius"] = "16px"   # = ui/tre.gd R: nền bo khớp vòng tre
 	return o
 
 # ------------------------------------------------------------------ hàng chip .khchips cuộn ngang (scrollLeft)

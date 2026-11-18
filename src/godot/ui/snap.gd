@@ -6,6 +6,7 @@ extends RefCounted
 
 const Css = preload("res://ui/css.gd")
 const Box = preload("res://ui/box.gd")
+const Tre = preload("res://ui/tre.gd")
 
 static var _cache := {}
 
@@ -91,6 +92,7 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var b: Control = Box.new()
 	var R: Array = n.r
 	var z := float(n.get("z", 1.0))
+	n = _tre(n, z)   # (bản 294) khung tre chung bằng ảnh
 	var c: Dictionary = n.css
 	var rot := _rot(c.get("transform", "none"))
 	if rot != 0.0:
@@ -251,6 +253,36 @@ static func _text(b: Control, n: Dictionary, R: Array, z: float, icon: Dictionar
 	var wrap: bool = c.get("white-space", "normal") == "normal" and ((measured and n.tr[3] > fs * 1.7) or (not measured and tw > tr.size.x + 1.0))
 	b.text(s, tr, fs, fw, col, al, shadows_txt(c.get("text-shadow", "none"), 1.0), wrap)
 	b.set_meta("ti", b.texts.size() - 1)
+
+static func _tre(n: Dictionary, z: float) -> Dictionary:
+	# .u2tre (nẹp tre vẽ bằng gradient của bản web, góc không khớp) -> các mảnh ảnh của ui/tre.gd; hộp chứa nó và lớp nền
+	# trùng khung hộp bo đúng Tre.R (nền không lòi ra ngoài vòng tre)
+	var kids: Array = n.get("kids", [])
+	var has := false
+	for k in kids:
+		if String(k.get("cls", "")).split(" ").has("u2tre"):
+			has = true
+	if String(n.get("cls", "")).split(" ").has("u2tre"):
+		var o: Dictionary = n.duplicate()
+		o.kids = Tre.frame(n.r, z)
+		return o
+	if not has:
+		return n
+	var o2: Dictionary = n.duplicate()
+	o2.css = n.css.duplicate()
+	o2.css["border-radius"] = str(Tre.R) + "px"
+	var nk := []
+	for k in kids:
+		var cl := String(k.get("cls", "")).split(" ")
+		if not cl.has("u2tre") and not cl.has("u2hoa") and absf(float(k.r[0]) - float(n.r[0])) < 1.0 and absf(float(k.r[1]) - float(n.r[1])) < 1.0 and absf(float(k.r[2]) - float(n.r[2])) < 1.0:
+			var k2: Dictionary = k.duplicate()
+			k2.css = k.css.duplicate()
+			k2.css["border-radius"] = str(Tre.R) + "px"
+			nk.append(k2)
+		else:
+			nk.append(k)
+	o2.kids = nk
+	return o2
 
 static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 	if sv.find("l5 10.2 11.2") >= 0:
