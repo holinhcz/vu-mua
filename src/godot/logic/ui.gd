@@ -5,6 +5,7 @@ extends CanvasLayer
 
 const Css = preload("res://ui/css.gd")
 const Snap = preload("res://ui/snap.gd")
+const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
 const Khuon = preload("res://ui/khuon.gd")
 const VW0 := 338.0           # khổ màn hình lúc chụp số đo (css px)
@@ -2860,13 +2861,14 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 			var oq := Snap.find(t, "odq")
 			var b0: Dictionary = oq.kids[0]
 			var r1: float = float(oq.r[0]) + float(oq.r[2])
-			var bw := _tw(b0, str(have))
-			var sw := _tw(oq, "/" + str(need))
-			var x := r1 - bw - sw
-			_set_t(b0, str(have), x, bw)
+			var qs: String = Qty.text(have, need)   # (bản 291) "có/cần" một khối chữ chung (qty.gd)
+			b0.css = Qty.css(b0.css, have >= need)
+			var bw := _tw(b0, qs)
+			var x := r1 - bw
+			_set_t(b0, qs, x, bw)
 			b0.r = [x, b0.r[1], bw, b0.r[3]]
-			_set_t(oq, "/" + str(need), x + bw, sw)
-			oq.r = [x, oq.r[1], bw + sw, oq.r[3]]
+			oq.text = ""
+			oq.r = [x, oq.r[1], bw, oq.r[3]]
 			var sm := Snap.find(t, "", "small")
 			_set_t(sm, G.item_name(id), float(sm.r[0]))
 			sm.r = [sm.r[0], sm.r[1], maxf(10.0, x - float(sm.r[0]) - 2.0), sm.r[3]]

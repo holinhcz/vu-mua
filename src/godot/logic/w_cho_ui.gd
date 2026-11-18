@@ -45,9 +45,11 @@ func _note(b: String, rest: String) -> Control:   # .note (<b> đầu dòng + ch
 
 func _chip(t: String, a: int) -> Control:   # nc: <span class="chip ok|no">Ai <b>n</b>/a tên</span>
 	var n := int(G.g.barn.get(t, 0))   # số trong kho (bản 285)
-	var h := HBoxContainer.new()
-	h.add_child(_ic(t, 20))
-	h.add_child(_lbl(str(n) + "/" + str(a) + " " + G.item_name(t), 12, 600, Color8(0x2f, 0x7a, 0x2a) if n >= a else Color8(0xc0, 0x3a, 0x2a), false))
+	var h := HBoxContainer.new()   # (bản 291) chữ có/cần chung (qty.gd), tên món đi sau
+	h.add_theme_constant_override("separation", int(_k(Qty.GAP)))
+	h.add_child(_ic(t, Qty.ICON))
+	h.add_child(_lbl(Qty.text(n, a), Qty.FS, Qty.FW, Qty.color(n >= a), false))
+	h.add_child(_lbl(G.item_name(t), 12, 500, Color8(0x5a, 0x4a, 0x3a), false))
 	return h
 
 func _rec(ic: String, b: String, small: String, chip: Array, btns: Array) -> Control:   # li.rec

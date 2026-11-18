@@ -80,17 +80,17 @@ func _chip(ic: Control, s: String, ok: bool) -> Control:   # .chip ok|no
 	h.add_theme_constant_override("separation", int(_k(3)))
 	if ic != null:
 		h.add_child(ic)
-	h.add_child(_lbl(s, 12, 700, Color8(0x2f, 0x7a, 0x2a) if ok else Color8(0xc0, 0x3a, 0x2a), false))
+	h.add_child(_lbl(s, Qty.FS, Qty.FW, Qty.color(ok), false))   # (bản 291) chữ có/cần chung (qty.gd)
 	return h
 
 func _q4(t: Dictionary) -> Control:   # Q4: .need (ô xu + pJ từng vật liệu "có/cần")
 	var h := HFlowContainer.new()
 	h.add_theme_constant_override("h_separation", int(_k(6)))
 	if int(t.xu):
-		h.add_child(_chip(_lbl("xu", 11, 700, Color8(0xb0, 0x80, 0x20), false), G.fmt_n(int(t.xu)), int(G.g.coins) >= int(t.xu)))
+		h.add_child(_chip(_coin(Qty.ICON), G.fmt_n(int(t.xu)), int(G.g.coins) >= int(t.xu)))
 	for a in t.m:
 		var have: int = G.mat_n(String(a[0]))
-		h.add_child(_chip(_ic(String(a[0]), 20), str(have) + "/" + str(int(a[1])), have >= int(a[1])))
+		h.add_child(_chip(_ic(String(a[0]), Qty.ICON), Qty.text(have, int(a[1])), have >= int(a[1])))
 	return h
 
 func _overlay(title: String, on_close: Callable) -> Array:   # .raceov > .rbox: [gốc, cột]

@@ -4,6 +4,7 @@ extends RefCounted
 # giờ chung một chỗ. Thân bảng cuộn bằng vscroll.gd như Kho (không dùng ScrollContainer nữa).
 const Css = preload("res://ui/css.gd")
 const VScroll = preload("res://logic/vscroll.gd")
+const Qty = preload("res://logic/qty.gd")
 
 var U          # ui.gd
 var G          # game.gd
@@ -63,6 +64,14 @@ func _ic(id: String, px: float) -> TextureRect:   # Ai(id): hình món
 	var t := TextureRect.new()
 	var f := _x("Ai")
 	t.texture = f.call(id) if f.is_valid() else U.item_ic(id, _k(px))
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.custom_minimum_size = Vector2(_k(px), _k(px))
+	return t
+
+func _coin(px: float) -> TextureRect:   # hình xu chung (ui/img/coin.webp)
+	var t := TextureRect.new()
+	t.texture = Css.svg_tex(Css.img_svg("res://ui/img/coin.webp"), _k(px), _k(px))
 	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	t.custom_minimum_size = Vector2(_k(px), _k(px))

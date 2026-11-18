@@ -5,6 +5,7 @@ extends RefCounted
 # Số đo + css lấy từ chính bản web: ui/snap/xf_run, xf_thu, xf2_pd, xf2_four, xf2_full, xf_sel, xf_ask*.
 
 const Snap = preload("res://ui/snap.gd")
+const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
 
@@ -629,14 +630,13 @@ func _build_card(w: Dictionary, pend: Array) -> void:   # It()
 				em = q
 		_tx(nm, G.item_name(a[0]))
 		var bb: Dictionary = em.kids[0]
-		var hs := str(have)
-		var ns := "/" + str(int(a[1]))
-		var hw: float = Box.text_w(hs, 14.0, 800)
-		var nw: float = Box.text_w(ns, 14.0, 600)
-		var ex := p.x + cw2 - 8.0 - hw - nw
-		em.r = [ex, em.r[1], hw + nw, em.r[3]]
-		em.text = ns
-		em.tr = [ex + hw, em.tr[1], nw, em.tr[3]]
+		var hs: String = Qty.text(have, int(a[1]))   # (bản 291) "có/cần" một khối chữ chung (qty.gd)
+		bb.css = Qty.css(bb.css, full_in)
+		var hw: float = Box.text_w(hs, Qty.FS, Qty.FW)
+		var ex := p.x + cw2 - 8.0 - hw
+		em.r = [ex, em.r[1], hw, em.r[3]]
+		em.text = ""
+		em.tr = [ex, em.tr[1], hw, em.tr[3]]
 		bb.text = hs
 		bb.r = [ex, bb.r[1], hw, bb.r[3]]
 		bb.tr = [ex, bb.tr[1], hw, bb.tr[3]]

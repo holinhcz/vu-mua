@@ -6,6 +6,7 @@ extends RefCounted
 # Bấm nút: lf("plot", i) / lf("plotall", r); thiếu cấp thì lớp bọc lf mở zF (ui_kho.ns_show).
 
 const Snap = preload("res://ui/snap.gd")
+const Qty = preload("res://logic/qty.gd")
 
 var U
 var G
@@ -175,7 +176,9 @@ func _draw() -> void:
 			var m: Array = nd.m[j]
 			var hv: int = G.mat_n(m[0])
 			out.append(K._chip(Snap.moved(slots[j + 1], Vector2(0, dy)), m[0], hv >= int(m[1]), hv, int(m[1]), K.mat_svg.get(m[0], "")))
-		need.kids = out
+		var pcb := Snap.find(n, "u2pc")   # hàng ô giá rộng hết lòng bảng (trừ khung tre) cho vừa 4 ô
+		need.r = [float(pcb.r[0]) + 12.0, need.r[1], float(pcb.r[2]) - 24.0, need.r[3]]
+		Qty.row(need, out)   # (bản 291) đúng số ô món cần, canh giữa, chật thì xuống hàng
 		var bt := Snap.find(sv, "", "button")
 		rows.append([need, 10.0])
 		rows.append([bt, 0.0])
@@ -186,7 +189,7 @@ func _draw() -> void:
 		else:
 			var bl := String(bt.text)
 			K._mix(bt, bl, ("Nâng cả " + str(o) + " ô lên " + str(r)) if all else ("Nâng lên " + str(r)), "", cx)
-	_flow(n, rows)
+	_flow(n, rows, l < 2)
 	var keep := pop != null
 	var vis := pop.visible if pop != null else true
 	if pop != null:
@@ -238,8 +241,23 @@ func _line(proto: Dictionary, s: String, x0: float, w: float) -> Dictionary:   #
 	K._ctext(o, s)
 	return o
 
-func _flow(n: Dictionary, rows: Array) -> void:   # (bản 290) xếp dọc các hàng [nút, khoảng dưới]; hộp và khung tre co giãn theo
+func _flow(n: Dictionary, rows: Array, single: bool) -> void:   # (bản 290) xếp dọc các hàng [nút, khoảng dưới]; hộp và khung tre co giãn theo
 	var sv := Snap.find(n, "u2sv")
+	var pc := Snap.find(n, "u2pc")
+	var tb := Snap.find(n, "u2tb2")
+	var d0 := 0.0   # (bản 291) 1 lựa chọn: bỏ hàng tab 34, tên nằm sát mép trên, khoảng trên = khoảng dưới
+	if single:
+		var top: float = float(pc.r[1]) + 20.0
+		Snap._move(tb, Vector2(0, top - float(tb.r[1])))
+		var t0: Dictionary = tb.kids[0]
+		var th := 22.0
+		tb.r = [tb.r[0], top, tb.r[2], th]
+		t0.r = [t0.r[0], top, t0.r[2], th]
+		var tr: Array = t0.get("tr", t0.r)
+		t0.tr = [tr[0], top + (th - float(tr[3])) * 0.5, tr[2], tr[3]]
+		var sb := Snap.find(n, "u2sbx2")
+		d0 = top + th + 12.0 - float(sb.r[1])
+		Snap._move(sb, Vector2(0, d0))
 	var cx: float = float(sv.r[0]) + float(sv.r[2]) * 0.5
 	var stb := Snap.find(sv, "stars")   # sao to 1,5 lần
 	var st: Array = stb.kids
@@ -258,7 +276,11 @@ func _flow(n: Dictionary, rows: Array) -> void:   # (bản 290) xếp dọc các
 		y += float(nd.r[3]) + float(e[1])
 	var d: float = y - float(sv.r[1]) - float(sv.r[3])
 	sv.kids = kids
-	for c in ["u2sv", "u2sbx2", "u2pc", "u2tre"]:
+	var sb2 := Snap.find(n, "u2sbx2")
+	sv.r = [sv.r[0], sv.r[1], sv.r[2], float(sv.r[3]) + d]
+	sb2.r = [sb2.r[0], sb2.r[1], sb2.r[2], float(sb2.r[3]) + d]
+	d += d0
+	for c in ["u2pc", "u2tre"]:
 		var q := Snap.find(n, c)
 		if not q.is_empty():
 			q.r = [q.r[0], q.r[1], q.r[2], float(q.r[3]) + d]

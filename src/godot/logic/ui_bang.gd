@@ -5,6 +5,7 @@ extends RefCounted
 # Cờ trong nút mẫu: act (Callable khi bấm, bấm xong dựng lại), ic (ô hình món: vẽ hình món theo id).
 
 const Snap = preload("res://ui/snap.gd")
+const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
 
@@ -562,8 +563,9 @@ func _chips(need: Dictionary, chips: Array, x: float, y: float, tok0 := {}) -> D
 		var sv: Dictionary = c.kids[0]
 		var sp: Dictionary = c.kids[1]
 		var bb: Dictionary = sp.kids[0]
-		var s1 := str(hv)
-		var s2 := "/" + str(q) + " " + (String(z[3]) if z.size() > 3 else String(G.item(z[0]).get("name", z[0])))
+		var s1 := Qty.text(hv, q)   # (bản 291) "có/cần" một khối chữ chung (qty.gd), tên món đi sau
+		bb.css = Qty.css(bb.css, good)
+		var s2 := " " + (String(z[3]) if z.size() > 3 else String(G.item(z[0]).get("name", z[0])))
 		var w1 := _tw(bb, s1)
 		var w2 := _tw(sp, s2)
 		var pad := float(sp.r[0]) - float(c.r[0])

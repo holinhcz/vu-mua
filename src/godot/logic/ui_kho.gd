@@ -9,6 +9,7 @@ extends RefCounted
 const Snap = preload("res://ui/snap.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
+const Qty = preload("res://logic/qty.gd")
 
 var U
 var G
@@ -110,55 +111,33 @@ func _ctext(n: Dictionary, s: String) -> void:
 	U._set_t(n, s, cx - U._tw(n, s) * 0.5)
 
 func _chip(c: Dictionary, kind: String, ok: bool, have: int, need: int, svg: String) -> Dictionary:
-	# Q4/pJ: ô xu "[xu] 1.500", ô vật liệu "[hình] có/cần" (có đỏ khi thiếu)
+	# Q4/pJ: ô xu "[xu] 1.500", ô vật liệu "[hình] có/cần": khuôn chung qty.gd (bản 291), rộng theo chữ; xếp hàng bằng Qty.row
 	var src: Dictionary = chip_css[("x" if kind == "xu" else "") + ("ok" if ok else "no")]
 	var o: Dictionary = c.duplicate(true)
 	o.cls = src.cls
 	o.css = src.css
-	var sb := Snap.find(src, "", "b")
 	var b := Snap.find(o, "", "b")
-	b.css = sb.css.duplicate()
-	b.css["font-size"] = "14px"   # (bản 290) chữ to hơn, ô xu và ô vật liệu cùng cỡ
-	var spc: Dictionary = _kid(o, "span")
-	spc.css = spc.css.duplicate()
-	spc.css["font-size"] = "14px"
-	spc.css["color"] = b.css.get("color", spc.css.get("color"))   # "/cần" cùng màu số có: thiếu đỏ, đủ xanh
-	var ic0: Dictionary = o.kids[0]   # hình xu / vật liệu 22 (bản chụp 18), giữ mép phải nên khoảng hở tới chữ không đổi
-	var icy: float = float(o.r[1]) + float(o.r[3]) * 0.5
-	ic0.r = [float(ic0.r[0]) - 4.0, icy - 11.0, 22.0, 22.0]
-	if kind == "xu":
-		var s: String = G.fmt_n(need)
-		var x0: float = float(b.r[0])
-		b.text = s
-		b.r = [x0, b.r[1], U._tw(b, s) + 0.5, b.r[3]]
-		b.tr = [x0, b.get("tr", b.r)[1], U._tw(b, s) + 0.5, b.get("tr", b.r)[3]]
-		# hình + số giữa ô
-		var im: Dictionary = o.kids[0]
-		var w: float = float(im.r[2]) + (x0 - float(im.r[0]) - float(im.r[2])) + float(b.r[2])
-		var cx: float = float(o.r[0]) + float(o.r[2]) * 0.5
-		var d: float = cx - w * 0.5 - float(im.r[0])
-		Snap._move(im, Vector2(d, 0))
-		Snap._move(_kid(o, "span"), Vector2(d, 0))
-		return o
-	var sv := Snap.find(o, "", "svg")
-	sv.svg = svg
 	var sp: Dictionary = _kid(o, "span")
-	var bs := str(have)   # số trong kho (bản 285)
-	var rs := "/" + str(need)
-	var wb: float = U._tw(b, bs)
-	var wr: float = U._tw(sp, rs)
-	# [hình][gap][b][/cần] giữa ô
-	var gap: float = float(sp.r[0]) - float(sv.r[0]) - float(sv.r[2])
-	var w2: float = float(sv.r[2]) + gap + wb + wr
-	var x: float = float(o.r[0]) + float(o.r[2]) * 0.5 - w2 * 0.5
-	Snap._move(sv, Vector2(x - float(sv.r[0]), 0))
-	var bx: float = x + float(sv.r[2]) + gap
-	b.text = bs
-	b.r = [bx, b.r[1], wb + 0.5, b.r[3]]
+	var ic: Dictionary = o.kids[0]
+	if kind != "xu":
+		Snap.find(o, "", "svg").svg = svg
+	var s: String = G.fmt_n(need) if kind == "xu" else Qty.text(have, need)
+	b.css = Qty.css(Snap.find(src, "", "b").css, ok)
+	sp.css = Qty.css(sp.css, ok)
+	sp.text = ""
+	var w: float = U._tw(b, s)
+	var cw: float = Qty.chip_w(w)
+	var x0: float = float(o.r[0])
+	var cy: float = float(o.r[1]) + Qty.H * 0.5
+	o.r = [x0, o.r[1], cw, Qty.H]
+	var ix: float = x0 + (cw - (Qty.ICON + Qty.GAP + w)) * 0.5
+	ic.r = [ix, cy - Qty.ICON * 0.5, Qty.ICON, Qty.ICON]
+	var bx: float = ix + Qty.ICON + Qty.GAP
+	b.text = s
+	b.r = [bx, cy - 9.0, w + 0.5, 18.0]
 	b.tr = b.r.duplicate()
-	sp.text = rs
-	sp.r = [bx, sp.r[1], wb + wr + 0.5, sp.r[3]]
-	sp.tr = [bx + wb, sp.get("tr", sp.r)[1], wr + 0.5, sp.get("tr", sp.r)[3]]
+	sp.r = b.r.duplicate()
+	sp.tr = b.r.duplicate()
 	return o
 
 # ------------------------------------------------------------------ nút sức chứa trong bảng Kho
@@ -303,7 +282,7 @@ func _draw() -> void:
 			var m: Array = nd.m[j]
 			var hv: int = G.mat_n(m[0])
 			out.append(_chip(ch[j + 1], m[0], hv >= int(m[1]), hv, int(m[1]), mat_svg.get(m[0], "")))
-		need.kids = out
+		Qty.row(need, out)   # (bản 291) đúng số ô, canh giữa
 		if lock:
 			var lk := Snap.find(sv, "u2lk")
 			var s: String = "Cần cấp " + str(nd.lv) + " · Bạn cấp " + str(G.lv())

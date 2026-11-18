@@ -305,16 +305,15 @@ func _vlod(t: String, list: Array, xu: int, lb: String, act: Callable) -> Dictio
 		var nm: Dictionary = _tag_kids(tx, "small")[0]
 		nm.text = String(W._ae(x[0]).get("name", x[0]))
 		var bq: Dictionary = oq.kids[0]
-		var s1 := str(hv)   # số trong kho (bản 285)
-		var s2 := "/" + str(q)
+		var s1 := Qty.text(hv, q)   # số trong kho (bản 285); "có/cần" một khối chữ chung (qty.gd, bản 291)
+		bq.css = Qty.css(bq.css, good)
 		var w1 := _tw(bq, s1)
-		var w2 := _tw(oq, s2)
 		var rgt := float(c.r[0]) + 181.3
-		oq.r = [rgt - w1 - w2, oq.r[1], w1 + w2, oq.r[3]]
-		oq.tr = [rgt - w2, oq.tr[1], w2, oq.tr[3]]
-		oq.text = s2
-		bq.r = [rgt - w1 - w2, bq.r[1], w1, bq.r[3]]
-		bq.tr = [rgt - w1 - w2, bq.tr[1], w1, bq.tr[3]]
+		oq.r = [rgt - w1, oq.r[1], w1, oq.r[3]]
+		oq.tr = [rgt - w1, oq.tr[1], w1, oq.tr[3]]
+		oq.text = ""
+		bq.r = [rgt - w1, bq.r[1], w1, bq.r[3]]
+		bq.tr = [rgt - w1, bq.tr[1], w1, bq.tr[3]]
 		bq.text = s1
 		if not good:
 			c.kids = c.kids.filter(func(k): return k.cls != "odck")
