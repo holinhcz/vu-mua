@@ -3524,6 +3524,20 @@ func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	kho_close()
 	hrp.open()
 
+func any_open() -> bool:   # (bản 283) đang mở bảng / vòng nút / khay nào trên làng
+	if rm_on() or kho_on or od_on or pc_b != null:
+		return true
+	if (gv_b != null and gv_b.visible) or (lk_b != null and lk_b.visible) or (dock_b != null and dock_b.visible):
+		return true
+	if xfp != null and xfp.k != "":
+		return true
+	if (spp != null and spp.pop != null) or (khp != null and khp.pop != null):
+		return true
+	for p in _pans() + [ngp, nvp, setp, lvp, pcp]:
+		if p != null and "on" in p and p.on:
+			return true
+	return false
+
 func close_all() -> void:
 	for p in _pans():
 		if p != null and p.on:

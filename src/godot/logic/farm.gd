@@ -1028,6 +1028,11 @@ func tap(sp: Vector2) -> void:
 		stop_jobs()
 		return
 	var h := pick(w)
+	# (bản 283) đang mở bảng / vòng nút / khay mà chạm ra làng: chỉ đóng lại, không làm việc kế tiếp (mở ô khác, đi tới, dọn...).
+	# Riêng khay giống đang mở thì chạm ô ruộng vẫn gieo tiếp như cũ
+	if ui.any_open() and not (ui.gv_b != null and ui.gv_b.visible and String(h.get("type", "")) == "plot"):
+		ui.close_all()
+		return
 	match String(h.get("type", "")):
 		"nn", "fl", "bun":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn
 			ui.close_all()
