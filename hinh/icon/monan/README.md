@@ -48,3 +48,6 @@ che_ba_ba, che_khoai_mon (tạm che_khoai), che_dau_den (che_me_den), che_thai (
 
 ## Lò bánh quê (bản 331) — hình tạm
 xoi_la_dua, xoi_xeo (tạm xoi), banh_xeo, banh_can (banh_khot), banh_gio (banh_beo), banh_hoi (banh_cuon), banh_chung (banh_tet), xoi_thit (xoi_cha_bong).
+
+## Nồi kho (bản 332) — hình tạm
+thit_kho (Thịt kho tiêu, vẫn hình thịt kho trứng cũ), ca_keo_kho (ca_ro_kho), mam_kho (thit_kho_nd), ca_chep_kho (ca_kho), ech_kho (luon_um), cua_rang_me, thit_rim_tom (tom_rim).

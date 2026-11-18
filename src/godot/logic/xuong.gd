@@ -21,13 +21,9 @@ func _init(game) -> void:
 	R = G._j("che_bien/cong_thuc")
 	LV2 = G._j("che_bien/xuong_cai_thu_hai_mo_cap")
 	var wv: Array = G._j("che_bien/thu_tu_xuong")
-	var more: Dictionary = G._j("che_bien/mon_lam_them_o_xuong_khac")
 	for t in wv:
 		var a: Dictionary = T[t]
-		var rec: Array = a.rec.duplicate()
-		for m in more:   # món làm thêm ở xưởng khác (Ge[m].w nhiều xưởng cách nhau |)
-			if String(more[m]).split("|").has(t) and not rec.has(m) and R.has(m):
-				rec.append(m)
+		var rec: Array = a.rec.duplicate()   # (bản 332) mỗi món chỉ làm ở đúng xưởng của nó
 		for n in I3:
 			var k: String = t + (str(n + 1) if n else "")
 			var p: Array = X8.get(t, [0, 0]) if n == 0 else [0, 0]
