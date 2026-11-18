@@ -1449,5 +1449,35 @@
 ],
 "nguon": "tấm ảnh người dùng (bản 314)",
 "cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"banh_cuon": {
+"file": "banh_cuon.png",
+"bbox": [
+41,
+73,
+471,
+439
+],
+"nguon": "tấm ảnh người dùng (bản 315)"
+},
+"bl_cha_bong": {
+"file": "bl_cha_bong.png",
+"bbox": [
+41,
+80,
+471,
+431
+],
+"nguon": "tấm ảnh người dùng (bản 315)"
+},
+"xoi_cha_bong": {
+"file": "xoi_cha_bong.png",
+"bbox": [
+41,
+75,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 315)"
 }
 }
