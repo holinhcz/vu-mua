@@ -631,38 +631,73 @@ func _nvsh(n: Dictionary, left: String, right: Array, x: float, y: float, W0: fl
 
 static var _TRE := {}
 
-# khung tre của hộp nổi (.u2tre, mẫu trong sp_ok): nẹp trên/dưới/trái/phải + 4 góc bọc quanh hộp (x, y, w, h)
-static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:
+# (bản 293) KHUNG TRE CHUNG = khung ngoài của Kho (.pwin trong kho: nẹp tre 7, góc 16, hai bông hoa, nền giấy vân lá).
+# Mọi hộp nổi (nâng sao ruộng / chuồng / xưởng / kho, Điểm danh, 7 ngày...) lấy khung ở đây, không chép khung riêng.
+static func _tre_src() -> Dictionary:
 	if _TRE.is_empty():
-		var p: Dictionary = Snap.load_snap("sp_ok")[".u2pop"][0]
-		_TRE = {"tre": Snap.find(p, "u2tre"), "box": Snap.find(p, "u2pc")}
-	var src: Dictionary = _TRE.tre
-	var o: Dictionary = src.duplicate(true)
-	var r0: Array = _TRE.box.r
-	var sx: float = x - float(r0[0])
-	var sy: float = y - float(r0[1])
+		var w: Dictionary = Snap.find(Snap.load_snap("kho")["#pov"][0], "pwin")
+		_TRE = {"win": w, "tre": Snap.find(w, "u2tre"), "hoa": Snap.find(w, "u2hoa"), "body": Snap.find(w, "pbody")}
+	return _TRE
+
+static func tre_frame(x: float, y: float, w: float, h: float) -> Dictionary:   # lớp trên: nẹp tre + góc + hoa, quanh hộp (x, y, w, h)
+	var T: Dictionary = _tre_src()
+	var o: Dictionary = T.tre.duplicate(true)
 	o.r = [x, y, w, h]
 	for k in o.kids:
 		var c := String(k.cls)
-		var kr: Array = k.r
 		if c == "t":
-			k.r = [x + 24.0, y - 6.0, w - 48.0, kr[3]]
+			k.r = [x + 16.0, y - 4.0, w - 33.0, 7.0]
 		elif c == "b":
-			k.r = [x + 24.0, y + h - 4.0, w - 48.0, kr[3]]
+			k.r = [x + 16.0, y + h - 7.0, w - 33.0, 7.0]
 		elif c == "l":
-			k.r = [x - 6.0, y + 24.0, kr[2], h - 48.0]
+			k.r = [x, y + 12.0, 7.0, h - 29.0]
 		elif c == "r":
-			k.r = [x + w - 3.0, y + 24.0, kr[2], h - 48.0]
+			k.r = [x + w - 7.0, y + 12.0, 7.0, h - 29.0]
 		elif c.find("c1") >= 0:
-			k.r = [x - 6.0, y - 6.0, kr[2], kr[3]]
+			k.r = [x, y - 4.0, 16.0, 16.0]
 		elif c.find("c2") >= 0:
-			k.r = [x + w - 24.0, y - 6.0, kr[2], kr[3]]
+			k.r = [x + w - 16.0, y - 4.0, 16.0, 16.0]
 		elif c.find("c3") >= 0:
-			k.r = [x - 6.0, y + h - 25.0, kr[2], kr[3]]
+			k.r = [x, y + h - 16.0, 16.0, 16.0]
 		elif c.find("c4") >= 0:
-			k.r = [x + w - 24.0, y + h - 25.0, kr[2], kr[3]]
-		else:
-			Snap._move(k, Vector2(sx, sy))
+			k.r = [x + w - 16.0, y + h - 16.0, 16.0, 16.0]
+	var hoa: Dictionary = T.hoa.duplicate(true)
+	hoa.r = [x, y, w, h]
+	var h1: Dictionary = hoa.kids[0]   # hoa góc trên trái / dưới phải, cùng chỗ so với mép hộp như ở Kho (dời cả hình bên trong)
+	var h2: Dictionary = hoa.kids[1]
+	Snap._move(h1, Vector2(x - 15.5 - float(h1.r[0]), y - 20.0 - float(h1.r[1])))
+	Snap._move(h2, Vector2(x + w - 37.0 - float(h2.r[0]), y + h - 33.0 - float(h2.r[1])))   # đè góc khung như hoa trên, không che nút
+	return {"tag": "div", "id": "", "cls": "trechung", "z": o.get("z", 1.0), "css": {}, "r": [x, y, w, h], "kids": [o, hoa]}
+
+static func tre_bg(x: float, y: float, w: float, h: float) -> Dictionary:   # lớp dưới: nền giấy vân lá của Kho
+	var b: Dictionary = _tre_src().body.duplicate(true)
+	b.kids = []
+	b.r = [x, y, w, h]
+	b.css = b.css.duplicate()
+	b.css["border-radius"] = "22px"
+	return b
+
+static func tre_apply(n: Dictionary, box_cls := "u2pc") -> void:   # hộp nổi chụp từ web (.u2pc + .u2tre dày): đổi sang khung Kho
+	var bx := Snap.find(n, box_cls)
+	if bx.is_empty():
+		return
+	var x: float = float(bx.r[0])
+	var y: float = float(bx.r[1])
+	var w: float = float(bx.r[2])
+	var h: float = float(bx.r[3])
+	bx.css = tre_box_css(bx.css)
+	var kids := [tre_bg(x, y, w, h)]
+	for k in bx.kids:
+		if not String(k.get("cls", "")).split(" ").has("u2tre"):
+			kids.append(k)
+	kids.append(tre_frame(x, y, w, h))
+	bx.kids = kids
+
+static func tre_box_css(c: Dictionary) -> Dictionary:   # màu nền, bo góc, bóng của hộp = .pwin của Kho
+	var o := c.duplicate()
+	var wc: Dictionary = _tre_src().win.css
+	for k in ["background-color", "border-radius", "box-shadow"]:
+		o[k] = wc[k]
 	return o
 
 # ------------------------------------------------------------------ hàng chip .khchips cuộn ngang (scrollLeft)

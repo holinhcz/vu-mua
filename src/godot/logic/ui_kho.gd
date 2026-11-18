@@ -10,6 +10,7 @@ const Snap = preload("res://ui/snap.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
 const Qty = preload("res://logic/qty.gd")
+const UB = preload("res://logic/ui_bang.gd")
 
 var U
 var G
@@ -193,6 +194,8 @@ func sync_panel(ids: Dictionary, n: int, cap: int) -> void:
 
 # lớp tối là một lớp riêng phủ kín màn thật (U._cover), hộp nằm giữa (như ui_set.help)
 func _show(n: Dictionary, box_cls: String, ids: Dictionary, on_close: Callable) -> Control:
+	if not Snap.find(Snap.find(n, box_cls), "u2tre").is_empty():
+		UB.tre_apply(n, box_cls)   # (bản 293) hộp nổi nào cũng khung ngoài của Kho (nẹp tre, hoa, nền giấy)
 	var bx := Snap.find(n, box_cls)
 	var bk: Dictionary = n.duplicate()
 	bk.kids = []
