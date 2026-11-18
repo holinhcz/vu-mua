@@ -436,8 +436,9 @@ static func _pseudo(b: Control, p: Dictionary, R: Array, z: float, which: String
 		# (bản 295) thanh tre ngang trong bảng (dưới hàng tab Kho, trên nút Bán hết...): cùng ảnh cạnh khung tre chung
 		var tb: Control = Box.new()
 		tb.place(Rect2(x, y, pw, ph))
-		var e: float = (Tre.T + Tre.S) * z
-		tb.pic(Tre.bar(pw / z), Rect2(0, (ph - Tre.T * z) * 0.5, pw, e))   # một ảnh liền (ui/tre.gd)
+		# phủ kín cả bề cao thanh của bản web (9): mép dưới các tab nằm trong thanh, chừa ra là lộ màu tab (lem xanh)
+		var e: float = ph * (Tre.T + Tre.S) / Tre.T
+		tb.pic(Tre.bar(pw / z * Tre.T / (ph / z)), Rect2(0, 0, pw, e))   # một ảnh liền (ui/tre.gd)
 		return tb
 	var st := ""
 	for kv in [["background-color", "bg"], ["background-image", "bgi"], ["background-size", "bgs"], ["background-position", "bgp"], ["background-repeat", "bgr"], ["border-radius", "br"], ["box-shadow", "bs"], ["opacity", "op"]]:
