@@ -1254,5 +1254,65 @@
 436
 ],
 "nguon": "tấm ảnh người dùng (bản 311)"
+},
+"banh": {
+"file": "banh.png",
+"bbox": [
+41,
+65,
+471,
+446
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
+},
+"banh_bo": {
+"file": "banh_bo.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
+},
+"banh_cam": {
+"file": "banh_cam.png",
+"bbox": [
+41,
+72,
+471,
+440
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
+},
+"banh_pia": {
+"file": "banh_pia.png",
+"bbox": [
+41,
+74,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
+},
+"bong_lan": {
+"file": "bong_lan.png",
+"bbox": [
+41,
+77,
+471,
+434
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
+},
+"kem": {
+"file": "kem.png",
+"bbox": [
+41,
+58,
+471,
+453
+],
+"nguon": "tấm ảnh người dùng (bản 313)"
 }
 }
