@@ -42,3 +42,7 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | tra_tac.png | Trà tắc |
 | st_sapoche.png | Sinh tố sapoche |
 | st_bo_sr.png | Sinh tố bơ sầu riêng |
+| banh_tam_khoai_mi.png | Bánh tầm khoai mì (bản 316) |
+| com_chien_hai_san.png | Cơm chiên hải sản |
+| muc_xao.png | Mực xào thập cẩm |
+| rau_muong_xao.png | Rau muống xào tỏi |

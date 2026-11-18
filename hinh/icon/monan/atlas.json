@@ -1479,5 +1479,79 @@
 436
 ],
 "nguon": "tấm ảnh người dùng (bản 315)"
+},
+"banh_tam_khoai_mi": {
+"file": "banh_tam_khoai_mi.png",
+"bbox": [
+41,
+96,
+471,
+416
+],
+"nguon": "tấm ảnh người dùng (bản 316)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"bo_bia": {
+"file": "bo_bia.png",
+"bbox": [
+41,
+88,
+471,
+423
+],
+"nguon": "tấm ảnh người dùng (bản 316)"
+},
+"bt_chabong": {
+"file": "bt_chabong.png",
+"bbox": [
+41,
+87,
+471,
+424
+],
+"nguon": "tấm ảnh người dùng (bản 316)"
+},
+"com_chien": {
+"file": "com_chien.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 316)"
+},
+"com_chien_hai_san": {
+"file": "com_chien_hai_san.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 316)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"muc_xao": {
+"file": "muc_xao.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 316)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"rau_muong_xao": {
+"file": "rau_muong_xao.png",
+"bbox": [
+41,
+75,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 316)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
 }
 }
