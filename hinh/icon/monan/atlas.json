@@ -1685,5 +1685,55 @@
 471
 ],
 "nguon": "tấm ảnh người dùng (bản 320)"
+},
+"mut_chomchom": {
+"file": "mut_chomchom.png",
+"bbox": [
+41,
+46,
+471,
+466
+],
+"nguon": "tấm ảnh người dùng (bản 321)"
+},
+"mut_dau": {
+"file": "mut_dau.png",
+"bbox": [
+76,
+41,
+436,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 321)"
+},
+"mut_mangcut": {
+"file": "mut_mangcut.png",
+"bbox": [
+61,
+41,
+450,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 321)"
+},
+"nuoc_mau": {
+"file": "nuoc_mau.png",
+"bbox": [
+53,
+41,
+459,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 321)"
+},
+"trung_muoi": {
+"file": "trung_muoi.png",
+"bbox": [
+41,
+57,
+471,
+455
+],
+"nguon": "tấm ảnh người dùng (bản 321)"
 }
 }
