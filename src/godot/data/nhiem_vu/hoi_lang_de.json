@@ -1,0 +1,1 @@
+[{"k":"harvest","n":"Ngày gặt","d":"mỗi lần thu hoạch 1 điểm","mul":1},{"k":"xuong","n":"Ngày làm hàng","d":"mỗi món xưởng làm xong 1 điểm","mul":1},{"k":"collect","n":"Ngày chăn nuôi","d":"mỗi sản phẩm vật nuôi 1 điểm","mul":1},{"k":"deliver","n":"Ngày giao đơn","d":"mỗi đơn giao xong 5 điểm","mul":5},{"k":"fish","n":"Ngày câu cá","d":"mỗi con cá 4 điểm","mul":4}]

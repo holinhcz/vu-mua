@@ -449,6 +449,9 @@ func _jd0() -> Array:   # jd gốc
 	l[3].append({"t": "ban", "k": "item", "id": "cui", "q": 6, "xu": 42})
 	l[3].append({"t": "ban", "k": "item", "id": "soi", "q": 2, "xu": _r(2 * _sell("soi", 20) * 0.9)})
 	l[3].append({"t": "ban", "k": "item", "id": "muoi_hot", "q": 3, "xu": _r(3 * _sell("muoi_hot", 10) * 0.9)})
+	if a.next() < 0.6:   # (bản 326) ghe biển gửi mực: làng nước ngọt không câu được, chỉ mua ở chợ nổi, ngày có ngày không
+		var mq := 2 + int(floor(a.next() * 3))
+		l[3].append({"t": "ban", "k": "item", "id": "muc", "q": mq, "xu": _r(mq * _sell("muc", 34) * 1.1)})
 	var E := to.filter(func(W): return _barn(W) > 0 and W != "cui" and Ge.has(W))
 	if E.size():
 		var C: String = _pick(E, a)
