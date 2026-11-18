@@ -37,3 +37,8 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_ca_keo.png | Lẩu cá kèo lá giang |
 | lau_ca_loc.png | Lẩu cá lóc chua cay |
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
+| nuoc_thom.png | Nước ép thơm (bản 314) |
+| nuoc_cam_carot.png | Nước ép cam cà rốt |
+| tra_tac.png | Trà tắc |
+| st_sapoche.png | Sinh tố sapoche |
+| st_bo_sr.png | Sinh tố bơ sầu riêng |
