@@ -53,6 +53,8 @@ func open_pen(t: String) -> void:   # nâng sao chuồng t (lf("pen", t))
 	_draw()
 
 func open_work(k: String) -> void:   # nâng sao xưởng k (bản 281): cùng bảng chuồng, 1 tab mang tên xưởng
+	if U.xfp != null:
+		U.xfp.close()   # (bản 290) như ruộng / chuồng đóng vòng nút: không chồng bảng xưởng dưới bảng sao
 	kind = "work"
 	pt = k
 	pi = 0
@@ -103,8 +105,13 @@ func _tabs(n: Dictionary, l: int) -> void:
 	var q: Dictionary = Snap.moved(src, Vector2(float(tb.r[0]) - float(src.r[0]), float(tb.r[1]) - float(src.r[1])))
 	if l >= 2:
 		K._ctext(q.kids[1], "Cả " + str(l) + " ô")
-	elif kind != "plot":
-		K._ctext(q.kids[0], _one())
+	else:   # (bản 290) chỉ 1 lựa chọn: tiêu đề chữ đậm không nền (thanh xanh trông như nút bấm)
+		var t0: Dictionary = q.kids[0]
+		t0.css = K._plain_css(t0.css)
+		t0.css["color"] = "rgb(74, 52, 20)"
+		t0.css["font-size"] = "17px"
+		t0.css["font-weight"] = "800"
+		K._ctext(t0, _one() if kind != "plot" else "Ô ruộng")
 	tb.kids = q.kids
 
 func _draw() -> void:
@@ -147,10 +154,18 @@ func _draw() -> void:
 		if k.tag == "small":
 			sm.append(k)
 	K._ctext(sm[0], _us(r))
+	var rows := [[Snap.find(sv, "stars"), 8.0], [sm[0], 6.0], [sm[1], 0.0]]   # (bản 290) xếp dọc lại trong _flow
 	if r < 6:
 		var sn: Dictionary = sm[1]
 		var tl := String(sn.text)
-		K._mix(sn, tl.substr(0, tl.find(":")), "Lên " + str(r), ": " + _us(r + 1), cx)
+		K._mix(sn, tl.substr(0, tl.find(":")), "Lên " + str(r), "", cx)   # "Lên N ★", hiệu lực xuống các dòng dưới
+		rows = [[rows[0][0], 8.0], [sn, 4.0]]
+		var lp: Dictionary = sn.duplicate(true)   # khuôn dòng hiệu lực: chữ đậm như dòng "Lên N"
+		lp.css = K._plain_css(sn.css)
+		lp.css["font-size"] = "14.5px"
+		for t in _diff(_us(r), _us(r + 1)):
+			rows.append([_line(lp, t, float(sv.r[0]), float(sv.r[2])), 2.0])
+		rows[-1][1] = 10.0
 		# Q4(l): ô xu + ô vật liệu, lưới 4 cột (chỗ đứng lấy từ sp_ns)
 		var need := Snap.find(sv, "need")
 		var slots: Array = Snap.find(T.sp_ns, "need").kids
@@ -162,13 +177,16 @@ func _draw() -> void:
 			out.append(K._chip(Snap.moved(slots[j + 1], Vector2(0, dy)), m[0], hv >= int(m[1]), hv, int(m[1]), K.mat_svg.get(m[0], "")))
 		need.kids = out
 		var bt := Snap.find(sv, "", "button")
+		rows.append([need, 10.0])
+		rows.append([bt, 0.0])
 		if c and s:
 			_gem_l(bt, "Nâng sớm (cần cấp " + str(nd.lv) + ")", cx)
 		elif c:
-			K._ctext(bt, "🔒 Cấp " + str(nd.lv))
+			K._ctext(bt, "🔒 Cần cấp " + str(nd.lv) + " · còn " + str(int(nd.lv) - G.lv()) + " cấp")
 		else:
 			var bl := String(bt.text)
 			K._mix(bt, bl, ("Nâng cả " + str(o) + " ô lên " + str(r)) if all else ("Nâng lên " + str(r)), "", cx)
+	_flow(n, rows)
 	var keep := pop != null
 	var vis := pop.visible if pop != null else true
 	if pop != null:
@@ -192,6 +210,66 @@ func _draw() -> void:
 	U._layout()
 	if not keep:
 		G.vib(0)
+
+var _rv := RegEx.create_from_string("^(.*?)(\\+?\\d+(?:[.,]\\d+)?\\s*(?:%|phút|giờ|ngày))(.*)$")
+
+func _diff(cur: String, nxt: String) -> Array:   # (bản 290) mỗi hiệu lực một dòng "nhãn cũ → mới"; chưa có thì "(mới)"
+	var out := []
+	var cl := cur.to_lower()
+	for p in nxt.split(" · "):
+		var m := _rv.search(p)
+		var t: String = p + " (mới)"
+		if m != null and m.get_string(1).strip_edges() != "":
+			var lb := m.get_string(1)
+			var at := cl.find(lb.to_lower())
+			if at >= 0:
+				var m2 := _rv.search(cur.substr(at))
+				if m2 != null and m2.get_string(1).to_lower() == lb.to_lower():
+					t = lb + m2.get_string(2) + " → " + m.get_string(2) + m.get_string(3)
+		out.append(t.substr(0, 1).to_upper() + t.substr(1))
+	return out
+
+func _line(proto: Dictionary, s: String, x0: float, w: float) -> Dictionary:   # một dòng chữ giữa bề ngang w
+	var o: Dictionary = proto.duplicate(true)
+	o.kids = []
+	o.cls = ""
+	o.r = [x0, 0.0, w, 19.0]
+	o.tr = [x0, 0.0, w, 19.0]
+	K._ctext(o, s)
+	return o
+
+func _flow(n: Dictionary, rows: Array) -> void:   # (bản 290) xếp dọc các hàng [nút, khoảng dưới]; hộp và khung tre co giãn theo
+	var sv := Snap.find(n, "u2sv")
+	var cx: float = float(sv.r[0]) + float(sv.r[2]) * 0.5
+	var stb := Snap.find(sv, "stars")   # sao to 1,5 lần
+	var st: Array = stb.kids
+	var S := 31.0
+	var gp := 5.0
+	var tw: float = S * st.size() + gp * (st.size() - 1)
+	for j in st.size():
+		st[j].r = [cx - tw * 0.5 + j * (S + gp), float(stb.r[1]), S, S]
+	stb.r = [cx - tw * 0.5, float(stb.r[1]), tw, S]
+	var y: float = float(sv.r[1])
+	var kids := []
+	for e in rows:
+		var nd: Dictionary = e[0]
+		Snap._move(nd, Vector2(0, y - float(nd.r[1])))
+		kids.append(nd)
+		y += float(nd.r[3]) + float(e[1])
+	var d: float = y - float(sv.r[1]) - float(sv.r[3])
+	sv.kids = kids
+	for c in ["u2sv", "u2sbx2", "u2pc", "u2tre"]:
+		var q := Snap.find(n, c)
+		if not q.is_empty():
+			q.r = [q.r[0], q.r[1], q.r[2], float(q.r[3]) + d]
+	var tre := Snap.find(n, "u2tre")
+	for k in tre.get("kids", []):
+		var cs: PackedStringArray = String(k.cls).split(" ")
+		if cs.has("l") or cs.has("r"):
+			k.r = [k.r[0], k.r[1], k.r[2], float(k.r[3]) + d]
+		elif cs.has("b") or cs.has("c3") or cs.has("c4"):
+			Snap._move(k, Vector2(0, d))
+	Snap._move(Snap.find(n, "u2pc"), Vector2(0, -d * 0.5))   # giữ giữa màn
 
 func up() -> void:   # click data-up → lf (lớp bọc nâng sớm)
 	var r: int = _r()

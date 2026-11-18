@@ -117,7 +117,15 @@ func _chip(c: Dictionary, kind: String, ok: bool, have: int, need: int, svg: Str
 	o.css = src.css
 	var sb := Snap.find(src, "", "b")
 	var b := Snap.find(o, "", "b")
-	b.css = sb.css
+	b.css = sb.css.duplicate()
+	b.css["font-size"] = "14px"   # (bản 290) chữ to hơn, ô xu và ô vật liệu cùng cỡ
+	var spc: Dictionary = _kid(o, "span")
+	spc.css = spc.css.duplicate()
+	spc.css["font-size"] = "14px"
+	spc.css["color"] = b.css.get("color", spc.css.get("color"))   # "/cần" cùng màu số có: thiếu đỏ, đủ xanh
+	var ic0: Dictionary = o.kids[0]   # hình xu / vật liệu 22 (bản chụp 18), giữ mép phải nên khoảng hở tới chữ không đổi
+	var icy: float = float(o.r[1]) + float(o.r[3]) * 0.5
+	ic0.r = [float(ic0.r[0]) - 4.0, icy - 11.0, 22.0, 22.0]
 	if kind == "xu":
 		var s: String = G.fmt_n(need)
 		var x0: float = float(b.r[0])
