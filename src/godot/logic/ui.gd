@@ -3541,6 +3541,8 @@ func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 var open_at_down := false   # (bản 286) lúc ngón tay chạm xuống có bảng / vòng nào đang mở (bảng tự đóng khi chạm xuống,
                             # nên tới lúc nhấc tay -> farm.tap thì đã đóng rồi: phải nhớ từ lúc chạm xuống)
 var gv_at_down := false
+var _hold := false   # cú chạm này bắt đầu lúc đang mở bảng: làng không lướt / zoom tới khi nhấc hết ngón
+var _fing := {}      # ngón tay (chuột: -1) đang chạm
 
 func any_open() -> bool:   # (bản 283) đang mở bảng / vòng nút / khay nào trên làng
 	if rm_on() or kho_on or od_on or pc_b != null:
@@ -3706,10 +3708,20 @@ func _process(dt: float) -> void:
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).
 	# main.gd đọc cờ này trong _unhandled_input; không chặn sự kiện ở đây để main vẫn đếm đủ ngón tay.
-	get_tree().set_meta("ui_modal", (setp != null and setp.on) or (vlp != null and vlp.on) or (ngp != null and ngp.on) or _pans().any(func(p): return p != null and p.on) or kho_on or (nvp != null and nvp.on) or (lvp != null and lvp.on) or (bdp != null and bdp.mode == "shop"))
-	if (e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT)) and e.pressed:
-		open_at_down = any_open()
-		gv_at_down = gv_b != null and gv_b.visible
+	# (bản 289) một luật: đang mở bất cứ bảng / popup / vòng nút nào (any_open) thì làng đứng yên; chạm xuống lúc đang mở
+	# thì giữ đứng yên tới khi nhấc hết ngón (bảng tự đóng khi chạm ra ngoài, kéo tiếp cũng không lướt làng)
+	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
+		if e.pressed:
+			_fing[e.index if e is InputEventScreenTouch else -1] = true
+			open_at_down = any_open()
+			gv_at_down = gv_b != null and gv_b.visible
+			if open_at_down:
+				_hold = true
+		else:
+			_fing.erase(e.index if e is InputEventScreenTouch else -1)
+	get_tree().set_meta("ui_modal", _hold or any_open() or (bdp != null and bdp.mode == "shop"))
+	if _fing.is_empty():
+		_hold = false
 	_od_input(e)
 	if kho_on:
 		kh_sc.input(e)
