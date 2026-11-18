@@ -45,3 +45,6 @@ Cây tạm: khom trên ruộng = hình cây la_dua; cây ăn trái ft_tac, ft_sa
 
 ## Quán chè (bản 330) — hình tạm
 che_ba_ba, che_khoai_mon (tạm che_khoai), che_dau_den (che_me_den), che_thai (che_ba_mau), tau_hu (sua_dau_nanh), che_bi_do (che_bap).
+
+## Lò bánh quê (bản 331) — hình tạm
+xoi_la_dua, xoi_xeo (tạm xoi), banh_xeo, banh_can (banh_khot), banh_gio (banh_beo), banh_hoi (banh_cuon), banh_chung (banh_tet), xoi_thit (xoi_cha_bong).
