@@ -182,8 +182,16 @@ func _ic(n: Dictionary, id: String, bottom := false) -> void:
 	var fi := Snap.find(n, "xfi")
 	if fi.is_empty():
 		return
+	# (bản 322) hình món to hơn bản web: món trên khay 44 -> 52, đầu thẻ 32 -> 40, nguyên liệu 24 -> 30 (cùng tâm cũ)
+	var w0: float = float(fi.r[2])
+	var w1: float = 52.0 if w0 >= 40.0 else (40.0 if w0 >= 30.0 else (30.0 if w0 >= 22.0 else w0))
+	if w1 != w0:
+		var cx: float = float(fi.r[0]) + w0 * 0.5
+		var cy: float = float(fi.r[1]) + float(fi.r[3]) * 0.5
+		fi.r = [cx - w1 * 0.5, cy - w1 * 0.5, w1, w1]
 	for q in fi.get("kids", []):
 		if q.tag == "svg":
+			q.r = fi.r.duplicate()
 			q.svg = _svg(id, 1.06 if bottom else 1.1, bottom)
 
 # ------------------------------------------------------------------ mở / đóng
