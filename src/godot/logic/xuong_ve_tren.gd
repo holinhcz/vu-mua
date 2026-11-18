@@ -24,7 +24,7 @@ func _draw() -> void:
 	var w: Dictionary = G.xw.w(k)
 	var cx: float = sr.gx + sr.fw / 2.0
 	var cy: float = sr.gy + sr.fd / 2.0
-	var bh: float = float(xv.BH.get(sr.type, 40 + sr.fd * 30))
+	var bh: float = xv.bh()
 	var p := Vector2(farm.en(cx, cy), farm.nn(cx, cy, bh))
 	var o := 0.0 if G.motion_off() else sin(xv.t * 3.0 + p.x) * 1.2
 	var n: int = G.xw.df(k)

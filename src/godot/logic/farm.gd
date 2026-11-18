@@ -1176,7 +1176,7 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 			var e: Dictionary = G.xw.sr[k]
 			var cx: float = e.gx + e.fw / 2.0
 			var cy: float = e.gy + e.fd / 2.0
-			var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
+			var bh: float = xw_bh(k)
 			if Vector2(en(cx, cy), nn(cx, cy, bh)).distance_to(w) <= 16.0:
 				return {"type": "work", "k": k}
 	return null
@@ -1208,7 +1208,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 		var cy: float = e.gy + e.fd / 2.0
 		var c := en(cx, cy)
 		var f := nn(cx, cy)
-		var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
+		var bh: float = xw_bh(k)
 		var inside: bool = tl.x >= e.gx - 0.1 and tl.x < e.gx + e.fw + 0.1 and tl.y >= e.gy - 0.1 and tl.y < e.gy + e.fd + 0.1
 		var xv = xnodes.get(k)
 		var box := func(p: Vector2) -> bool: return absf(p.x - c) < (e.fw + e.fd) * 13 and p.y >= f - bh + 6 and p.y <= f
@@ -1697,6 +1697,11 @@ func pc_lv(t: String) -> int:   # hs: cấp còn thiếu (0 = đủ cấp)
 # ------------------------------------------------------------------ nodes
 # ------------------------------------------------------------------ xưởng chế biến (xuong.gd, vẽ ở xuong_ve.gd)
 var xnodes := {}       # khoá xưởng -> node
+func xw_bh(k: String) -> float:   # độ cao bong bóng xưởng k (xuong_ve.bh: đỉnh ảnh thật)
+	var n = xnodes.get(k)
+	if n != null and is_instance_valid(n):
+		return n.bh()
+	return 40.0 + float(G.xw.sr[k].fd) * 30.0
 var _xw_sig := ""
 var _lf_sig := ""
 func leaf_sync(force := false) -> void:   # lá rụng đi theo cây: ô gốc các cây đang đứng gửi sang nền (main.leaf_live)
@@ -1780,7 +1785,7 @@ func xw_at(w: Vector2) -> String:   # lz bản web: chạm trúng nền, thân x
 		var cy: float = e.gy + e.fd / 2.0
 		var c := en(cx, cy)
 		var f := nn(cx, cy)
-		var bh: float = float(load("res://logic/xuong_ve.gd").BH.get(e.type, 40 + e.fd * 30))
+		var bh: float = xw_bh(k)
 		if (tl.x >= e.gx - 0.1 and tl.x < e.gx + e.fw + 0.1 and tl.y >= e.gy - 0.1 and tl.y < e.gy + e.fd + 0.1) or (absf(w.x - c) < (e.fw + e.fd) * 13 and w.y >= f - bh + 6 and w.y <= f):
 			return k
 		if G.xw.df(k) > 0 and absf(w.x - c) < 16 and absf(w.y - nn(cx, cy, bh)) < 16:

@@ -8,8 +8,6 @@ const FOLDER := {"ruong": "ruongmuoi", "mill": "coixay", "oven": "lobanhmi", "mu
 	"duong": "duong", "kho": "noikho", "say": "say", "btrang": "btrang", "det": "khungdet", "nuong": "nuong",
 	"bepcui": "bepcui", "quanche": "quanche", "lobanh": "lobanh", "hangcha": "hangcha"}
 const FPS := {"coixay/g": 8.0}          # khung chạy khác 10 khung/s (README)
-const BH := {"oven": 88, "muoi": 72, "ep": 96, "rang": 66, "kho": 76, "say": 58, "det": 72, "duong": 96, "btrang": 70,
-	"mill": 82, "nuong": 64, "bepcui": 72, "quanche": 96, "lobanh": 84, "hangcha": 80}   # To[t].bh: độ cao bong bóng
 const PPU := 9.0
 
 var farm
@@ -257,6 +255,13 @@ func seq_ok(s: Array) -> bool:
 		if farm.P.texz(b, String(s[0]) + str(i) + "_" + d, PPU, farm.main.zoom) == null:
 			ok = false
 	return ok
+
+func bh() -> float:   # (bản 288) độ cao bong bóng = đỉnh ảnh thật của xưởng (ảnh nghỉ ban ngày "id") + 2; một luật cho mọi xưởng
+	_meta()
+	if A.has("id"):
+		return -float(A["id"][1]) + 2.0
+	var s: Dictionary = farm.G.xw.sr[k]
+	return 40.0 + float(s.fd) * 30.0   # ảnh chưa tải xong
 
 func centre() -> Vector2:
 	var s: Dictionary = farm.G.xw.sr[k]

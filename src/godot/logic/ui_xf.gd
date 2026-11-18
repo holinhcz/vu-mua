@@ -676,11 +676,7 @@ func _scr(wx: float, wy: float, z := 0.0) -> Vector2:
 	return (Vector2(F.en(wx, wy), F.nn(wx, wy, z)) - U.main.cam) * U.main.zoom / Css.K
 
 func _nt() -> float:   # Nt: đỉnh hình xưởng so với tâm nền (đơn vị làng, âm)
-	var n = U.F.xnodes.get(k)
-	if n != null and n.A.has("id"):
-		return float(n.A["id"][1])
-	var s: Dictionary = G.xw.sr[k]
-	return -float(load("res://logic/xuong_ve.gd").BH.get(s.type, 40 + s.fd * 30))
+	return 2.0 - U.F.xw_bh(k)   # cùng một luật với bong bóng (xuong_ve.bh)
 
 func _gt() -> Dictionary:
 	var s: Dictionary = G.xw.sr[k]
