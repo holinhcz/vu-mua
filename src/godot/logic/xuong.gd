@@ -142,23 +142,33 @@ func make(k: String, rid: String) -> bool:   # _3: trừ nguyên liệu, xếp v
 	return true
 
 func collect(k: String) -> bool:   # Dp
+	# (bản 323) kho còn chỗ thì thu tới đâu hay tới đó, phần dư nằm lại xưởng (trước: còn 27 chỗ mà xưởng có 30 món
+	# là không thu được gì, báo "Kho đầy" dù kho chưa đầy)
 	var a := w(k)
 	if df(k) == 0:
 		return false
-	var f := 0
-	for id in a.r:
-		f += int(a.r[id])
-	if not G.kho_fit(f):   # g8 (bản web bọc Dp)
+	var room: int = G.kho_room()
+	if room <= 0:
+		G.kho_fit(1)   # báo kho đầy
 		return false
 	var s: Dictionary = sr[k]
 	var at := Vector2(s.gx + s.fw / 2.0, s.gy + s.fd / 2.0)
 	var txt := []
-	for id in a.r:
-		var c := int(a.r[id])
+	for id in a.r.keys():
+		if room <= 0:
+			break
+		var c := mini(int(a.r[id]), room)
+		if c <= 0:
+			continue
+		room -= c
 		G.g.barn[id] = int(G.g.barn.get(id, 0)) + c
+		a.r[id] = int(a.r[id]) - c
+		if int(a.r[id]) <= 0:
+			a.r.erase(id)
 		txt.append("+" + str(c) + " " + G.item_name(id))
-	a.r = {}
 	G.float_text.emit(at.x, at.y - 0.6, ", ".join(txt))
+	if df(k) > 0:
+		G.toast.emit("Kho đầy (" + G.fmt_n(G.kho_n()) + "/" + G.fmt_n(G.kho_cap()) + "): còn " + str(df(k)) + " món chờ ở xưởng. Bán bớt hoặc nâng kho rồi thu tiếp.")
 	G._drop_at("work", at)
 	G.vib(10)
 	G.mark()
