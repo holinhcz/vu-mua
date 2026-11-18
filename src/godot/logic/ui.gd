@@ -743,6 +743,8 @@ func _build_dock() -> void:
 			if sel == "nav.dock":
 				dock_b = b
 				_stop(b)
+				for bd in ids.get(".bdg*", []):   # (bản 304) bỏ huy hiệu chụp cứng của bản web ("10" Kho, "đẹp 0" Xây dựng): không nối số thật
+					bd.visible = false
 			else:
 				dock_btn2 = b
 				_click(b, func(): dock_open(false), "scale")
