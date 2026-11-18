@@ -652,5 +652,333 @@
 444
 ],
 "nguon": "tấm ảnh người dùng (bản 309)"
+},
+"banh_tet": {
+"file": "banh_tet.png",
+"bbox": [
+41,
+68,
+471,
+444
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"banh_trang": {
+"file": "banh_trang.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"bt_me": {
+"file": "bt_me.png",
+"bbox": [
+41,
+68,
+471,
+444
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"bt_sua": {
+"file": "bt_sua.png",
+"bbox": [
+41,
+71,
+471,
+441
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"bt_tron": {
+"file": "bt_tron.png",
+"bbox": [
+41,
+71,
+471,
+441
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"chao_ga": {
+"file": "chao_ga.png",
+"bbox": [
+41,
+70,
+471,
+441
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"che_ba_mau": {
+"file": "che_ba_mau.png",
+"bbox": [
+41,
+74,
+471,
+438
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"che_bap": {
+"file": "che_bap.png",
+"bbox": [
+41,
+63,
+471,
+449
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"che_khoai": {
+"file": "che_khoai.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"che_me_den": {
+"file": "che_me_den.png",
+"bbox": [
+41,
+72,
+471,
+439
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"chuoi_say": {
+"file": "chuoi_say.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"com_tam": {
+"file": "com_tam.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"dp_rang": {
+"file": "dp_rang.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"duong": {
+"file": "duong.png",
+"bbox": [
+41,
+80,
+471,
+432
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"goi_ga": {
+"file": "goi_ga.png",
+"bbox": [
+41,
+82,
+471,
+430
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"hd_rang": {
+"file": "hd_rang.png",
+"bbox": [
+41,
+77,
+471,
+434
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"hu_tieu": {
+"file": "hu_tieu.png",
+"bbox": [
+41,
+73,
+471,
+438
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"keo_dp": {
+"file": "keo_dp.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"keo_dua": {
+"file": "keo_dua.png",
+"bbox": [
+41,
+72,
+471,
+439
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"keo_me": {
+"file": "keo_me.png",
+"bbox": [
+41,
+77,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"keo_sua_de": {
+"file": "keo_sua_de.png",
+"bbox": [
+41,
+72,
+471,
+440
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"lau_bo": {
+"file": "lau_bo.png",
+"bbox": [
+41,
+80,
+471,
+431
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_bo_giam": {
+"file": "lau_bo_giam.png",
+"bbox": [
+41,
+76,
+471,
+435
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_ca_chep": {
+"file": "lau_ca_chep.png",
+"bbox": [
+41,
+75,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_de": {
+"file": "lau_de.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_ga_la_e": {
+"file": "lau_ga_la_e.png",
+"bbox": [
+41,
+79,
+471,
+433
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_hai_san": {
+"file": "lau_hai_san.png",
+"bbox": [
+41,
+80,
+471,
+432
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_rieu_cua": {
+"file": "lau_rieu_cua.png",
+"bbox": [
+41,
+76,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"lau_thai": {
+"file": "lau_thai.png",
+"bbox": [
+41,
+76,
+471,
+436
+],
+"nguon": "tấm ảnh người dùng (bản 310)",
+"cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"mat_mia": {
+"file": "mat_mia.png",
+"bbox": [
+41,
+70,
+471,
+442
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"me_rang": {
+"file": "me_rang.png",
+"bbox": [
+41,
+74,
+471,
+437
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
+},
+"pho_mai_de": {
+"file": "pho_mai_de.png",
+"bbox": [
+41,
+86,
+471,
+426
+],
+"nguon": "tấm ảnh người dùng (bản 310)"
 }
 }

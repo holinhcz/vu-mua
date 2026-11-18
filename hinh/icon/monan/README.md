@@ -25,3 +25,11 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_nam.png | Lẩu nấm thập cẩm |
 | banh_khoai_mi.png | Bánh khoai mì |
 | banh_chuoi_nuong.png | Bánh chuối nướng (game đang có Bánh chuối hấp, khác món) |
+| lau_thai.png | Lẩu thái chua cay (bản 310) |
+| lau_bo_giam.png | Lẩu bò nhúng giấm |
+| lau_ca_chep.png | Lẩu cá chép om dưa |
+| lau_rieu_cua.png | Lẩu riêu cua bắp bò |
+| lau_ga_la_e.png | Lẩu gà lá é |
+| lau_hai_san.png | Lẩu hải sản |
+| lau_de.png | Lẩu dê |
+| lau_bo.png | Lẩu bò |
