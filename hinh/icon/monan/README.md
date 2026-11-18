@@ -23,7 +23,6 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_ca_hu.png | Lẩu cá hú măng chua |
 | lau_nam.png | Lẩu nấm thập cẩm |
 | banh_khoai_mi.png | Bánh khoai mì |
-| banh_chuoi_nuong.png | Bánh chuối nướng (game đang có Bánh chuối hấp, khác món) |
 | lau_thai.png | Lẩu thái chua cay (bản 310) |
 | lau_bo_giam.png | Lẩu bò nhúng giấm |
 | lau_ca_chep.png | Lẩu cá chép om dưa |
@@ -51,3 +50,6 @@ xoi_la_dua, xoi_xeo (tạm xoi), banh_xeo, banh_can (banh_khot), banh_gio (banh_
 
 ## Nồi kho (bản 332) — hình tạm
 thit_kho (Thịt kho tiêu, vẫn hình thịt kho trứng cũ), ca_keo_kho (ca_ro_kho), mam_kho (thit_kho_nd), ca_chep_kho (ca_kho), ech_kho (luon_um), cua_rang_me, thit_rim_tom (tom_rim).
+
+## Lò nướng (bản 333)
+banh_chuoi_nuong gắn hình thật (làm ở Lò bánh mì). Hình tạm: nem_nuong, catim_mo_hanh (bachi_nuong), muc_nuong, cua_nuong (tom_nuong), ca_keo_nuong (ca_loc_trui), bap_nuong (ga_nuong_sa), khoai_nuong (oc_nuong).
