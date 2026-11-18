@@ -11,17 +11,16 @@ PNG 512x512 nền trong suốt, mỗi món 1 file.
 |---|---|---|
 | banhmi.png | Bánh mì | lò bánh mì |
 
+## Đã gắn vào Bếp củi (bản 327)
+lau_cua_dong, lau_ga_ot_hiem, lau_luon, lau_ech, lau_ga_la_e, lau_hai_san, lau_de, lau_bo, lau_ca_linh, lau_ca_keo (cùng mã), com_chien_hai_san -> com_chien_hs, muc_xao, rau_muong_xao, hu_tieu_nam_vang -> hu_tieu.
+
 ## Hình món chưa có trong game (bản 309) — làm món thì lấy dùng
 Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, cỡ chuẩn 430. Gắn vào game: bọc WebP thành ui/svg/kh/<mã món>.svg.
 | File | Món |
 |---|---|
-| lau_cua_dong.png | Lẩu cua đồng |
 | lau_vit_chao.png | Lẩu vịt nấu chao |
 | lau_ga_la_giang.png | Lẩu gà lá giang |
-| lau_ga_ot_hiem.png | Lẩu gà ớt hiểm |
 | lau_ca_hu.png | Lẩu cá hú măng chua |
-| lau_luon.png | Lẩu lươn chua cay |
-| lau_ech.png | Lẩu ếch măng cay |
 | lau_nam.png | Lẩu nấm thập cẩm |
 | banh_khoai_mi.png | Bánh khoai mì |
 | banh_chuoi_nuong.png | Bánh chuối nướng (game đang có Bánh chuối hấp, khác món) |
@@ -29,12 +28,6 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_bo_giam.png | Lẩu bò nhúng giấm |
 | lau_ca_chep.png | Lẩu cá chép om dưa |
 | lau_rieu_cua.png | Lẩu riêu cua bắp bò |
-| lau_ga_la_e.png | Lẩu gà lá é |
-| lau_hai_san.png | Lẩu hải sản |
-| lau_de.png | Lẩu dê |
-| lau_bo.png | Lẩu bò |
-| lau_ca_linh.png | Lẩu cá linh bông điên điển (bản 311) |
-| lau_ca_keo.png | Lẩu cá kèo lá giang |
 | lau_ca_loc.png | Lẩu cá lóc chua cay |
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
 | nuoc_thom.png | Nước ép thơm (bản 314) |
@@ -43,8 +36,9 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | st_sapoche.png | Sinh tố sapoche |
 | st_bo_sr.png | Sinh tố bơ sầu riêng |
 | banh_tam_khoai_mi.png | Bánh tầm khoai mì (bản 316) |
-| com_chien_hai_san.png | Cơm chiên hải sản |
-| muc_xao.png | Mực xào thập cẩm |
-| rau_muong_xao.png | Rau muống xào tỏi |
-| hu_tieu_nam_vang.png | Hủ tiếu nam vang (bản 317; game đang có "Hủ tiếu" riêng) |
 | banh_mi_cha_ca.png | Bánh mì chả cá (bản 320) |
+
+## Hình tạm (bản 327) — chờ hình thật thì thay ui/svg/kh/<mã>.svg
+pho_bo (tạm hình hu_tieu_bv), bun_bo_hue (bun_rieu), mi_quang (hu_tieu), bun_cha (bun_cha_gio), banh_canh_cl (canh_chua), ech_xao (ga_xao).
+Cây tạm: toi (hình cây hanh, src/tools/cay/them_tam.py), la_e (hình cây rau_ram); icon toi / la_e lấy từ hinh/icon/anh (toi.png, lae.png).
+Nguyên liệu muc / cua / ech chưa có hình.

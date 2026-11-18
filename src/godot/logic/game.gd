@@ -55,6 +55,7 @@ func _load_data() -> void:
 	D.drop = _j("nang_cap/roi_vat_lieu")
 	D.items = _j("che_bien/vat_pham")
 	D.mua = _j("nong_trai/cay_dung_mua")
+	D.nhom = _j("nong_trai/nhom_vat_pham")
 	D.mat = _j("nang_cap/vat_lieu")
 	D.need = _j("cho/nhu_cau_tiem")         # Sv: nhóm hàng (c) và món (i) mỗi tiệm cần
 	D.who = _j("cho/ds_nguoi_dat_don")      # k5
@@ -1013,10 +1014,6 @@ func spray(i: int) -> bool:   # QS: bình thuốc 150 xu = 5 lần, sạch luôn
 
 # ------------------------------------------------------------------ chợ: giá bán trong Kho ($i, ngKho, B3, mk* bản web)
 # danh sách hợp mùa qO: Xuân, Hạ, Thu, Khô
-const SEA := [["lua", "dau", "rau_muong", "hanh", "xa_lach", "dua_leo", "sa", "rau_ram", "kho_qua", "dau_den"],
-	["bap", "cachua", "duahau", "ot", "catim", "huong_duong", "me", "bong_vai", "sa", "dau_xanh", "la_dua", "bau", "bi_dao", "kho_qua", "dau_rong", "dau_bap", "muop", "khoai_mon"],
-	["lua", "carot", "khoai", "bido", "dauphong", "nep", "cham", "gung", "nghe", "bau", "bi_dao", "dau_rong", "dau_bap", "muop", "khoai_mon"],
-	["carot", "cachua", "cai", "mia", "hanh_tay", "dau_nanh", "tieu", "gung", "dau_den"]]
 const SEA_N := ["Xuân", "Hạ", "Thu", "Khô"]
 const LY := 4			   # Bán hết chừa lại mỗi thứ 4 hạt giống
 var _hot_day := -99999
@@ -1094,7 +1091,7 @@ func mk_f(t: String, s: float) -> float:   # bán dồn thì rớt giá, tối �
 
 func mk_ev(t: String) -> float:   # mkWhy: hợp mùa rẻ hơn, trái mùa đắt hơn
 	if D.crops.has(t) and not crop(t).get("hyb", false):
-		return 0.9 if SEA[season()].has(t) else 1.1
+		return 0.9 if D.mua[season()].has(t) else 1.1
 	return 1.0
 
 func rel(t: String) -> float:   # mkRel: > 1,08 lên giá (▲), < 0,92 rớt giá (▼)
@@ -1575,16 +1572,7 @@ func _process(dt: float) -> void:
 			save_game()
 
 # ------------------------------------------------------------------ đơn hàng (fh, U3, ks, Ed, rI, L1 bản web)
-# nhóm món của tiệm (UA, ZF): món không thuộc nhóm nào là "khac"
-const UA := {
-	"hat": ["lua", "nep", "bap", "dau_nanh", "dau_xanh", "dauphong", "me", "huong_duong", "dau_den"],
-	"rau": ["rau_muong", "hanh", "cai", "carot", "bido", "catim", "ot", "cachua", "khoai", "xa_lach", "hanh_tay", "dua_leo", "bau", "bi_dao", "kho_qua", "dau_rong", "dau_bap", "khoai_mon", "muop"],
-	"gvi": ["sa", "rau_ram", "gung", "nghe", "la_dua", "tieu"],
-	"traic": ["dau", "duahau", "mia"],
-	"soi": ["cham", "bong_vai", "len"],
-	"trung": ["trung", "trung_vit"],
-	"sua": ["sua", "sua_de"],
-	"thit": ["thit_ga", "thit_cuu", "thit_bo", "thit", "suon", "thit_de", "thit_vit"]}
+# nhóm món của tiệm: data/nong_trai/nhom_vat_pham.json (D.nhom), món không thuộc nhóm nào là "khac"
 const Y8 := 300000.0      # đổi đơn: khách mới tới sau 5 phút
 var ppos := Vector2(6.3, 4.6)   # chỗ nhân vật (farm.gd cập nhật): chữ "+1 ..." bay lên ở đó
 var _ord_t := 2.0         # YY mỗi 60 s
@@ -1596,8 +1584,8 @@ func ord_slots() -> int:   # iN
 	return 9 if t >= 50 else 6 if t >= 30 else 4 if t >= 15 else 3
 
 func _zf(t: String) -> String:
-	for a in UA:
-		if UA[a].has(t):
+	for a in D.nhom:
+		if D.nhom[a].has(t):
 			return a
 	return "khac"
 

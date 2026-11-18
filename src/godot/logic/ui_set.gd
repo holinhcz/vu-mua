@@ -352,7 +352,7 @@ func _sea_now() -> String:   # fE: #seaNow
 	var i: int = G.season()
 	var auto: bool = G.cfg.s == "auto"
 	var a := []
-	for c in G.SEA[i]:
+	for c in G.D.mua[i]:
 		a.append(G.item_name(c).to_lower())
 	var hm: String = a[0] if a.size() == 1 else ", ".join(a.slice(0, a.size() - 1)) + " và " + a[a.size() - 1]
 	return "Hôm nay: " + T_SEA[i] + (", ngày " + str(t % 7 + 1) + "/7 (ngày " + str(t + 1) + "/28 của tháng)" if auto else " (đang giữ cố định)") + ". Hợp mùa: " + hm + "."
