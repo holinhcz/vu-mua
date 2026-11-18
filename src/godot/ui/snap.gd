@@ -106,6 +106,8 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	b.set_meta("snap", n)
 	if n.has("svg"):
 		_svg(b, n.svg, R, fsh if fsh != null else drop_shadow(c.get("filter", "none"), z))
+	if n.has("tre"):   # (bản 295) cả khung tre chung một ảnh (ui/tre.gd)
+		b.pic(Tre.texture(float(n.tre[0]), float(n.tre[1])), Rect2(0, 0, R[2], R[3]))
 	if n.has("pic"):   # hình chụp sẵn (canvas bản web) ở res://ui/img/...
 		var pt: Texture2D = Css.image(String(n.pic))
 		if pt != null:
@@ -274,15 +276,37 @@ static func _tre(n: Dictionary, z: float) -> Dictionary:
 	var nk := []
 	for k in kids:
 		var cl := String(k.get("cls", "")).split(" ")
-		if not cl.has("u2tre") and not cl.has("u2hoa") and absf(float(k.r[0]) - float(n.r[0])) < 1.0 and absf(float(k.r[1]) - float(n.r[1])) < 1.0 and absf(float(k.r[2]) - float(n.r[2])) < 1.0:
-			var k2: Dictionary = k.duplicate()
-			k2.css = k.css.duplicate()
-			k2.css["border-radius"] = str(Tre.R) + "px"
-			nk.append(k2)
-		else:
+		if cl.has("u2tre") or cl.has("u2hoa"):
 			nk.append(k)
+		else:
+			var k2: Dictionary = k.duplicate(true)
+			_tre_round(k2, n.r)
+			nk.append(k2)
 	o2.kids = nk
 	return o2
+
+static func _tre_round(k: Dictionary, B: Array) -> void:
+	# mọi lớp có nền chạm góc hộp (nền giấy, dải dưới Kho...) bo đúng góc đó theo Tre.R: không lòi ra ngoài vòng tre
+	var r: Array = k.get("r", [0, 0, 0, 0])
+	var c: Dictionary = k.get("css", {})
+	var has_bg: bool = not _skip("background-color", String(c.get("background-color", ""))) or not _skip("background-image", String(c.get("background-image", "")))
+	if has_bg:
+		var L0: bool = absf(float(r[0]) - float(B[0])) < 1.5
+		var R0: bool = absf(float(r[0]) + float(r[2]) - float(B[0]) - float(B[2])) < 1.5
+		var T0: bool = absf(float(r[1]) - float(B[1])) < 1.5
+		var D0: bool = absf(float(r[1]) + float(r[3]) - float(B[1]) - float(B[3])) < 1.5
+		if (L0 or R0) and (T0 or D0):
+			var q := Css.radius(String(c.get("border-radius", "")), float(r[2]), float(r[3]))
+			var v := [q.x, q.y, q.z, q.w]   # trên trái, trên phải, dưới phải, dưới trái
+			if T0 and L0: v[0] = maxf(v[0], Tre.R)
+			if T0 and R0: v[1] = maxf(v[1], Tre.R)
+			if D0 and R0: v[2] = maxf(v[2], Tre.R)
+			if D0 and L0: v[3] = maxf(v[3], Tre.R)
+			var c2: Dictionary = c.duplicate()
+			c2["border-radius"] = "%spx %spx %spx %spx" % [v[0], v[1], v[2], v[3]]
+			k.css = c2
+	for q2 in k.get("kids", []):
+		_tre_round(q2, B)
 
 static func _svg(b: Control, sv: String, R: Array, sh) -> void:
 	if sv.find("l5 10.2 11.2") >= 0:
@@ -413,12 +437,7 @@ static func _pseudo(b: Control, p: Dictionary, R: Array, z: float, which: String
 		var tb: Control = Box.new()
 		tb.place(Rect2(x, y, pw, ph))
 		var e: float = (Tre.T + Tre.S) * z
-		var Lz: float = Tre.L * z
-		var n := maxi(1, int(round(pw / Lz)))
-		var tw2: float = pw / n
-		var tex: Texture2D = Css.image(Tre.D + "canh_tren.png")
-		for i in n:
-			tb.pic(tex, Rect2(i * tw2, (ph - Tre.T * z) * 0.5, tw2, e))
+		tb.pic(Tre.bar(pw / z), Rect2(0, (ph - Tre.T * z) * 0.5, pw, e))   # một ảnh liền (ui/tre.gd)
 		return tb
 	var st := ""
 	for kv in [["background-color", "bg"], ["background-image", "bgi"], ["background-size", "bgs"], ["background-position", "bgp"], ["background-repeat", "bgr"], ["border-radius", "br"], ["box-shadow", "bs"], ["opacity", "op"]]:

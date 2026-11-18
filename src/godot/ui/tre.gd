@@ -1,33 +1,88 @@
 extends RefCounted
-# KHUNG TRE CHUNG BẰNG ẢNH (bản 294): 4 góc cong + 4 cạnh lặp theo đốt (ui/img/tre, vẽ bằng tools/tre/lam.py).
+# KHUNG TRE CHUNG BẰNG ẢNH (bản 294-295): 4 góc cong + 4 cạnh lặp theo đốt (ui/img/tre, vẽ bằng tools/tre/lam.py).
 # Góc và cạnh cùng một mặt cắt cây tre (dày T, bóng S vào lòng) nên nối liền; nền hộp bo đúng R nên không lòi viền.
-# Snap.build gọi frame() cho mọi .u2tre (Kho, bảng tre, hộp nổi): một khung cho cả game.
+# (bản 295) Ghép SẴN cả khung thành MỘT ảnh theo đúng cỡ hộp, mảnh nào cũng đặt ở điểm ảnh nguyên, rồi vẽ một lần:
+# không còn khe giữa các mảnh (vẽ từng mảnh ở toạ độ lẻ thì máy làm tròn hở 1 điểm ảnh, lộ nền kem thành vạch trắng).
+# Snap.build gọi frame() cho mọi .u2tre và bar() cho mọi thanh tre ngang: một khung cho cả game.
+const Css = preload("res://ui/css.gd")
 const T := 7.0     # dày tre (css px)
 const S := 3.0     # bóng đổ vào lòng bảng
 const R := 16.0    # bo góc ngoài = bo góc nền hộp
 const L := 48.0    # dài một đốt (một mắt tre)
 const D := "res://ui/img/tre/"
+const SRC := 6.0   # ảnh gốc: 6 điểm ảnh / css px
 
-static func _p(name: String, x: float, y: float, w: float, h: float, z: float) -> Dictionary:
-	return {"tag": "i", "id": "", "cls": "tre-" + name, "z": z, "css": {"position": "absolute"}, "r": [x, y, w, h], "kids": [], "pic": D + name + ".png"}
+static var _src := {}
+static var _tex := {}
 
-static func frame(r: Array, z: float) -> Array:   # các mảnh khung quanh hộp r (khung tràn ra 1 px để phủ kín mép nền)
+static func _px() -> float:   # điểm ảnh / css px khi ghép: theo độ nét màn (2..4)
+	return clampf(ceilf(Css.K), 2.0, 4.0)
+
+static func _img(name: String, w: int, h: int) -> Image:   # mảnh gốc thu về đúng w x h điểm ảnh
+	var key := name + "|" + str(w) + "x" + str(h)
+	if _src.has(key):
+		return _src[key]
+	var im := Image.new()
+	im.load_png_from_buffer(FileAccess.get_file_as_bytes(D + name + ".png"))
+	im.convert(Image.FORMAT_RGBA8)
+	im.resize(maxi(1, w), maxi(1, h), Image.INTERPOLATE_LANCZOS)
+	_src[key] = im
+	return im
+
+static func _cuts(total: int, n: int) -> Array:   # chia total điểm ảnh thành n đoạn nguyên, cộng lại đúng total
+	var o := []
+	var a := 0
+	for i in n:
+		var b := int(round(float(total) * (i + 1) / n))
+		o.append([a, b - a])
+		a = b
+	return o
+
+static func texture(w: float, h: float) -> Texture2D:   # cả khung tre cho hộp w x h (css px), một ảnh
+	var k := _px()
+	var W := int(round(w * k))
+	var H := int(round(h * k))
+	var key := str(W) + "x" + str(H)
+	if _tex.has(key):
+		return _tex[key]
+	var r := int(round(R * k))
+	var e := int(round((T + S) * k))
+	var out := Image.create(W, H, false, Image.FORMAT_RGBA8)
+	var sw := W - 2 * r
+	for c in _cuts(sw, maxi(1, int(round(sw / (L * k))))):
+		out.blit_rect(_img("canh_tren", c[1], e), Rect2i(0, 0, c[1], e), Vector2i(r + c[0], 0))
+		out.blit_rect(_img("canh_duoi", c[1], e), Rect2i(0, 0, c[1], e), Vector2i(r + c[0], H - e))
+	var sh := H - 2 * r
+	for c in _cuts(sh, maxi(1, int(round(sh / (L * k))))):
+		out.blit_rect(_img("canh_trai", e, c[1]), Rect2i(0, 0, e, c[1]), Vector2i(0, r + c[0]))
+		out.blit_rect(_img("canh_phai", e, c[1]), Rect2i(0, 0, e, c[1]), Vector2i(W - e, r + c[0]))
+	out.blit_rect(_img("goc_tt", r, r), Rect2i(0, 0, r, r), Vector2i(0, 0))
+	out.blit_rect(_img("goc_tp", r, r), Rect2i(0, 0, r, r), Vector2i(W - r, 0))
+	out.blit_rect(_img("goc_dt", r, r), Rect2i(0, 0, r, r), Vector2i(0, H - r))
+	out.blit_rect(_img("goc_dp", r, r), Rect2i(0, 0, r, r), Vector2i(W - r, H - r))
+	out.generate_mipmaps()
+	var t := ImageTexture.create_from_image(out)
+	_tex[key] = t
+	return t
+
+static func bar(w: float) -> Texture2D:   # thanh tre ngang dài w (css px), cao T + S, một ảnh
+	var k := _px()
+	var W := int(round(w * k))
+	var key := "bar" + str(W)
+	if _tex.has(key):
+		return _tex[key]
+	var e := int(round((T + S) * k))
+	var out := Image.create(W, e, false, Image.FORMAT_RGBA8)
+	for c in _cuts(W, maxi(1, int(round(W / (L * k))))):
+		out.blit_rect(_img("canh_tren", c[1], e), Rect2i(0, 0, c[1], e), Vector2i(c[0], 0))
+	out.generate_mipmaps()
+	var t := ImageTexture.create_from_image(out)
+	_tex[key] = t
+	return t
+
+static func frame(r: Array, z: float) -> Array:   # khung quanh hộp r (tràn ra 1 px để phủ kín mép nền)
 	var x: float = float(r[0]) - 1.0
 	var y: float = float(r[1]) - 1.0
 	var w: float = float(r[2]) + 2.0
 	var h: float = float(r[3]) + 2.0
-	var o := [_p("goc_tt", x, y, R, R, z), _p("goc_tp", x + w - R, y, R, R, z), _p("goc_dt", x, y + h - R, R, R, z), _p("goc_dp", x + w - R, y + h - R, R, R, z)]
-	var e := T + S
-	var sw: float = w - 2.0 * R
-	var n := maxi(1, int(round(sw / L)))
-	var tw: float = sw / n
-	for i in n:
-		o.append(_p("canh_tren", x + R + i * tw, y, tw, e, z))
-		o.append(_p("canh_duoi", x + R + i * tw, y + h - e, tw, e, z))
-	var sh: float = h - 2.0 * R
-	n = maxi(1, int(round(sh / L)))
-	var th: float = sh / n
-	for i in n:
-		o.append(_p("canh_trai", x, y + R + i * th, e, th, z))
-		o.append(_p("canh_phai", x + w - e, y + R + i * th, e, th, z))
-	return o
+	return [{"tag": "i", "id": "", "cls": "tre-khung", "z": z, "css": {"position": "absolute"}, "r": [x, y, w, h], "kids": [], "tre": [w, h]}]
