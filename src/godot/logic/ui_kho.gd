@@ -146,6 +146,13 @@ func sync_panel(ids: Dictionary, n: int, cap: int) -> void:
 	var l := mini(100, int(round(float(n) / maxf(1.0, cap) * 100.0)))
 	var c := "full" if n >= cap else ("warn" if l >= 85 else "")
 	var bar = ids.get(".kcbar")
+	var st0 = ids.get(".khst")
+	if bar != null and st0 != null:   # (bản 299) thanh sức chứa dừng trước nút sao (nút nở sang trái khi số dài: 165/200)
+		if not bar.has_meta("gap"):
+			bar.set_meta("gap", st0.r.position.x - bar.r.end.x)
+		var bw: float = st0.r.position.x - float(bar.get_meta("gap")) - bar.r.position.x
+		if absf(bw - bar.r.size.x) > 0.01 and bw > 20.0:
+			bar.place(Rect2(bar.r.position, Vector2(bw, bar.r.size.y)))
 	if bar != null and bar.kids().size() > 0:
 		var fi: Control = bar.kids()[0]
 		fi.place(Rect2(fi.r.position, Vector2(bar.r.size.x * l / 100.0, fi.r.size.y)))
@@ -166,31 +173,44 @@ func sync_panel(ids: Dictionary, n: int, cap: int) -> void:
 	if st.get_meta("ks", "") == s1 + "|" + s2:
 		return
 	st.set_meta("ks", s1 + "|" + s2)
-	# nút canh phải (flex): chữ dài/ngắn hơn thì nút nở sang trái, các phần sau chữ đó dời theo
-	var d_cap := 0.0
-	var d_sn := 0.0
-	if cp != null and not cp.texts.is_empty():
-		var t0: Dictionary = cp.texts[0]
-		d_cap = Box.text_w(s1, t0.size, t0.w) - Box.text_w(t0.s, t0.size, t0.w)
-		U._txt(cp, s1)
-	if sn2 != null and not sn2.texts.is_empty():
-		var t1: Dictionary = sn2.texts[0]
-		d_sn = Box.text_w(s2, t1.size, t1.w) - Box.text_w(t1.s, t1.size, t1.w)
-		U._txt(sn2, s2)
-	var dw := d_cap + d_sn
-	if absf(dw) < 0.01:
+	# (bản 299) xếp lại cả nút từ đầu mỗi lần số đổi: đệm trái = đệm phải như bản web (12 / khoảng 5), mép phải giữ chỗ,
+	# nút nở sang trái; thanh sức chứa bên trái dừng trước nút (trước đây cộng dồn phần chênh nên lệch dần, chữ sát mép)
+	if cp == null or sn2 == null or cp.texts.is_empty() or sn2.texts.is_empty():
 		return
-	st.place(Rect2(st.r.position - Vector2(dw, 0), st.r.size + Vector2(dw, 0)))
-	# trong nút: số/sức chứa nở, sao + số sao dời phải theo phần nở của số/sức chứa
+	if not st.has_meta("r0"):
+		st.set_meta("r0", st.r)
+	var r0: Rect2 = st.get_meta("r0")
+	var t0: Dictionary = cp.texts[0]
+	var t1: Dictionary = sn2.texts[0]
+	U._txt(cp, s1)
+	U._txt(sn2, s2)
+	var pad: float = cp.r.position.x if not st.has_meta("pad") else float(st.get_meta("pad"))
+	st.set_meta("pad", pad)
+	var gap := 5.0
+	var w1: float = Box.text_w(s1, t0.size, t0.w)
+	var w2: float = Box.text_w(s2, t1.size, t1.w)
+	var ic: Control = null
 	for k in st.kids():
-		var kn: Dictionary = k.get_meta("snap", {})
-		var kc := String(kn.get("cls", ""))
-		if kc.find("khcap") >= 0:
-			k.place(Rect2(k.r.position, k.r.size + Vector2(d_cap, 0)))
-		elif kc.find("khsn") >= 0:
-			k.place(Rect2(k.r.position + Vector2(d_cap, 0), k.r.size + Vector2(d_sn, 0)))
-		else:
-			k.place(Rect2(k.r.position + Vector2(d_cap, 0), k.r.size))
+		if k != cp and k != sn2:
+			ic = k
+	var wi: float = ic.r.size.x if ic != null else 0.0
+	var tot: float = pad + w1 + gap + wi + gap + w2 + pad
+	st.place(Rect2(Vector2(r0.end.x - tot, st.r.position.y), Vector2(tot, st.r.size.y)))
+	cp.place(Rect2(Vector2(pad, cp.r.position.y), Vector2(w1, cp.r.size.y)))
+	if ic != null:
+		ic.place(Rect2(Vector2(pad + w1 + gap, ic.r.position.y), ic.r.size))
+	sn2.place(Rect2(Vector2(pad + w1 + gap + wi + gap, sn2.r.position.y), Vector2(w2, sn2.r.size.y)))
+	for t in [t0, t1]:
+		t.rect = Rect2(Vector2(0, t.rect.position.y), Vector2(maxf(t.rect.size.x, w1 if t == t0 else w2), t.rect.size.y))
+	cp.redraw()
+	sn2.redraw()
+	if bar != null and bar.has_meta("gap"):
+		var bw2: float = st.r.position.x - float(bar.get_meta("gap")) - bar.r.position.x
+		if bw2 > 20.0:
+			bar.place(Rect2(bar.r.position, Vector2(bw2, bar.r.size.y)))
+			if bar.kids().size() > 0:
+				var fi2: Control = bar.kids()[0]
+				fi2.place(Rect2(fi2.r.position, Vector2(bw2 * l / 100.0, fi2.r.size.y)))
 
 # lớp tối là một lớp riêng phủ kín màn thật (U._cover), hộp nằm giữa (như ui_set.help)
 func _show(n: Dictionary, box_cls: String, ids: Dictionary, on_close: Callable) -> Control:
