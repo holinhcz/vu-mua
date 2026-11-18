@@ -30,7 +30,6 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_ca_loc.png | Lẩu cá lóc chua cay |
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
 | banh_tam_khoai_mi.png | Bánh tầm khoai mì (bản 316) |
-| banh_mi_cha_ca.png | Bánh mì chả cá (bản 320) |
 
 ## Hình tạm (bản 327) — chờ hình thật thì thay ui/svg/kh/<mã>.svg
 pho_bo (tạm hình hu_tieu_bv), bun_bo_hue (bun_rieu), mi_quang (hu_tieu), bun_cha (bun_cha_gio), banh_canh_cl (canh_chua), ech_xao (ga_xao).
@@ -56,3 +55,6 @@ banh_chuoi_nuong gắn hình thật (làm ở Lò bánh mì). Hình tạm: nem_n
 
 ## Hàng chả (bản 334) — hình tạm
 cha_muc (cha_ca), cha_cua (cha_tom), xiu_mai (bo_vien).
+
+## Lò bánh nướng (bản 335)
+banh_mi_cha_ca gắn hình thật. Hình tạm: banh_mi_xm (banh_mi_cha), banh_mi_op (banh), su_kem (bong_lan), banh_dua (banh_bido).
