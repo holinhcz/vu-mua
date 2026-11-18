@@ -10,6 +10,8 @@ const FS := 14.0            # cỡ chữ (css px)
 const FW := 700             # độ đậm
 const OK := "rgb(35, 160, 74)"
 const NO := "rgb(224, 72, 62)"
+const OK_D := "rgb(155, 229, 143)"   # nền tối (thẻ món xưởng): xanh / đỏ sáng cho đọc được
+const NO_D := "rgb(255, 143, 128)"
 const ICON := 22.0          # hình món / xu trong ô giá
 const GAP := 4.0            # hình -> chữ
 const PAD := 6.0            # đệm trái / phải ô
@@ -20,11 +22,11 @@ const SEP := 5.0            # khoảng giữa các ô
 static func text(have: int, need: int) -> String:
 	return str(have) + "/" + str(need)
 
-static func css(c: Dictionary, ok: bool) -> Dictionary:   # css chữ số (bản chụp): cỡ / đậm / màu chung
+static func css(c: Dictionary, ok: bool, dark := false) -> Dictionary:   # css chữ số (bản chụp): cỡ / đậm / màu chung
 	var o := c.duplicate()
 	o["font-size"] = str(FS) + "px"
 	o["font-weight"] = str(FW)
-	o["color"] = OK if ok else NO
+	o["color"] = (OK_D if ok else NO_D) if dark else (OK if ok else NO)
 	o["white-space"] = "nowrap"
 	return o
 

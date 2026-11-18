@@ -631,7 +631,7 @@ func _build_card(w: Dictionary, pend: Array) -> void:   # It()
 		_tx(nm, G.item_name(a[0]))
 		var bb: Dictionary = em.kids[0]
 		var hs: String = Qty.text(have, int(a[1]))   # (bản 291) "có/cần" một khối chữ chung (qty.gd)
-		bb.css = Qty.css(bb.css, full_in)
+		bb.css = Qty.css(bb.css, full_in, true)   # thẻ nền tối
 		var hw: float = Box.text_w(hs, Qty.FS, Qty.FW)
 		var ex := p.x + cw2 - 8.0 - hw
 		em.r = [ex, em.r[1], hw, em.r[3]]

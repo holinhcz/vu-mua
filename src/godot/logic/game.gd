@@ -1279,14 +1279,15 @@ func _pay(t: Dictionary) -> bool:   # Yg (z3: đang nâng sớm, bỏ qua cấp)
 
 var z3 := false
 # ------------------------------------------------------------------ NÂNG SAO Ô RUỘNG (dJ.plot, hl, lf, e$, R2)
-const DJ_PLOT := {"m": ["rom", "phan", "voi"], "xu": [0, 0, 50, 150, 400, 1200, 3000], "q": [null, null, [1, 1, 0], [2, 1, 1], [2, 2, 2], [3, 3, 3], [5, 5, 5]]}
+const DJ_PLOT := {"m": ["rom", "phan", "voi"], "xu": [0, 0, 50, 150, 400, 1200, 3000], "q": [null, null, [1, 1, 1], [2, 1, 1], [2, 2, 2], [3, 3, 3], [5, 5, 5]]}
 const HJ := [0, 0, 3, 7, 12, 25, 40]
 const NS_FEE := [0, 0, 2, 3, 4, 6, 10]   # n$
 
-const DJ_PEN := {"m": ["tre", "la", "may"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 0], [3, 2, 1], [4, 3, 2], [6, 6, 5], [10, 10, 8]]}
-const DJ_WORK := {"m": ["van", "dinh", "gach"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 0], [3, 2, 1], [4, 3, 3], [6, 6, 8], [10, 10, 15]]}   # nang_sao.json "work" (bản 281)
+const DJ_PEN := {"m": ["tre", "la", "may"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 1], [3, 2, 1], [4, 3, 2], [6, 6, 5], [10, 10, 8]]}
+const DJ_WORK := {"m": ["van", "dinh", "gach"], "xu": [0, 0, 150, 400, 1200, 3000, 7500], "q": [null, null, [2, 1, 1], [3, 2, 1], [4, 3, 3], [6, 6, 8], [10, 10, 15]]}   # nang_sao.json "work" (bản 281)
 
 func up_need(a: int, n := 1, kind := "plot") -> Dictionary:   # hl(kind, a, n): ô ruộng / chuồng
+	# (bản 292) mọi nấc đều cần đủ 3 vật liệu (bản web lên 2★ để món thứ 3 = 0 nên bảng thiếu 1 ô)
 	var D2: Dictionary = DJ_PEN if kind == "pen" else (DJ_WORK if kind == "work" else DJ_PLOT)
 	var r: Array = D2.q[a]
 	var m := []
