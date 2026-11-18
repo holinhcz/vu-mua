@@ -1594,5 +1594,45 @@
 ],
 "nguon": "tấm ảnh người dùng (bản 317)",
 "cho": "chưa có món trong game: làm món thì lấy hình này"
+},
+"dua_cai": {
+"file": "dua_cai.png",
+"bbox": [
+41,
+44,
+471,
+468
+],
+"nguon": "tấm ảnh người dùng (bản 318)"
+},
+"ca_muoi": {
+"file": "ca_muoi.png",
+"bbox": [
+41,
+44,
+471,
+468
+],
+"nguon": "tấm ảnh người dùng (bản 318)"
+},
+"dua_mon": {
+"file": "dua_mon.png",
+"bbox": [
+56,
+41,
+455,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 318)"
+},
+"dua_hanh": {
+"file": "dua_hanh.png",
+"bbox": [
+41,
+41,
+470,
+471
+],
+"nguon": "tấm ảnh người dùng (bản 318)"
 }
 }
