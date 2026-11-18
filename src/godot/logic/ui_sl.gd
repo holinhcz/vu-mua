@@ -20,6 +20,11 @@ func _init(ui, wca, wl, wh) -> void:
 	WH = wh
 	SB = Snap.load_snap("sl")["#pov"][0]
 	ST = Snap.load_snap("sl_tab")
+	for v in ST.values():   # (bản 303) ô chức năng (tab Làng) + ô bộ sưu tập: kiểu chip Kho chung, như nút Menu
+		for q in (v if v is Array else [v]):
+			if q is Dictionary:
+				Snap.chip_look(q, "bk2l")
+				Snap.chip_look(q, "khb")
 
 func open() -> void:   # Al("book"): luôn về tab Làng
 	tab = "lang"

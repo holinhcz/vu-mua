@@ -267,6 +267,24 @@ static func _text(b: Control, n: Dictionary, R: Array, z: float, icon: Dictionar
 	b.text(s, tr, fs, fw, col, al, shadows_txt(c.get("text-shadow", "none"), 1.0), wrap)
 	b.set_meta("ti", b.texts.size() - 1)
 
+# KIỂU NÚT CHIP CHUNG (bản 302): lấy đúng css chip lọc chưa chọn của Kho (.khchip trong bản chụp kho; Menu, Sổ làng...): nền kem chuyển màu,
+# viền nâu vàng, bóng nhẹ. Nút nào muốn kiểu chip thì gọi đây, không chép tay css.
+static var _CHIP := {}
+static func chip_look(n: Dictionary, cls: String) -> void:   # mọi nút .cls trong n đổi sang kiểu chip Kho
+	if _CHIP.is_empty():
+		var ch: Dictionary = find(load_snap("kho")["#pov"][0], "khchips")
+		for k in ch.kids:
+			if not String(k.cls).split(" ").has("on"):
+				_CHIP = k.css
+				break
+	if String(n.get("cls", "")).split(" ").has(cls):
+		var c: Dictionary = n.css.duplicate()
+		for key in ["background-color", "background-image", "border-top", "border-right", "border-bottom", "border-left", "border-radius", "box-shadow"]:
+			c[key] = _CHIP.get(key, c.get(key, ""))
+		n.css = c
+	for k in n.get("kids", []):
+		chip_look(k, cls)
+
 static func _tre(n: Dictionary, z: float) -> Dictionary:
 	# .u2tre (nẹp tre vẽ bằng gradient của bản web, góc không khớp) -> các mảnh ảnh của ui/tre.gd; hộp chứa nó và lớp nền
 	# trùng khung hộp bo đúng Tre.R (nền không lòi ra ngoài vòng tre)
