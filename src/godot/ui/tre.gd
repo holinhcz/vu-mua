@@ -25,7 +25,11 @@ static func _img(name: String, w: int, h: int) -> Image:   # mảnh gốc thu v�
 	var im := Image.new()
 	im.load_png_from_buffer(FileAccess.get_file_as_bytes(D + name + ".png"))
 	im.convert(Image.FORMAT_RGBA8)
+	# thu như Css.svg_load: nhân màu với độ trong trước rồi mới thu, chia lại sau (không thì mép trong suốt kéo màu đen /
+	# vệt sáng Lanczos ra viền quanh tre)
+	im.premultiply_alpha()
 	im.resize(maxi(1, w), maxi(1, h), Image.INTERPOLATE_LANCZOS)
+	Css._unpremul(im)
 	_src[key] = im
 	return im
 
@@ -60,6 +64,7 @@ static func texture(w: float, h: float) -> Texture2D:   # cả khung tre cho h�
 	out.blit_rect(_img("goc_tp", r, r), Rect2i(0, 0, r, r), Vector2i(W - r, 0))
 	out.blit_rect(_img("goc_dt", r, r), Rect2i(0, 0, r, r), Vector2i(0, H - r))
 	out.blit_rect(_img("goc_dp", r, r), Rect2i(0, 0, r, r), Vector2i(W - r, H - r))
+	out.fix_alpha_edges()   # chỗ trong suốt mang màu mép tre: mipmap / lọc mịn không ra viền đen hay sáng
 	out.generate_mipmaps()
 	var t := ImageTexture.create_from_image(out)
 	_tex[key] = t
@@ -75,14 +80,15 @@ static func bar(w: float) -> Texture2D:   # thanh tre ngang dài w (css px), cao
 	var out := Image.create(W, e, false, Image.FORMAT_RGBA8)
 	for c in _cuts(W, maxi(1, int(round(W / (L * k))))):
 		out.blit_rect(_img("canh_tren", c[1], e), Rect2i(0, 0, c[1], e), Vector2i(c[0], 0))
+	out.fix_alpha_edges()
 	out.generate_mipmaps()
 	var t := ImageTexture.create_from_image(out)
 	_tex[key] = t
 	return t
 
-static func frame(r: Array, z: float) -> Array:   # khung quanh hộp r (tràn ra 1 px để phủ kín mép nền)
-	var x: float = float(r[0]) - 1.0
-	var y: float = float(r[1]) - 1.0
-	var w: float = float(r[2]) + 2.0
-	var h: float = float(r[3]) + 2.0
+static func frame(r: Array, z: float) -> Array:   # khung quanh hộp r (tràn ra 1,5 px: phủ kín cả mép mịn của nền ở mọi độ nét màn)
+	var x: float = float(r[0]) - 1.5
+	var y: float = float(r[1]) - 1.5
+	var w: float = float(r[2]) + 3.0
+	var h: float = float(r[3]) + 3.0
 	return [{"tag": "i", "id": "", "cls": "tre-khung", "z": z, "css": {"position": "absolute"}, "r": [x, y, w, h], "kids": [], "tre": [w, h]}]
