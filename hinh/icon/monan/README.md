@@ -42,3 +42,6 @@ Nguyên liệu muc / cua / ech chưa có hình.
 Gắn hình thật: nuoc_cam_carot, nuoc_thom, tra_tac, st_sapoche, st_bo_sr. Icon khom, qua_sapoche lấy từ hinh/icon/anh.
 Hình tạm: nuoc_dua (qua_dua), nuoc_buoi (nuoc_cam), st_saurieng / st_dau / st_dudu / st_mangcut (sinh_to), qua_tac (traicay/quyt.png), qua_bo (qua_xoai).
 Cây tạm: khom trên ruộng = hình cây la_dua; cây ăn trái ft_tac, ft_sapoche, ft_bo = hình cây xoài (ui/snap/bd_pics.json).
+
+## Quán chè (bản 330) — hình tạm
+che_ba_ba, che_khoai_mon (tạm che_khoai), che_dau_den (che_me_den), che_thai (che_ba_mau), tau_hu (sua_dau_nanh), che_bi_do (che_bap).
