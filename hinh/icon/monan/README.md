@@ -58,3 +58,6 @@ cha_muc (cha_ca), cha_cua (cha_tom), xiu_mai (bo_vien).
 
 ## Lò bánh nướng (bản 335)
 banh_mi_cha_ca gắn hình thật. Hình tạm: banh_mi_xm (banh_mi_cha), banh_mi_op (banh), su_kem (bong_lan), banh_dua (banh_bido).
+
+## Vại muối dưa (bản 336) — hình tạm
+mam_ca_linh (dua_mon), nuoc_mam, mam_tom (tuong_ot). sua_chua_de chưa có hình.
