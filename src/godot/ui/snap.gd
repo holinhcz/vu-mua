@@ -93,6 +93,14 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var R: Array = n.r
 	var z := float(n.get("z", 1.0))
 	n = _tre(n, z)   # (bản 294) khung tre chung bằng ảnh
+	var tick: bool = String(n.get("text", "")) == "✓"
+	if tick:   # (bản 300) dấu tích: ảnh chung ui/img/bong/tick.png (ô tròn xanh + tích trắng) thay chữ ✓ (Nunito không có)
+		n = n.duplicate()
+		n.erase("text")
+		n.erase("tr")
+		n.css = n.css.duplicate()
+		n.css["background-color"] = "rgba(0, 0, 0, 0)"
+		n.css["box-shadow"] = "none"
 	var c: Dictionary = n.css
 	var rot := _rot(c.get("transform", "none"))
 	if rot != 0.0:
@@ -106,6 +114,9 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	b.set_meta("snap", n)
 	if n.has("svg"):
 		_svg(b, n.svg, R, fsh if fsh != null else drop_shadow(c.get("filter", "none"), z))
+	if tick:
+		var ts: float = minf(float(R[2]), float(R[3]))
+		b.pic(Css.svg_tex(Css.img_svg("res://ui/img/bong/tick.png"), ts, ts), Rect2((float(R[2]) - ts) * 0.5, (float(R[3]) - ts) * 0.5, ts, ts))
 	if n.has("tre"):   # (bản 295) cả khung tre chung một ảnh (ui/tre.gd)
 		b.pic(Tre.texture(float(n.tre[0]), float(n.tre[1])), Rect2(0, 0, R[2], R[3]))
 	if n.has("pic"):   # hình chụp sẵn (canvas bản web) ở res://ui/img/...

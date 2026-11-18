@@ -2529,20 +2529,6 @@ static func _nshift(n: Dictionary, dx: float) -> void:
 	if n.has("tr"):
 		n.tr = [float(n.tr[0]) + dx, n.tr[1], n.tr[2], n.tr[3]]
 
-const OD_CK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M6 12.6l4 4L18.2 8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
-
-static func _od_tick(n: Dictionary) -> void:
-	# "✓" không có trong Nunito: vẽ dấu tích bằng nét svg trong ô tròn xanh
-	if n.get("text", "") != "✓":
-		return
-	n.erase("text")
-	n.erase("tr")
-	var r: Array = n.r
-	var k := 0.78
-	var w: float = float(r[2]) * k
-	n.kids = [{"tag": "svg", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "kids": [], "svg": OD_CK,
-		"r": [float(r[0]) + (float(r[2]) - w) * 0.5, float(r[1]) + (float(r[3]) - w) * 0.5, w, w]}]
-
 static func _od_dash(n: Dictionary, off := 1.5, op := 0.3, rad := 10.0) -> void:
 	# css outline 1.5px dashed rgba(150,112,48,op), outline-offset -off (x .75): ô trống .odph, thẻ khách đang tới .odw
 	var z := float(n.get("z", 1.0))
@@ -2781,7 +2767,6 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 		_od_low(Snap.find(n, "pwin"), dy)
 	var ul: Dictionary = Snap.find(n, "orders")
 	od_ul0 = Vector2(float(ul.r[0]), float(ul.r[1]))
-	_od_tick(Snap.find(n, "odtd").kids[0])
 	var ids := {}
 	od_box = _build(n, ids)
 	root.add_child(od_box)
@@ -2850,9 +2835,6 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 			if G.hot_x(id) > 1.0:
 				t.cls = String(t.cls) + " hot"
 				t["::after"] = od_tpl.hot.duplicate(true)
-			for k in t.kids:
-				if String(k.cls).split(" ").has("odck"):
-					_od_tick(k)
 			var ic := Snap.find(t, "odic")
 			var sv := _fit_svg(id)
 			for k in ic.get("kids", []):
