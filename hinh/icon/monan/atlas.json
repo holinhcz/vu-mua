@@ -1344,7 +1344,7 @@
    437
   ],
   "nguon": "tấm ảnh người dùng (bản 314)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "nuoc_cam_carot"
  },
  "nuoc_cot": {
   "file": "nuoc_cot.png",
@@ -1395,7 +1395,7 @@
    471
   ],
   "nguon": "tấm ảnh người dùng (bản 314)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "nuoc_thom"
  },
  "sinh_to": {
   "file": "sinh_to.png",
@@ -1416,7 +1416,7 @@
    415
   ],
   "nguon": "tấm ảnh người dùng (bản 314)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "st_bo_sr"
  },
  "st_sapoche": {
   "file": "st_sapoche.png",
@@ -1427,7 +1427,7 @@
    457
   ],
   "nguon": "tấm ảnh người dùng (bản 314)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "st_sapoche"
  },
  "st_thanhlong": {
   "file": "st_thanhlong.png",
@@ -1448,7 +1448,7 @@
    471
   ],
   "nguon": "tấm ảnh người dùng (bản 314)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "tra_tac"
  },
  "banh_cuon": {
   "file": "banh_cuon.png",

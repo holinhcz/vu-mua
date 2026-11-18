@@ -925,7 +925,7 @@ func ab() -> Variant:   # aB: danh hiệu đang mang
 	return a
 
 # ------------------------------------------------------------------ kỷ lục nông sản (g.kl): trái khủng, tủ kỷ lục, hội thi tuần
-# KLD[id] = [đơn vị, nặng thường (g), kỷ lục (g), gọi là, đo gì, cỡ thường (cm), độ ngọt thường] (ui/snap/kld.json: KLD bản web lúc chạy, đã tính giống lai)
+# KLD[id] = [đơn vị, nặng thường (g), kỷ lục (g), gọi là, đo gì, cỡ thường (cm), độ ngọt thường] (data/ky_luc/can_nang.json, đã tính giống lai)
 const KLHANG := ["Ngon", "Hảo hạng", "Thượng hạng", "Kỷ lục"]
 const KLPRIZE := [[3000, 5], [2000, 3], [1200, 1]]
 static var KLD := {}
@@ -934,7 +934,7 @@ var klw = null             # KLW: nhà làm thuê đang gặt
 
 static func kld() -> Dictionary:
 	if KLD.is_empty():
-		var d = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/kld.json"))
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://data/ky_luc/can_nang.json"))
 		KLD = d if d is Dictionary else {}
 	return KLD
 

@@ -30,11 +30,6 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_rieu_cua.png | Lẩu riêu cua bắp bò |
 | lau_ca_loc.png | Lẩu cá lóc chua cay |
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
-| nuoc_thom.png | Nước ép thơm (bản 314) |
-| nuoc_cam_carot.png | Nước ép cam cà rốt |
-| tra_tac.png | Trà tắc |
-| st_sapoche.png | Sinh tố sapoche |
-| st_bo_sr.png | Sinh tố bơ sầu riêng |
 | banh_tam_khoai_mi.png | Bánh tầm khoai mì (bản 316) |
 | banh_mi_cha_ca.png | Bánh mì chả cá (bản 320) |
 
@@ -42,3 +37,8 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 pho_bo (tạm hình hu_tieu_bv), bun_bo_hue (bun_rieu), mi_quang (hu_tieu), bun_cha (bun_cha_gio), banh_canh_cl (canh_chua), ech_xao (ga_xao).
 Cây tạm: toi (hình cây hanh, src/tools/cay/them_tam.py), la_e (hình cây rau_ram); icon toi / la_e lấy từ hinh/icon/anh (toi.png, lae.png).
 Nguyên liệu muc / cua / ech chưa có hình.
+
+## Xe nước mía (bản 329)
+Gắn hình thật: nuoc_cam_carot, nuoc_thom, tra_tac, st_sapoche, st_bo_sr. Icon khom, qua_sapoche lấy từ hinh/icon/anh.
+Hình tạm: nuoc_dua (qua_dua), nuoc_buoi (nuoc_cam), st_saurieng / st_dau / st_dudu / st_mangcut (sinh_to), qua_tac (traicay/quyt.png), qua_bo (qua_xoai).
+Cây tạm: khom trên ruộng = hình cây la_dua; cây ăn trái ft_tac, ft_sapoche, ft_bo = hình cây xoài (ui/snap/bd_pics.json).

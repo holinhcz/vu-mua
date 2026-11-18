@@ -58,12 +58,10 @@ func built(k: String) -> bool:
 func list_built() -> Array:
 	return N0.filter(func(k): return built(k))
 
-# (bản 324) NHÓM MÓN trong một xưởng: xưởng có từ 2 nhóm thì bảng xưởng hiện hàng chip lọc (ui_xf). Món không ghi nhóm
-# thì vào nhóm đầu. Muốn chia xưởng khác chỉ cần thêm ở đây.
-const NHOM := {"bepcui": [["nau", "Xào nấu"], ["lau", "Lẩu"]]}
-
+# (bản 324) NHÓM MÓN trong một xưởng: xuong.json "nhom" [[mã, tên]] (từ 2 nhóm thì bảng xưởng hiện hàng chip lọc, ui_xf);
+# cong_thuc.json "nhom" của món, món không ghi thì vào nhóm đầu.
 func groups(k: String) -> Array:   # [[mã, tên]] của xưởng k ([] = không chia)
-	return NHOM.get(String(sr[k].type), [])
+	return T.get(String(sr[k].type), {}).get("nhom", [])
 
 func group_of(k: String, rid: String) -> String:
 	var g: Array = groups(k)

@@ -2,7 +2,7 @@ extends RefCounted
 # Đồ đặt trong làng (g.objs) + luật ô đất của bảng Xây dựng, chép từ bản web:
 # fo/ci/D5/Zv/o2/fg/Lz/mb/BENMB/Az (chỗ đặt), mM/bM/bj/mj/Rz/Hz/_v (đặt, dời, bán, xoay, nhận vật có sẵn, dọn),
 # As/uM/sM (độ đẹp, hạng làng), hoa cỏ nhỏ g.minis (oq/PM), đường g.road/g.unroad (Xz/CM), nền g.gt (nq/EM).
-# Dữ liệu: ui/snap/bd_cat.json (og, LM, Yz, Kz, chuồng, Q5, V5, hj, Nd, Ei, eb) và ui/snap/bd_map.json
+# Dữ liệu: ui/snap/bd_cat.json (og, LM, Yz, Kz, chuồng, Q5, V5, hj, Nd, eb), Ei = data/nong_trai/cay_an_trai.json và ui/snap/bd_map.json
 # (bản đồ ô lúc làng mới: khu fo, loại đất Il, đường gốc Uz, nước fM, ao p0, vật cảnh yc, cây rừng hu, So, hu list).
 
 var G
@@ -25,6 +25,7 @@ func _init(game, farm) -> void:
 	G = game
 	F = farm
 	C = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/bd_cat.json"))
+	C.Ei = G._j("nong_trai/cay_an_trai")   # cây ăn trái: data/nong_trai/cay_an_trai.json (bản 329 bỏ bản chép trong bd_cat)
 	M = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/bd_map.json"))
 	for t in C.og:
 		Pi[t.id] = t
