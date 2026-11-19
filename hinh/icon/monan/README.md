@@ -64,3 +64,6 @@ mam_ca_linh (dua_mon), nuoc_mam, mam_tom (tuong_ot). sua_chua_de chưa có hình
 
 ## Giàn phơi (bản 337) — hình tạm
 kho_muc, kho_ca_ro, bo_kho_say, kho_ga (kho_ca), me_say (xoai_say).
+
+## Lò bánh tráng (bản 338) — hình tạm
+bt_nuong (bt_chabong), bt_muoi_tom (bt_tron), bt_me_chua (bt_me).
