@@ -2704,5 +2704,25 @@
    458
   ],
   "nguon": "tấm ảnh người dùng (bản 374)"
+ },
+ "bt_nuong": {
+  "file": "bt_nuong.png",
+  "bbox": [
+   41,
+   50,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 375)"
+ },
+ "bt_me_chua": {
+  "file": "bt_me_chua.png",
+  "bbox": [
+   41,
+   52,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 375)"
  }
 }

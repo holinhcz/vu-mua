@@ -117,3 +117,6 @@ mia_sr, st_bo_sr.
 
 ## Bản 374 — hình thật
 mut_khoai, mut_tac, keo_chuoi, muoi_me.
+
+## Bản 375 — hình thật
+bt_nuong, bt_me_chua.
