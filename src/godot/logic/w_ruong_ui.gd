@@ -223,6 +223,8 @@ func cz() -> void:   # CZ
 		if not t:
 			return
 		pill = PILL.new(U)   # button.ghepill.manpill
+		pill.kind = "khan"
+		pill.ic = "res://ui/img/bong/nuoc.png"
 		pill.pressed.connect(open_man)   # eO
 		U.root.add_child(pill)
 	pill.visible = t and R._mode() == "off"

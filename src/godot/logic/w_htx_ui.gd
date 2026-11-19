@@ -132,6 +132,7 @@ func pill_sync(parent: Control) -> void:   # bQ (gọi mỗi khung hoặc mỗi 
 		return
 	if pill == null:
 		pill = PILL.new(U)
+		pill.kind = "le"
 		pill.pressed.connect(open_fest)
 		parent.add_child(pill)
 	pill.visible = true

@@ -334,14 +334,6 @@ func ui_setup(ui) -> void:
 		U._lack_open(o.get("items", []), String(o.get("why", "")), o.get("go", Callable()), int(o.get("xu", 0)), o.get("mats", []))
 	WHU.ext["Ai"] = func(id: String) -> Texture2D: return U.item_ic(id, 64.0)
 	WSU.ext["Ai"] = WHU.ext["Ai"]
-	# #goal trên HUD: chạm khi đủ thì nhận thưởng (#goalGo)
-	var gb = U.hid.get("#goal")
-	if gb != null:
-		U._click(gb, func():
-			var v: Dictionary = WS.goal_view()
-			if v.get("ready", false):
-				WS.goal_claim()
-				U._sync_hud())
 
 func _job(key: String, pos, dur: float, run) -> void:   # Gl / Ns / Px: xếp việc đi tới pos rồi chạy run
 	var F = U.F if U != null else null
@@ -358,7 +350,7 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	var gb = U.hid.get("#goal") if U.hid is Dictionary else null   # .xpills nằm ngay dưới thẻ mục tiêu
 	if gb != null and pills != null:
 		var gr: Rect2 = gb.get_global_rect()
-		pills.position = Vector2(gr.position.x, (gr.end.y if gb.is_visible_in_tree() else gr.position.y) + 4.5 * Css.K)
+		pills.position = gr.position   # (bản 362) thẻ mục tiêu là một dòng trong cột việc (_goal_pill), cột đứng chỗ thẻ cũ
 	WRU.cz()
 	if WRU.pill != null and WRU.pill.get_parent() != pills:
 		WRU.pill.reparent(pills, false)
@@ -371,10 +363,12 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	_ray_pill()
 	_tn_pill()
 	_hdn_pill()
+	_goal_pill()
+	_pills_sort()
 	WEV.step()
 
 var pl := {}   # nút viên theo khóa: tn (TNPILL), hdn (HDNPILL)
-func _pill_put(k: String, tx, cb: Callable) -> void:   # tx: [chữ, gấp?] hoặc rỗng = ẩn (ẩn cả lúc đang xây)
+func _pill_put(k: String, tx, cb: Callable, kd := "") -> void:   # tx: [chữ, gấp?] hoặc rỗng = ẩn (ẩn cả lúc đang xây)
 	var show: bool = tx is Array and not tx.is_empty() and (U.bdp == null or String(U.bdp.mode) == "off")
 	var p = pl.get(k)
 	if not show:
@@ -383,6 +377,7 @@ func _pill_put(k: String, tx, cb: Callable) -> void:   # tx: [chữ, gấp?] ho�
 		return
 	if p == null:
 		p = PILL.new(U)
+		p.kind = kd
 		p.pressed.connect(cb)
 		pills.add_child(p)
 		pl[k] = p
@@ -391,10 +386,60 @@ func _pill_put(k: String, tx, cb: Callable) -> void:   # tx: [chữ, gấp?] ho�
 	p.hurry = bool(tx[1])
 
 func _tn_pill() -> void:   # tnPill: "Đêm nay bão lớn về · phòng chống" / "N nhà gặp nạn · giúp bà con"
-	_pill_put("tn", WD.tn_pill_txt(), func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"))
+	_pill_put("tn", WD.tn_pill_txt(), func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"), "khan")
+
+func _goal_pill() -> void:   # (bản 362) mục tiêu tân thủ (w_sys.goal_view) thành một dòng trong cột việc; đủ thì chạm nhận thưởng
+	var v: Dictionary = WS.goal_view()
+	var tx = []
+	if not v.is_empty():
+		tx = [("Mục tiêu xong · " + String(v.btn)) if v.get("ready", false) else String(v.txt), false]
+	_pill_put("goal", tx, func() -> void:
+		if WS.goal_view().get("ready", false) and WS.goal_claim():
+			G.mark()
+			U._sync_hud(), "nv")
+	var p = pl.get("goal")
+	if p != null:
+		p.bar = -1.0 if v.is_empty() or v.get("ready", false) else float(v.bar)
+		p.hurry = bool(v.get("ready", false))
+
+const PMAX := 3       # cột việc hiện tối đa 3 dòng; nhiều hơn: 2 dòng đầu + "+N việc khác" (chạm: hiện hết, chạm lại: thu bớt)
+var pmore: Control = null
+var pex := false
+func _more_tap() -> void:
+	pex = not pex
+	_pills_sort()
+
+func _pills_sort() -> void:   # khẩn > lễ > chợ, ghe > mục tiêu; dòng thừa ẩn sau "+N việc khác"
+	if pills == null:
+		return
+	if pmore == null:
+		pmore = PILL.new(U)
+		pmore.kind = "more"
+		pmore.set_meta("nocount", true)
+		pmore.pressed.connect(_more_tap)
+		pills.add_child(pmore)
+	var L := []
+	for c in pills.get_children():
+		if c != pmore and c is Control and c.visible and c.has_method("order"):
+			L.append(c)
+	var ix := {}
+	for i in L.size():
+		ix[L[i]] = i
+	L.sort_custom(func(a, b): return a.order() < b.order() or (a.order() == b.order() and ix[a] < ix[b]))
+	var cut := L.size() > PMAX and not pex
+	var show := (PMAX - 1) if cut else L.size()
+	for i in L.size():
+		pills.move_child(L[i], i)
+		L[i].cut = i >= show
+	pmore.visible = L.size() > PMAX
+	if pmore.visible:
+		pills.move_child(pmore, show)
+		pmore.text = "Thu bớt" if pex else "+" + str(L.size() - show) + " việc khác · chạm để xem hết"
+	if L.size() <= PMAX:
+		pex = false
 
 func _hdn_pill() -> void:   # hdnPill: "Hội đình còn N ngày · chuẩn bị" / "Hôm nay hội đình · vào thi"
-	_pill_put("hdn", WH.hdn_pill_txt(), func() -> void: U.hdn_open("giai" if WH.hdn_today() else "mo"))
+	_pill_put("hdn", WH.hdn_pill_txt(), func() -> void: U.hdn_open("giai" if WH.hdn_today() else "mo"), "le")
 
 var rpill: Control = null   # Lg: nút viên "Rầy nâu: N ô · phun thuốc"
 func _ray_pill() -> void:   # l_
@@ -418,6 +463,8 @@ func _ray_pill() -> void:   # l_
 			U.close_all()
 			U.F.queue_job(i, "spray"))
 		rpill.hurry = true   # .hurry
+		rpill.kind = "khan"
+		rpill.ic = "res://ui/img/bong/raycon.png"
 		pills.add_child(rpill)
 	rpill.visible = true
 	var tx := "Rầy nâu: " + str(t) + " ô · phun thuốc"

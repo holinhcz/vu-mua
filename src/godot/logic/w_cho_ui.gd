@@ -182,6 +182,7 @@ func pill_sync(parent: Control) -> void:   # mQ (gọi mỗi khung; parent = Hs(
 		return
 	if pill == null:
 		pill = PILL.new(U)
+		pill.kind = "su"
 		pill.pressed.connect(_pill_go)
 		parent.add_child(pill)
 	pill.visible = true
@@ -273,6 +274,7 @@ func ghe_pill_sync(parent: Control) -> void:   # UD: nút viên khi ghe đang v�
 		return
 	if gpill == null:
 		gpill = PILL.new(U)
+		gpill.kind = "su"
 		gpill.pressed.connect(open_ghe)
 		parent.add_child(gpill)
 	gpill.visible = true

@@ -361,7 +361,6 @@ func _build_hud() -> void:
 	_click(hid.get("#pcAv"), func(): pcp.open(), "scale")
 	_auto_setup(hid.get(".autob"))
 	_click(hid.get("#hudTab"), func(): hud_min(not hm), "scale")   # yO: thu gọn / mở thẻ nhiệm vụ bên trái
-	_click(hid.get("#goal"), _goal_tap, "scale94")
 	hm_badge = null
 	hud_min(bool(G.cfg.get("hm", false)), true)
 	for k in [".ngpill", "#coinsPill"]:
@@ -594,20 +593,6 @@ func _sync_hud() -> void:
 		_txt(_q(ng, "", "b"), str(int(G.g.get("ngoc", 0))))
 	var t := (posmod(G.day(), 28))
 	_txt(hid.get("#seaT"), G.SEA_N[G.season()] + (" " + str(t % 7 + 1) if G.cfg.s == "auto" else ""))
-	var hv := int(G.g.get("harvested", 0))
-	var gtx := "Thu hoạch 5 cây trồng (" + str(mini(5, hv)) + "/5)"
-	var gfr := minf(1.0, hv / 5.0)
-	if G.w_all != null and hid.get("#goal") != null:   # NTWEB fy: mục tiêu tân thủ (w_sys.goal_view)
-		var gv: Dictionary = G.w_all.WS.goal_view()
-		hid["#goal"].visible = not gv.is_empty() and not hm
-		if not gv.is_empty():
-			gtx = String(gv.txt) + (" · " + String(gv.btn) if gv.get("ready", false) else "")
-			gfr = float(gv.bar)
-	_txt(hid.get("#goalTxt"), gtx)
-	var gb = hid.get("#goalBar")
-	if gb != null:
-		var par: Control = gb.get_parent().get_parent()
-		gb.place(Rect2(gb.r.position, Vector2(par.r.size.x * gfr, gb.r.size.y)))
 
 # ------------------------------------------------------------------ thẻ nhiệm vụ bên mép trái (.hudq bản web: yO, xO, #goalGo)
 # Nút ‹ thu gọn thẻ mục tiêu + hàng nút viên (body.hudmin), thành › kèm số nút viên đang có (chấm đỏ); nhớ theo máy.
@@ -628,8 +613,8 @@ func hud_min(on: bool, quiet := false) -> void:   # yO
 	if tb != null:
 		var ar := _q(tb, "ar")
 		_txt(ar, "›" if on else "‹")
-	if hid.get("#goal") != null:
-		hid["#goal"].visible = not on and G.w_all != null and not G.w_all.WS.goal_view().is_empty()
+	if hid.get("#goal") != null:   # (bản 362) thẻ mục tiêu chỉ làm mẫu cho cột việc (pill.gd), không hiện
+		hid["#goal"].visible = false
 	if G.w_all != null and G.w_all.pills != null:
 		G.w_all.pills.visible = not on
 	hm_n = -1
@@ -642,7 +627,7 @@ func _hm_badge() -> void:   # xO: số nút viên đang hiện, chỉ lúc thu g
 	var n := 0
 	if G.w_all != null and G.w_all.pills != null:
 		for c in G.w_all.pills.get_children():
-			if c is Control and c.visible:
+			if c is Control and c.visible and not c.has_meta("nocount"):
 				n += 1
 	if not hm:
 		n = 0
@@ -674,13 +659,6 @@ func _hm_badge() -> void:   # xO: số nút viên đang hiện, chỉ lúc thu g
 	hm_badge.position = Vector2.ZERO
 	hm_badge.size = tb.size
 	hm_badge.queue_redraw()
-
-func _goal_tap() -> void:   # #goalGo: đủ thì nhận thưởng mục tiêu
-	if G.w_all == null:
-		return
-	var gv: Dictionary = G.w_all.WS.goal_view()
-	if gv.get("ready", false) and G.w_all.WS.goal_claim():
-		G.mark()
 
 # #coinsPill bản web rộng theo số (width auto, bám mép phải): số dài hơn thì ô xu nới sang trái, không cắt chữ
 func _coins_txt(s: String) -> void:
