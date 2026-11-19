@@ -1,0 +1,210 @@
+{
+ "quancom": {
+  "ten": "Quán cơm",
+  "obj": [
+   "quancom",
+   "quancom2"
+  ],
+  "mo": [
+   6,
+   21
+  ],
+  "cao": 0.25,
+  "thuong": 0.75,
+  "toi_da": 3,
+  "cho": 0.5,
+  "nhom": 0.3,
+  "sl": [
+   1,
+   1
+  ],
+  "gio": [
+   {
+    "tu": 6,
+    "den": 9,
+    "cao": true,
+    "mon": [
+     "xoi_cha_bong",
+     "xoi_la_dua",
+     "xoi",
+     "xoi_xeo",
+     "xoi_thit",
+     "banh_beo",
+     "banh_khot",
+     "banh_xeo",
+     "banh_can",
+     "banh_gio",
+     "banh_hoi",
+     "banh_cuon",
+     "pho_bo",
+     "hu_tieu",
+     "hu_tieu_bv",
+     "bun_bo_hue",
+     "mi_quang",
+     "banh_canh_cl",
+     "bun_rieu",
+     "chao_ga",
+     "chao_vit",
+     "com_tam"
+    ]
+   },
+   {
+    "tu": 11,
+    "den": 13,
+    "cao": true,
+    "xuong": {
+     "bepcui": [
+      "nau"
+     ],
+     "kho": [],
+     "nuong": [
+      "thit",
+      "ca"
+     ],
+     "hangcha": []
+    }
+   },
+   {
+    "tu": 17,
+    "den": 20,
+    "cao": true,
+    "xuong": {
+     "bepcui": [],
+     "kho": [],
+     "nuong": [
+      "thit",
+      "ca"
+     ],
+     "hangcha": []
+    }
+   },
+   {
+    "tu": 6,
+    "den": 21,
+    "cao": false,
+    "xuong": {
+     "bepcui": [
+      "nau"
+     ],
+     "kho": [],
+     "nuong": [],
+     "hangcha": [],
+     "lobanh": [
+      "man"
+     ]
+    }
+   }
+  ]
+ },
+ "taphoa": {
+  "ten": "Tạp hóa đầu ngõ",
+  "obj": [
+   "taphoa",
+   "taphoa2"
+  ],
+  "mo": [
+   0,
+   24
+  ],
+  "cao": 2.0,
+  "thuong": 2.0,
+  "toi_da": 2,
+  "cho": 8.0,
+  "mon_moi_don": [
+   2,
+   4
+  ],
+  "sl": [
+   5,
+   15
+  ],
+  "gia": 1.25,
+  "nghi_sau": 3,
+  "gio": [
+   {
+    "tu": 0,
+    "den": 24,
+    "cao": false,
+    "xuong": {
+     "ruong": [],
+     "duong": [],
+     "muoi": [],
+     "rang": [],
+     "say": [],
+     "btrang": [],
+     "mill": []
+    },
+    "mon": [
+     "lx_tuoi",
+     "cha_bong"
+    ]
+   }
+  ]
+ },
+ "cafe": {
+  "ten": "Quán cà phê võng",
+  "obj": [
+   "cafe",
+   "cafe2"
+  ],
+  "mo": [
+   6,
+   22
+  ],
+  "cao": 0.333,
+  "thuong": 1.0,
+  "toi_da": 4,
+  "cho": 0.333,
+  "sl": [
+   1,
+   1
+  ],
+  "gia": 1.1,
+  "boa": [
+   0.1,
+   0.3
+  ],
+  "bot_khach": 0.05,
+  "gio": [
+   {
+    "tu": 6,
+    "den": 9,
+    "cao": true,
+    "xuong": {
+     "ep": [
+      "cf"
+     ]
+    }
+   },
+   {
+    "tu": 14,
+    "den": 17,
+    "cao": true,
+    "xuong": {
+     "ep": [
+      "nuoc",
+      "st"
+     ],
+     "quanche": []
+    }
+   },
+   {
+    "tu": 6,
+    "den": 22,
+    "cao": false,
+    "xuong": {
+     "ep": [],
+     "quanche": []
+    },
+    "mon": [
+     "dp_rang",
+     "hd_rang",
+     "dieu_muoi",
+     "bap_rang",
+     "bap_nuong",
+     "khoai_nuong"
+    ]
+   }
+  ]
+ }
+}

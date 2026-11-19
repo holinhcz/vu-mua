@@ -7,7 +7,7 @@ extends RefCounted
 #   lễ hội g.fest / g.festn / g.festh (Mm, Jb, WT, x2, xQ, kQ, h4, eN, Tm, p4, DT, Dx, jT, VT, yQ; nút viên bQ ở UI),
 #   quán g.quan (Yd, Dk), cơm g.com (n5), y tế g.yte (cC), chợ phiên g.cp (Lf), du lịch g.dl (R6), g.vm (Wm),
 #   hội thi g.thi (Jm), sen đỏ g.ng ($0), sổ khách g.gb (iS), thưởng xếp hạng g.rkw (bR), rầy g.ray (rc),
-#   vật liệu g.mat (PH), sao chuồng g.penst (u3), quán cà phê g.cafe (N), tạp hóa g.tap (x),
+#   vật liệu g.mat (PH), sao chuồng g.penst (u3).
 #   đổi nhịp Hay Day g.hdv (SH, TH, _7, fJ).
 # Vẽ cờ hội đình (hdnItems), đèn lồng lễ (rN), hạt bay xu (Ol), âm thanh (Jt): không chép.
 
@@ -1386,24 +1386,6 @@ func u3() -> Dictionary:   # u3: g.penst (sao chuồng)
 		t = {}
 		G.g.penst = t
 	return t
-
-func cafe_s() -> Dictionary:   # N (khối quán cà phê): g.cafe
-	var gt = G.g.get("cafe")
-	if not _tr(gt) or not (gt is Dictionary):
-		gt = {"c": [], "nx": 0}
-		G.g.cafe = gt
-	if not (gt.get("c") is Array):
-		gt.c = []
-	return gt
-
-func tap_s() -> Dictionary:   # x (khối tạp hóa): g.tap
-	var gt = G.g.get("tap")
-	if not _tr(gt) or not (gt is Dictionary):
-		gt = {"o": [], "nx": 0}
-		G.g.tap = gt
-	if not (gt.get("o") is Array):
-		gt.o = []
-	return gt
 
 # ================================================================== ĐỔI NHỊP HAY DAY (g.hdv)
 static func hd7(t: float, a: float, n: float) -> float:   # _7: đổi tiến độ t (thang a) sang thang n

@@ -2,7 +2,7 @@ extends RefCounted
 # ĐƯỜNG, CHUỒNG (luật, không vẽ thú), LƯU / TẢI: phần luật bản web còn thiếu ở bản Godot, chép 1:1.
 #   đường g.road (laid), đình làng (d4: bỏ vật đã dời g.mv), mùa nước nổi g.fl ($q -> YD),
 #   chuồng g.pens (VR thả con giống, lY đếm con, rT việc còn làm được (+ lớp bọc kho đầy), I$ việc cho ăn đang xếp,
-#     W9 hàng cần giữ (+ lớp bọc tạp hóa / quán cà phê)),
+#     W9 hàng cần giữ (+ khách quán đang chờ, w_quan.gd)),
 #   thiên tai đánh xuống làng (tnHit + tnPick, tnNeedOf, tnBusy, tnLoEnd, tnRate (+ lớp bọc n_chiu), tnNearRiv, yh,
 #     tnScale, tnMul, tnShelter): ruộng hư g.plots[].hu/lc, con vật bệnh g.pens[].s (dịch), nhà gặp nạn g.tn.nan,
 #   thưởng trò chơi nhỏ mỗi ngày: Xếp trái g.xtr (xts), Ô ăn quan g.oq (oqs), Đua gà g.dg (dgs).
@@ -232,7 +232,7 @@ func I_(t: String) -> int:   # I$: số việc cho ăn (món t) đang xếp ch�
 					a += 1
 	return a
 
-func W9() -> Dictionary:   # W9 (+ lớp bọc: đơn tạp hóa g.tap.o, quán cà phê g.cafe.c): hàng cần giữ lại khi bán
+func W9() -> Dictionary:   # W9 (+ khách quán cơm / tạp hóa / cà phê đang chờ): hàng cần giữ lại khi bán
 	var t := {}
 	var add := func(r, o) -> void:
 		if _tr(r) and _num(o) and float(o) > 0:
@@ -282,13 +282,11 @@ func W9() -> Dictionary:   # W9 (+ lớp bọc: đơn tạp hóa g.tap.o, quán 
 		if G.lang != null and G.lang.pen_built(r) and _pens().get(r) is Array and _pens()[r].size():
 			add.call(_qr(r).get("feed"), _pens()[r].size())
 	# lớp bọc: A(At, Pt) cộng thẳng, không xét > 0
-	if WH != null:
-		for At in WH.tap_s().o:
-			for Pt in At.items:
-				t[String(Pt[0])] = int(_n(t.get(String(Pt[0]), 0))) + int(Pt[1])
-		for At in WH.cafe_s().c:
-			for Pt in At.items:
-				t[String(Pt[0])] = int(_n(t.get(String(Pt[0]), 0))) + int(Pt[1])
+	if G.w_all != null and G.w_all.WQ != null:   # (bản 350) khách quán cơm / đơn tạp hóa / khách cà phê đang chờ (w_quan.gd)
+		for k in G.w_all.WQ.CF:
+			for At in G.w_all.WQ.list(k):
+				for Pt in At.items:
+					t[String(Pt[0])] = int(_n(t.get(String(Pt[0]), 0))) + int(Pt[1])
 	return t
 
 # ------------------------------------------------------------------ thiên tai đánh xuống làng (tnTick gọi)

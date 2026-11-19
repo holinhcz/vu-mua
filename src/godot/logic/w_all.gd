@@ -24,6 +24,7 @@ var WEV   # w_ev.gd     cột sự kiện: điểm danh, 7 ngày về làng
 var WSG   # sgeo.gd     hình học sông Vàm (SGEO)
 var WGH   # w_ghe.gd    ghe thương hồ
 var WTH   # w_thu.gd    thư nhà, ông đưa thư
+var WQ    # w_quan.gd   khách quán cơm, tạp hóa, cà phê võng
 var GHV = null   # ghe_ve.gd  hình ghe trên sông (chợ nổi, ghe thương hồ)
 
 var U = null    # ui.gd (ui_setup)
@@ -52,6 +53,7 @@ func _init(game) -> void:
 	WCA = load("res://logic/w_ca.gd").new(G)
 	WD = load("res://logic/w_duong.gd").new(G)
 	WDL = load("res://logic/w_dl.gd").new(G)
+	WQ = load("res://logic/w_quan.gd").new(G)
 	WAU = load("res://logic/w_auto.gd").new(G)
 	WEV = load("res://logic/w_ev.gd").new(G)
 	WSG = load("res://logic/sgeo.gd").new()
@@ -190,6 +192,7 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 	WCA.step(dt, false)
 	WD.step(dt, false)
 	WDL.step(dt)
+	WQ.step(dt)
 	if U != null:
 		WAU.step(dt)
 		WGH.step(dt)
