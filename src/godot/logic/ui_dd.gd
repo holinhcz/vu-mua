@@ -122,30 +122,41 @@ func _dbx(x: float, y: float, w: float, h: float, bg: String, rad := 8.0, bd := 
 	n.css = n.css.duplicate()
 	n.css["background-color"] = bg
 	n.css["background-image"] = "none"
+	n.css["opacity"] = "1"   # mẫu ô .ddc.fut của web mờ sẵn: bỏ
 	n.css["border-radius"] = _cpx(rad)
 	n.css["box-shadow"] = sh
 	for sd in ["top", "right", "bottom", "left"]:
 		n.css["border-" + sd] = bd if bd != "" else "0px none rgb(0, 0, 0)"
 	return n
 
-# ô chip nổi như thẻ Sổ làng (Snap.chip_look nhạt = chip Kho nền kem): viền trong + bóng giữ của chip, chỉ đổi nền theo trạng thái
-const CHIPBG := {
-	"got": "linear-gradient(rgb(214, 238, 204) 0%, rgb(222, 242, 214) 50%, rgb(232, 247, 226) 100%)",
-	"miss": "linear-gradient(rgb(222, 218, 208) 0%, rgb(228, 224, 215) 50%, rgb(236, 233, 226) 100%)",
-	"now": "linear-gradient(rgb(255, 240, 196) 0%, rgb(255, 246, 216) 50%, rgb(255, 251, 234) 100%)",
+# ô chip nổi như thẻ Sổ làng / chip Kho (viền trong 1px + vệt sáng + quầng trong + bóng): nền VÀ viền cùng tông theo trạng thái
+const CHIPK := {   # [gradient trên, giữa, dưới, viền]
+	"fut": ["rgb(250, 242, 222)", "rgb(252, 247, 234)", "rgb(255, 252, 245)", "rgba(150, 112, 48, 0.55)"],
+	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
+	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
+	"miss": ["rgb(214, 210, 200)", "rgb(222, 218, 209)", "rgb(232, 229, 222)", "rgb(160, 152, 138)"],
+	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 }
-func _chip(x: float, y: float, w: float, h: float, kind: String, pink := false) -> Dictionary:
+func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
+	var C: Array = CHIPK[kind]
+	var n := _dbx(x, y, w, h, String(C[1]), 10.0)
+	n.css["background-image"] = "linear-gradient(" + String(C[0]) + " 0%, " + String(C[1]) + " 50%, " + String(C[2]) + " 100%)"
+	n.css["box-shadow"] = String(C[3]) + " 0px 0px 0px " + ("1.5px" if kind == "now" else "1px") + " inset, rgba(255, 255, 255, 0.75) 0px 2px 0px 0px inset, rgba(120, 85, 25, 0.1) 0px 0px 8px 3px inset, rgba(60, 40, 15, 0.28) 0px 1px 2px 0px"
+	return n
+
+static var _ON := {}
+func _onbtn(x: float, y: float, w: float, h: float, t: String, cb: Callable) -> Dictionary:   # nút = chip "on" (xanh) của Kho
+	if _ON.is_empty():
+		var ch: Dictionary = Snap.find(Snap.load_snap("kho")["#pov"][0], "khchips")
+		for k in ch.kids:
+			if String(k.cls).split(" ").has("on"):
+				_ON = k.css
+				break
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 10.0)
-	n.cls = "ddchip"
-	Snap.chip_look(n, "ddchip", true)
-	if CHIPBG.has(kind):
-		n.css["background-image"] = CHIPBG[kind]
-	var sh := String(n.css["box-shadow"])
-	if kind == "now":
-		sh = "rgb(222, 160, 40) 0px 0px 0px 1.5px inset, " + sh + ", rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
-	elif pink:
-		sh = "rgb(232, 150, 150) 0px 0px 0px 1.5px inset, " + sh
-	n.css["box-shadow"] = sh
+	for key in ["background-color", "background-image", "border-radius", "box-shadow"]:
+		n.css[key] = _ON.get(key, n.css.get(key))
+	n.kids = [_dt(x, y, w, h, t, 12.5, 800, "rgb(255, 255, 255)")]
+	n.act = cb
 	return n
 
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
@@ -199,7 +210,7 @@ func _tab7() -> Array:
 		var w := cw * 2.0 + g if i == 6 else cw
 		var got := i < p
 		var now := d and i == p
-		var c := _chip(x, y, w, rh, "got" if got else ("now" if now else "fut"), i == 6)
+		var c := _chip(x, y, w, rh, "got" if got else ("now" if now else ("sen" if i == 6 else "fut")))
 		var op := 0.55 if got else (1.0 if now else 0.8)
 		var s := minf(w - 14.0, rh * 0.5) if i == 6 else minf(cw - 10.0, rh * 0.42)
 		var L: Array = T7[i]
@@ -253,10 +264,11 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	out.append_array(_dsec(hy, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày"))
 	var bx0 := X0 + 14.0
 	var bw := XW - 28.0
-	var iy := hy + 22.0
-	var by := iy + 36.0
+	var iy := hy + 24.0
+	var by := iy + 12.0   # thanh chạy qua giữa các chip mốc
 	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
 	out.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
+	var ly := iy + 36.0
 	var row: Dictionary = D.ddms.kids[1]
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
@@ -265,8 +277,8 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
-		var ring := _chip(cx - 17.0, iy, 34.0, 31.0, "got" if got else ("now" if ok else "fut"))
-		ring.kids = [_dic(cx - 12.5, iy + 3.0, 25.0, String(row.kids[j].kids[0].svg), 1.0 if ok or nxt else 0.45)]
+		var ring := _chip(cx - 17.0, iy, 34.0, 31.0, "got" if got else ("now" if ok or nxt else "fut"))
+		ring.kids = [_dic(cx - 12.5, iy + 3.0, 25.0, String(row.kids[j].kids[0].svg))]
 		if got:
 			ring.kids.append(_dtick(cx + 8.0, iy + 2.0, 10.0))
 		if ok and not got:
@@ -274,42 +286,43 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		else:
 			ring.act = _dsay.bind("Mốc " + str(n) + " ngày: " + String(R.t) + ("" if ok else " (còn " + str(n - v) + " ngày)"))
 		out.append(ring)
-		out.append(_dt(cx - 30.0, by + 11.0, 60.0, 12.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
-		out.append(_dt(cx - 36.0, by + 22.0, 72.0, 11.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(214, 84, 52)" if nxt else SUB))
+		out.append(_dt(cx - 30.0, ly, 60.0, 14.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
+		out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(176, 118, 10)" if nxt else SUB))
 	# 2. lịch
-	var cy := by + 42.0
-	out.append_array(_dsec(cy, "Lịch tháng " + str(E.q8() % 100)))
+	var cy := ly + 36.0
 	var misses := 0
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var bot := 36.0 + (16.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
+	var bot := 40.0 + (20.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
 	var cw := (XW - g * 6.0) / 7.0
 	var gx := X0
-	var wy := cy + 20.0
+	var wy := cy
 	for i in 7:
 		out.append(_dt(gx + i * (cw + g), wy, cw, 14.0, DW[i], 10.0, 800, SUB))
-	var rows := int(ceil((k + o) / 7.0))
+	var rows := mini(5, int(ceil((k + o) / 7.0)))   # lịch giấy: ngày 30, 31 tràn hàng 6 thì dồn lên ô trống hàng 1
 	var gy := wy + 18.0
-	var rh := minf(cw + 4.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
+	var rh := minf(cw + 12.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
+		if gi >= 35:
+			gi -= 35
 		out.append(_dday(w, gx + (gi % 7) * (cw + g), gy + (gi / 7) * (rh + g), cw, rh, M))
 	# 3. hôm nay: nút vàng (chưa nhận) / một dòng (đã nhận), dòng bù
 	var ty := gy + rows * (rh + g) + 4.0
 	var gd: Dictionary = E.aF(r)
 	if E.q9():
-		out.append(_dbtn(X0 + (XW - 170.0) * 0.5, ty, 170.0, 28.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
+		out.append(_onbtn(X0 + (XW - 170.0) * 0.5, ty, 170.0, 28.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
 	else:
 		var t := "✓ Đã nhận hôm nay" + ((" · Mai: " + String(E.aF(r + 1).t)) if r < o else "")
 		out.append(_dt(X0, ty, XW, 28.0, t, 11.0, 700, GREEN))
-	var ey := ty + 30.0
+	var ey := ty + 36.0
 	if misses > 0:
 		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
-		out.append(_dt(X0, ey, XW, 14.0, fs, 10.5, 600, SUB))
-		ey += 16.0
+		out.append(_dt(X0, ey, XW, 16.0, fs, 10.5, 600, SUB))
+		ey += 20.0
 	return [out, ey + 8.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
@@ -319,11 +332,11 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var miss := w < r and not got
 	var gd: Dictionary = E.aF(w)
 	var big := w % 7 == 0
-	var kind := "got" if got else ("now" if now else ("miss" if miss else "fut"))
-	var op := 1.0 if got or now else (0.35 if miss else 0.8)
-	var c := _chip(x, y, cw, rh, kind, big)
-	var s := minf(cw - 12.0, rh - 17.0)
-	var kids := [_dt(x + 4.0, y + 2.0, 18.0, 13.0, str(w), 11.0, 800, GREEN if got else (GOLD if now else (SUB if not miss else "rgb(150, 140, 122)")), "left"),
+	var kind := "got" if got else ("now" if now else ("miss" if miss else ("sen" if big else "fut")))
+	var op := 0.7 if miss else 1.0
+	var c := _chip(x, y, cw, rh, kind)
+	var s := minf(cw - 6.0, rh - 13.0)
+	var kids := [_dt(x + 4.0, y + 2.0, 18.0, 13.0, str(w), 11.0, 800, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
 		_dic(x + (cw - s) * 0.5, y + rh - s - 3.0, s, D.ic[String(gd.ic)], op)]
 	if got:
 		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))
