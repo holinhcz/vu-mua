@@ -1318,12 +1318,12 @@
  "mia_sr": {
   "file": "mia_sr.png",
   "bbox": [
+   56,
    41,
-   60,
-   471,
-   451
+   455,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 314)"
+  "nguon": "tấm ảnh người dùng (bản 373)"
  },
  "nuoc_cam": {
   "file": "nuoc_cam.png",
@@ -1410,13 +1410,12 @@
  "st_bo_sr": {
   "file": "st_bo_sr.png",
   "bbox": [
+   69,
    41,
-   96,
-   471,
-   415
+   443,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 314)",
-  "game": "st_bo_sr"
+  "nguon": "tấm ảnh người dùng (bản 373)"
  },
  "st_sapoche": {
   "file": "st_sapoche.png",

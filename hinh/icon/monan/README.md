@@ -111,3 +111,6 @@ ca_chep_kho, ech_kho, cua_rang_me, cha_muc, cha_cua, banh_canh_cl. Lưu sẵn ch
 
 ## Bản 372 — hình thật
 banh_cam. Lưu sẵn chưa có món: cai_thia_xao, kho_qua_xao_trung, ca_tim_xao_toi, dau_que_xao, banh_tom_chien, banh_goi, hoanh_thanh_chien, ca_keo_chien, tom_chien_xu, muc_chien_xu, dau_hu_chien_sa, ba_roi_chien, ca_ro_chien, ca_dieu_hong_chien, ca_sac_chien.
+
+## Bản 373 — hình thật
+mia_sr, st_bo_sr.
