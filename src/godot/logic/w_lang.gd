@@ -3469,6 +3469,14 @@ func make_req(u, f: Dictionary) -> Dictionary:   # makeReq
 		var q := maxi(1, mini(8, _rnd(_nn(50, 140) * (1.0 + 0.5 * _v1()) / sell)))
 		it.append([id, q])
 		v += q * sell
+	# (bản 349) dân nhờ mua: ít nhất 1 món chế biến (như đơn hàng), thay món thô cuối nếu chưa có
+	var mk := func(id): return G.xw != null and G.xw.R.has(String(id))
+	var pp: Array = pool.filter(func(id): return mk.call(id) and not it.any(func(x): return x[0] == id))
+	if it.size() and not it.any(func(x): return mk.call(x[0])) and pp.size():
+		var pid = _t0(pp)
+		var pq := maxi(1, mini(8, _rnd(_nn(50, 140) * (1.0 + 0.5 * _v1()) / _sell(pid))))
+		v += pq * _sell(pid) - _i(it[-1][1]) * _sell(it[-1][0])
+		it[-1] = [pid, pq]
 	var why = _t0(NGHEWHY[gn.id]) if by_ng and NGHEWHY.has(gn.get("id", "")) else _t0(XD)
 	if it.is_empty():
 		it = [["lua", 2]]
@@ -3482,8 +3490,14 @@ func make_pq(f: Dictionary) -> Dictionary:   # makePQ
 	var n := 2 if randf() < 0.5 else 3
 	var it := []
 	var v := 0.0
-	while it.size() < n and pool.size():
-		var id = pool.pop_at(int(floor(randf() * pool.size())))
+	# (bản 349) việc nhờ: 1 món chế biến (3 món thì ngẫu nhiên 1 hoặc 2), còn lại đồ thô
+	var mk := func(id): return G.xw != null and G.xw.R.has(String(id))
+	var pp: Array = pool.filter(mk)
+	var rw: Array = pool.filter(func(id): return not mk.call(id))
+	var wp := 0 if pp.is_empty() else (1 if n < 3 else randi_range(1, 2))
+	while it.size() < n and (pp.size() or rw.size()):
+		var src: Array = pp if (it.filter(func(x): return mk.call(x[0])).size() < wp and pp.size()) or rw.is_empty() else rw
+		var id = src.pop_at(int(floor(randf() * src.size())))
 		if it.any(func(x): return x[0] == id):
 			continue
 		it.append([id, maxi(1, mini(10, _rnd(_nn(90, 200) * (1.0 + 0.5 * t) / _sell(id))))])
