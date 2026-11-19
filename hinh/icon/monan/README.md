@@ -105,3 +105,6 @@ ech_xao, de_xao, bo_xao, ga_xao.
 
 ## Bản 371 — hình thật
 ca_chep_kho, ech_kho, cua_rang_me, cha_muc, cha_cua, banh_canh_cl. Lưu sẵn chưa có món: canh_bau_tom, canh_kho_qua.
+
+## Bản 372 — hình thật
+. Lưu sẵn chưa có món: muc_xao_sate, oc_xao, luon_xao, suon_chua_ngot, nam_xao, ga_xao_nam, vit_xao_gung, long_ga_xao, canh_bi_do, canh_cai, canh_du_du, canh_mong_toi, mi_xao_hs, hu_tieu_xao, bun_xao_bo, mien_xao_cua.

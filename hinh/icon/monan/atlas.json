@@ -2355,5 +2355,165 @@
    460
   ],
   "nguon": "tấm ảnh người dùng (bản 371)"
+ },
+ "muc_xao_sate": {
+  "file": "muc_xao_sate.png",
+  "bbox": [
+   41,
+   59,
+   471,
+   452
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "oc_xao": {
+  "file": "oc_xao.png",
+  "bbox": [
+   41,
+   66,
+   471,
+   446
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "luon_xao": {
+  "file": "luon_xao.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "suon_chua_ngot": {
+  "file": "suon_chua_ngot.png",
+  "bbox": [
+   41,
+   66,
+   471,
+   445
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "nam_xao": {
+  "file": "nam_xao.png",
+  "bbox": [
+   41,
+   50,
+   471,
+   462
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ga_xao_nam": {
+  "file": "ga_xao_nam.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   454
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "vit_xao_gung": {
+  "file": "vit_xao_gung.png",
+  "bbox": [
+   41,
+   52,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "long_ga_xao": {
+  "file": "long_ga_xao.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "canh_bi_do": {
+  "file": "canh_bi_do.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   464
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "canh_cai": {
+  "file": "canh_cai.png",
+  "bbox": [
+   41,
+   52,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "canh_du_du": {
+  "file": "canh_du_du.png",
+  "bbox": [
+   41,
+   42,
+   471,
+   469
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "canh_mong_toi": {
+  "file": "canh_mong_toi.png",
+  "bbox": [
+   41,
+   47,
+   471,
+   464
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "mi_xao_hs": {
+  "file": "mi_xao_hs.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   456
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "hu_tieu_xao": {
+  "file": "hu_tieu_xao.png",
+  "bbox": [
+   41,
+   59,
+   471,
+   452
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "bun_xao_bo": {
+  "file": "bun_xao_bo.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   456
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "mien_xao_cua": {
+  "file": "mien_xao_cua.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
  }
 }
