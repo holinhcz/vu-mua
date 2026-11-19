@@ -1249,11 +1249,11 @@
   "file": "xoi.png",
   "bbox": [
    41,
-   75,
+   59,
    471,
-   436
+   453
   ],
-  "nguon": "tấm ảnh người dùng (bản 311)"
+  "nguon": "tấm ảnh người dùng (bản 367)"
  },
  "banh": {
   "file": "banh.png",
@@ -1945,5 +1945,105 @@
    452
   ],
   "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "muoi_ot": {
+  "file": "muoi_ot.png",
+  "bbox": [
+   42,
+   59,
+   470,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "muoi_tieu": {
+  "file": "muoi_tieu.png",
+  "bbox": [
+   41,
+   66,
+   470,
+   448
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "muoi_tom": {
+  "file": "muoi_tom.png",
+  "bbox": [
+   42,
+   61,
+   470,
+   452
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "pho_bo": {
+  "file": "pho_bo.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   456
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "banh_hoi": {
+  "file": "banh_hoi.png",
+  "bbox": [
+   41,
+   50,
+   471,
+   462
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "xoi_la_dua": {
+  "file": "xoi_la_dua.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "xoi_xeo": {
+  "file": "xoi_xeo.png",
+  "bbox": [
+   41,
+   53,
+   471,
+   459
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "pho_ga": {
+  "file": "pho_ga.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "bun_ca_loc": {
+  "file": "bun_ca_loc.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "banh_canh_tc": {
+  "file": "banh_canh_tc.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 367)"
  }
 }
