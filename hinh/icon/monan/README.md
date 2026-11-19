@@ -132,3 +132,60 @@ tuong_ot, dua_mon. Lưu sẵn chưa có món: kieu_muoi.
 
 ## Bản 379 — hình thật
 . Lưu sẵn chưa có món: ot_ngam_toi, dua_du_du, mam_thai.
+
+## HÌNH CHỜ MÓN (chưa có món trong game, làm sau)
+- ba_roi_chien.png
+- banh_canh_tc.png
+- banh_goi.png
+- banh_tom_chien.png
+- banhmi.png
+- bun_ca_loc.png
+- bun_xao_bo.png
+- ca_dieu_hong_chien.png
+- ca_keo_chien.png
+- ca_ro_chien.png
+- ca_sac_chien.png
+- ca_tim_xao_toi.png
+- cai_thia_xao.png
+- canh_bau_tom.png
+- canh_bi_do.png
+- canh_cai.png
+- canh_du_du.png
+- canh_kho_qua.png
+- canh_mong_toi.png
+- cao_lau.png
+- com_chien_hai_san.png
+- dau_hu_chien_sa.png
+- dau_que_xao.png
+- dua_du_du.png
+- ga_xao_nam.png
+- hoanh_thanh_chien.png
+- hu_tieu_nam_vang.png
+- hu_tieu_xao.png
+- kho_qua_xao_trung.png
+- kieu_muoi.png
+- lau_bo_giam.png
+- lau_ca_chep.png
+- lau_ca_hu.png
+- lau_ca_loc.png
+- lau_ga_la_giang.png
+- lau_nam.png
+- lau_rieu_cua.png
+- lau_thac_lac.png
+- lau_thai.png
+- lau_vit_chao.png
+- long_ga_xao.png
+- luon_xao.png
+- mam_thai.png
+- mi_xao_hs.png
+- mien_xao_cua.png
+- muc_chien_xu.png
+- muc_xao_sate.png
+- nam_xao.png
+- oc_xao.png
+- ot_ngam_toi.png
+- pho_ga.png
+- sam_dua_sua.png
+- suon_chua_ngot.png
+- tom_chien_xu.png
+- vit_xao_gung.png
