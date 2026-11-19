@@ -1070,6 +1070,9 @@ func tap(sp: Vector2) -> void:
 		"quan":
 			ui.close_all()
 			G.w_all.WQ.giao(String(h.k))
+		"quan_open":
+			ui.close_all()
+			ui.qk_open(String(h.k))
 		"nha":
 			ui.close_all()
 			ui.vl_open(int(h.u))
@@ -1333,6 +1336,10 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 				var inside2: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 				if inside2 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
 					_pk_add(L, {"type": "nha", "u": int(o.u)}, 50, sy, px, {"gr": 3 if inside2 else 0, "n": on})
+			elif G.w_all != null and G.w_all.WQ.kind_of(String(o.id)) != "":   # (bản 353) quán cơm / tạp hóa / cà phê: mở bảng khách
+				var inside3: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
+				if inside3 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
+					_pk_add(L, {"type": "quan_open", "k": G.w_all.WQ.kind_of(String(o.id))}, 50, sy, px, {"gr": 3 if inside3 else 0, "n": on})
 			elif o.id == "thungong":
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):

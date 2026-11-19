@@ -176,41 +176,91 @@ func bub(k: String):   # món hiện trên bong bóng (khách chờ lâu nhất)
 	var L := list(k)
 	return String(L[0].items[0][0]) if L.size() else null
 
-func giao(k: String) -> void:
+func giao(k: String, i := 0) -> bool:   # giao khách / đơn thứ i (bong bóng: khách chờ lâu nhất)
 	var L := list(k)
-	if L.is_empty():
-		return
-	var e: Dictionary = L[0]
+	if i < 0 or i >= L.size():
+		return false
+	var e: Dictionary = L[i]
 	var miss := []
 	for p in e.items:
 		if int(G.g.barn.get(p[0], 0)) < int(p[1]):
 			miss.append(G.item_name(String(p[0])) + " " + str(int(p[1]) - int(G.g.barn.get(p[0], 0))))
 	if miss.size():
 		G.toast.emit(CF[k].ten + " cần: " + ", ".join(miss) + ".")
-		return
-	var v := 0.0
+		return false
+	var pay := _pay(k, e.items)
 	for p in e.items:
 		G.g.barn[p[0]] = int(G.g.barn[p[0]]) - int(p[1])
-		v += float(G.item(String(p[0])).get("sell", 10)) * int(p[1])
 	var s := st(k)
-	var xu := 0
-	var boa := 0
 	match k:
 		"quancom":
 			var m: Dictionary = GIA[clampi(int(s.gia), 0, GIA.size() - 1)]
-			xu = int(round(v * float(m.m)))
-			boa = int(round(v * 0.05 * float(s.sao)))
 			s.sao = clampf(float(s.sao) + float(m.s) * 5.0, 1.0, 5.0)
 			s.tot = int(s.get("tot", 0)) + 1
-			s.xu = int(s.get("xu", 0)) + xu + boa
+			s.xu = int(s.get("xu", 0)) + pay[0] + pay[1]
 		"taphoa":
-			xu = int(round(v * float(CF.taphoa.gia)))
 			s.tre = 0
+	L.remove_at(i)
+	G.g.coins = float(G.g.coins) + pay[0] + pay[1]
+	G.add_xp(maxi(1, int(round(_val(e.items) / 12.0))), "quan")
+	G.toast.emit(CF[k].ten + ": +" + G.fmt_n(pay[0]) + " xu" + (" (boa " + G.fmt_n(pay[1]) + ")" if pay[1] > 0 else "") + ".")
+	G.mark()
+	return true
+
+func _val(items: Array) -> float:
+	var v := 0.0
+	for p in items:
+		v += float(G.item(String(p[0])).get("sell", 10)) * int(p[1])
+	return v
+
+func _pay(k: String, items: Array, est := false) -> Array:   # [xu, boa]; est: boa cà phê lấy giữa khoảng
+	var v := _val(items)
+	var s := st(k)
+	match k:
+		"quancom":
+			var m: Dictionary = GIA[clampi(int(s.gia), 0, GIA.size() - 1)]
+			return [int(round(v * float(m.m))), int(round(v * 0.05 * float(s.sao)))]
+		"taphoa":
+			return [int(round(v * float(CF.taphoa.gia))), 0]
 		"cafe":
-			xu = int(round(v * float(CF.cafe.gia)))
-			boa = int(round(v * randf_range(float(CF.cafe.boa[0]), float(CF.cafe.boa[1]))))
-	L.remove_at(0)
-	G.g.coins = float(G.g.coins) + xu + boa
-	G.add_xp(maxi(1, int(round(v / 12.0))), "quan")
-	G.toast.emit(CF[k].ten + ": +" + G.fmt_n(xu) + " xu" + (" (boa " + G.fmt_n(boa) + ")" if boa > 0 else "") + ".")
+			var b: float = (float(CF.cafe.boa[0]) + float(CF.cafe.boa[1])) * 0.5 if est else randf_range(float(CF.cafe.boa[0]), float(CF.cafe.boa[1]))
+			return [int(round(v * float(CF.cafe.gia))), int(round(v * b))]
+	return [int(v), 0]
+
+# ------------------------------------------------------------------ bảng quán (ui.gd dùng chung bảng Đơn hàng: od_src = k)
+const CHO := {"quancom": "Bàn", "taphoa": "Đơn sỉ", "cafe": "Võng"}
+func cards(k: String) -> Array:   # khách đang chờ dạng thẻ đơn: {who, shop, items, reward}; chỗ trống: khách kế {w}
+	var now: float = G._now_ms()
+	var out := []
+	var L := list(k)
+	for i in L.size():
+		var e: Dictionary = L[i]
+		var pay := _pay(k, e.items, true)
+		out.append({"who": CHO[k] + " " + str(i + 1), "shop": "Còn " + _left(float(e.dl) - now), "items": e.items, "reward": pay[0] + pay[1]})
+	var s := st(k)
+	var nx := float(s.get("nx", 0))
+	if L.size() < int(CF[k].toi_da) and nx > now and _slot(k, G.nv.hour()) != null and not (k == "taphoa" and int(s.get("nghi", -1)) > G.day()):
+		out.append({"who": "", "shop": "", "items": [], "reward": 0, "w": nx})
+	return out
+
+func _left(ms: float) -> String:
+	var m := int(ceil(maxf(0.0, ms) / 60000.0))
+	return (str(m / 60) + "g " + str(m % 60) + "p") if m >= 60 else (str(m) + " phút")
+
+func info(k: String) -> String:   # góc phải đầu bảng
+	var s := st(k)
+	match k:
+		"quancom":
+			return "%.1f★ · giá %s" % [float(s.sao), String(GIA[clampi(int(s.gia), 0, GIA.size() - 1)].n)]
+		"taphoa":
+			return "Nghỉ tới mai" if int(s.get("nghi", -1)) > G.day() else "Trễ " + str(int(s.get("tre", 0))) + "/" + str(int(CF.taphoa.nghi_sau))
+		"cafe":
+			var pen := int(s.get("pen", 0)) if int(s.get("pd", -1)) == G.day() else 0
+			return "Khách hôm nay " + str(int(round(maxf(0.5, 1.0 - float(CF.cafe.bot_khach) * pen) * 100.0))) + "%"
+	return ""
+
+func gia_next() -> void:   # quán cơm: đổi mức giá Bình dân -> Vừa -> Sang
+	var s := st("quancom")
+	s.gia = (int(s.gia) + 1) % GIA.size()
+	G.toast.emit("Quán cơm đổi giá: " + String(GIA[int(s.gia)].n) + ".")
 	G.mark()

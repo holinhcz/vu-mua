@@ -2455,6 +2455,8 @@ const OD_COL := 160.0         # cột 2 lệch cột 1
 const OD_GAP := 6.0           # gap 8px x .75
 const OD_UL := 416.22         # khung danh sách đơn cao nhất (2 hàng thẻ đầy)
 var od_on := false
+var od_src := ""              # (bản 353) "" = Đơn hàng; quancom / taphoa / cafe = khách quán (w_quan.cards) trên cùng bảng
+var od_L := []                # danh sách thẻ của od_src (làm mới mỗi lần _ord_sync)
 var od_tpl := {}              # mẫu thẻ, dòng món, nút (từ số đo bản web)
 var od_shell := {}            # "has"/"no": khung bảng (chưa có thẻ)
 var od_box: Control = null
@@ -2636,7 +2638,14 @@ func _od_colors() -> Dictionary:
 		out[f] = s
 	return out
 
-func ord_open() -> void:
+func qk_open(k: String) -> void:   # bảng khách quán: dùng chung bảng Đơn hàng
+	ord_open(k)
+
+func _od_list() -> Array:
+	return G.g.orders if od_src == "" else od_L
+
+func ord_open(src := "") -> void:
+	od_src = src
 	if nvp != null:
 		nvp.close()
 	pc_close()
@@ -2666,9 +2675,11 @@ func _anchor_of(b: Control):
 
 func _od_order() -> Array:
 	# thẻ đủ hàng trước (order 1), đơn thường (2), khách đang tới cuối (3)
-	var plan: Array = G.ord_plan()
+	if od_src != "":
+		od_L = G.w_all.WQ.cards(od_src)
+	var plan: Array = G.ord_plan(null if od_src == "" else od_L)
 	var L := []
-	for f in G.g.orders.size():
+	for f in _od_list().size():
 		var k := 3 if plan[f] == null else (1 if plan[f].ok else 2)
 		L.append([k, f])
 	L.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
@@ -2706,7 +2717,7 @@ func _ord_sync() -> void:
 	var pad: float = float(od_tpl.no.r[1]) - float(Snap.find(od_shell.no, "orders").r[1])
 	var ch := H + 2.0 * pad
 	var dy := maxf(0.0, OD_UL - ch)
-	var ssig := ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1))
+	var ssig: String = ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1)) + "|" + od_src + "|" + (G.w_all.WQ.info(od_src) if od_src != "" else "")
 	if ssig != od_shsig:
 		od_shsig = ssig
 		_od_shell(okn, m, dy)
@@ -2722,7 +2733,7 @@ func _ord_sync() -> void:
 		if q % 2 == 0 and rw > 0:
 			y += (hw if rows[rw - 1] else hn) + OD_GAP
 		var f: int = L[q][1]
-		var o: Dictionary = G.g.orders[f]
+		var o: Dictionary = _od_list()[f]
 		var at := Vector2(float(od_tpl.no.r[0]) + (q % 2) * OD_COL, y - od_scroll)
 		var full: bool = not rows[rw]
 		var sig := str(at) + JSON.stringify(o) + "|" + JSON.stringify(plan[f]) + "|" + str(cols.get(f, "")) + "|" + str(int(G.g.ngoc)) + "|" + str(od_ud.i == f) + "|" + str(full)
@@ -2761,6 +2772,8 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	var tw := _tw(tn, tn.text)
 	tn.r = [tn.r[0], tn.r[1], tw, tn.r[3]]
 	var em: Dictionary = tl[2]
+	if od_src != "":   # khách quán: "Giao được N/M khách" (tạp hóa: đơn)
+		_set_t(em, "đơn" if od_src == "taphoa" else "khách", float(em.r[0]))
 	_nshift(em, float(tn.r[0]) + tw + OD_GAP * 0.75 - float(em.r[0]))
 	var td := Snap.find(n, "odtd")
 	var tk: Array = td.kids
@@ -2775,6 +2788,12 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	bd.r = [bd.tr[0], bd.r[1], bw, bd.r[3]]
 	_set_t(td, td.text, x0 + float(tk[0].r[2]) + g + bw + g)
 	td.r = [x0, td.r[1], right - x0, td.r[3]]
+	if od_src != "":   # góc phải: sao + giá quán cơm (chạm đổi giá) / tạp hóa trễ / cà phê lượng khách
+		var inf: String = String(G.w_all.WQ.info(od_src))
+		td.kids = []
+		var iw := _tw(td, inf)
+		_set_t(td, inf, right - iw)
+		td.r = [right - iw, td.r[1], iw, td.r[3]]
 	# ít thẻ: khung thấp xuống (đầu bảng, khăn trên, hoa dời xuống; đáy giữ chỗ)
 	if dy > 0.0:
 		_od_low(Snap.find(n, "pwin"), dy)
@@ -2788,6 +2807,8 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	od_ul = ids.get("#orders")
 	od_ul._kids.clip_contents = true
 	_stop(od_ul)
+	if od_src == "quancom":
+		_click(_q(od_box, "odtd"), func(): G.w_all.WQ.gia_next(); od_shsig = ""; _ord_sync(), "down")
 	_click(ids.get("#pClose"), ord_close, "scale")
 	var bk = ids.get(".pbk")
 	if bk != null:
@@ -2829,7 +2850,10 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 		_set_t(on[q], String(o.who if q == 0 else o.shop), float(on[q].r[0]))
 		on[q].r = [on[q].r[0], on[q].r[1], on[q].tr[2], on[q].r[3]]
 		on[q].css["white-space"] = "nowrap"
-	if od_ud.i == f:
+	if od_src != "":   # khách quán: không có nút đổi đơn
+		var hq := Snap.find(nd, "odh")
+		hq.kids = hq.kids.filter(func(k): return not String(k.cls).split(" ").has("odsw"))
+	elif od_ud.i == f:
 		var hd := Snap.find(nd, "odh")
 		for q in hd.kids.size():
 			if String(hd.kids[q].cls).split(" ").has("odsw"):
@@ -2908,7 +2932,7 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 	if not ok:
 		# Đi lấy + nút bù bằng sen đỏ (mờ khi không đủ sen)
 		var acts := Snap.find(nd, "odacts")
-		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() else 0
+		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() and od_src == "" else 0
 		var kids := []
 		var get_n: Dictionary = {}
 		for k in acts.kids:
@@ -2984,8 +3008,18 @@ func _od_wait(o: Dictionary, full: bool, now: float) -> Dictionary:
 		for k in nd.kids:
 			Snap._move(k, Vector2(0, d))
 		nd.r = [nd.r[0], nd.r[1], nd.r[2], od_tpl.no.r[3]]
+	if od_src != "":   # khách quán tới theo giờ: không gọi sớm bằng sen
+		var wb := Snap.find(nd, "odb2")
+		_q_drop(nd, wb)
 	_od_dash(nd, 5.0, 0.35, 14.0)
 	return nd
+
+static func _q_drop(n: Dictionary, x: Dictionary) -> void:   # bỏ node x khỏi cây n
+	for k in n.get("kids", []):
+		if k == x:
+			n.kids.erase(k)
+			return
+		_q_drop(k, x)
 
 func _od_hook(b: Control, f: int) -> void:
 	_click(_q(b, "odgo"), func(): if not _od_dragged(): _od_deliver(f), "down")
@@ -2998,6 +3032,10 @@ func _od_dragged() -> bool:
 	return od_sc.moved()
 
 func _od_deliver(f: int) -> void:
+	if od_src != "":
+		G.w_all.WQ.giao(od_src, f)
+		_ord_sync()
+		return
 	var r = G.deliver(f)
 	if r is Dictionary and r.has("lack"):
 		_lack_open(r.lack, r.why, func(): _od_deliver(f))
@@ -3039,10 +3077,10 @@ func _od_kind(t: String) -> String:   # d$: món này lấy ở đâu (bản God
 const OD_PEN := {"ga": "Chuồng gà", "cuu": "Chuồng cừu", "bo": "Chuồng bò", "heo": "Chuồng heo", "de": "Chuồng dê"}
 
 func _od_get(f: int) -> void:   # g$
-	var pl: Array = G.ord_plan()
+	var pl: Array = G.ord_plan(null if od_src == "" else od_L)
 	if f >= pl.size() or pl[f] == null or pl[f].ok or pl[f].miss.is_empty():
 		return
-	var o: Dictionary = G.g.orders[f]
+	var o: Dictionary = _od_list()[f]
 	var e: String = pl[f].miss[0][0]
 	var r := int(pl[f].miss[0][1])
 	var nm: String = G.item_name(e)

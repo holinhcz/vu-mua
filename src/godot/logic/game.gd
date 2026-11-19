@@ -1828,11 +1828,12 @@ func ord_fill() -> bool:   # U3
 func ord_wait(o: Dictionary) -> bool:
 	return float(o.get("w", 0)) > _now_ms()
 
-func ord_plan() -> Array:   # zA: chia hàng trong kho cho các đơn, đơn đủ trước giữ hàng trước
+func ord_plan(L = null) -> Array:   # zA: chia hàng trong kho cho các đơn, đơn đủ trước giữ hàng trước (L: danh sách khác, vd khách quán)
+	var OL: Array = g.orders if L == null else L
 	var a := {}
 	var out := []
 	var cnt := func(r): return a[r] if a.has(r) else int(g.barn.get(r, 0))
-	for o in g.orders:
+	for o in OL:
 		if ord_wait(o):
 			out.append(null)
 			continue
@@ -1841,11 +1842,11 @@ func ord_plan() -> Array:   # zA: chia hàng trong kho cho các đơn, đơn đ�
 			for c in o.items:
 				a[c[0]] = cnt.call(c[0]) - int(c[1])
 		out.append({"ok": ok, "have": o.items.map(func(c): return int(c[1])) if ok else null, "miss": []})
-	for q in g.orders.size():
+	for q in OL.size():
 		var l = out[q]
 		if l == null or l.ok:
 			continue
-		var o: Dictionary = g.orders[q]
+		var o: Dictionary = OL[q]
 		l.have = o.items.map(func(c): return maxi(0, mini(cnt.call(c[0]), int(c[1]))))
 		var m := []
 		for f in o.items.size():
