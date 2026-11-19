@@ -1,8 +1,9 @@
 extends RefCounted
 # Bảng LÊN CẤP chép từ bản web (QH / TJ / KH / iL, giao diện u2lv).
 # Khung, thẻ quà, nút lấy đúng số đo bản web (res://ui/snap/lv5.json, chụp lúc lên cấp 5 còn 1 cấp chờ).
-# Quà mở khóa từng cấp 2–100 (MJ bản web) ở res://ui/snap/lv_qua.json; hình xưởng/chuồng (canvas Qv/Z5) và emoji
-# chụp từ chính bản web ở res://ui/img/lv/.
+# Quà mở khóa từng cấp 2–100: xu / sen / xưởng, chuồng (canvas Qv/Z5) / chức năng, đất, địa danh (emoji) ở
+# res://ui/snap/lv_qua.json (MJ bản web), hình ở res://ui/img/lv/. (bản 343) Cây trồng, cây ăn trái và món làm được
+# tính từ data lúc chạy (_gen): cây theo cấp mở, món theo cấp có đủ xưởng + nguyên liệu, hình ui/svg/kh.
 
 const Snap = preload("res://ui/snap.gd")
 const Box = preload("res://ui/box.gd")
@@ -85,7 +86,7 @@ func _card(it: Dictionary, t: int) -> Dictionary:
 	if k == "xu" and ic.kids.size() > 0:
 		ic.kids[0].src = "xuimg"
 	if k == "svg":
-		ic.svg = it.svg
+		ic.svg = FileAccess.get_file_as_string("res://ui/svg/kh/" + String(it.id) + ".svg")
 	elif k == "cv":
 		ic.tag = "div"
 		ic["pic"] = "res://ui/img/lv/" + String(it.ic) + ".png"
@@ -113,13 +114,82 @@ func _queue() -> Array:
 		G.g.lvq = []
 	return G.g.lvq
 
+# ------------------------------------------------------------------ quà từng cấp (bản 343)
+var GEN := {}    # cấp -> {"cay": [...], "mon": [...]}
+
+func gift_list(t: int) -> Array:   # xu, sen, cây, xưởng / chuồng, món, chức năng / đất / địa danh
+	if GEN.is_empty():
+		_gen()
+	var head := []
+	var cv := []
+	var emo := []
+	for it in Q.get(str(t), []):
+		var k := String(it.k)
+		if k == "xu" or k == "sen":
+			head.append(it)
+		elif k == "cv":
+			cv.append(it)
+		elif k == "emo":
+			emo.append(it)
+	var g: Dictionary = GEN.get(t, {})
+	return head + g.get("cay", []) + cv + g.get("mon", []) + emo
+
+func _gen() -> void:
+	var D = G.D
+	var lai: Dictionary = G._j("nong_trai/giong_lai")
+	var at := {}   # vật phẩm -> cấp có được
+	for k in D.crops:
+		at[k] = int(D.crops[k].lv)
+		if not lai.has(k):
+			_add(int(D.crops[k].lv), "cay", {"n": String(D.crops[k].name), "id": k, "k": "svg", "em": true})
+	var ei: Dictionary = G._j("nong_trai/cay_an_trai")
+	var ct: Dictionary = G._j("xay_dung/cong_trinh")
+	for f in ei:
+		var q := String(ei[f].p)
+		at[q] = mini(int(at.get(q, 999)), int(ei[f].lv))
+		_add(int(ei[f].lv), "cay", {"n": "Cây " + String(ct.get(f, {}).get("n", G.item_name(q))).to_lower(), "id": q, "k": "svg", "em": true})
+	var an: Dictionary = G._j("vat_nuoi/vat_nuoi")
+	var cm: Dictionary = G._j("vat_nuoi/chuong_mo_cap")
+	for a in an:
+		for m in [an[a].get("make", ""), an[a].get("make2", "")]:
+			if m != "":
+				at[m] = mini(int(at.get(m, 999)), int(cm.get(a, 1)))
+	var ws: Array = G.xw.T.keys()
+	ws.sort_custom(func(a, b): return int(G.xw.T[a].lv) < int(G.xw.T[b].lv))
+	var memo := {}
+	for w in ws:
+		for r in G.xw.T[w].rec:
+			var l := _rl(String(r), at, memo, {})
+			if l <= 100:
+				_add(maxi(l, 2), "mon", {"n": G.item_name(String(r)), "id": r, "k": "svg", "em": true})
+
+func _rl(r: String, at: Dictionary, memo: Dictionary, seen: Dictionary) -> int:   # cấp sớm nhất có món r
+	if memo.has(r):
+		return memo[r]
+	if at.has(r):
+		return at[r]
+	var R: Dictionary = G.xw.R
+	if not R.has(r) or seen.has(r) or not G.xw.T.has(String(R[r].w)) or not G.xw.T[R[r].w].rec.has(r):
+		return 1 if not R.has(r) else 999   # đồ câu / bắt / mua: có sẵn
+	seen[r] = true
+	var l := int(G.xw.T[R[r].w].lv)
+	for p in R[r]["in"]:
+		l = maxi(l, _rl(String(p[0]), at, memo, seen))
+	memo[r] = l
+	return l
+
+func _add(t: int, kind: String, it: Dictionary) -> void:
+	if not GEN.has(t):
+		GEN[t] = {"cay": [], "mon": []}
+	GEN[t][kind].append(it)
+
 # ------------------------------------------------------------------ mở (QH), nhận (TJ / KH), đóng (iL)
 func open() -> void:
 	var q := _queue()
 	if on or q.is_empty():
 		return
 	var t := int(q[0])
-	var L: Array = Q.get(str(t), [])
+	var L := gift_list(t)
 	var n: Dictionary = T.root.duplicate(true)
 	var wrap := Snap.find(n, "lvwrap")
 	var gb := Snap.find(n, "lvgifts")
