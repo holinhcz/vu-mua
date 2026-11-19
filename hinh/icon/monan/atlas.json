@@ -1735,5 +1735,45 @@
    455
   ],
   "nguon": "tấm ảnh người dùng (bản 321)"
+ },
+ "bun_bo_hue": {
+  "file": "bun_bo_hue.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   454
+  ],
+  "nguon": "tấm ảnh người dùng (bản 363)"
+ },
+ "mi_quang": {
+  "file": "mi_quang.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 363)"
+ },
+ "cao_lau": {
+  "file": "cao_lau.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 363)"
+ },
+ "bun_cha": {
+  "file": "bun_cha.png",
+  "bbox": [
+   41,
+   49,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 363)"
  }
 }

@@ -30,7 +30,7 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
 
 ## Hình tạm (bản 327) — chờ hình thật thì thay ui/svg/kh/<mã>.svg
-pho_bo (tạm hình hu_tieu_bv), bun_bo_hue (bun_rieu), mi_quang (hu_tieu), bun_cha (bun_cha_gio), banh_canh_cl (canh_chua), ech_xao (ga_xao).
+pho_bo (tạm hình hu_tieu_bv), banh_canh_cl (canh_chua), ech_xao (ga_xao).
 Cây tạm: toi (hình cây hanh, src/tools/cay/them_tam.py), la_e (hình cây rau_ram); icon toi / la_e lấy từ hinh/icon/anh (toi.png, lae.png).
 Nguyên liệu muc / cua / ech chưa có hình.
 
@@ -77,3 +77,6 @@ banh_khoai_mi (Lò bánh nướng), banh_tam_khoai_mi (Lò bánh quê) gắn hì
 
 ## Ruộng muối (bản 342) — hình tạm
 muoi_ot, muoi_tom, muoi_tieu (icon muối hột vẽ code).
+
+## Bản 363 — hình thật
+bun_bo_hue, mi_quang, bun_cha gắn vào game. cao_lau.png (Cao lầu) lưu sẵn, chưa có món trong game.
