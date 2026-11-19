@@ -2863,9 +2863,18 @@ func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) ->
 			oq.r = [x, oq.r[1], bw, oq.r[3]]
 			var sm := Snap.find(t, "", "small")
 			_set_t(sm, G.item_name(id), float(sm.r[0]))
-			sm.r = [sm.r[0], sm.r[1], maxf(10.0, x - float(sm.r[0]) - 2.0), sm.r[3]]
-			sm.tr = [sm.tr[0], sm.tr[1], minf(float(sm.tr[2]), float(sm.r[2])), sm.tr[3]]
-			sm.css["white-space"] = "nowrap"
+			var aw := maxf(10.0, x - float(sm.r[0]) - 4.0)
+			if float(sm.tr[2]) > aw:   # (bản 347) tên dài: xuống 2 hàng, canh giữa hàng theo chiều cao
+				var lh := float(sm.r[3])
+				var cy := float(sm.r[1]) + lh * 0.5
+				var dy := float(sm.tr[1]) - float(sm.r[1])
+				sm.r = [sm.r[0], cy - lh, aw, lh * 2.0]
+				sm.tr = [sm.tr[0], cy - lh + dy, aw, float(sm.tr[3]) + lh]
+				sm.css["white-space"] = "normal"
+			else:
+				sm.r = [sm.r[0], sm.r[1], aw, sm.r[3]]
+				sm.tr = [sm.tr[0], sm.tr[1], minf(float(sm.tr[2]), aw), sm.tr[3]]
+				sm.css["white-space"] = "nowrap"
 		else:
 			t = od_tpl.it_ph.duplicate(true)
 			_od_dash(t)
