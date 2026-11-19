@@ -138,10 +138,21 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 }
 func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
+	# góc bo, viền trong, vệt sáng, bóng: lấy nguyên chip chung (Snap.chip_look); chỉ thay nền + màu viền theo trạng thái
 	var C: Array = CHIPK[kind]
-	var n := _dbx(x, y, w, h, String(C[1]), 10.0)
+	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)")
+	n.cls = "ddchip"
+	Snap.chip_look(n, "ddchip", true)
+	n.css["background-color"] = String(C[1])
 	n.css["background-image"] = "linear-gradient(" + String(C[0]) + " 0%, " + String(C[1]) + " 50%, " + String(C[2]) + " 100%)"
-	n.css["box-shadow"] = String(C[3]) + " 0px 0px 0px " + ("1.5px" if kind == "now" else "1px") + " inset, rgba(255, 255, 255, 0.75) 0px 2px 0px 0px inset, rgba(120, 85, 25, 0.1) 0px 0px 8px 3px inset, rgba(60, 40, 15, 0.28) 0px 1px 2px 0px"
+	var sh := String(n.css["box-shadow"])
+	sh = String(C[3]) + sh.substr(sh.find(")") + 1)   # màu viền trong (lớp bóng đầu)
+	if kind == "now":
+		sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 1.5px inset")
+	var L := sh.split(") 0px 1px 2px 0px")   # bỏ lớp bóng đổ mờ dưới chip (lớp cuối, không inset)
+	if L.size() > 1:
+		sh = L[0].substr(0, L[0].rfind(", "))
+	n.css["box-shadow"] = sh
 	return n
 
 static var _ON := {}
@@ -264,11 +275,12 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	out.append_array(_dsec(hy, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày"))
 	var bx0 := X0 + 14.0
 	var bw := XW - 28.0
-	var iy := hy + 24.0
-	var by := iy + 12.0   # thanh chạy qua giữa các chip mốc
+	var iy := hy + 22.0
+	var ms := 44.0        # chip mốc cỡ ô ngày
+	var by := iy + ms * 0.5 - 3.5   # thanh chạy qua giữa các chip mốc
 	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
 	out.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
-	var ly := iy + 36.0
+	var ly := iy + ms + 5.0
 	var row: Dictionary = D.ddms.kids[1]
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
@@ -277,10 +289,10 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
-		var ring := _chip(cx - 17.0, iy, 34.0, 31.0, "got" if got else ("now" if ok or nxt else "fut"))
-		ring.kids = [_dic(cx - 12.5, iy + 3.0, 25.0, String(row.kids[j].kids[0].svg))]
+		var ring := _chip(cx - ms * 0.5, iy, ms, ms, "got" if got else ("now" if ok else "fut"))   # vàng = đủ ngày, chờ bấm Nhận
+		ring.kids = [_dic(cx - 16.0, iy + 6.0, 32.0, String(row.kids[j].kids[0].svg))]
 		if got:
-			ring.kids.append(_dtick(cx + 8.0, iy + 2.0, 10.0))
+			ring.kids.append(_dtick(cx + ms * 0.5 - 13.0, iy + 3.0, 10.0))
 		if ok and not got:
 			ring.act = E.eF.bind(n)
 		else:
@@ -300,10 +312,11 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var cw := (XW - g * 6.0) / 7.0
 	var gx := X0
 	var wy := cy
+	out.append(_chip(gx, wy, XW, 20.0, "fut"))
 	for i in 7:
-		out.append(_dt(gx + i * (cw + g), wy, cw, 14.0, DW[i], 10.0, 800, SUB))
+		out.append(_dt(gx + i * (cw + g), wy, cw, 20.0, DW[i], 11.5, 800, "rgb(200, 70, 60)" if i == 6 else BROWN))
 	var rows := mini(5, int(ceil((k + o) / 7.0)))   # lịch giấy: ngày 30, 31 tràn hàng 6 thì dồn lên ô trống hàng 1
-	var gy := wy + 18.0
+	var gy := wy + 25.0
 	var rh := minf(cw + 12.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
