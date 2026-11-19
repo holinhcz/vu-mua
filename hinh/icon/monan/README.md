@@ -74,3 +74,6 @@ mut_gung (mut_dau), mut_khoai (mut_chomchom), mut_tac (mut_mangcut), keo_chuoi (
 
 ## Cối xay + khoai mì (bản 341)
 banh_khoai_mi (Lò bánh nướng), banh_tam_khoai_mi (Lò bánh quê) gắn hình thật. Cây khoai_mi: icon hinh/icon/anh/khoaimi.png, hình cây trên ruộng tạm = cây khoai lang. Gạo, bột gạo, bột mì, bột nếp vẫn là icon vẽ code, chờ hình.
+
+## Ruộng muối (bản 342) — hình tạm
+muoi_ot, muoi_tom, muoi_tieu (icon muối hột vẽ code).
