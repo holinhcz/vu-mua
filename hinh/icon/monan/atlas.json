@@ -2894,5 +2894,35 @@
    452
   ],
   "nguon": "tấm ảnh người dùng (bản 382)"
+ },
+ "nuoc_dua": {
+  "file": "nuoc_dua.png",
+  "bbox": [
+   41,
+   49,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 384)"
+ },
+ "tom": {
+  "file": "tom.png",
+  "bbox": [
+   41,
+   132,
+   471,
+   379
+  ],
+  "nguon": "tấm ảnh người dùng (bản 384)"
+ },
+ "muc": {
+  "file": "muc.png",
+  "bbox": [
+   41,
+   81,
+   471,
+   430
+  ],
+  "nguon": "tấm ảnh người dùng (bản 384)"
  }
 }

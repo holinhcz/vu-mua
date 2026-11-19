@@ -201,3 +201,6 @@ cua. Lưu sẵn chưa có món: cua_bien, ba_khia.
 
 ## Bản 382 — hình thật
 ech.
+
+## Bản 384 — hình thật
+nuoc_dua, tom, muc.
