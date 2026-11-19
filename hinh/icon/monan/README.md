@@ -67,3 +67,6 @@ kho_muc, kho_ca_ro, bo_kho_say, kho_ga (kho_ca), me_say (xoai_say).
 
 ## Lò bánh tráng (bản 338) — hình tạm
 bt_nuong (bt_chabong), bt_muoi_tom (bt_tron), bt_me_chua (bt_me).
+
+## Lò rang hạt + cà phê (bản 339) — hình tạm
+thinh (me_rang), com_det (bap_rang), muoi_me (muoi_dp), caphe_rang (dp_rang), caphe_den (nuoc_mia), caphe_sua (sinh_to), qua_caphe (icon đậu phộng / mè), cây ft_caphe = hình cây xoài.
