@@ -141,6 +141,8 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var bef: Dictionary = n.get("::before", {})
 	if bef.get("pos", "") == "static" and bef.get("dsp", "") != "none" and (String(bef.get("bgi", "none")).begins_with("url(") or String(bef.get("mask", "none")).begins_with("url(")) and String(bef.get("w", "auto")).ends_with("px"):
 		icon = bef
+	if icon.is_empty() and String(n.get("text", "")).begins_with("✓ "):
+		n = _tick_lead(b, n, R, z)
 	if n.has("text") or not icon.is_empty():
 		_text(b, n, R, z, icon)
 	var order := []
@@ -181,6 +183,33 @@ static func _zi(pos: String, zi: String) -> float:
 	if zi == "auto" or zi == "" or float(zi) == 0.0:
 		return 0.5
 	return float(zi)
+
+static func _tick_lead(b: Control, n: Dictionary, R: Array, z: float) -> Dictionary:
+	# (bản 361) chữ "✓ Đã xây", "✓ Đạt"...: dấu ✓ thành ảnh tick chung (ui/img/bong/tick.png) đứng trước chữ
+	n = n.duplicate()
+	var c: Dictionary = n.css
+	var s: String = String(n.text).substr(2)
+	var fs := Css.px(c.get("font-size", "15px")) * z
+	var tw: float = Box.text_w(s, fs, int(c.get("font-weight", "400")))
+	var ts := fs * 1.05
+	var gp := fs * 0.3
+	var al: String = c.get("text-align", "center")
+	var ax := 0.0 if (al == "start" or al == "left") else (1.0 if (al == "end" or al == "right") else 0.5)
+	var bx: float
+	var bw: float
+	var by: float
+	var bh: float
+	if n.has("tr"):
+		bx = float(n.tr[0]); bw = float(n.tr[2]); by = float(n.tr[1]); bh = float(n.tr[3])
+	else:
+		var pl := Css.px(c.get("padding-left", "0px")) * z
+		var pr := Css.px(c.get("padding-right", "0px")) * z
+		bx = float(R[0]) + pl; bw = float(R[2]) - pl - pr; by = float(R[1]); bh = float(R[3])
+	var x0 := bx + (bw - (ts + gp + tw)) * ax
+	n.text = s
+	n.tr = [x0 + ts + gp, by, tw + 1.0, bh]
+	b.pic(Css.svg_tex(Css.img_svg("res://ui/img/bong/tick.png"), ts, ts), Rect2(x0 - float(R[0]), by - float(R[1]) + (bh - ts) * 0.5, ts, ts))
+	return n
 
 static func _text(b: Control, n: Dictionary, R: Array, z: float, icon: Dictionary) -> void:
 	var c: Dictionary = n.css

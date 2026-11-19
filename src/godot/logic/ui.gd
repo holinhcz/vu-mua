@@ -36,7 +36,6 @@ var bfp = null               # vòng hiệu ứng dưới ô giờ (ui_bf.gd)
 var setp = null              # bảng CÀI ĐẶT (ui_set.gd)
 var vlp = null               # bảng NHÀ DÂN (ui_vl.gd)
 var ngp = null               # bảng NGHỀ THỦ CÔNG (ui_ng.gd)
-var ng_bdg: Control = null   # số đơn làng giao được trên nút Nghề (ngBdg)
 var slp = null               # bảng SỔ LÀNG (ui_sl.gd)
 var utp = null               # bảng UY TÍN LÀNG (ui_ut.gd)
 var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
@@ -56,8 +55,6 @@ var klp = null               # bảng KỶ LỤC (ui_kl.gd)
 var klcp = null              # thẻ TRÁI KHỦNG (ui_klc.gd)
 var gdp = null               # SỔ TAY (ui_gd.gd)
 var rkp = null               # BẢNG XẾP HẠNG (ui_rk.gd)
-var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ làng (#bookBdg)
-var sys_bdg: Control = null  # số việc chờ trên nút Hệ Thống (#sysBdg: htRed)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var cgp = null               # CỜ GÁNH (ui_cg.gd, #cgBtn trong Giải trí)
@@ -763,57 +760,16 @@ func _build_dock() -> void:
 				_click(b, func(): dock_open(false); bdp.open_shop(), "scale94")
 			elif lab == "Nghề":
 				_click(b, func(): dock_open(false); ng_open(), "scale94")
-				ng_bdg = _bdg_make(d, b)
 			elif lab.contains("Sổ làng"):
 				_click(b, func(): dock_open(false); sl_open(), "scale94")
-				sl_bdg = _bdg_make(d, b)
 			elif lab.contains("Câu cá"):
 				_click(b, func(): dock_open(false); pcp.open("cau"), "scale94")
 			elif lab.contains("Cờ gánh"):
 				_click(b, func(): dock_open(false); cgp.open(), "scale94")
 			elif lab.contains("Hệ Thống"):
 				_click(b, func(): dock_open(false); sys_open(), "scale94")
-				sys_bdg = _bdg_make(d, b)
 			else:
 				_click(b, func(): say(SOON), "scale94")
-
-func _bdg_make(d: Dictionary, b: Control) -> Control:   # #ngheBdg, #bookBdg: huy hiệu đỏ như số trên nút Kho, ẩn khi 0
-	var sn = null
-	for sel in d:
-		for n in d[sel]:
-			var f := Snap.find(n, "bdg")
-			if not f.is_empty() and f.get("id", "") == "stockN":
-				sn = f
-	if sn == null:
-		return null
-	var n0: Dictionary = sn.duplicate(true)
-	var br: Rect2 = b.get_global_rect()
-	var bs: Dictionary = b.get_meta("snap", {})
-	var ks: Dictionary = {}
-	for k in d["nav.dock"][0].kids:
-		if k.get("id", "") == "stockPill":
-			ks = k
-	n0.text = "0"
-	Snap._move(n0, Vector2(float(bs.r[0]) - float(ks.r[0]), float(bs.r[1]) - float(ks.r[1])))
-	var ids2 := {}
-	var bd: Control = _build(n0, ids2, Vector2(float(bs.r[0]), float(bs.r[1])))
-	bd.visible = false
-	b.add(bd)
-	return bd
-
-func _bdg_set(bd: Control, n: int) -> void:
-	if bd == null:
-		return
-	bd.visible = n > 0
-	if n > 0 and bd.texts.size():
-		bd.set_text(0, str(n))
-
-func _ng_bdg() -> void:   # ngBdg, lV
-	if G.w_all == null:
-		return
-	_bdg_set(ng_bdg, G.w_all.WL.ng_red())
-	_bdg_set(sl_bdg, G.w_all.WCA.lv_red())
-	_bdg_set(sys_bdg, G.w_all.WS.htRed())
 
 func _buttons(b: Control, out: Array) -> Array:
 	# theo thứ tự trong trang (Snap.build xếp con theo z-index để vẽ: nút "on" bị đẩy xuống cuối)
@@ -3802,7 +3758,6 @@ func _process(dt: float) -> void:
 	for p in _pans():
 		if p != null and not p.busy():
 			p.step(dt)
-	_ng_bdg()
 	_auto_sync()
 	if xfp != null:
 		xfp.step(dt)

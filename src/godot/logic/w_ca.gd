@@ -890,13 +890,6 @@ func bs_cur(id: String) -> int:
 func tb(t: Dictionary) -> bool:   # tB: nhận được
 	return not _tr(tc().tt.get(t.id)) and bs_cur(t.id) >= int(t.max)
 
-func lv_red() -> int:   # lV: số danh hiệu chờ nhận (#bookBdg)
-	var n := 0
-	for t in bs_list():
-		if tb(t):
-			n += 1
-	return n
-
 func cv(id: String) -> void:   # cV: nhận danh hiệu
 	var a = null
 	for e in bs_list():

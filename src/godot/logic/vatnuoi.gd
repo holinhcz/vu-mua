@@ -177,7 +177,7 @@ func _after(t: String, j: int) -> void:   # _R: thân thì có khi cho thêm; ch
 	var e: Dictionary = list(t)[j]
 	var r: Dictionary = Q[t]
 	var th := float(e.get("t", 0))
-	if th >= 3.0 and randf() < 0.1 * (th - 2.0):
+	if th >= 3.0 and randf() < 0.1 * (th - 2.0) and G.kho_room() > 0:   # (bản 361) quà thêm chỉ khi kho còn chỗ
 		G.g.barn[r.make] = int(G.g.barn.get(r.make, 0)) + 1
 		var at := spot(t, j)
 		G.float_text.emit(at.x, at.y - 0.9, "♥ thêm 1 " + G.item_name(r.make).to_lower())

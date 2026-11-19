@@ -238,14 +238,22 @@ func _pen_act(t: String, k: String) -> void:
 	var F = U.F
 	var L: Array = V.list(t)
 	if k == "fast":   # Thu hết: nhân vật đi thu từng con
-		var n := 0
+		var rd := []
 		for j in L.size():
 			if V.ready(t, L[j]):
-				F.vn_job(t, j, "collect")
-				n += 1
-		if n == 0:
+				rd.append(j)
+		if rd.is_empty():
 			G.toast.emit("Chưa con nào có " + G.item_name(V.Q[t].make).to_lower() + ".")
 			return
+		var room: int = G.kho_room()   # (bản 361) kho còn ít chỗ: thu tới đâu hay tới đó, các con còn lại để thu sau
+		if room <= 0:
+			G.kho_fit(1)
+			return
+		if room < rd.size():
+			G.toast.emit("Kho còn " + str(room) + " chỗ: thu " + str(room) + "/" + str(rd.size()) + " con, mấy con kia để dọn kho rồi thu tiếp.")
+			rd = rd.slice(0, room)
+		for j in rd:
+			F.vn_job(t, j, "collect")
 		U.rm_close()
 	elif k == "star":   # Cho ăn hết: đủ thức ăn tới đâu cho tới đó
 		var feed: String = V.Q[t].feed

@@ -320,10 +320,7 @@ func Wx(t: int, a: int) -> bool:   # Wx
 	return n is Dictionary and int(n.get("day", -1)) == G.day() and n.get("d") is Dictionary and bool(n.d.get(str(t) + "_" + str(a), 0))
 
 func dQ(t: int, a: int) -> void:   # dQ
-	var n: int = G.day()
-	if not (G.g.get("cho") is Dictionary) or int(G.g.cho.get("day", -1)) != n:
-		G.g.cho = {"day": n, "d": {}}
-	G.g.cho.d[str(t) + "_" + str(a)] = 1
+	_cho_d().d[str(t) + "_" + str(a)] = 1
 
 # ------------------------------------------------------------------ hàng của 4 ghe hôm nay
 func s2() -> Array:   # s2: món đang làm ra được
@@ -477,6 +474,10 @@ func jd() -> Array:   # jd (+ lớp bọc: lần sinh mới thì đổi món kh�
 				var s: Dictionary = l[f][h]
 				if s.k == "item":
 					G8(s, G.day() * 11 + f * 5 + h)
+				var pb := int(_cho_d().b.get(str(f) + "_" + str(h), 0))   # (bản 361) ô đã mua một phần hôm nay
+				if pb > 0 and s.t == "ban" and int(s.get("q", 0)) > pb:
+					s.xu = int(s.xu) - _r(float(s.xu) * pb / int(s.q))
+					s.q = int(s.q) - pb
 	return l
 
 func G9(t: String, a: int) -> bool:   # G9
@@ -522,13 +523,51 @@ func _dd_room(t: int, a: int) -> int:   # lớp bọc A1 của Dd: số chỗ kh
 
 func Dd(t: int, a: int) -> bool:   # Dd (+ lớp bọc A1: kho đủ chỗ; + j9 sau khi chạy)
 	var need := _dd_room(t, a)
-	if need > 0 and not G.kho_fit(need):
-		return false
-	var r := _dd(t, a)
+	var r := false
+	if need > 0 and G.kho_room() < need:
+		# (bản 361) kho còn ít chỗ: hàng mua lẻ được (hạt giống, đồ) thì mua tới đâu hay tới đó, phần còn lại nằm ở sạp
+		var e: Dictionary = jd()[t][a]
+		if G.kho_room() <= 0 or e.t != "ban" or not (e.k in ["item", "giong"]):
+			G.kho_fit(need)
+			return false
+		r = _dd_part(t, a, G.kho_room())
+	else:
+		r = _dd(t, a)
 	var f := _x("j9")
 	if f.is_valid():
 		f.call()
 	return r
+
+func _dd_part(t: int, a: int, c: int) -> bool:   # mua c / q món của sạp t ô a, trả tiền theo phần
+	if not b2():
+		_ta("Chợ đã tan. Mai 5 giờ sáng ghé lại nha.")
+		return false
+	var e: Dictionary = jd()[t][a]
+	if Wx(t, a):
+		return false
+	var q := int(e.q)
+	var xu := _r(float(e.xu) * c / q)
+	if int(G.g.coins) < xu:
+		_ta("Chưa đủ " + G.fmt_n(xu) + " xu.")
+		return false
+	G.g.coins = int(G.g.coins) - xu
+	_add(e.id, c)
+	e.q = q - c
+	e.xu = int(e.xu) - xu
+	_cho_d().b[str(t) + "_" + str(a)] = int(_cho_d().b.get(str(t) + "_" + str(a), 0)) + c
+	_ta("Kho còn " + str(c) + " chỗ: mua " + ho(e.id, c) + " giá " + G.fmt_n(xu) + " xu. Còn " + str(int(e.q)) + " để ở sạp, dọn kho rồi mua tiếp.")
+	qi("cho")
+	G.vib(10)
+	G.mark()
+	return true
+
+func _cho_d() -> Dictionary:   # g.cho hôm nay: d = ô đã mua hết, b = ô đã mua một phần (số món)
+	var n: int = G.day()
+	if not (G.g.get("cho") is Dictionary) or int(G.g.cho.get("day", -1)) != n:
+		G.g.cho = {"day": n, "d": {}}
+	if not (G.g.cho.get("b") is Dictionary):
+		G.g.cho.b = {}
+	return G.g.cho
 
 func _dd(t: int, a: int) -> bool:   # Dd gốc
 	if not b2():
@@ -792,11 +831,14 @@ func bZ(t) -> Array:   # bZ: 2 giống nhà t để dư hôm nay
 func Um(t: String) -> bool:   # Um "khóa|giống|số|giá|tối đa" (+ lớp bọc A1: kho đủ chỗ); true = đã mua
 	var a := t.split("|")
 	var need := 0 if (a.size() > 1 and a[1].begins_with("@")) else (int(a[2]) if a.size() > 2 and int(a[2]) else 1)
-	if need > 0 and not G.kho_fit(need):
-		return false
+	var r := int(a[2])
+	if need > 0 and G.kho_room() < need:
+		if G.kho_room() <= 0 or a[1].begins_with("@"):
+			G.kho_fit(need)
+			return false
+		r = G.kho_room()   # (bản 361) kho còn ít chỗ: mua tới đâu hay tới đó
 	var n := a[0]
 	var e := a[1]
-	var r := int(a[2])
 	var o := int(a[3])
 	var l := int(a[4])
 	if G6(n, l) < r:
