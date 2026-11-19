@@ -2844,5 +2844,15 @@
    454
   ],
   "nguon": "tấm ảnh người dùng (bản 379)"
+ },
+ "xiu_mai": {
+  "file": "xiu_mai.png",
+  "bbox": [
+   41,
+   85,
+   471,
+   427
+  ],
+  "nguon": "tấm ảnh người dùng (bản 380)"
  }
 }

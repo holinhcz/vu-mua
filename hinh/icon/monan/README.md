@@ -192,3 +192,6 @@ tuong_ot, dua_mon. Lưu sẵn chưa có món: kieu_muoi.
 
 ## Bản 379 — hình thật
 muoi_hot, muoi_me, muoi_dp.
+
+## Bản 380 — hình thật
+xiu_mai.
