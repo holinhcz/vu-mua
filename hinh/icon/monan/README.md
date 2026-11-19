@@ -102,3 +102,6 @@ me_say, kho_ga, kho_ca_ro, kho_muc, bo_kho_say, nem_nuong, catim_mo_hanh, ca_keo
 
 ## Bản 370 — hình thật
 ech_xao, de_xao, bo_xao, ga_xao.
+
+## Bản 371 — hình thật
+ca_chep_kho, ech_kho, cua_rang_me, cha_muc, cha_cua, banh_canh_cl. Lưu sẵn chưa có món: canh_bau_tom, canh_kho_qua.
