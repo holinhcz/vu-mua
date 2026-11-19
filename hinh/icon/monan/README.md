@@ -129,3 +129,6 @@ dua_leo_muoi, dua_cai, ca_muoi, dua_hanh.
 
 ## Bản 378 — hình thật
 tuong_ot, dua_mon. Lưu sẵn chưa có món: kieu_muoi.
+
+## Bản 379 — hình thật
+. Lưu sẵn chưa có món: ot_ngam_toi, dua_du_du, mam_thai.

@@ -2804,5 +2804,35 @@
    471
   ],
   "nguon": "tấm ảnh người dùng (bản 378)"
+ },
+ "ot_ngam_toi": {
+  "file": "ot_ngam_toi.png",
+  "bbox": [
+   120,
+   41,
+   391,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 379)"
+ },
+ "dua_du_du": {
+  "file": "dua_du_du.png",
+  "bbox": [
+   118,
+   41,
+   394,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 379)"
+ },
+ "mam_thai": {
+  "file": "mam_thai.png",
+  "bbox": [
+   123,
+   41,
+   389,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 379)"
  }
 }
