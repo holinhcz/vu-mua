@@ -3,13 +3,15 @@ extends "res://logic/ui_hx.gd"
 #  - "Quà 7 ngày đầu" (chỉ khi chưa nhận hết): lưới 7 thẻ quà, thẻ hôm nay có nút Nhận.
 #  - "Điểm danh tháng": 4 mốc 7/14/21/28 ngày, số ngày đã điểm danh, lịch tháng (chạm hôm nay / ngày lỡ để điểm danh bù).
 # Mẫu: ui/snap/dd.json (chụp bản web, tọa độ tính từ đỉnh thân / đỉnh hàng tab). Luật ở w_ev.gd.
+# (bản 385) Khung cỡ Kho hàng (#pov .pwin: x 0..338, y 85,4..610): mẫu dựng ở hộp giữa màn rồi nới ngang (_wx) và kéo cao (_hx).
 
 var E          # w_ev.gd
 var D := {}
 var cd := "7"  # tab đang mở
 
 const CX := 30.64   # bước cột lịch
-const CY := 25.5    # bước hàng lịch
+const CY := 30.0    # bước hàng lịch (bản 385: ô cao hơn; khung Kho nới ngang x1,4 nên ô gần vuông)
+const CH := 27.5    # cao ô lịch
 
 func _init(ui, wev) -> void:
 	super(ui)
@@ -101,13 +103,14 @@ func _tab7() -> Array:
 			c.kids.append(em)
 		elif d and i == p:   # hôm nay: nhận
 			c.cls += " today"
-			if int(E.D7[i].get("big", 0)) != 2:
-				c.css["box-shadow"] = D.sh_today
+			c.css["box-shadow"] = "rgb(222, 160, 40) 0px 0px 0px 2px inset, rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"   # (bản 385) hôm nay: viền vàng như lịch tháng
 			var bb: Dictionary = c.kids.filter(func(k): return k.tag == "b")[0]
 			var ib := _cl(D.i7)
 			_mv(ib, float(c.r[0]) + (float(c.r[2]) - float(ib.r[2])) * 0.5, float(bb.r[1]) + float(bb.r[3]) + 4.5)
 			c.kids.append(ib)
 			c.act = E.tF
+		else:   # chưa tới: mờ nhẹ
+			c.css.opacity = "0.7"
 	g.r[3] = y2 + rh[1] - y1
 	var out := [g]
 	var bot: float = y2 + rh[1]
@@ -166,38 +169,142 @@ func _tabm() -> Array:
 	var sl: Dictionary = sm.kids[1]
 	_set_txt(sl, "Điểm danh bù: " + str(5 - M) + " lần còn lại · " + str(3 + M) + " sen đỏ/lần")
 	out.append(sm)
-	# lịch tháng
+	# lịch tháng (bản 385): ô to hơn, trạng thái đổi cả ô: đã nhận (mờ + tick), hôm nay (viền vàng, chạm nhận),
+	# lỡ (nền xám, chạm hỏi lại rồi bù bằng sen đỏ), chưa tới (quà mờ); ngày 7/14/21/28 viền đỏ
 	var cal := _cl(D.cal)
 	_set_txt(cal.kids[0], "Tháng " + str(E.q8() % 100) + "/" + str(E.q8() / 100), "center")
 	var x0 := float(D.dde.r[0])
 	var y0 := float(D.dde.r[1])
-	for t in k:
-		var de := _cl(D.dde)
-		_mv(de, x0 + t * CX, y0)
-		cal.kids.append(de)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
 		var Eg: bool = E.got(w)
 		var N := w == r
 		var z := w < r and not Eg
-		var key := "gottoday" if Eg and N else ("got" if Eg else ("today" if N else ("miss" if z else "fut")))
-		var c := _cl(D.cell[key])
-		_mv(c, x0 + (gi % 7) * CX, y0 + (gi / 7) * CY)
-		if N:   # .ddc.today: viền xanh tròn (bản chụp không bắt được, lấy computed style của web)
-			for sd in ["top", "right", "bottom", "left"]:
-				c.css["border-" + sd] = "1.33333px solid rgb(62, 154, 37)"
-			c.css["border-radius"] = "999px"
-			c.css["background-color"] = "rgb(255, 255, 255)"
-			c.css["box-shadow"] = "rgba(62, 154, 37, 0.25) 0px 0px 0px 2px"
-		var sml: Dictionary = c.kids[0]
-		_set_txt(sml, str(w))
-		c.kids[1].svg = D.ic[String(E.aF(w).ic)]
+		var c := _cell(w, Eg, N, z, x0 + (gi % 7) * CX, y0 + (gi / 7) * CY)
 		if N and not Eg:
 			c.act = E.tA.bind(w, false)
 		elif z:
-			c.act = E.tA.bind(w, true)
+			c.act = _bu_ask.bind(w, 3 + M)
 		cal.kids.append(c)
 	var rows := int(ceil((k + o) / 7.0))
 	cal.r[3] = (y0 - float(cal.r[1])) + rows * CY - 3.0
 	out.append(cal)
+	if E.q9():   # nút Điểm danh hôm nay dưới lịch
+		var bt := _cl(D.i7)
+		var bw := 150.0
+		var bx := float(cal.r[0]) + (float(cal.r[2]) - bw) * 0.5
+		var byy := float(cal.r[1]) + float(cal.r[3]) + 8.0
+		bt.r = [bx, byy, bw, 26.0]
+		bt.erase("tr")
+		bt.css = bt.css.duplicate()
+		bt.css["font-size"] = "13px"
+		bt.css["line-height"] = "26px"
+		bt.css["text-align"] = "center"
+		bt.text = "Điểm danh hôm nay"
+		var bb := {"tag": "button", "id": "", "cls": "ddgo", "z": float(bt.get("z", 1.0)), "css": {"background-color": "rgba(0, 0, 0, 0)"}, "r": bt.r.duplicate(), "kids": [bt]}
+		bb.act = E.tA.bind(r, false)
+		out.append(bb)
+		return [out, byy + 26.0 + 10.5]
 	return [out, float(cal.r[1]) + float(cal.r[3]) + 10.5]
+
+const C_GOLD := "rgb(222, 160, 40)"
+const C_RED := "rgb(214, 84, 52)"
+
+func _cell(w: int, got: bool, now: bool, miss: bool, x: float, y: float) -> Dictionary:   # một ô lịch tháng
+	var c := _cl(D.cell["got" if got else "fut"])
+	var ox := float(c.r[0])
+	var oy := float(c.r[1])
+	var W := float(c.r[2])
+	c.r = [x, y, W, CH]
+	c.css = c.css.duplicate()
+	var sml: Dictionary = c.kids[0]
+	_set_txt(sml, str(w))
+	sml.r = [x + 3.0, y + 2.0, float(sml.r[2]), float(sml.r[3])]
+	if sml.has("tr"):
+		sml.erase("tr")
+	var ic: Dictionary = c.kids[1]
+	ic.svg = D.ic[String(E.aF(w).ic)]
+	var s := 18.0
+	ic.r = [x + (W - s) * 0.5, y + 8.5, s, s]
+	ic.css = ic.css.duplicate()
+	var kids := [sml, ic]
+	var bd := ""
+	if now:
+		bd = "1.5px solid " + C_GOLD
+		c.css["background-color"] = "rgb(255, 255, 255)"
+		c.css["box-shadow"] = "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
+	elif w % 7 == 0:
+		bd = "1.33333px solid " + C_RED
+	if bd != "":
+		for sd in ["top", "right", "bottom", "left"]:
+			c.css["border-" + sd] = bd
+	if got:   # mờ + tick góc phải trên
+		ic.css["opacity"] = "0.45"
+		var em: Dictionary = c.kids[2]
+		em.r = [x + W - 11.0, y + 1.5, 10.0, 10.0]
+		if em.has("tr"):
+			em.erase("tr")
+		kids.append(em)
+	elif miss:   # lỡ: nền xám (giá bù ở dòng tóm tắt, chạm thì hỏi lại)
+		c.css["background-color"] = "rgb(230, 224, 208)"
+		ic.css["opacity"] = "0.4"
+	elif not now:   # chưa tới
+		ic.css["opacity"] = "0.55"
+	c.kids = kids
+	return c
+
+func _bu_ask(w: int, cost: int) -> void:   # ngày lỡ: hỏi lại rồi mới bù
+	U.xfp._ask(null, cost, "Điểm danh bù ngày " + str(w) + "?", "", func(): E.tA(w, true))
+
+# ------------------------------------------------------------------ khung cỡ Kho hàng (bản 385)
+const KX := 0.0       # .pwin của Kho
+const KY := 85.4
+const KW := 338.0
+const KH := 524.6
+var _ox := 48.2       # mép trái hộp mẫu (.hxwrap)
+var _sx := 1.0
+
+func _wx(n: Dictionary, dd = null) -> void:   # nới ngang: khối nền (không chữ, không hình) giãn theo; chữ / hình giữ cỡ,
+	# dời theo tâm; chữ nằm trong chữ (đoạn chữ nhiều kiểu) dời cùng một khoảng với chữ ngoài (dd)
+	var R: Array = n.r
+	var keep: bool = n.has("svg") or String(n.get("text", "")) != "" or dd != null
+	var d = null
+	if keep:
+		if dd == null:
+			var cx := float(R[0]) + float(R[2]) * 0.5
+			dd = KX + (cx - _ox) * _sx - float(R[2]) * 0.5 - float(R[0])
+		d = dd
+		n.r = [float(R[0]) + float(dd), R[1], R[2], R[3]]
+		if n.has("tr"):
+			n.tr = [float(n.tr[0]) + float(dd), n.tr[1], n.tr[2], n.tr[3]]
+	else:
+		n.r = [KX + (float(R[0]) - _ox) * _sx, R[1], float(R[2]) * _sx, R[3]]
+		if n.has("tr"):
+			n.tr = [KX + (float(n.tr[0]) - _ox) * _sx, n.tr[1], n.tr[2], n.tr[3]]
+	for k in n.get("kids", []):
+		if k is Dictionary and k.has("r"):
+			_wx(k, d)
+
+func _hx(ov: Dictionary, kids: Array, ch: float) -> void:   # khung đặt đúng chỗ, đúng cỡ Kho; thân cao hết phần còn lại
+	var wr := _find(ov, "hxwrap")
+	var bd := _find(ov, "hxbody")
+	_ox = float(wr.r[0])
+	_sx = KW / float(wr.r[2])
+	for k in wr.kids:
+		_wx(k)
+	wr.r = [KX, wr.r[1], KW, wr.r[3]]
+	for k in kids:
+		_wx(k)
+	var dh := KH - float(wr.r[3])
+	bd.r[3] = float(bd.r[3]) + dh
+	var hin := _find(wr, "hxin")
+	if not hin.is_empty():
+		hin.r[3] = float(hin.r[3]) + dh
+	wr.r[3] = KH
+	var dy := KY - float(wr.r[1])
+	Snap._move(wr, Vector2(0, dy))
+	for k in kids:
+		Snap._move(k, Vector2(0, dy))
+	_tre_box(wr)
+	_mount(_ovl(ov), bd, kids, float(bd.r[1]), ch)
+	_wire_ov(".hxwrap")

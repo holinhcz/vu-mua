@@ -284,6 +284,9 @@ func ui_setup(ui) -> void:
 	pills.position = Vector2(21.0, 325.44) * Css.K   # .xpills: dưới thẻ mục tiêu bên trái
 	pills.add_theme_constant_override("separation", int(round(4.5 * Css.K)))
 	U.root.add_child(pills)
+	var hq = U.hud_roots.get(".hudq")   # (bản 385) cột việc nằm ngang tầng HUD: dưới mọi bảng (Kho, Điểm danh...)
+	if hq != null and hq.get_parent() == U.root:
+		U.root.move_child(pills, hq.get_index() + 1)
 	# Mt.mode / qc / bận
 	var mt := func() -> String: return String(U.bdp.mode) if U.bdp != null else "off"
 	for m in [WC, WL, WH]:
