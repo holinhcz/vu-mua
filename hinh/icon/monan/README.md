@@ -70,3 +70,6 @@ bt_nuong (bt_chabong), bt_muoi_tom (bt_tron), bt_me_chua (bt_me).
 
 ## Lò rang hạt + cà phê (bản 339) — hình tạm
 thinh (me_rang), com_det (bap_rang), muoi_me (muoi_dp), caphe_rang (dp_rang), caphe_den (nuoc_mia), caphe_sua (sinh_to), qua_caphe (icon đậu phộng / mè), cây ft_caphe = hình cây xoài.
+
+## Lò đường (bản 340) — hình tạm
+mut_gung (mut_dau), mut_khoai (mut_chomchom), mut_tac (mut_mangcut), keo_chuoi (keo_dua).
