@@ -1778,12 +1778,12 @@ func _fh0() -> Dictionary:
 		o = 1
 		h[v] = [x]
 	var M: String = D.shop.get(v, _pick(["quán cơm", "tiệm bánh", "quán chè", "nhà hàng", "quầy rau", "trường mầm non", "tiệm tạp hóa", "quán phở"]))
-	# (bản 346) món trong đơn: khoảng nửa đồ chế biến (ít nhất 1 khi tiệm có), nửa đồ thô, x (món chọn tiệm) luôn có
+	# (bản 346-348) món trong đơn: ít nhất 1 đồ chế biến khi tiệm có (đơn 3 món: 1 hoặc 2), còn lại đồ thô; x (món chọn tiệm) luôn có
 	var mk := func(w): return xw != null and xw.R.has(w)
 	var Pp: Array = h[v].filter(func(w): return w != x and mk.call(w))
 	var Rw: Array = h[v].filter(func(w): return w != x and not mk.call(w))
 	o = mini(o, 1 + Pp.size() + Rw.size())
-	var wp := maxi(1, o / 2) if (mk.call(x) or not Pp.is_empty()) else 0
+	var wp := (1 if o < 3 else randi_range(1, 2)) if (mk.call(x) or not Pp.is_empty()) else 0   # đơn 3 món: 1 hoặc 2 món chế biến
 	var n := [x]
 	while n.size() < o:
 		var np: int = n.filter(mk).size()
