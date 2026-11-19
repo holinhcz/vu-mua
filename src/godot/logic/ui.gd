@@ -60,6 +60,7 @@ var sl_bdg: Control = null   # số danh hiệu chờ nhận trên nút Sổ là
 var sys_bdg: Control = null  # số việc chờ trên nút Hệ Thống (#sysBdg: htRed)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
+var cgp = null               # CỜ GÁNH (ui_cg.gd, #cgBtn trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -97,6 +98,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	bfp = load("res://logic/ui_bf.gd").new(self)
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
+	cgp = load("res://logic/ui_cg.gd").new(self)
 	G.kho_full.connect(_kho_full)
 	var bdi := Node.new()
 	bdi.set_script(load("res://logic/ui_bd_in.gd"))
@@ -767,6 +769,8 @@ func _build_dock() -> void:
 				sl_bdg = _bdg_make(d, b)
 			elif lab.contains("Câu cá"):
 				_click(b, func(): dock_open(false); pcp.open("cau"), "scale94")
+			elif lab.contains("Cờ gánh"):
+				_click(b, func(): dock_open(false); cgp.open(), "scale94")
 			elif lab.contains("Hệ Thống"):
 				_click(b, func(): dock_open(false); sys_open(), "scale94")
 				sys_bdg = _bdg_make(d, b)
@@ -3654,6 +3658,8 @@ func _process(dt: float) -> void:
 		khp.step()
 	if spp != null:
 		spp.step()
+	if cgp != null:
+		cgp.step(dt)
 	_t -= dt
 	if _t <= 0.0:
 		_t = 0.25
