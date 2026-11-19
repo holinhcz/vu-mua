@@ -9,9 +9,6 @@ var E          # w_ev.gd
 var D := {}
 var cd := "7"  # tab đang mở
 
-const CX := 30.64   # bước cột lịch
-const CY := 30.0    # bước hàng lịch (bản 385: ô cao hơn; khung Kho nới ngang x1,4 nên ô gần vuông)
-const CH := 27.5    # cao ô lịch
 
 func _init(ui, wev) -> void:
 	super(ui)
@@ -43,6 +40,7 @@ func _build() -> void:
 	var ty := float(tabs.r[1])
 	var bd := _find(ov, "hxbody")
 	var by := float(bd.r[1])
+	_hb = float(bd.r[3]) + KH - float(_find(ov, "hxwrap").r[3])
 	var mo: int = E.q8() % 100
 	help = ["Điểm danh", "Vào làng mỗi ngày nhận quà · tháng " + str(mo) + "/" + str(E.q8() / 100)]
 	# hàng tab: Quà 7 ngày đầu (chấm f), Điểm danh tháng (chấm s)
@@ -77,58 +75,150 @@ func _build() -> void:
 		Snap._move(k, Vector2(0, by))
 	_hx(ov, kids, ch)
 
-# ------------------------------------------------------------------ tab Quà 7 ngày đầu
+# ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
+const X0 := 18.0      # mép trái nội dung thân (khung Kho, lề trong 9)
+const XW := 302.0     # rộng nội dung
+const BROWN := "rgb(74, 52, 20)"
+const SUB := "rgb(128, 98, 58)"
+const GOLD := "rgb(222, 160, 40)"
+const GREEN := "rgb(46, 150, 80)"
+var _hb := 455.0      # cao thân (tính ở _build theo khung Kho)
+
+func _dz() -> float:
+	return float(D.cal.kids[0].get("z", 0.75))
+
+func _cpx(v: float) -> String:   # đơn vị số đo -> px css của mẫu (nhân z lúc vẽ)
+	return str(snappedf(v / _dz(), 0.01)) + "px"
+
+func _dt(x: float, y: float, w: float, h: float, s: String, fs := 11.0, fw := 700, col := BROWN, al := "center") -> Dictionary:
+	var n := _cl(D.cal.kids[0])
+	n.erase("tr")
+	n.kids = []
+	n.r = [x, y, w, h]
+	n.text = s
+	n.css = n.css.duplicate()
+	n.css["font-size"] = _cpx(fs)
+	n.css["font-weight"] = str(fw)
+	n.css["color"] = col
+	n.css["text-align"] = al
+	n.css["line-height"] = _cpx(h)
+	n.css["white-space"] = "nowrap"
+	for k in ["padding-top", "padding-bottom", "padding-left", "padding-right"]:
+		n.css[k] = "0px"
+	return n
+
+func _dcard(x: float, y: float, w: float, h: float) -> Dictionary:   # thẻ kem như các thẻ trong Kho
+	var n := _cl(D.ddsum)
+	n.erase("text")
+	n.erase("tr")
+	n.kids = []
+	n.r = [x, y, w, h]
+	return n
+
+func _dbx(x: float, y: float, w: float, h: float, bg: String, rad := 8.0, bd := "", sh := "none") -> Dictionary:
+	var n := _cl(D.cell.fut)
+	n.kids = []
+	n.r = [x, y, w, h]
+	n.css = n.css.duplicate()
+	n.css["background-color"] = bg
+	n.css["background-image"] = "none"
+	n.css["border-radius"] = _cpx(rad)
+	n.css["box-shadow"] = sh
+	for sd in ["top", "right", "bottom", "left"]:
+		n.css["border-" + sd] = bd if bd != "" else "0px none rgb(0, 0, 0)"
+	return n
+
+func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
+	var n := _cl(D.cell.fut.kids[1])
+	n.r = [x, y, s, s]
+	n.svg = svg
+	n.css = n.css.duplicate()
+	n.css["opacity"] = str(op)
+	return n
+
+func _dtick(x: float, y: float, s := 11.0) -> Dictionary:   # dấu ✓ = ảnh tick chung (Snap)
+	var n := _cl(D.cell.got.kids[2])
+	n.erase("tr")
+	n.r = [x, y, s, s]
+	return n
+
+func _dbtn(x: float, y: float, w: float, h: float, s: String, cb: Callable) -> Dictionary:   # nút vàng (mẫu Nhận)
+	var n := _cl(D.i7)
+	n.erase("tr")
+	n.r = [x, y, w, h]
+	n.text = s
+	n.css = n.css.duplicate()
+	n.css["line-height"] = _cpx(h)
+	n.css["font-size"] = _cpx(11.5)
+	n.css["padding-left"] = "0px"
+	n.css["padding-right"] = "0px"
+	n.act = cb
+	return n
+
+func _dsay(s: String) -> void:
+	G.toast.emit(s)
+
+# ------------------------------------------------------------------ tab Quà 7 ngày đầu (bản 386): lưới 4 + 3, ô ngày 7 rộng gấp đôi
+const T7 := [["1.000 xu"], ["5 sen đỏ"], ["Gói", "vật liệu"], ["Xe đạp"], ["10 sen đỏ", "+ bùa EXP"], ["Vật liệu", "+ 3 phần cơm"], ["Xuồng ba lá", "+ 20 sen đỏ"]]
+
 func _tab7() -> Array:
 	var p: int = int(E.Sp().l7.get("n", 0))
 	var d: bool = E.Cp()
-	var g := _cl(D.dd7)
-	var cards: Array = g.kids
-	var rh := [float(cards[0].r[3]), float(cards[4].r[3])]
-	if d and p < 4:
-		rh[0] += 13.2
-	elif d and p < 7:
-		rh[1] += 12.6
-	var y1 := float(cards[0].r[1])
-	var y2: float = y1 + rh[0] + 4.5
-	for i in cards.size():
-		var c: Dictionary = cards[i]
+	var out := []
+	var g := 6.0
+	var cw := (XW - g * 3.0) / 4.0
+	var fh := 44.0
+	var rh := (_hb - 8.0 - g - g - fh - 10.0) * 0.5
+	var y1 := 8.0
+	var y2 := y1 + rh + g
+	for i in 7:
 		var row := 0 if i < 4 else 1
-		Snap._move(c, Vector2(0, (y1 if row == 0 else y2) - float(c.r[1])))
-		c.r[3] = rh[row]
-		if i < p:   # đã nhận
-			c.cls += " got"
-			c.css.opacity = D.op_got
-			var em := _cl(D.em7)
-			_mv(em, float(c.r[0]) + float(c.r[2]) - 15.75, float(c.r[1]) + 3.75)
-			c.kids.append(em)
-		elif d and i == p:   # hôm nay: nhận
-			c.cls += " today"
-			c.css["box-shadow"] = "rgb(222, 160, 40) 0px 0px 0px 2px inset, rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"   # (bản 385) hôm nay: viền vàng như lịch tháng
-			var bb: Dictionary = c.kids.filter(func(k): return k.tag == "b")[0]
-			var ib := _cl(D.i7)
-			_mv(ib, float(c.r[0]) + (float(c.r[2]) - float(ib.r[2])) * 0.5, float(bb.r[1]) + float(bb.r[3]) + 4.5)
-			c.kids.append(ib)
+		var col := i if i < 4 else i - 4
+		var x := X0 + col * (cw + g)
+		var y := y1 if row == 0 else y2
+		var w := cw * 2.0 + g if i == 6 else cw
+		var got := i < p
+		var now := d and i == p
+		var bg := "rgb(232, 245, 226)" if got else ("rgb(255, 255, 255)" if now else "rgb(255, 250, 240)")
+		var bd := "1.5px solid " + GOLD if now else ("1.33333px solid rgb(214, 84, 52)" if i == 6 else "1px solid rgb(225, 208, 170)")
+		var c := _dbx(x, y, w, rh, bg, 12.0, bd, "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px" if now else "none")
+		var op := 0.55 if got else (1.0 if now else 0.8)
+		var s := minf(w - 14.0, rh * 0.5) if i == 6 else minf(cw - 10.0, rh * 0.42)
+		var L: Array = T7[i]
+		var foot := 30.0   # chỗ nút Nhận / dấu tích dưới đáy ô
+		var bh := 16.0 + 8.0 + s + 8.0 + L.size() * 15.0
+		var top := y + maxf(6.0, (rh - foot - bh) * 0.5)
+		var kids := [_dt(x, top, w, 14.0, "Ngày " + str(i + 1), 11.0, 800, GOLD if now else SUB)]
+		var iy := top + 22.0
+		kids.append(_dic(x + (w - s) * 0.5, iy, s, String(D.dd7.kids[i].kids[1].svg), op))
+		var ty := iy + s + 8.0
+		for ln in L:
+			var sm: bool = String(ln).begins_with("+")
+			kids.append(_dt(x + 2.0, ty, w - 4.0, 15.0, String(ln), 11.0 if sm else 12.5, 600 if sm else 800, SUB if got or sm else BROWN))
+			ty += 15.0
+		if got:
+			kids.append(_dtick(x + (w - 18.0) * 0.5, y + rh - 26.0, 18.0))
+		elif now:
+			kids.append(_dbtn(x + (w - 58.0) * 0.5, y + rh - 29.0, 58.0, 22.0, "Nhận", E.tF))
 			c.act = E.tF
-		else:   # chưa tới: mờ nhẹ
-			c.css.opacity = "0.7"
-	g.r[3] = y2 + rh[1] - y1
-	var out := [g]
-	var bot: float = y2 + rh[1]
-	if not d:
-		var nt := _cl(D.note)
-		_mv(nt, float(nt.r[0]), bot + 7.5)
-		var st := _cl(nt)
-		st.erase("kids")
-		var q := p + 1
-		var h := _put(nt, [_r("Hôm nay nhận rồi, mai quay lại nhận quà ngày " + str(q) + (" (xe đạp)" if q == 4 else (" (xuồng ba lá)" if q == 7 else "")) + " nha!", st)])
-		nt.r[3] = h + _px(nt, "padding-top") + _px(nt, "padding-bottom")
-		out.append(nt)
-		bot = float(nt.r[1]) + float(nt.r[3])
-	return [out, bot + 10.5]
+		c.kids = kids
+		out.append(c)
+	var fy := y2 + rh + g + 4.0
+	var fc := _dcard(X0, fy, XW, fh)
+	var q := p + 1 if not d else p + 1
+	var ft := ""
+	if d:
+		ft = "Hôm nay nhận quà ngày " + str(p + 1) + ": " + " ".join(T7[p])
+	elif p < 7:
+		ft = "Mai nhận quà ngày " + str(q) + ": " + " ".join(T7[p])
+	fc.kids = [_dt(X0 + 10.0, fy, XW - 20.0, fh, ft, 12.0, 700, BROWN)]
+	out.append(fc)
+	return [out, fy + fh + 10.0]
 
-# ------------------------------------------------------------------ tab Điểm danh tháng
+# ------------------------------------------------------------------ tab Điểm danh tháng (bản 386)
+const R8S := ["1.500 xu", "5 sen đỏ", "Vật liệu lớn", "10 sen + bùa"]
+
 func _tabm() -> Array:
-	var a: Dictionary = E.Sp()
 	var e: Array = E.B8()
 	var v := e.size()
 	var r: int = E.ld()
@@ -136,125 +226,139 @@ func _tabm() -> Array:
 	var k: int = E.dow1()
 	var M: int = E.bu_n()
 	var out := []
-	# mốc 7/14/21/28 ngày
-	var ms := _cl(D.ddms)
-	var bar: Dictionary = ms.kids[0]
-	bar.kids[0].r[2] = float(bar.r[2]) * minf(1.0, v / 28.0)
-	var row: Dictionary = ms.kids[1]
-	var bs := []
+	# 1. đầu bảng: tháng + số ngày + thanh tiến độ có 4 mốc đúng vị trí ngày
+	var hy := 6.0
+	var hh := 92.0
+	var hc := _dcard(X0, hy, XW, hh)
+	var hk := []
+	hk.append(_dt(X0 + 12.0, hy + 8.0, XW - 24.0, 16.0, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày", 13.0, 800, BROWN, "left"))
+	var bx0 := X0 + 16.0
+	var bw := XW - 32.0
+	var by := hy + 58.0
+	hk.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
+	hk.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
+	var row: Dictionary = D.ddms.kids[1]
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
-		var pl: Dictionary = row.kids[j]
-		var dt := v >= int(R.n)
-		var W: bool = E.ms_got(int(R.n))
-		var b := _cl(pl)
-		if W or dt:
-			b = _cl(D.ch_got if W else D.ch_on)
-			_mv(b, float(pl.r[0]) + (0.0 if W else 21.0), float(pl.r[1]))
-			b.kids[0].svg = pl.kids[0].svg
-			b.kids[1].text = pl.kids[1].text
-		if dt and not W:
-			b.act = E.eF.bind(int(R.n))
-		bs.append(b)
-	row.kids = bs
-	out.append(ms)
-	# Đã điểm danh v/o ngày · bù
-	var sm := _cl(D.ddsum)
-	var sp: Dictionary = sm.kids[0]
-	var bst: Dictionary = _cl(sp.kids[0])
-	bst.erase("kids")
-	var st := _cl(sp)
-	st.erase("kids")
-	_put(sp, [_r("Đã điểm danh ", st), _r(str(v), bst), _r("/" + str(o) + " ngày", st)])
-	var sl: Dictionary = sm.kids[1]
-	_set_txt(sl, "Điểm danh bù: " + str(5 - M) + " lần còn lại · " + str(3 + M) + " sen đỏ/lần")
-	out.append(sm)
-	# lịch tháng (bản 385): ô to hơn, trạng thái đổi cả ô: đã nhận (mờ + tick), hôm nay (viền vàng, chạm nhận),
-	# lỡ (nền xám, chạm hỏi lại rồi bù bằng sen đỏ), chưa tới (quà mờ); ngày 7/14/21/28 viền đỏ
-	var cal := _cl(D.cal)
-	_set_txt(cal.kids[0], "Tháng " + str(E.q8() % 100) + "/" + str(E.q8() / 100), "center")
-	var x0 := float(D.dde.r[0])
-	var y0 := float(D.dde.r[1])
+		var n := int(R.n)
+		var cx := bx0 + bw * float(n) / o
+		var got: bool = E.ms_got(n)
+		var ok := v >= n
+		var s := 26.0
+		var ring := _dbx(cx - 17.0, hy + 27.0, 34.0, 30.0, "rgb(255, 244, 200)" if ok and not got else "rgba(0, 0, 0, 0)", 8.0, ("1.5px solid " + GOLD) if ok and not got else "")
+		ring.kids = [_dic(cx - s * 0.5, hy + 29.0, s, String(row.kids[j].kids[0].svg), 1.0 if ok else 0.45)]
+		if got:
+			ring.kids.append(_dtick(cx + 7.0, hy + 26.0, 11.0))
+		if ok and not got:
+			ring.act = E.eF.bind(n)
+		else:
+			ring.act = _dsay.bind("Mốc " + str(n) + " ngày: " + String(R.t) + ("" if ok else " (còn " + str(n - v) + " ngày)"))
+		hk.append(ring)
+		hk.append(_dt(cx - 30.0, by + 10.0, 60.0, 12.0, (str(n) + " ngày") if not (ok and not got) else "Nhận", 10.0, 800, GREEN if got else (GOLD if ok else SUB)))
+		hk.append(_dt(cx - 34.0, by + 21.0, 68.0, 11.0, R8S[j], 9.5, 600, SUB))
+	hc.kids = hk
+	out.append(hc)
+	# 2. thẻ hôm nay
+	var ty := hy + hh + 6.0
+	var th := 50.0
+	var tc := _dcard(X0, ty, XW, th)
+	var gd: Dictionary = E.aF(r)
+	var tk := [_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gd.ic)])]
+	if E.q9():
+		tk.append(_dt(X0 + 54.0, ty + 8.0, 150.0, 14.0, "Hôm nay · ngày " + str(r), 10.5, 700, SUB, "left"))
+		tk.append(_dt(X0 + 54.0, ty + 23.0, 150.0, 18.0, String(gd.t), 13.0, 800, BROWN, "left"))
+		tk.append(_dbtn(X0 + XW - 96.0, ty + 12.0, 86.0, 26.0, "Điểm danh", E.tA.bind(r, false)))
+		tc.css = tc.css.duplicate()
+		tc.css["box-shadow"] = "rgb(222, 160, 40) 0px 0px 0px 1.5px inset, rgba(222, 160, 40, 0.3) 0px 0px 0px 2px"
+	else:
+		var nx := ""
+		if r < o:
+			nx = "Mai: " + String(E.aF(r + 1).t)
+		tk.append(_dt(X0 + 54.0, ty + 8.0, 200.0, 14.0, "Hôm nay đã nhận", 10.5, 700, GREEN, "left"))
+		tk.append(_dt(X0 + 54.0, ty + 23.0, 230.0, 18.0, nx if nx != "" else "Hết tháng, tháng sau điểm danh lại", 13.0, 800, BROWN, "left"))
+		tk.append(_dtick(X0 + 36.0, ty + 6.0, 13.0))
+	tc.kids = tk
+	out.append(tc)
+	# 3. lịch
+	var cy := ty + th + 6.0
+	var misses := 0
+	for w in range(1, r):
+		if not E.got(w):
+			misses += 1
+	var foot := 22.0 if misses > 0 else 0.0
+	var ch := _hb - cy - 10.0
+	var cc := _dcard(X0, cy, XW, ch)
+	var ck := []
+	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+	var g := 4.0
+	var cw := (XW - 16.0 - g * 6.0) / 7.0
+	var gx := X0 + 8.0
+	for i in 7:
+		ck.append(_dt(gx + i * (cw + g), cy + 6.0, cw, 14.0, DW[i], 10.0, 800, SUB))
+	var rows := int(ceil((k + o) / 7.0))
+	var gy := cy + 24.0
+	var rh := minf(cw + 6.0, (ch - 24.0 - 8.0 - foot - g * (rows - 1)) / rows)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
-		var Eg: bool = E.got(w)
-		var N := w == r
-		var z := w < r and not Eg
-		var c := _cell(w, Eg, N, z, x0 + (gi % 7) * CX, y0 + (gi / 7) * CY)
-		if N and not Eg:
-			c.act = E.tA.bind(w, false)
-		elif z:
-			c.act = _bu_ask.bind(w, 3 + M)
-		cal.kids.append(c)
-	var rows := int(ceil((k + o) / 7.0))
-	cal.r[3] = (y0 - float(cal.r[1])) + rows * CY - 3.0
-	out.append(cal)
-	if E.q9():   # nút Điểm danh hôm nay dưới lịch
-		var bt := _cl(D.i7)
-		var bw := 150.0
-		var bx := float(cal.r[0]) + (float(cal.r[2]) - bw) * 0.5
-		var byy := float(cal.r[1]) + float(cal.r[3]) + 8.0
-		bt.r = [bx, byy, bw, 26.0]
-		bt.erase("tr")
-		bt.css = bt.css.duplicate()
-		bt.css["font-size"] = "13px"
-		bt.css["line-height"] = "26px"
-		bt.css["text-align"] = "center"
-		bt.text = "Điểm danh hôm nay"
-		var bb := {"tag": "button", "id": "", "cls": "ddgo", "z": float(bt.get("z", 1.0)), "css": {"background-color": "rgba(0, 0, 0, 0)"}, "r": bt.r.duplicate(), "kids": [bt]}
-		bb.act = E.tA.bind(r, false)
-		out.append(bb)
-		return [out, byy + 26.0 + 10.5]
-	return [out, float(cal.r[1]) + float(cal.r[3]) + 10.5]
+		var x := gx + (gi % 7) * (cw + g)
+		var y := gy + (gi / 7) * (rh + g)
+		ck.append(_dday(w, x, y, cw, rh, M))
+	if misses > 0:
+		var fs := ("Bù ngày lỡ: còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần · chạm ngày lỡ để bù") if M < 5 else "Hết lượt bù tháng này"
+		ck.append(_dt(X0 + 8.0, cy + ch - 8.0 - foot + 2.0, XW - 16.0, foot - 4.0, fs, 10.5, 600, SUB))
+	cc.kids = ck
+	out.append(cc)
+	return [out, cy + ch + 10.0]
 
-const C_GOLD := "rgb(222, 160, 40)"
-const C_RED := "rgb(214, 84, 52)"
-
-func _cell(w: int, got: bool, now: bool, miss: bool, x: float, y: float) -> Dictionary:   # một ô lịch tháng
-	var c := _cl(D.cell["got" if got else "fut"])
-	var ox := float(c.r[0])
-	var oy := float(c.r[1])
-	var W := float(c.r[2])
-	c.r = [x, y, W, CH]
-	c.css = c.css.duplicate()
-	var sml: Dictionary = c.kids[0]
-	_set_txt(sml, str(w))
-	sml.r = [x + 3.0, y + 2.0, float(sml.r[2]), float(sml.r[3])]
-	if sml.has("tr"):
-		sml.erase("tr")
-	var ic: Dictionary = c.kids[1]
-	ic.svg = D.ic[String(E.aF(w).ic)]
-	var s := 18.0
-	ic.r = [x + (W - s) * 0.5, y + 8.5, s, s]
-	ic.css = ic.css.duplicate()
-	var kids := [sml, ic]
-	var bd := ""
-	if now:
-		bd = "1.5px solid " + C_GOLD
-		c.css["background-color"] = "rgb(255, 255, 255)"
-		c.css["box-shadow"] = "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
-	elif w % 7 == 0:
-		bd = "1.33333px solid " + C_RED
-	if bd != "":
-		for sd in ["top", "right", "bottom", "left"]:
-			c.css["border-" + sd] = bd
-	if got:   # mờ + tick góc phải trên
-		ic.css["opacity"] = "0.45"
-		var em: Dictionary = c.kids[2]
-		em.r = [x + W - 11.0, y + 1.5, 10.0, 10.0]
-		if em.has("tr"):
-			em.erase("tr")
-		kids.append(em)
-	elif miss:   # lỡ: nền xám (giá bù ở dòng tóm tắt, chạm thì hỏi lại)
-		c.css["background-color"] = "rgb(230, 224, 208)"
-		ic.css["opacity"] = "0.4"
-	elif not now:   # chưa tới
-		ic.css["opacity"] = "0.55"
+func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
+	var got: bool = E.got(w)
+	var r: int = E.ld()
+	var now := w == r
+	var miss := w < r and not got
+	var gd: Dictionary = E.aF(w)
+	var big := w % 7 == 0
+	var bg := "rgb(255, 250, 240)"
+	var bd := "1px solid rgb(232, 218, 186)"
+	var sh := "none"
+	var op := 0.75
+	if got:
+		bg = "rgb(226, 243, 220)"
+		bd = "1px solid rgb(170, 214, 160)"
+		op = 1.0
+	elif now:
+		bg = "rgb(255, 255, 255)"
+		bd = "1.5px solid " + GOLD
+		sh = "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
+		op = 1.0
+	elif miss:
+		bg = "rgb(255, 255, 255)"
+		bd = "1px solid rgb(205, 196, 178)"
+		op = 0.3
+	elif big:
+		bg = "rgb(253, 232, 230)"
+		bd = "1px solid rgb(236, 190, 182)"
+	var c := _dbx(x, y, cw, rh, bg, 8.0, bd, sh)
+	var s := minf(cw - 12.0, rh - 15.0)
+	var kids := [_dt(x + 3.0, y + 1.5, 16.0, 11.0, str(w), 9.5, 800, GREEN if got else (GOLD if now else (SUB if not miss else "rgb(170, 160, 140)")), "left"),
+		_dic(x + (cw - s) * 0.5, y + rh - s - 3.0, s, D.ic[String(gd.ic)], op)]
+	if got:
+		kids.append(_dtick(x + cw - 11.5, y + 1.5, 10.0))
+		c.act = _dsay.bind("Ngày " + str(w) + ": đã nhận " + String(gd.t) + ".")
+	elif now:
+		c.act = E.tA.bind(w, false)
+	elif miss:
+		if bu < 5:
+			kids.append(_dt(x + cw - 15.0, y + 1.5, 13.0, 11.0, str(3 + bu), 9.0, 800, "rgb(214, 84, 52)", "right"))
+			c.act = _bu_ask.bind(w, 3 + bu)
+		else:
+			c.act = _dsay.bind("Ngày " + str(w) + " đã lỡ, hết lượt bù tháng này.")
+	else:
+		c.act = _dsay.bind("Ngày " + str(w) + ": " + String(gd.t) + ".")
 	c.kids = kids
 	return c
 
 func _bu_ask(w: int, cost: int) -> void:   # ngày lỡ: hỏi lại rồi mới bù
-	U.xfp._ask(null, cost, "Điểm danh bù ngày " + str(w) + "?", "", func(): E.tA(w, true))
+	U.xfp._ask(null, cost, "Điểm danh bù ngày " + str(w) + "?", "Quà: " + String(E.aF(w).t), func(): E.tA(w, true))
 
 # ------------------------------------------------------------------ khung cỡ Kho hàng (bản 385)
 const KX := 0.0       # .pwin của Kho
@@ -293,8 +397,6 @@ func _hx(ov: Dictionary, kids: Array, ch: float) -> void:   # khung đặt đún
 	for k in wr.kids:
 		_wx(k)
 	wr.r = [KX, wr.r[1], KW, wr.r[3]]
-	for k in kids:
-		_wx(k)
 	var dh := KH - float(wr.r[3])
 	bd.r[3] = float(bd.r[3]) + dh
 	var hin := _find(wr, "hxin")
