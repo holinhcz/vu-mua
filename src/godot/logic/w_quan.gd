@@ -155,8 +155,12 @@ func _spawn(k: String, now: float, h: float) -> void:
 	elif k == "taphoa":
 		n = randi_range(int(c.mon_moi_don[0]), int(c.mon_moi_don[1]))
 	P.shuffle()
+	var tv := (20.0 + 10.0 * mini(60, G.lv())) * randf_range(float(c.gia_tri[0]), float(c.gia_tri[1])) if c.has("gia_tri") else 0.0
 	for m in P.slice(0, n):
-		it.append([m, randi_range(int(c.sl[0]), int(c.sl[1]))])
+		var q := randi_range(int(c.sl[0]), int(c.sl[1]))
+		if tv > 0.0:   # (bản 354) tạp hóa: số lượng theo giá trị, cả đơn khoảng 2-3 lần một đơn hàng thường
+			q = clampi(int(round(tv / n / float(G.item(m).get("sell", 10)))), int(c.sl[0]), int(c.sl[1]))
+		it.append([m, q])
 	L.append({"items": it, "dl": now + float(c.cho) * _hms(), "t0": now})
 	G.mark()
 
@@ -258,6 +262,15 @@ func info(k: String) -> String:   # góc phải đầu bảng
 			var pen := int(s.get("pen", 0)) if int(s.get("pd", -1)) == G.day() else 0
 			return "Khách hôm nay " + str(int(round(maxf(0.5, 1.0 - float(CF.cafe.bot_khach) * pen) * 100.0))) + "%"
 	return ""
+
+func menu_now(k: String) -> Array:   # món khách có thể gọi giờ này (đã lọc món làm được)
+	var sl = _slot(k, G.nv.hour())
+	return [] if sl == null else pool(sl)
+
+func menu_title(k: String) -> String:
+	if _slot(k, G.nv.hour()) == null:
+		return "Đang đóng cửa, mở lúc " + str(int(CF[k].mo[0])) + " giờ"
+	return "Giờ này khách hay gọi:" if k != "taphoa" else "Tạp hóa hay lấy sỉ:"
 
 func gia_next() -> void:   # quán cơm: đổi mức giá Bình dân -> Vừa -> Sang
 	var s := st("quancom")

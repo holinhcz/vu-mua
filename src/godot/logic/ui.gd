@@ -2714,6 +2714,11 @@ func _ord_sync() -> void:
 	var H := 0.0
 	for rw in rows.size():
 		H += (hw if rows[rw] else hn) + (OD_GAP if rw > 0 else 0.0)
+	var Hc := H
+	var mn: Dictionary = {}
+	if od_src != "":   # (bản 354) riêng bảng khách quán: hàng "món giờ này" dưới các thẻ
+		mn = _od_menu()
+		H += (OD_GAP if Hc > 0.0 else 0.0) + float(mn.r[3])
 	var pad: float = float(od_tpl.no.r[1]) - float(Snap.find(od_shell.no, "orders").r[1])
 	var ch := H + 2.0 * pad
 	var dy := maxf(0.0, OD_UL - ch)
@@ -2753,6 +2758,17 @@ func _ord_sync() -> void:
 		od_ul.add(b)
 		_od_hook(b, f)
 		od_cards[f] = {"b": b, "sig": sig}
+	if not mn.is_empty():
+		var my := float(od_tpl.no.r[1]) + dy + Hc + (OD_GAP if Hc > 0.0 else 0.0) - od_scroll
+		var msig := str(my) + JSON.stringify(mn.get("ids", []))
+		keep[-1] = 1
+		var mc = od_cards.get(-1)
+		if mc == null or mc.sig != msig:
+			if mc != null:
+				mc.b.queue_free()
+			var mb := _build(Snap.moved(mn, Vector2(float(od_tpl.no.r[0]), my) - Vector2(float(mn.r[0]), float(mn.r[1]))), {}, ul0)
+			od_ul.add(mb)
+			od_cards[-1] = {"b": mb, "sig": msig}
 	for f in od_cards.keys():
 		if not keep.has(f):
 			od_cards[f].b.queue_free()
@@ -3011,6 +3027,46 @@ func _od_wait(o: Dictionary, full: bool, now: float) -> Dictionary:
 	if od_src != "":   # khách quán tới theo giờ: không gọi sớm bằng sen
 		var wb := Snap.find(nd, "odb2")
 		_q_drop(nd, wb)
+	_od_dash(nd, 5.0, 0.35, 14.0)
+	return nd
+
+func _od_menu() -> Dictionary:   # (bản 354) bảng khách quán: khung nét đứt rộng 2 cột, chữ + hình các món giờ này
+	var WQ = G.w_all.WQ
+	var ids: Array = WQ.menu_now(od_src)
+	var nd: Dictionary = od_tpl.wait.duplicate(true)
+	var lb: Dictionary = Snap.find(nd, "odwm").kids[0].duplicate(true)
+	lb.erase("kids")
+	var ic0: Dictionary = Snap.find(od_tpl.it_ok, "odic")
+	var x0 := float(nd.r[0])
+	var y0 := float(nd.r[1])
+	var W := OD_COL + float(od_tpl.no.r[2])
+	var pad := 9.0
+	var t: String = WQ.menu_title(od_src)
+	var tw := _tw(lb, t)
+	var lh := float(lb.r[3])
+	var dty: float = float(lb.get("tr", lb.r)[1]) - float(lb.r[1])
+	lb.r = [x0 + pad, y0 + pad, tw, lh]
+	_set_t(lb, t, x0 + pad, tw)
+	lb.tr = [x0 + pad, y0 + pad + dty, tw + 0.5, lb.get("tr", lb.r)[3]]
+	var kids := [lb]
+	var iw := float(ic0.r[2])
+	var gap := 5.0
+	var per := maxi(1, int(floor((W - 2.0 * pad + gap) / (iw + gap))))
+	var yi := y0 + pad + lh + 6.0
+	for q in ids.size():
+		var ic: Dictionary = ic0.duplicate(true)
+		var sv := _fit_svg(String(ids[q]))
+		for k in ic.get("kids", []):
+			if k.tag == "svg" and sv != "":
+				k.svg = sv
+		var x := x0 + pad + (q % per) * (iw + gap)
+		var y := yi + (q / per) * (iw + gap)
+		kids.append(Snap.moved(ic, Vector2(x - float(ic.r[0]), y - float(ic.r[1]))))
+	var rows := ceili(ids.size() / float(per)) if ids.size() else 0
+	var h := pad + lh + (6.0 + rows * (iw + gap) - gap if rows > 0 else 0.0) + pad
+	nd.kids = kids
+	nd.r = [x0, y0, W, h]
+	nd["ids"] = ids
 	_od_dash(nd, 5.0, 0.35, 14.0)
 	return nd
 
