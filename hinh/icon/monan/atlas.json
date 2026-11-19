@@ -1815,5 +1815,45 @@
    453
   ],
   "nguon": "tấm ảnh người dùng (bản 364)"
+ },
+ "gao": {
+  "file": "gao.png",
+  "bbox": [
+   41,
+   44,
+   471,
+   467
+  ],
+  "nguon": "tấm ảnh người dùng (bản 365)"
+ },
+ "bot_nep": {
+  "file": "bot_nep.png",
+  "bbox": [
+   41,
+   46,
+   471,
+   466
+  ],
+  "nguon": "tấm ảnh người dùng (bản 365)"
+ },
+ "bot": {
+  "file": "bot.png",
+  "bbox": [
+   41,
+   44,
+   471,
+   467
+  ],
+  "nguon": "tấm ảnh người dùng (bản 365)"
+ },
+ "bot_gao": {
+  "file": "bot_gao.png",
+  "bbox": [
+   41,
+   44,
+   471,
+   467
+  ],
+  "nguon": "tấm ảnh người dùng (bản 365)"
  }
 }

@@ -73,7 +73,7 @@ muoi_me (muoi_dp), caphe_den (nuoc_mia), caphe_sua (sinh_to), qua_caphe (icon đ
 mut_khoai (mut_chomchom), mut_tac (mut_mangcut), keo_chuoi (keo_dua).
 
 ## Cối xay + khoai mì (bản 341)
-banh_khoai_mi (Lò bánh nướng), banh_tam_khoai_mi (Lò bánh quê) gắn hình thật. Cây khoai_mi: icon hinh/icon/anh/khoaimi.png, hình cây trên ruộng tạm = cây khoai lang. Gạo, bột gạo, bột mì, bột nếp vẫn là icon vẽ code, chờ hình.
+banh_khoai_mi (Lò bánh nướng), banh_tam_khoai_mi (Lò bánh quê) gắn hình thật. Cây khoai_mi: icon hinh/icon/anh/khoaimi.png, hình cây trên ruộng tạm = cây khoai lang.
 
 ## Ruộng muối (bản 342) — hình tạm
 muoi_ot, muoi_tom, muoi_tieu (icon muối hột vẽ code).
@@ -83,3 +83,6 @@ bun_bo_hue, mi_quang, bun_cha gắn vào game. cao_lau.png (Cao lầu) lưu sẵ
 
 ## Bản 364 — hình thật
 xoi_thit, com_det, thinh, caphe_rang.
+
+## Bản 365 — hình thật
+gao, bot_nep, bot (bột mì), bot_gao.
