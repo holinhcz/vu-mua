@@ -2724,5 +2724,75 @@
    460
   ],
   "nguon": "tấm ảnh người dùng (bản 375)"
+ },
+ "mam_ca_linh": {
+  "file": "mam_ca_linh.png",
+  "bbox": [
+   112,
+   41,
+   399,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "nuoc_mam": {
+  "file": "nuoc_mam.png",
+  "bbox": [
+   108,
+   41,
+   404,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "mam_tom": {
+  "file": "mam_tom.png",
+  "bbox": [
+   109,
+   41,
+   402,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "nuoc_buoi": {
+  "file": "nuoc_buoi.png",
+  "bbox": [
+   49,
+   41,
+   462,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "st_saurieng": {
+  "file": "st_saurieng.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "st_dau": {
+  "file": "st_dau.png",
+  "bbox": [
+   51,
+   41,
+   461,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "st_dudu": {
+  "file": "st_dudu.png",
+  "bbox": [
+   41,
+   47,
+   471,
+   465
+  ],
+  "nguon": "tấm ảnh người dùng (bản 376)"
  }
 }

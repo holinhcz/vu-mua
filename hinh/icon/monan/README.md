@@ -120,3 +120,6 @@ mut_khoai, mut_tac, keo_chuoi, muoi_me.
 
 ## Bản 375 — hình thật
 bt_nuong, bt_me_chua.
+
+## Bản 376 — hình thật
+mam_ca_linh, nuoc_mam, mam_tom, nuoc_buoi, st_saurieng, st_dau, st_dudu.
