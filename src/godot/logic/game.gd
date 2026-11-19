@@ -1768,7 +1768,9 @@ func _fh0() -> Dictionary:
 			for c in h[w]:
 				if not k.has(c):
 					k.append(c)
-		x = _pick(k)
+		var kp: Array = k.filter(func(w): return xw != null and xw.R.has(w))   # (bản 346) món chọn tiệm: nửa đồ chế biến, nửa đồ thô
+		var kr: Array = k.filter(func(w): return not kp.has(w))
+		x = _pick(kp if (randf() < 0.5 and not kp.is_empty()) or kr.is_empty() else kr)
 		v = _pick(d.filter(func(w): return h[w].has(x)))
 	else:
 		v = "Bà Tư" if s.has("Bà Tư") else _pick(s)
@@ -1776,11 +1778,20 @@ func _fh0() -> Dictionary:
 		o = 1
 		h[v] = [x]
 	var M: String = D.shop.get(v, _pick(["quán cơm", "tiệm bánh", "quán chè", "nhà hàng", "quầy rau", "trường mầm non", "tiệm tạp hóa", "quán phở"]))
-	var T: Array = h[v].filter(func(w): return w != x)
+	# (bản 346) món trong đơn: khoảng nửa đồ chế biến (ít nhất 1 khi tiệm có), nửa đồ thô, x (món chọn tiệm) luôn có
+	var mk := func(w): return xw != null and xw.R.has(w)
+	var Pp: Array = h[v].filter(func(w): return w != x and mk.call(w))
+	var Rw: Array = h[v].filter(func(w): return w != x and not mk.call(w))
+	o = mini(o, 1 + Pp.size() + Rw.size())
+	var wp := maxi(1, o / 2) if (mk.call(x) or not Pp.is_empty()) else 0
 	var n := [x]
-	o = mini(o, 1 + T.size())
 	while n.size() < o:
-		n.append(T.pop_at(randi() % T.size()))
+		var np: int = n.filter(mk).size()
+		var take_p: bool = (np < wp and not Pp.is_empty()) or Rw.is_empty()
+		var src: Array = Pp if take_p else Rw
+		n.append(src.pop_at(randi() % src.size()))
+	if wp > 0 and n.filter(mk).is_empty() and not Pp.is_empty():
+		n[n.size() - 1] = Pp.pop_at(randi() % Pp.size())
 	var e := 0.0
 	var c := []
 	for w in n:
@@ -1789,23 +1800,14 @@ func _fh0() -> Dictionary:
 		c.append([w, q])
 	return {"who": v, "shop": M, "items": c, "reward": int(round(e * randf_range(1.5, 1.8))), "sf": 1, "m3": 2}
 
-func _fh1() -> Dictionary:
-	# vá 1: đơn phải có ít nhất 1 món làm ra được (thử 8 lần)
-	for n in 8:
-		var e := _fh0()
-		for r in e.items:
-			if D.crops.has(r[0]) or int(g.barn.get(r[0], 0)) > 0:
-				return e
-	return _fh0()
-
 func new_order() -> Dictionary:   # fh: 45% đơn cố có món được giá hôm nay; có thì thưởng x1,3
-	var r := _fh1()
+	var r := _fh0()
 	var o := hot().map(func(c): return c[0])
 	var has := func(q): return q.items.any(func(c): return o.has(c[0]))
 	if randf() < 0.45:
 		var l := 0
 		while l < 6 and not has.call(r):
-			r = _fh1()
+			r = _fh0()
 			l += 1
 	if has.call(r):
 		r.reward = int(round(r.reward * 1.3))
