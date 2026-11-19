@@ -56,6 +56,7 @@ func _load_data() -> void:
 	D.items = _j("che_bien/vat_pham")
 	D.mua = _j("nong_trai/cay_dung_mua")
 	D.nhom = _j("nong_trai/nhom_vat_pham")
+	D.nhom_xw = _j("che_bien/nhom_hang_theo_xuong")
 	D.mat = _j("nang_cap/vat_lieu")
 	D.need = _j("cho/nhu_cau_tiem")         # Sv: nhóm hàng (c) và món (i) mỗi tiệm cần
 	D.who = _j("cho/ds_nguoi_dat_don")      # k5
@@ -1583,10 +1584,17 @@ func ord_slots() -> int:   # iN
 	var t := lv()
 	return 9 if t >= 50 else 6 if t >= 30 else 4 if t >= 15 else 3
 
-func _zf(t: String) -> String:
+func _zf(t: String) -> String:   # nhóm hàng của món (tiệm nào cần: cho/nhu_cau_tiem.json "c")
 	for a in D.nhom:
 		if D.nhom[a].has(t):
 			return a
+	if xw != null and xw.R.has(t):   # (bản 345) đồ chế biến: theo xưởng làm ra (che_bien/nhom_hang_theo_xuong.json)
+		return String(D.nhom_xw.get(String(xw.R[t].w), "khac"))
+	var f := String(item(t).get("from", ""))
+	if f == "tree":
+		return "trai"
+	if f == "fish" or f == "bun" or f == "ao":
+		return "ca"
 	return "khac"
 
 func _g3(shop: String, t: String) -> bool:   # tiệm này có cần món này không
@@ -1673,11 +1681,9 @@ func _f8(t: String, a := 0) -> bool:   # F8: món còn làm ra được (hoặc 
 		r = true
 	elif pen:
 		r = true
-	elif t == "thit_vit" or t == "trung_vit":
-		r = int(g.barn.get(t, 0)) > 0      # vịt: chưa có ở bản Godot
-	elif WF.has(t) or t == "luon" or t == "oc" or t == "ca_keo":
-		r = int(g.barn.get(t, 0)) > 0      # cá (lc): ao câu chưa có ở bản Godot
-	elif xw != null and xw.R.has(t):
+	elif not (xw != null and xw.R.has(t)):
+		r = int(g.barn.get(t, 0)) > 0      # (bản 345) đồ câu / bắt / mua / vịt (cá, tôm, lươn, ốc, cua, ếch, mực, bông điên điển…): đang có trong kho
+	else:
 		var o: Dictionary = xw.R[t]
 		r = cd(String(o.w)) and bf(t) <= e and not o.get("fest", "")   # lễ hội (Vx): chưa có ở bản Godot
 		if r:
@@ -1695,6 +1701,11 @@ func _lv_items() -> Array:   # Lv (+ bọc F8)
 	for r in xo:
 		if not crop(r).get("hyb", false) and int(crop(r).get("lv", 1)) <= a:
 			n.append(r)
+	# (bản 345) xếp theo cấp mở: 5 cây cuối = 5 cây mở gần nhất (thu_tu_cay.json xếp theo nhóm, không theo cấp)
+	var lvo := {}
+	for r in n:
+		lvo[r] = int(crop(r).get("lv", 1)) * 1000 + n.find(r)
+	n.sort_custom(func(x, y): return lvo[x] < lvo[y])
 	var e: Array = n.slice(maxi(0, n.size() - 5))
 	if n.size() > 5:
 		e.append(n[randi() % (n.size() - 5)])
