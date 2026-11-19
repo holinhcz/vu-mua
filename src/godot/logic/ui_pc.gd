@@ -58,14 +58,7 @@ func step(dt := 0.25) -> void:
 func _sig() -> String:
 	var p: Dictionary = G.g.pc
 	return JSON.stringify([tab, sel, p.lv, p.xp, int(floor(float(p.en))), p.get("tools"), p.get("xe"), p.get("xuong"), G.bh(), int(G.bh_left() / 60000.0),
-		int(G.nv.Fu() / 60000.0), G.g.coins, G.mat_n("gach"), _foods(), p.get("n")]) if tab == "nv" else tab
-
-func _foods() -> Array:   # fB lọc món có trong kho
-	var out := []
-	for r in G.FB:
-		if int(G.g.barn.get(r[0], 0)) > 0:
-			out.append(r)
-	return out
+		int(G.nv.Fu() / 60000.0), G.g.coins, G.mat_n("gach"), p.get("n")]) if tab == "nv" else tab
 
 func _tab_go(k: String) -> void:
 	if tab == "cau" and k != "cau" and G.w_all != null:
@@ -196,13 +189,6 @@ func _nv() -> Array:
 		[["Đã làm ", false], [G.fmt_n(int(p.get("n", 0))), true], [" việc trong làng.", false]]))
 	out.append(_card_nv(UT.card, "Sức", [[str(int(floor(float(p.en)))) + "/" + str(int(em)), true]], float(p.en) / maxf(1.0, em),
 		[["Tự hồi 4 sức mỗi phút" + (", đang mệt nên đi chậm." if float(p.en) < 1.0 else "."), false]]))
-	var fo := _foods()
-	if fo.size():
-		var bt := []
-		for r in fo.slice(0, 4):
-			var id: String = r[0]
-			bt.append([String(r[2]) + " +" + str(r[1]) + " (" + str(int(G.g.barn[id])) + ")", false, float(p.en) < em, func(): G.eat(id)])
-		out.append(_card([_r("Ăn món trong kho để hồi sức ngay.", _csm())], [], bt))
 	var sp: float = G.speed(3.0)
 	out.append(_card_nv(UT.card, "Chỉ số", [], null, [["Tốc độ đi ", false], [str(snappedf(sp, 0.1)).replace(".", ",") + " ô/giây", true],
 		[(" (xe đạp +70% khi đi xa)" if p.get("xe", 0) else ""), false], [". Bùa đang có: ", false], [(String(G.BUFFS[G.bh()].n)) if G.bh() != "" else "không", true], [".", false]]))

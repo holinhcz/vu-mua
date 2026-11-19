@@ -56,6 +56,7 @@ func _load_data() -> void:
 	D.items = _j("che_bien/vat_pham")
 	D.mua = _j("nong_trai/cay_dung_mua")
 	D.nhom = _j("nong_trai/nhom_vat_pham")
+	BUFFS = _j("che_bien/hieu_ung_mon_an")
 	D.nhom_xw = _j("che_bien/nhom_hang_theo_xuong")
 	D.mat = _j("nang_cap/vat_lieu")
 	D.need = _j("cho/nhu_cau_tiem")         # Sv: nhóm hàng (c) và món (i) mỗi tiệm cần
@@ -362,20 +363,14 @@ func _on_level(n: int) -> void:
 func en_max() -> float:   # Wl
 	return 100.0 + 20.0 * fd("gui")
 
-# ------------------------------------------------------------------ ĐỒ NGHỀ (hB, dB, Fd, SV) + BÙA (Sf, Bh)
+# ------------------------------------------------------------------ ĐỒ NGHỀ (hB, dB, Fd, SV) + BÙA (BUFFS = data hieu_ung_mon_an, Bh)
 const TOOLS := [
 	{"id": "binh", "n": "Bình tưới thiếc"},
 	{"id": "liem", "n": "Liềm cắt lúa"},
 	{"id": "cuoc", "n": "Cuốc xới đất"},
 	{"id": "gui", "n": "Gùi tre"}]
 const TOOL_COST := [[600, 0], [3500, 8], [15000, 25]]   # dB: [xu, gạch nung]
-const BUFFS := {
-	"nhanh": {"n": "Chân sáo", "d": "Đi nhanh hơn 30%"},
-	"gat": {"n": "Tay mát", "d": "Thu hoạch 10% được thêm 1"},
-	"ben": {"n": "Dẻo dai", "d": "Làm việc tốn sức một nửa"},
-	"xp": {"n": "Sáng dạ", "d": "Kinh nghiệm thêm 50%"},
-	"mat": {"n": "No ấm", "d": "Hồi sức nhanh gấp đôi"},
-	"cau": {"n": "Tay câu đỏ", "d": "Dễ câu được cá quý"}}
+var BUFFS := {}   # bùa (hiệu ứng): data/che_bien/hieu_ung_mon_an.json
 
 static func tool_desc(id: String, t: int) -> String:   # hB[].d
 	match id:
@@ -453,82 +448,6 @@ func bh() -> String:   # Bh: bùa đang có (pc.bf = {k, u})
 func bh_left() -> float:   # oN (ms)
 	var a = g.pc.get("bf")
 	return maxf(0.0, float(a.u) - _now_ms()) if a is Dictionary else 0.0
-
-func eat(t: String) -> bool:   # MV
-	var a: Array = []
-	for r in FB:
-		if r[0] == t:
-			a = r
-	if a.is_empty() or not (int(g.barn.get(t, 0)) > 0):
-		return false
-	var e := en_max()
-	if float(g.pc.en) >= e:
-		toast.emit("Đang no sức rồi.")
-		return false
-	g.barn[t] = int(g.barn[t]) - 1
-	g.pc.en = minf(e, float(g.pc.en) + int(a[1]))
-	toast.emit("Ăn " + String(a[2]).to_lower() + ", hồi " + str(a[1]) + " sức.")
-	mark()
-	return true
-
-const FB := [["banh_mi_thit", 45, "Bánh mì thịt"], ["ca_kho", 45, "Cá kho tộ"], ["thit_kho", 40, "Thịt kho trứng"], ["thit_kho_nd", 45, "Thịt kho nước dừa"], ["che_chuoi", 40, "Chè chuối"], ["nuoc_mia", 30, "Nước mía"], ["sinh_to", 30, "Sinh tố xoài"], ["banh", 25, "Bánh mì"], ["banh_bo", 25, "Bánh bò"], ["bong_lan", 25, "Bánh bông lan"], ["gao", 12, "Cơm gạo mới"], ["mat_ong", 12, "Nước mật ong"], ["sua", 10, "Ly sữa"], ["qua_dua", 10, "Nước dừa"], ["qua_xoai", 8, "Xoài chín"], ["qua_chuoi", 6, "Chuối chín"], ["trung", 4, "Trứng luộc"]]   # fB
-
-# ------------------------------------------------------------------ BẾP NHÀ (kg, g4, Ux, $b, J7)
-const KG := [["com_trung", "Cơm trắng trứng chiên", [["gao", 1], ["trung", 1]], 35, null, 0, 4], ["com_tam", "Cơm tấm sườn trứng", [["gao", 1], ["thit", 1], ["trung", 1]], 60, "nhanh", 8, 6], ["canh_chua", "Canh chua cá lóc", [["ca_loc", 1], ["cachua", 1], ["hanh", 1], ["ot", 1]], 70, "gat", 10, 7], ["ca_kho_to", "Cá rô kho tộ", [["ca_ro", 2], ["hanh", 1], ["ot", 1], ["muoi_hot", 1]], 80, "ben", 12, 8], ["banh_xeo", "Bánh xèo tôm", [["bot_gao", 2], ["trung", 1], ["tom", 1], ["qua_dua", 1]], 70, "xp", 10, 7], ["canh_bi", "Canh bí đỏ nấu tôm", [["bido", 1], ["tom", 1]], 45, "mat", 15, 5], ["keo_nuong", "Cá kèo nướng muối ớt", [["ca_keo", 3], ["muoi_hot", 1], ["ot", 1]], 65, "nhanh", 10, 6], ["oc_luoc", "Ốc luộc sả", [["oc", 5]], 30, null, 0, 4], ["lau_mam", "Lẩu mắm điên điển", [["mam_ca_linh", 1], ["ca_loc", 1], ["dien_dien", 2], ["catim", 1]], 100, "cau", 15, 9]]   # [id, tên, in, sức, bùa, phút, giây nấu]
-
-func kg(t: String) -> Array:   # Vd
-	for r in KG:
-		if r[0] == t:
-			return r
-	return []
-
-func cook_ok(r: Array) -> bool:   # g4
-	for a in r[2]:
-		if int(g.barn.get(a[0], 0)) < int(a[1]):
-			return false
-	return int(g.barn.get("cui", 0)) >= 1
-
-func cook_lv(r: Array) -> int:   # J7
-	var a := 1
-	for n in r[2]:
-		a = maxi(a, bf(n[0]))
-	return a
-
-func cook_done(t: String) -> bool:   # Ux job run
-	var a := kg(t)
-	if a.is_empty():
-		return false
-	if not cook_ok(a):
-		toast.emit("Thiếu nguyên liệu, không nấu được.")
-		return false
-	for r in a[2]:
-		g.barn[r[0]] = int(g.barn[r[0]]) - int(r[1])
-	g.barn.cui = int(g.barn.cui) - 1
-	var n: Dictionary = g.pc
-	n.en = minf(en_max(), float(n.en) + int(a[3]))
-	if a[4] != null:
-		n.bf = {"k": a[4], "u": _now_ms() + int(a[5]) * 60000.0, "s": _now_ms()}   # s: lúc ăn (vòng hiệu ứng chạy hết dần)
-	n.ck = int(n.get("ck", 0)) + 1
-	if not (n.get("cks") is Dictionary):
-		n.cks = {}
-	n.cks[t] = 1
-	if not (n.get("ckn") is Dictionary):
-		n.ckn = {}
-	n.ckn[t] = int(n.ckn.get(t, 0)) + 1
-	toast.emit("Nấu xong " + String(a[1]).to_lower() + ", ăn ngon lành! Hồi " + str(a[3]) + " sức" + ((", được \"" + String(BUFFS[a[4]].n) + "\": " + String(BUFFS[a[4]].d).to_lower() + " trong " + str(a[5]) + " phút") if a[4] != null else "") + ".")
-	vib(15)
-	mark()
-	return true
-
-func buy_cui() -> bool:   # $b
-	if int(g.coins) < 60:
-		toast.emit("Cần 60 xu.")
-		return false
-	g.coins = int(g.coins) - 60
-	g.barn.cui = int(g.barn.get("cui", 0)) + 5
-	toast.emit("Mua 5 bó củi khô của bà Năm hàng xóm.")
-	mark()
-	return true
 
 func after_plant(t: int, a: String) -> void:   # LV: cuốc
 	var n := fd("cuoc")

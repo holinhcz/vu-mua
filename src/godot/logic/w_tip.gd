@@ -5,10 +5,7 @@ extends Node
 # Chỉ chuột (web: e.pointerType === "mouse"), chỉ khi Mt.mode == "off" và không đang bấm giữ; cập nhật lại mỗi 0,25 s (mH) khi đứng yên.
 
 const Css = preload("res://ui/css.gd")
-const IG := {"duanuoc": "bụi dừa nước", "reed": "bụi lau", "tram": "cây tràm", "ft_saurieng": "cây sầu riêng", "ft_mangcut": "cây măng cụt",
-	"ft_chomchom": "cây chôm chôm", "ft_mit": "cây mít", "ft_xoai": "cây xoài", "ft_buoi": "cây bưởi", "caosu": "cây cao su", "dieu": "cây điều",
-	"mango": "cây xoài", "jackfruit": "cây mít", "coconut": "cây dừa", "banana": "cây chuối", "areca": "cây cau", "bamboo": "bụi tre",
-	"haystack": "đống rơm", "house": "nhà cũ", "hut": "nhà tranh cũ", "boat": "thuyền cũ", "tallgrass": "cỏ", "wildbush": "bụi cây", "hibiscus": "bụi dâm bụt"}   # ig
+var IG := {}   # tên cảnh vật: data/khac/ig.json (bản 359 bỏ bản chép trong code)
 
 var G
 var U
@@ -152,6 +149,8 @@ func fp(t: Dictionary) -> String:   # fp
 			return String(c).replace("<b>", "[b]").replace("</b>", "[/b]\n")
 	if ty == "scn":
 		var oid := String(t.o.get("id", ""))
+		if IG.is_empty():
+			IG = G._j("khac/ig")
 		var nm := String(IG.get(oid, IG.get(oid.trim_suffix("nho").trim_suffix("2"), "cảnh vật")))
 		return "[b]" + nm.substr(0, 1).to_upper() + nm.substr(1) + "[/b]\nChạm để dọn, được " + str(int(G.lang.C.Nd.get(oid, 5))) + " xu."
 	if ty == "sap":

@@ -310,7 +310,7 @@ func _dh() -> Dictionary:   # DH: Túi đặc sản (.sysx)
 		var hh: String = sp[1] if sp.size() > 1 else ""
 		var sm := ""
 		if s == "an":
-			sm = "Ăn hồi 30 sức" + ((", " + String(W.Sf[hh].n) + " 20 phút") if hh != "" and W.Sf.has(hh) else "")
+			sm = "Ăn hồi 30 sức" + ((", " + String(G.BUFFS[hh].n) + " 20 phút") if hh != "" and G.BUFFS.has(hh) else "")
 		elif s == "qua":
 			sm = "Biếu nhà ít thân nhất, +1 ♥"
 		elif s == "giong":

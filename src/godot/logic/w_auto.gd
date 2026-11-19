@@ -229,16 +229,8 @@ func _turn() -> void:
 				res[String(k[0])] = int(res.get(String(k[0]), 0)) + int(k[1])
 	var o := func(x: String) -> int: return _bn(x) - int(res.get(x, 0))
 	var en := float(G.g.pc.en)
-	if en < G.en_max() * 0.12:
-		var ate := false
-		for f in G.FB:
-			if _bn(f[0]) > int(res.get(f[0], 0)):
-				ate = G.eat(f[0])
-				break
-		if ate:
-			c += 1
-		elif F.cur == null and F.q.is_empty() and not G.night:
-			F.sleep_go()
+	if en < G.en_max() * 0.12 and F.cur == null and F.q.is_empty() and not G.night:
+		F.sleep_go()
 	rest = en < 3.0
 	var s := 0 if rest else maxi(0, 4 - _ga())
 	var room: int = G.kho_room()

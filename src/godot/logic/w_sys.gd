@@ -53,7 +53,6 @@ var Gp: Dictionary = {}   # nâng cấp khác
 var Z9: Array = []
 var WH: Array = []        # cửa hàng Hệ Thống
 var IH: Dictionary = {}   # cách dùng đặc sản
-var Sf: Dictionary = {}   # hiệu ứng món ăn
 var Dc: Array = []        # mục tiêu tân thủ
 var HTLV: Array = []
 var HTGIA: Array = []
@@ -94,7 +93,6 @@ func _init(game) -> void:
 	Z9 = _ja("khac/Z9")
 	WH = _ja("he_thong/cua_hang")
 	IH = _jd("he_thong/dac_san_cach_dung")
-	Sf = _jd("che_bien/hieu_ung_mon_an")
 	Dc = _ja("nhiem_vu/muc_tieu_tan_thu")
 	HTLV = _ja("he_thong/cap_mo_tang")
 	HTGIA = _ja("he_thong/gia_nut_theo_tang")
@@ -628,9 +626,9 @@ func FH(t: String) -> void:   # FH: dùng đặc sản
 	if e == "an":
 		var r: Dictionary = G.g.pc
 		r.en = minf(G.en_max(), float(r.en) + 30)
-		if n1 != "" and Sf.has(n1):
+		if n1 != "" and G.BUFFS.has(n1):
 			r.bf = {"k": n1, "u": _now() + 20 * 60000.0}
-		_ta("Ăn " + spec + ": hồi 30 sức" + ((", được " + String(Sf[n1].n) + " (" + String(Sf[n1].d).to_lower() + ") 20 phút") if n1 != "" and Sf.has(n1) else "") + ".")
+		_ta("Ăn " + spec + ": hồi 30 sức" + ((", được " + String(G.BUFFS[n1].n) + " (" + String(G.BUFFS[n1].d).to_lower() + ") 20 phút") if n1 != "" and G.BUFFS.has(n1) else "") + ".")
 	elif e == "qua":
 		var o = G.g.lang.get("fam") if G.g.get("lang") is Dictionary else null
 		var l: Array = o.keys() if o is Dictionary else []

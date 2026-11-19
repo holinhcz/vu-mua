@@ -189,13 +189,12 @@ func snap() -> Dictionary:   # nvSnap: mốc bộ đếm nhân vật lúc đầu
 	var o := {}
 	for k in p.get("cnt", {}).keys():
 		o[k] = int(p.cnt[k])
-	o.ck = int(p.get("ck", 0))
 	return o
 
 func OL(k: String) -> int:
 	var p: Dictionary = G.g.pc
 	var b: Dictionary = Pl().pb
-	var v := int(p.get("ck", 0)) if k == "ck" else int(p.get("cnt", {}).get(k, 0))
+	var v := int(p.get("cnt", {}).get(k, 0))
 	return v - int(b.get(k, 0))
 
 func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn tuần
@@ -243,7 +242,6 @@ const WI := [
 	{"id": "collect", "n": "Lượm 5 sản phẩm vật nuôi", "m": 5},
 	{"id": "wc", "n": "Thu hàng xưởng 3 lần", "m": 3},
 	{"id": "fish", "n": "Câu được 2 con cá", "m": 2, "go": 1},
-	{"id": "cook", "n": "Nấu 1 bữa ở bếp nhà", "m": 1, "go": 1},
 	{"id": "tharvest", "n": "Hái trái 3 lần", "m": 3},
 	{"id": "chat", "n": "Trò chuyện với 2 nhà", "m": 2},
 	{"id": "scn", "n": "Dọn 3 bụi cây, gốc cây", "m": 3},
@@ -285,7 +283,6 @@ func task_f(t: Dictionary) -> int:   # t.f()
 		var v: Dictionary = t.v
 		return int(v.q) if v.get("done", 0) else int(G.g.barn.get(v.id, 0))   # việc giao hàng: số trong kho (bản 285)
 	match id:
-		"cook": return OL("ck")
 		"tharvest": return OL("tharvest")
 		"scn": return OL("scn")
 		"dd": return OL("dd")

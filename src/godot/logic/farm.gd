@@ -1502,22 +1502,6 @@ func sleep_go() -> void:   # TV: về nhà (yT 6,3; 4,6) ngủ 12 giây, dậy �
 	q.append({"key": "sleep", "kind": "sleep", "i": -1, "seed": "", "pos": Vector2(6.3, 4.6)})
 	G.toast.emit("Nhân vật về nhà ngủ một giấc.")
 
-func cook_go(t: String) -> void:   # Ux: về bếp nhà (_T 6,25; 4,35) nấu a.t giây
-	var a: Array = G.kg(t)
-	if a.is_empty():
-		return
-	if not G.cook_ok(a):
-		G.toast.emit("Hết củi rồi. Mua củi ở bếp, chợ nổi, hoặc dọn cây đổ sau giông." if int(G.g.barn.get("cui", 0)) < 1 else "Kho chưa đủ nguyên liệu.")
-		return
-	if has_job("cook"):
-		G.toast.emit("Đang nấu rồi.")
-		return
-	if q.size() >= 30:
-		G.toast.emit("Nhân vật đang có quá nhiều việc rồi.")
-		return
-	q.append({"key": "cook", "kind": "cook", "i": -1, "seed": t, "pos": Vector2(6.25, 4.35), "dur": float(a[6])})
-	G.toast.emit("Nhân vật về nhà nhóm bếp nấu " + String(a[1]).to_lower() + ".")
-
 func stop_jobs() -> void:
 	q.clear()
 	cur = null
@@ -1574,7 +1558,6 @@ func _jobs(dt: float) -> void:
 				if ok:
 					var sc: Dictionary = G.cells[j.i]
 					burst(Vector2(en(sc.gx + 0.5, sc.gy + 0.5), nn(sc.gx + 0.5, sc.gy + 0.5, G.CO + 10.0)), 14, ["#e8f2f4", "#cfe6ea", "#ffffff"], 60.0, 3.0, 40.0, 2.4, 0.9, 30.0)
-			"cook": ok = G.cook_done(j.seed)
 			"sleep":
 				G.g.pc.en = G.en_max()
 				G.toast.emit("Ngủ một giấc dậy khỏe re, sức đầy lại.")
