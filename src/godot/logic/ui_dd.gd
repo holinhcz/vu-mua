@@ -1,19 +1,22 @@
-extends "res://logic/ui_hx.gd"
-# ĐIỂM DANH (aA / ov bản web, nút Điểm danh ở cột sự kiện): hộp khung tre ui_hx.gd, 2 tab
-#  - "Quà 7 ngày đầu" (chỉ khi chưa nhận hết): lưới 7 thẻ quà, thẻ hôm nay có nút Nhận.
-#  - "Điểm danh tháng": 4 mốc 7/14/21/28 ngày, số ngày đã điểm danh, lịch tháng (chạm hôm nay / ngày lỡ để điểm danh bù).
-# Mẫu: ui/snap/dd.json (chụp bản web, tọa độ tính từ đỉnh thân / đỉnh hàng tab). Luật ở w_ev.gd.
-# (bản 385) Khung cỡ Kho hàng (#pov .pwin: x 0..338, y 85,4..610): mẫu dựng ở hộp giữa màn rồi nới ngang (_wx) và kéo cao (_hx).
+extends "res://logic/ui_bang.gd"
+# ĐIỂM DANH (aA / ov bản web, nút Điểm danh ở cột sự kiện): (bản 393) khung chung của Kho (ui_bang.gd, khung Sổ làng sl.json:
+# #pov .pwin, nút × #pClose, hàng tab tre .bk2tabs), 2 tab:
+#  - "Quà 7 ngày đầu" (chỉ khi chưa nhận hết): lưới 4 + 3 ô chip, ô hôm nay có nút Nhận.
+#  - "Điểm danh tháng": chip đỏ tháng + số ngày, 4 mốc 7/14/21/28 trên thanh, lịch 5 hàng (chạm hôm nay / ngày lỡ để bù).
+# Mẫu khối: ui/snap/dd.json (kiểu chữ, hình quà). Luật ở w_ev.gd.
 
 var E          # w_ev.gd
-var D := {}
+var D := {}    # dd.json: mẫu kiểu chữ, hình quà
+var SB := {}   # #pov khung Sổ làng (khung chung Kho)
+var ST := {}   # sl_tab.json: chấm đỏ tab
 var cd := "7"  # tab đang mở
-
 
 func _init(ui, wev) -> void:
 	super(ui)
 	E = wev
 	D = Snap.load_snap("dd")
+	SB = Snap.load_snap("sl")["#pov"][0]
+	ST = Snap.load_snap("sl_tab")
 
 func open(t := "") -> void:   # aA
 	if t != "":
@@ -22,6 +25,16 @@ func open(t := "") -> void:   # aA
 	scroll = 0.0
 	sig = ""
 	_build()
+
+func step(dt: float) -> void:   # dựng lại khi trạng thái đổi
+	if not on:
+		return
+	_sig_t -= dt
+	if _sig_t > 0.0:
+		return
+	_sig_t = 1.0
+	if _sig() != sig:
+		_build()
 
 func _sig() -> String:
 	return JSON.stringify([cd, E.Sp(), E.ld(), G.g.get("ngoc", 0)])
@@ -35,49 +48,34 @@ func _build() -> void:
 	if not E.N8() and cd == "7":
 		cd = "m"
 	sig = _sig()
-	var ov := _cl(D.ov)
-	var tabs := _find(ov, "ngtabs")
-	var ty := float(tabs.r[1])
-	var bd := _find(ov, "hxbody")
-	var by := float(bd.r[1])
-	_hb = float(bd.r[3]) + KH - float(_find(ov, "hxwrap").r[3])
-	var mo: int = E.q8() % 100
-	help = ["Điểm danh", "Vào làng mỗi ngày nhận quà · tháng " + str(mo) + "/" + str(E.q8() / 100)]
-	# hàng tab: Quà 7 ngày đầu (chấm f), Điểm danh tháng (chấm s)
-	var f: int = 1 if E.Cp() else 0
-	var s: int = (1 if E.q9() else 0) + E.nF()
-	var L: Array = (D.tab7 if cd == "7" else D.tabm) if E.N8() else D.tab1
-	var keys := ["7", "m"] if E.N8() else ["m"]
-	var tk := []
-	for i in L.size():
-		var b := _cl(L[i])
-		Snap._move(b, Vector2(0, ty))
-		var c: int = f if keys[i] == "7" else s
-		for k in b.kids:
-			if k.tag == "em":
-				k.text = str(c)
-		if c <= 0:
-			b.kids = b.kids.filter(func(k): return k.tag != "em")
-		b.act = _tab_go.bind(keys[i])
-		tk.append(b)
-	tabs.kids = tk
-	var kids: Array
-	var ch: float
-	if cd == "7":
-		var r := _tab7()
-		kids = r[0]
-		ch = r[1]
-	else:
-		var r := _tabm()
-		kids = r[0]
-		ch = r[1]
+	var n := _cl(SB)
+	var card := _find(n, "khcard")
+	var tabs := _find(n, "bk2tabs")
+	var vt := _find(n, "bk2v")
+	var ty0 := float(_find(n, "bk2top").r[1])   # bỏ đầu bảng danh hiệu của Sổ làng: hàng tab lên đỉnh thẻ
+	card.kids = card.kids.filter(func(k): return not String(k.get("cls", "")).contains("bk2top"))
+	_mv(tabs, float(tabs.r[0]), ty0)
+	var vy := ty0 + float(tabs.r[3]) + 6.0
+	var vb := float(vt.r[1]) + float(vt.r[3])
+	vt.r = [vt.r[0], vy, vt.r[2], vb - vy]
+	var L := []
+	if E.N8():
+		L.append(["7", "Quà 7 ngày đầu", E.Cp()])
+	L.append(["m", "Điểm danh tháng", E.q9() or E.nF() > 0])
+	var bd := _cl(ST.ttdot)
+	bd.text = "1"
+	_seg_tabs(tabs, L, cd, _tab_go, bd)
+	_hb = float(vt.r[3])
+	var r: Array = _tab7() if cd == "7" else _tabm()
+	var kids: Array = r[0]
 	for k in kids:
-		Snap._move(k, Vector2(0, by))
-	_hx(ov, kids, ch)
+		Snap._move(k, Vector2(0, vy))
+	_mount(n, vt, kids, vy, float(r[1]), 0.0)
+	U._layout()
 
 # ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
-const X0 := 18.0      # mép trái nội dung thân (khung Kho, lề trong 9)
-const XW := 302.0     # rộng nội dung
+const X0 := 16.5      # mép trái nội dung (như thẻ trong Kho / Sổ làng)
+const XW := 305.0     # rộng nội dung
 const BROWN := "rgb(74, 52, 20)"
 const SUB := "rgb(128, 98, 58)"
 const GOLD := "rgb(222, 160, 40)"
@@ -174,6 +172,13 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false)
 	if cb is Callable:
 		n.act = cb
 	return n
+
+# hình quà vẽ trong khung 64 mà độ đầy khác nhau (đồng xu nhỏ, hộp quà to): phóng theo loại cho cùng cỡ nhìn
+const ICK := {"coin": 1.35, "pearl": 1.08, "crate": 1.0, "bua": 1.0, "che": 0.9, "gift": 0.8}
+func _dick(cx: float, cy: float, s: float, ic: String, op := 1.0) -> Dictionary:   # hình quà loại ic, tâm (cx, cy)
+	var svg: String = D.ic[ic] if D.ic.has(ic) else String(D.ddms.kids[1].kids[3].kids[0].svg)
+	var z := s * float(ICK.get(ic, 1.0))
+	return _dic(cx - z * 0.5, cy - z * 0.5, z, svg, op)
 
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
 	var n := _cl(D.cell.fut.kids[1])
@@ -292,7 +297,6 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
 	out.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
 	var ly := iy + ms + 5.0
-	var row: Dictionary = D.ddms.kids[1]
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
 		var n := int(R.n)
@@ -301,7 +305,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		var ok := v >= n
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
 		var ring := _chip(cx - ms * 0.5, iy, ms, ms, "got" if got else ("now" if ok else "fut"))   # vàng = đủ ngày, chờ bấm Nhận
-		ring.kids = [_dic(cx - 16.0, iy + 6.0, 32.0, String(row.kids[j].kids[0].svg))]
+		ring.kids = [_dick(cx, iy + ms * 0.5, 32.0, String(R.ic))]
 		if got:
 			ring.kids.append(_dtick(cx + ms * 0.5 - 13.0, iy + 3.0, 10.0))
 		if ok and not got:
@@ -363,7 +367,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var c := _chip(x, y, cw, rh, kind)
 	var s := minf(cw - 6.0, rh - 13.0)
 	var kids := [_dt(x + 4.0, y + 2.5, 18.0, 10.0, str(w), 8.25, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
-		_dic(x + (cw - s) * 0.5, y + rh - s - 3.0, s, D.ic[String(gd.ic)], op)]
+		_dick(x + cw * 0.5, y + rh - s * 0.5 - 3.0, s, String(gd.ic), op)]
 	if got:
 		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))
 		c.act = _dsay.bind("Ngày " + str(w) + ": đã nhận " + String(gd.t) + ".")
@@ -382,53 +386,3 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 func _bu_ask(w: int, cost: int) -> void:   # ngày lỡ: hỏi lại rồi mới bù
 	U.xfp._ask(null, cost, "Điểm danh bù ngày " + str(w) + "?", "Quà: " + String(E.aF(w).t), func(): E.tA(w, true))
 
-# ------------------------------------------------------------------ khung cỡ Kho hàng (bản 385)
-const KX := 0.0       # .pwin của Kho
-const KY := 85.4
-const KW := 338.0
-const KH := 524.6
-var _ox := 48.2       # mép trái hộp mẫu (.hxwrap)
-var _sx := 1.0
-
-func _wx(n: Dictionary, dd = null) -> void:   # nới ngang: khối nền (không chữ, không hình) giãn theo; chữ / hình giữ cỡ,
-	# dời theo tâm; chữ nằm trong chữ (đoạn chữ nhiều kiểu) dời cùng một khoảng với chữ ngoài (dd)
-	var R: Array = n.r
-	var keep: bool = n.has("svg") or String(n.get("text", "")) != "" or dd != null
-	var d = null
-	if keep:
-		if dd == null:
-			var cx := float(R[0]) + float(R[2]) * 0.5
-			dd = KX + (cx - _ox) * _sx - float(R[2]) * 0.5 - float(R[0])
-		d = dd
-		n.r = [float(R[0]) + float(dd), R[1], R[2], R[3]]
-		if n.has("tr"):
-			n.tr = [float(n.tr[0]) + float(dd), n.tr[1], n.tr[2], n.tr[3]]
-	else:
-		n.r = [KX + (float(R[0]) - _ox) * _sx, R[1], float(R[2]) * _sx, R[3]]
-		if n.has("tr"):
-			n.tr = [KX + (float(n.tr[0]) - _ox) * _sx, n.tr[1], n.tr[2], n.tr[3]]
-	for k in n.get("kids", []):
-		if k is Dictionary and k.has("r"):
-			_wx(k, d)
-
-func _hx(ov: Dictionary, kids: Array, ch: float) -> void:   # khung đặt đúng chỗ, đúng cỡ Kho; thân cao hết phần còn lại
-	var wr := _find(ov, "hxwrap")
-	var bd := _find(ov, "hxbody")
-	_ox = float(wr.r[0])
-	_sx = KW / float(wr.r[2])
-	for k in wr.kids:
-		_wx(k)
-	wr.r = [KX, wr.r[1], KW, wr.r[3]]
-	var dh := KH - float(wr.r[3])
-	bd.r[3] = float(bd.r[3]) + dh
-	var hin := _find(wr, "hxin")
-	if not hin.is_empty():
-		hin.r[3] = float(hin.r[3]) + dh
-	wr.r[3] = KH
-	var dy := KY - float(wr.r[1])
-	Snap._move(wr, Vector2(0, dy))
-	for k in kids:
-		Snap._move(k, Vector2(0, dy))
-	_tre_box(wr)
-	_mount(_ovl(ov), bd, kids, float(bd.r[1]), ch)
-	_wire_ov(".hxwrap")
