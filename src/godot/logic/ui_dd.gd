@@ -134,7 +134,8 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"fut": ["rgb(250, 242, 222)", "rgb(252, 247, 234)", "rgb(255, 252, 245)", "rgba(150, 112, 48, 0.55)"],
 	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
 	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
-	"miss": ["rgb(214, 210, 200)", "rgb(222, 218, 209)", "rgb(232, 229, 222)", "rgb(160, 152, 138)"],
+	"miss": ["rgb(200, 196, 186)", "rgb(208, 204, 195)", "rgb(218, 215, 207)", "rgb(145, 137, 123)"],
+	"tre": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)"],   # dải thứ: nâu vàng
 	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 }
 func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
@@ -156,7 +157,7 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	return n
 
 static var _ON := {}
-func _onbtn(x: float, y: float, w: float, h: float, t: String, cb: Callable) -> Dictionary:   # nút = chip "on" (xanh) của Kho
+func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false) -> Dictionary:   # nút = chip "on" (xanh) của Kho; red: cùng dáng, tông đỏ
 	if _ON.is_empty():
 		var ch: Dictionary = Snap.find(Snap.load_snap("kho")["#pov"][0], "khchips")
 		for k in ch.kids:
@@ -166,8 +167,12 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb: Callable) -> 
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 10.0)
 	for key in ["background-color", "background-image", "border-radius", "box-shadow"]:
 		n.css[key] = _ON.get(key, n.css.get(key))
+	if red:
+		n.css["background-image"] = "linear-gradient(rgb(196, 62, 48) 0%, rgb(204, 68, 52) 50%, rgb(216, 82, 62) 100%)"
+		n.css["box-shadow"] = String(n.css["box-shadow"]).replace("rgb(63, 116, 41)", "rgb(140, 38, 28)").replace("rgba(150, 215, 130, 0.45)", "rgba(255, 170, 150, 0.45)").replace("rgba(10, 55, 10, 0.2)", "rgba(80, 10, 5, 0.2)").replace("rgba(30, 70, 20, 0.32)", "rgba(80, 20, 10, 0.32)")
 	n.kids = [_dt(x, y, w, h, t, 12.5, 800, "rgb(255, 255, 255)")]
-	n.act = cb
+	if cb is Callable:
+		n.act = cb
 	return n
 
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
@@ -258,10 +263,6 @@ func _tab7() -> Array:
 # ------------------------------------------------------------------ tab Điểm danh tháng (bản 386)
 const R8S := ["1.500 xu", "5 sen đỏ", "Vật liệu lớn", "10 sen + bùa"]
 
-func _dsec(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
-	var tw: float = Box.text_w(t, 12.5, 800) + 8.0
-	return [_dt(X0 + 2.0, y, tw, 16.0, t, 12.5, 800, BROWN, "left"), _dbx(X0 + 2.0 + tw + 4.0, y + 8.0, XW - tw - 10.0, 1.0, "rgb(222, 204, 164)", 0.0)]
-
 func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề phần + chip đặt thẳng trên nền khung
 	var e: Array = E.B8()
 	var v := e.size()
@@ -271,11 +272,21 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var M: int = E.bu_n()
 	var out := []
 	# 1. mốc tháng: thanh tiến độ + 4 mốc đúng vị trí ngày
-	var hy := 4.0
-	out.append_array(_dsec(hy, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày"))
+	var hy := 12.0
+	var mt := "Tháng " + str(E.q8() % 100)
+	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
+	out.append(_onbtn(X0, hy - 3.0, mw, 24.0, mt, null, true))
+	var tx := X0 + mw + 8.0
+	var t1 := "Đã điểm danh "
+	var w1: float = Box.text_w(t1, 12.0, 700)
+	out.append(_dt(tx, hy - 3.0, w1, 24.0, t1, 12.0, 700, BROWN, "left"))
+	var t2 := str(v) + "/" + str(o)
+	var w2: float = Box.text_w(t2, 13.0, 800)
+	out.append(_dt(tx + w1, hy - 3.0, w2, 24.0, t2, 13.0, 800, GREEN, "left"))
+	out.append(_dt(tx + w1 + w2 + 5.0, hy - 3.0, 50.0, 24.0, "ngày", 12.0, 700, BROWN, "left"))
 	var bx0 := X0 + 14.0
 	var bw := XW - 28.0
-	var iy := hy + 22.0
+	var iy := hy + 31.0
 	var ms := 44.0        # chip mốc cỡ ô ngày
 	var by := iy + ms * 0.5 - 3.5   # thanh chạy qua giữa các chip mốc
 	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
@@ -301,7 +312,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		out.append(_dt(cx - 30.0, ly, 60.0, 14.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
 		out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(176, 118, 10)" if nxt else SUB))
 	# 2. lịch
-	var cy := ly + 36.0
+	var cy := ly + 42.0
 	var misses := 0
 	for w in range(1, r):
 		if not E.got(w):
@@ -312,11 +323,13 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var cw := (XW - g * 6.0) / 7.0
 	var gx := X0
 	var wy := cy
-	out.append(_chip(gx, wy, XW, 20.0, "fut"))
+	var band := _chip(gx, wy, XW, 24.0, "tre")
+	band.css["border-radius"] = _cpx(5.0)   # dải mỏng: bo ít (chỉ dải này)
+	out.append(band)
 	for i in 7:
-		out.append(_dt(gx + i * (cw + g), wy, cw, 20.0, DW[i], 11.5, 800, "rgb(200, 70, 60)" if i == 6 else BROWN))
+		out.append(_dt(gx + i * (cw + g), wy, cw, 24.0, DW[i], 12.0, 800, "rgb(190, 50, 40)" if i == 6 else "rgb(80, 52, 14)"))
 	var rows := mini(5, int(ceil((k + o) / 7.0)))   # lịch giấy: ngày 30, 31 tràn hàng 6 thì dồn lên ô trống hàng 1
-	var gy := wy + 25.0
+	var gy := wy + 29.0
 	var rh := minf(cw + 12.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
@@ -346,7 +359,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var gd: Dictionary = E.aF(w)
 	var big := w % 7 == 0
 	var kind := "got" if got else ("now" if now else ("miss" if miss else ("sen" if big else "fut")))
-	var op := 0.7 if miss else 1.0
+	var op := 0.5 if miss else 1.0
 	var c := _chip(x, y, cw, rh, kind)
 	var s := minf(cw - 6.0, rh - 13.0)
 	var kids := [_dt(x + 4.0, y + 2.0, 18.0, 13.0, str(w), 11.0, 800, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
