@@ -1,7 +1,8 @@
 extends "res://logic/ui_pop.gd"
 # SỔ TAY HƯỚNG DẪN (ZC bản web, Sổ làng › Sổ tay): hộp nổi khung tre (ui_pop.gd): ô tìm, từng nhóm (h3.gdsec), mỗi mục một thẻ
 # details.gd (hình món, tên, nhãn "Mới" khi chưa đọc, bấm để mở / gập các dòng hướng dẫn). Đọc rồi ghi g.tut.rd[mã].
-# Cuối hộp: Chuyện làng, Tắt / Bật lại nhắc lần đầu (g.tut.off). Mẫu: gd_tab.json; nội dung: ui/snap/sotay.json (Y6 của web lúc chạy).
+# Cuối hộp: Chuyện làng, Tắt / Bật lại nhắc lần đầu (g.tut.off). Mẫu: gd_tab.json; nội dung: data/huong_dan/so_tay.json
+# (bản 344: thay bản chụp ui/snap/sotay.json cũ thiếu mục). Mục "Cấp nào mở gì": cây trồng / cây ăn trái tính lại từ data (_capdo).
 
 var GD := {}                # mẫu
 var Y6 := []                # [{sec, items: [{id, ic, n, b: [dòng]}]}]
@@ -11,8 +12,53 @@ var q := ""                 # chữ tìm
 func _init(ui) -> void:
 	super(ui)
 	GD = Snap.load_snap("gd_tab")
-	var y = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/sotay.json"))
+	var y = G._j("huong_dan/so_tay")
 	Y6 = y if y is Array else []
+	_capdo()
+
+func _capdo() -> void:   # dòng "Cấp N: ..." : bỏ chữ "Cây ..." cũ, ghi lại cây mở ở cấp đó theo data
+	var lai: Dictionary = G._j("nong_trai/giong_lai")
+	var ei: Dictionary = G._j("nong_trai/cay_an_trai")
+	var ct: Dictionary = G._j("xay_dung/cong_trinh")
+	var by := {}      # cấp -> ["Cây lúa", ...]
+	var all := {}     # mọi chữ "Cây ..." có thể có
+	for k in G.D.crops:
+		var t := "Cây " + String(G.D.crops[k].name).to_lower()
+		all[t] = true
+		if not lai.has(k):
+			by.get_or_add(int(G.D.crops[k].lv), []).append(t)
+	for f in ei:
+		var t := "Cây " + String(ct.get(f, {}).get("n", G.item_name(String(ei[f].p)))).to_lower()
+		all[t] = true
+		by.get_or_add(int(ei[f].lv), []).append(t)
+	for sec in Y6:
+		for it in sec.items:
+			if it.id != "capdo":
+				continue
+			var out := []
+			var seen := {}
+			for line in it.b:
+				var m := String(line)
+				if not m.begins_with("Cấp ") or m.find(": ") < 0:
+					out.append(m)
+					continue
+				var n := int(m.substr(4, m.find(":") - 4))
+				var rest := m.substr(m.find(": ") + 2).trim_suffix(".")
+				var keep := []
+				for tok in rest.split(", "):
+					if not all.has(tok):
+						keep.append(tok)
+				var toks: Array = by.get(n, []) + keep
+				seen[n] = true
+				if not toks.is_empty():
+					out.append("Cấp " + str(n) + ": " + ", ".join(toks) + ".")
+			for n in by:   # cấp có cây mới mà sổ chưa có dòng
+				if not seen.has(n):
+					out.append("Cấp " + str(n) + ": " + ", ".join(by[n]) + ".")
+			var head := out.filter(func(l): return not String(l).begins_with("Cấp "))
+			var lv := out.filter(func(l): return String(l).begins_with("Cấp "))
+			lv.sort_custom(func(a, b): return int(String(a).substr(4, String(a).find(":") - 4)) < int(String(b).substr(4, String(b).find(":") - 4)))
+			it.b = head + lv
 
 static func kh(G) -> Dictionary:   # Kh: g.tut
 	var t = G.g.get("tut")
