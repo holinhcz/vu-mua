@@ -1279,11 +1279,11 @@
   "file": "banh_cam.png",
   "bbox": [
    41,
-   72,
+   49,
    471,
-   440
+   462
   ],
-  "nguon": "tấm ảnh người dùng (bản 313)"
+  "nguon": "tấm ảnh người dùng (bản 372)"
  },
  "banh_pia": {
   "file": "banh_pia.png",
@@ -2513,6 +2513,156 @@
    58,
    471,
    453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "cai_thia_xao": {
+  "file": "cai_thia_xao.png",
+  "bbox": [
+   41,
+   66,
+   471,
+   446
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "kho_qua_xao_trung": {
+  "file": "kho_qua_xao_trung.png",
+  "bbox": [
+   41,
+   66,
+   471,
+   445
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ca_tim_xao_toi": {
+  "file": "ca_tim_xao_toi.png",
+  "bbox": [
+   41,
+   68,
+   471,
+   444
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "dau_que_xao": {
+  "file": "dau_que_xao.png",
+  "bbox": [
+   41,
+   69,
+   471,
+   443
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "banh_tom_chien": {
+  "file": "banh_tom_chien.png",
+  "bbox": [
+   41,
+   53,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "banh_goi": {
+  "file": "banh_goi.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "hoanh_thanh_chien": {
+  "file": "hoanh_thanh_chien.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ca_keo_chien": {
+  "file": "ca_keo_chien.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   464
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "tom_chien_xu": {
+  "file": "tom_chien_xu.png",
+  "bbox": [
+   41,
+   53,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "muc_chien_xu": {
+  "file": "muc_chien_xu.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "dau_hu_chien_sa": {
+  "file": "dau_hu_chien_sa.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ba_roi_chien": {
+  "file": "ba_roi_chien.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ca_ro_chien": {
+  "file": "ca_ro_chien.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   452
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ca_dieu_hong_chien": {
+  "file": "ca_dieu_hong_chien.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "ca_sac_chien": {
+  "file": "ca_sac_chien.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   455
   ],
   "nguon": "tấm ảnh người dùng (bản 372)"
  }
