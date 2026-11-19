@@ -90,7 +90,7 @@ func _us(a: int) -> String:   # Us(kind, a)
 
 func _one() -> String:   # tên một thứ (tab, thông báo): chuồng / xưởng / quán
 	if kind == "quan":
-		return String(G.w_all.WQ.CF[pt].ten)
+		return G.w_all.WQ.ten(pt)
 	if kind == "work":
 		return String(G.xw.sr[pt].name)
 	return String(G.lang.CO.get(pt, "Chuồng"))

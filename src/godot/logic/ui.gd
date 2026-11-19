@@ -2751,7 +2751,7 @@ func _ord_sync() -> void:
 			od_ul.add(cb)
 			var qk := od_src
 			_click(_q(cb, "qkc_sao"), func(): if not _od_dragged(): ord_close(); spp.open_quan(qk), "down")
-			_click(_q(cb, "qkc_gia"), func(): if not _od_dragged(): G.w_all.WQ.gia_next(); _ord_sync(), "down")
+			_click(_q(cb, "qkc_gia"), func(): if not _od_dragged(): G.w_all.WQ.gia_next(qk); _ord_sync(), "down")
 			od_cards[-2] = {"b": cb, "sig": csig}
 	for q in L.size():
 		var rw := q / 2
@@ -2809,7 +2809,7 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	tn.r = [tn.r[0], tn.r[1], tw, tn.r[3]]
 	var em: Dictionary = tl[2]
 	if od_src != "":   # khách quán: "Giao được N/M khách" (tạp hóa: đơn)
-		_set_t(em, "đơn" if od_src == "taphoa" else "khách", float(em.r[0]))
+		_set_t(em, "đơn" if G.w_all.WQ.kd(od_src) == "taphoa" else "khách", float(em.r[0]))
 	_nshift(em, float(tn.r[0]) + tw + OD_GAP * 0.75 - float(em.r[0]))
 	var td := Snap.find(n, "odtd")
 	var tk: Array = td.kids

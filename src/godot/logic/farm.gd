@@ -1170,7 +1170,7 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
 			var o: Dictionary = lang.objs()[i]
 			if G.w_all != null and G.w_all.WQ.kind_of(String(o.id)) != "":   # (bản 350) khách quán: giao từ kho
-				return {"type": "quan", "k": G.w_all.WQ.kind_of(String(o.id))}
+				return {"type": "quan", "k": String(o.id)}
 			if b.kind == "chat" or (G.w_all != null and G.w_all.WL.CX.has(o.id)):   # bong bóng nhà dân (FD): mở bảng nhà
 				return {"type": "nha", "u": int(o.get("u", 0))}
 			return {"type": "hive" if o.id == "thungong" else "tree", "i": i}
@@ -1339,7 +1339,7 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 			elif G.w_all != null and G.w_all.WQ.kind_of(String(o.id)) != "":   # (bản 353) quán cơm / tạp hóa / cà phê: mở bảng khách
 				var inside3: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 				if inside3 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
-					_pk_add(L, {"type": "quan_open", "k": G.w_all.WQ.kind_of(String(o.id))}, 50, sy, px, {"gr": 3 if inside3 else 0, "n": on})
+					_pk_add(L, {"type": "quan_open", "k": String(o.id)}, 50, sy, px, {"gr": 3 if inside3 else 0, "n": on})
 			elif o.id == "thungong":
 				var hb := func(p: Vector2) -> bool: return absf(p.x - sx) < 24.0 and p.y >= sy - 86.0 and p.y <= sy + 8.0
 				if hb.call(w):
@@ -2147,9 +2147,8 @@ func _tree_bub_want() -> Dictionary:
 			elif o.id == "thungong" and WR.hive_h(i) > 0:
 				want[i] = ["ripe", "mat_ong"]
 			elif G.w_all.WQ.kind_of(String(o.id)) != "":   # (bản 350) quán cơm / tạp hóa / cà phê: món khách đang chờ (w_quan.gd)
-				var qk: String = G.w_all.WQ.kind_of(String(o.id))
-				var qm = G.w_all.WQ.bub(qk)
-				if qm != null and _quan_first(qk, i, O):
+				var qm = G.w_all.WQ.bub(String(o.id))   # (bản 360) mỗi căn một hàng khách
+				if qm != null:
 					want[i] = ["ripe", String(qm)]
 			elif G.w_all.WL.CX.has(o.id) and int(o.get("u", 0)) > 0:   # FD: nhà đang cần đồ (hình món) / mời trò chuyện (...)
 				var f = G.w_all.WL._fam_of(int(o.u))
@@ -2158,12 +2157,6 @@ func _tree_bub_want() -> Dictionary:
 				elif f != null and int(f.get("mo", 0)) == 1 and G.w_all.WL.chat_left(f) > 0:
 					want[i] = ["chat", ""]
 	return want
-
-func _quan_first(k: String, i: int, O: Array) -> bool:   # bong bóng khách quán chỉ hiện trên căn đầu tiên cùng loại
-	for j in O.size():
-		if O[j] is Dictionary and G.w_all.WQ.kind_of(String(O[j].get("id", ""))) == k:
-			return j == i
-	return false
 
 func vn_job(t: String, j: int, act: String) -> bool:   # Ns: nhân vật đi tới con vật rồi làm (0,35 s; vuốt ve 0,8 s)
 	var key := "animal:" + t + ":" + str(j) + ":" + act

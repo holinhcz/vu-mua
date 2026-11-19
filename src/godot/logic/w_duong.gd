@@ -284,9 +284,10 @@ func W9() -> Dictionary:   # W9 (+ khách quán cơm / tạp hóa / cà phê đa
 	# lớp bọc: A(At, Pt) cộng thẳng, không xét > 0
 	if G.w_all != null and G.w_all.WQ != null:   # (bản 350) khách quán cơm / đơn tạp hóa / khách cà phê đang chờ (w_quan.gd)
 		for k in G.w_all.WQ.CF:
-			for At in G.w_all.WQ.list(k):
-				for Pt in At.items:
-					t[String(Pt[0])] = int(_n(t.get(String(Pt[0]), 0))) + int(Pt[1])
+			for q in G.w_all.WQ.CF[k].obj:
+				for At in G.w_all.WQ.list(String(q)):
+					for Pt in At.items:
+						t[String(Pt[0])] = int(_n(t.get(String(Pt[0]), 0))) + int(Pt[1])
 	return t
 
 # ------------------------------------------------------------------ thiên tai đánh xuống làng (tnTick gọi)
