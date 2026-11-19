@@ -1775,5 +1775,45 @@
    463
   ],
   "nguon": "tấm ảnh người dùng (bản 363)"
+ },
+ "xoi_thit": {
+  "file": "xoi_thit.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 364)"
+ },
+ "com_det": {
+  "file": "com_det.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 364)"
+ },
+ "thinh": {
+  "file": "thinh.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 364)"
+ },
+ "caphe_rang": {
+  "file": "caphe_rang.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 364)"
  }
 }

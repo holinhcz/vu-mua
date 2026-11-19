@@ -43,7 +43,7 @@ Cây tạm: khom trên ruộng = hình cây la_dua; cây ăn trái ft_tac, ft_sa
 che_ba_ba, che_khoai_mon (tạm che_khoai), che_dau_den (che_me_den), che_thai (che_ba_mau), tau_hu (sua_dau_nanh), che_bi_do (che_bap).
 
 ## Lò bánh quê (bản 331) — hình tạm
-xoi_la_dua, xoi_xeo (tạm xoi), banh_xeo, banh_can (banh_khot), banh_gio (banh_beo), banh_hoi (banh_cuon), banh_chung (banh_tet), xoi_thit (xoi_cha_bong).
+xoi_la_dua, xoi_xeo (tạm xoi), banh_xeo, banh_can (banh_khot), banh_gio (banh_beo), banh_hoi (banh_cuon), banh_chung (banh_tet).
 
 ## Nồi kho (bản 332) — hình tạm
 thit_kho (Thịt kho tiêu, vẫn hình thịt kho trứng cũ), ca_keo_kho (ca_ro_kho), mam_kho (thit_kho_nd), ca_chep_kho (ca_kho), ech_kho (luon_um), cua_rang_me, thit_rim_tom (tom_rim).
@@ -67,7 +67,7 @@ kho_muc, kho_ca_ro, bo_kho_say, kho_ga (kho_ca), me_say (xoai_say).
 bt_nuong (bt_chabong), bt_muoi_tom (bt_tron), bt_me_chua (bt_me).
 
 ## Lò rang hạt + cà phê (bản 339) — hình tạm
-thinh (me_rang), com_det (bap_rang), muoi_me (muoi_dp), caphe_rang (dp_rang), caphe_den (nuoc_mia), caphe_sua (sinh_to), qua_caphe (icon đậu phộng / mè), cây ft_caphe = hình cây xoài.
+muoi_me (muoi_dp), caphe_den (nuoc_mia), caphe_sua (sinh_to), qua_caphe (icon đậu phộng / mè), cây ft_caphe = hình cây xoài.
 
 ## Lò đường (bản 340) — hình tạm
 mut_khoai (mut_chomchom), mut_tac (mut_mangcut), keo_chuoi (keo_dua).
@@ -80,3 +80,6 @@ muoi_ot, muoi_tom, muoi_tieu (icon muối hột vẽ code).
 
 ## Bản 363 — hình thật
 bun_bo_hue, mi_quang, bun_cha gắn vào game. cao_lau.png (Cao lầu) lưu sẵn, chưa có món trong game.
+
+## Bản 364 — hình thật
+xoi_thit, com_det, thinh, caphe_rang.
