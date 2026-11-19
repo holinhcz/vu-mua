@@ -236,7 +236,11 @@ func _tab7() -> Array:
 # ------------------------------------------------------------------ tab Điểm danh tháng (bản 386)
 const R8S := ["1.500 xu", "5 sen đỏ", "Vật liệu lớn", "10 sen + bùa"]
 
-func _tabm() -> Array:
+func _dsec(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
+	var tw: float = Box.text_w(t, 12.5, 800) + 8.0
+	return [_dt(X0 + 2.0, y, tw, 16.0, t, 12.5, 800, BROWN, "left"), _dbx(X0 + 2.0 + tw + 4.0, y + 8.0, XW - tw - 10.0, 1.0, "rgb(222, 204, 164)", 0.0)]
+
+func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề phần + chip đặt thẳng trên nền khung
 	var e: Array = E.B8()
 	var v := e.size()
 	var r: int = E.ld()
@@ -244,17 +248,15 @@ func _tabm() -> Array:
 	var k: int = E.dow1()
 	var M: int = E.bu_n()
 	var out := []
-	# 1. đầu bảng: tháng + số ngày + thanh tiến độ có 4 mốc đúng vị trí ngày
-	var hy := 6.0
-	var hh := 92.0
-	var hc := _dcard(X0, hy, XW, hh)
-	var hk := []
-	hk.append(_dt(X0 + 12.0, hy + 8.0, XW - 24.0, 16.0, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày", 13.0, 800, BROWN, "left"))
-	var bx0 := X0 + 16.0
-	var bw := XW - 32.0
-	var by := hy + 58.0
-	hk.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
-	hk.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
+	# 1. mốc tháng: thanh tiến độ + 4 mốc đúng vị trí ngày
+	var hy := 4.0
+	out.append_array(_dsec(hy, "Tháng " + str(E.q8() % 100) + " · đã điểm danh " + str(v) + "/" + str(o) + " ngày"))
+	var bx0 := X0 + 14.0
+	var bw := XW - 28.0
+	var iy := hy + 22.0
+	var by := iy + 36.0
+	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
+	out.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
 	var row: Dictionary = D.ddms.kids[1]
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
@@ -262,76 +264,53 @@ func _tabm() -> Array:
 		var cx := bx0 + bw * float(n) / o
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
-		var s := 26.0
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
-		var ring := _chip(cx - 17.0, hy + 26.0, 34.0, 31.0, "now") if ok and not got else _dbx(cx - 17.0, hy + 26.0, 34.0, 31.0, "rgba(0, 0, 0, 0)", 8.0)
-		ring.kids = [_dic(cx - s * 0.5, hy + 28.5, s, String(row.kids[j].kids[0].svg), 1.0 if ok or nxt else 0.4)]
+		var ring := _chip(cx - 17.0, iy, 34.0, 31.0, "got" if got else ("now" if ok else "fut"))
+		ring.kids = [_dic(cx - 12.5, iy + 3.0, 25.0, String(row.kids[j].kids[0].svg), 1.0 if ok or nxt else 0.45)]
 		if got:
-			ring.kids.append(_dtick(cx + 7.0, hy + 26.0, 11.0))
+			ring.kids.append(_dtick(cx + 8.0, iy + 2.0, 10.0))
 		if ok and not got:
 			ring.act = E.eF.bind(n)
 		else:
 			ring.act = _dsay.bind("Mốc " + str(n) + " ngày: " + String(R.t) + ("" if ok else " (còn " + str(n - v) + " ngày)"))
-		hk.append(ring)
-		var nxt2: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))
-		hk.append(_dt(cx - 30.0, by + 10.0, 60.0, 12.0, (str(n) + " ngày") if not (ok and not got) else "Nhận", 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt2 else SUB))))
-		hk.append(_dt(cx - 36.0, by + 21.0, 72.0, 11.0, ("còn " + str(n - v) + " ngày") if nxt2 else R8S[j], 9.5, 700 if nxt2 else 600, "rgb(214, 84, 52)" if nxt2 else SUB))
-	hc.kids = hk
-	out.append(hc)
-	# 2. thẻ hôm nay
-	var ty := hy + hh + 6.0
-	var th := 50.0
-	var tc := _dcard(X0, ty, XW, th)
-	var gd: Dictionary = E.aF(r)
-	var tk := []
-	if E.q9():
-		tk.append(_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gd.ic)]))
-		tk.append(_dt(X0 + 54.0, ty + 8.0, 150.0, 14.0, "Hôm nay · ngày " + str(r), 10.5, 700, SUB, "left"))
-		tk.append(_dt(X0 + 54.0, ty + 23.0, 150.0, 18.0, String(gd.t), 13.0, 800, BROWN, "left"))
-		tk.append(_dbtn(X0 + XW - 96.0, ty + 12.0, 86.0, 26.0, "Điểm danh", E.tA.bind(r, false)))
-		tc.css = tc.css.duplicate()
-		tc.css["box-shadow"] = "rgb(222, 160, 40) 0px 0px 0px 1.5px inset, rgba(222, 160, 40, 0.3) 0px 0px 0px 2px"
-	else:
-		var nx := ""
-		if r < o:
-			var gm: Dictionary = E.aF(r + 1)
-			nx = "Mai: " + String(gm.t)
-			tk.append(_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gm.ic)]))
-		tk.append(_dtick(X0 + 54.0, ty + 9.5, 11.0))
-		tk.append(_dt(X0 + 68.0, ty + 8.0, 230.0, 14.0, "Hôm nay đã nhận " + String(gd.t), 10.5, 700, GREEN, "left"))
-		tk.append(_dt(X0 + 54.0, ty + 23.0, 240.0, 18.0, nx if nx != "" else "Hết tháng, tháng sau điểm danh lại", 13.0, 800, BROWN, "left"))
-	tc.kids = tk
-	out.append(tc)
-	# 3. lịch
-	var cy := ty + th + 6.0
+		out.append(ring)
+		out.append(_dt(cx - 30.0, by + 11.0, 60.0, 12.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
+		out.append(_dt(cx - 36.0, by + 22.0, 72.0, 11.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(214, 84, 52)" if nxt else SUB))
+	# 2. lịch
+	var cy := by + 42.0
+	out.append_array(_dsec(cy, "Lịch tháng " + str(E.q8() % 100)))
 	var misses := 0
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var foot := 22.0 if misses > 0 else 0.0
-	var ch := _hb - cy - 10.0
-	var cc := _dcard(X0, cy, XW, ch)
-	var ck := []
+	var bot := 36.0 + (16.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
-	var cw := (XW - 16.0 - g * 6.0) / 7.0
-	var gx := X0 + 8.0
+	var cw := (XW - g * 6.0) / 7.0
+	var gx := X0
+	var wy := cy + 20.0
 	for i in 7:
-		ck.append(_dt(gx + i * (cw + g), cy + 6.0, cw, 14.0, DW[i], 10.0, 800, SUB))
+		out.append(_dt(gx + i * (cw + g), wy, cw, 14.0, DW[i], 10.0, 800, SUB))
 	var rows := int(ceil((k + o) / 7.0))
-	var gy := cy + 24.0
-	var rh := minf(cw + 6.0, (ch - 24.0 - 8.0 - foot - g * (rows - 1)) / rows)
+	var gy := wy + 18.0
+	var rh := minf(cw + 4.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
-		var x := gx + (gi % 7) * (cw + g)
-		var y := gy + (gi / 7) * (rh + g)
-		ck.append(_dday(w, x, y, cw, rh, M))
+		out.append(_dday(w, gx + (gi % 7) * (cw + g), gy + (gi / 7) * (rh + g), cw, rh, M))
+	# 3. hôm nay: nút vàng (chưa nhận) / một dòng (đã nhận), dòng bù
+	var ty := gy + rows * (rh + g) + 4.0
+	var gd: Dictionary = E.aF(r)
+	if E.q9():
+		out.append(_dbtn(X0 + (XW - 170.0) * 0.5, ty, 170.0, 28.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
+	else:
+		var t := "✓ Đã nhận hôm nay" + ((" · Mai: " + String(E.aF(r + 1).t)) if r < o else "")
+		out.append(_dt(X0, ty, XW, 28.0, t, 11.0, 700, GREEN))
+	var ey := ty + 30.0
 	if misses > 0:
 		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
-		ck.append(_dt(X0 + 8.0, cy + ch - 8.0 - foot + 2.0, XW - 16.0, foot - 4.0, fs, 10.5, 600, SUB))
-	cc.kids = ck
-	out.append(cc)
-	return [out, cy + ch + 10.0]
+		out.append(_dt(X0, ey, XW, 14.0, fs, 10.5, 600, SUB))
+		ey += 16.0
+	return [out, ey + 8.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
 	var got: bool = E.got(w)
