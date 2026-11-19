@@ -57,11 +57,11 @@
   "file": "ca_ro_kho.png",
   "bbox": [
    41,
-   87,
+   69,
    471,
-   425
+   442
   ],
-  "nguon": "tấm ảnh người dùng (bản 308)"
+  "nguon": "tấm ảnh người dùng (bản 368)"
  },
  "cha_ca": {
   "file": "cha_ca.png",
@@ -1229,11 +1229,11 @@
   "file": "thit_kho.png",
   "bbox": [
    41,
-   84,
+   70,
    471,
-   427
+   442
   ],
-  "nguon": "tấm ảnh người dùng (bản 311)"
+  "nguon": "tấm ảnh người dùng (bản 368)"
  },
  "thit_kho_nd": {
   "file": "thit_kho_nd.png",
@@ -2045,5 +2045,105 @@
    455
   ],
   "nguon": "tấm ảnh người dùng (bản 367)"
+ },
+ "mam_kho": {
+  "file": "mam_kho.png",
+  "bbox": [
+   41,
+   71,
+   471,
+   440
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "ca_keo_kho": {
+  "file": "ca_keo_kho.png",
+  "bbox": [
+   41,
+   71,
+   471,
+   440
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "tau_hu": {
+  "file": "tau_hu.png",
+  "bbox": [
+   41,
+   59,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "che_thai": {
+  "file": "che_thai.png",
+  "bbox": [
+   41,
+   61,
+   471,
+   451
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "che_dau_den": {
+  "file": "che_dau_den.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   454
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "che_bi_do": {
+  "file": "che_bi_do.png",
+  "bbox": [
+   41,
+   59,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "banh_mi_xm": {
+  "file": "banh_mi_xm.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "banh_mi_op": {
+  "file": "banh_mi_op.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "su_kem": {
+  "file": "su_kem.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "banh_dua": {
+  "file": "banh_dua.png",
+  "bbox": [
+   41,
+   50,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 368)"
  }
 }

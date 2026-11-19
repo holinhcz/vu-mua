@@ -93,3 +93,6 @@ che_khoai_mon, che_ba_ba, che_dau_xanh (thay hình cũ), caphe_den, caphe_sua, b
 ## Bản 367 — hình thật
 muoi_ot, muoi_tieu, muoi_tom, pho_bo, banh_hoi, xoi_la_dua, xoi (xôi đậu phộng), xoi_xeo. Lưu sẵn chưa có món: pho_ga (Phở gà), bun_ca_loc (Bún cá lóc), banh_canh_tc (Bánh canh thập cẩm).
 Tấm nền trong mà các món dính nhau (lá chồm qua món bên): src/tools/cut_mon2.py (lõi co + watershed).
+
+## Bản 368 — hình thật
+thit_kho, mam_kho, ca_ro_kho, ca_keo_kho, tau_hu, che_thai, che_dau_den, che_bi_do, banh_mi_xm, banh_mi_op, su_kem, banh_dua.
