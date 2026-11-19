@@ -1576,7 +1576,6 @@ func _process(dt: float) -> void:
 # nhóm món của tiệm: data/nong_trai/nhom_vat_pham.json (D.nhom), món không thuộc nhóm nào là "khac"
 const Y8 := 300000.0      # đổi đơn: khách mới tới sau 5 phút
 var ppos := Vector2(6.3, 4.6)   # chỗ nhân vật (farm.gd cập nhật): chữ "+1 ..." bay lên ở đó
-var _ord_t := 2.0         # YY mỗi 60 s
 var _slot_t := 0.0        # U3 mỗi 1,5 s
 var _slots := -1
 
@@ -1606,7 +1605,6 @@ func _g3(shop: String, t: String) -> bool:   # tiệm này có cần món này k
 const QR_MAKE := {"ga": ["trung", "thit_ga"], "cuu": ["len", "thit_cuu"], "bo": ["sua", "thit_bo"], "heo": ["thit", "suon"], "de": ["sua_de", "thit_de"]}
 const BB_LV := {"ga": 1, "bo": 6, "heo": 10, "cuu": 13, "de": 20}
 const DI := ["ga", "cuu", "bo", "heo", "de"]
-const WF := ["ca_ro", "ca_tre", "ca_chep", "tom", "ca_loc", "ca_koi"]
 const WV := ["ruong", "mill", "oven", "muoi", "ep", "rang", "duong", "kho", "say", "btrang", "det", "nuong", "bepcui", "quanche", "lobanh", "hangcha"]
 
 func _pen_n(r: String) -> int:   # g.pens[r].length
@@ -1633,14 +1631,10 @@ func bf(t: String, a := 0) -> int:   # Bf: cấp mở món t (cây, trái, chu�
 		for r in DI:
 			for m in QR_MAKE[r]:
 				_ds[m] = int(BB_LV.get(r, 1))
-		for r in WF:
-			_ds[r] = 5      # V4.cau
-		_ds["luon"] = 7     # V4.lo
-		_ds["oc"] = 1
-		_ds["ca_keo"] = 1
-		_ds["luc_binh"] = 1
 	if _ds.has(t):
 		return _ds[t]
+	if _src_lv(t) > 0:   # (bản 352) đồ câu / bắt / mua: cấp có chỗ kiếm (SRC_FROM, SRC_LV)
+		return _src_lv(t)
 	var n = xw.R.get(t) if xw != null else null
 	if n == null or a > 9:
 		return 1
@@ -1649,6 +1643,14 @@ func bf(t: String, a := 0) -> int:   # Bf: cấp mở món t (cây, trái, chu�
 		e = maxi(e, bf(String(r[0]), a + 1))
 	_ds[t] = e
 	return e
+
+# cấp có chỗ kiếm đồ không trồng / không chế biến (0 = chỉ tính khi có trong kho)
+const SRC_FROM := {"fish": 5, "bun": 1, "song": 1, "vit": 7}   # câu cá cấp 5, bãi bùn / ven sông, thả vịt cấp 7
+const SRC_LV := {"luon": 7, "cua": 7, "ech": 7, "muc": 4}       # lờ, lọp, giăng câu cấp 7; mực mua ở ghe chợ nổi cấp 4
+func _src_lv(t: String) -> int:
+	if SRC_LV.has(t):
+		return SRC_LV[t]
+	return int(SRC_FROM.get(String(item(t).get("from", "")), 0))
 
 var _i8 := {}
 var _ep := 0
@@ -1682,7 +1684,10 @@ func _f8(t: String, a := 0) -> bool:   # F8: món còn làm ra được (hoặc 
 	elif pen:
 		r = true
 	elif not (xw != null and xw.R.has(t)):
-		r = int(g.barn.get(t, 0)) > 0      # (bản 345) đồ câu / bắt / mua / vịt (cá, tôm, lươn, ốc, cua, ếch, mực, bông điên điển…): đang có trong kho
+		# (bản 345 / 352) đồ câu / bắt / mua (cá, tôm, lươn, ốc, cua, ếch, mực, bông điên điển…): đã tới cấp có chỗ kiếm
+		# (SRC_LV), hoặc đang có trong kho. Đồ cần công trình riêng (ao nhà, thùng ong, chó, bão) thì chỉ khi có trong kho.
+		var sl := _src_lv(t)
+		r = int(g.barn.get(t, 0)) > 0 or (sl > 0 and sl <= e)
 	else:
 		var o: Dictionary = xw.R[t]
 		r = cd(String(o.w)) and bf(t) <= e and not o.get("fest", "")   # lễ hội (Vx): chưa có ở bản Godot
@@ -1951,18 +1956,6 @@ func _ord_step(t: float) -> void:
 			ord_fill()
 			mark()
 		_slots = a
-	_ord_t -= t
-	if _ord_t <= 0.0:
-		_ord_t = 60.0
-		# YY: đơn có món không còn làm ra được thì đổi đơn khác
-		var ch := false
-		for n in g.orders.size():
-			var o: Dictionary = g.orders[n]
-			if not ord_wait(o) and not o.items.all(func(e): return _f8(e[0]) or int(g.barn.get(e[0], 0)) >= int(e[1])):
-				g.orders[n] = new_order()
-				ch = true
-		if ch:
-			mark()
 
 func _sig() -> String:
 	# đổi giai đoạn cây / nước / sâu thì báo vẽ lại

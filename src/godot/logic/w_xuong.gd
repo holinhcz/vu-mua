@@ -4,7 +4,7 @@ extends RefCounted
 #    hàng (F$), giờ còn lại cả hàng đợi (xL), xong cả hàng đợi bằng sen đỏ (qJ), dời xưởng (ytt, g.fac).
 #  - Việc làng nhờ (rq) còn hợp lệ không (UJ: xưởng / chuồng / ruộng).
 #  - Đơn hàng g.orders: số bậc đơn theo số đã giao (v1, g.delivered), vá bản lưu cũ (u$: đúng người đặt ↔ quán,
-#    h$: đơn cũ thêm cho đủ 3 món, m3), xếp đơn theo lời (P$, _9, WF, GF), đơn kẹt lâu thì đổi (G$, jF).
+#    h$: đơn cũ thêm cho đủ 3 món, m3), xếp đơn theo lời (P$, _9, WF, GF). (bản 352) Bỏ tự đổi đơn kẹt (G$, jF).
 #  - Hoa cỏ nhỏ g.minis: Bj, wtt.
 #  - Bãi bùn khi nước ròng g.td / g.tdh (bS, gk, IK; con nước p6, GN, pk, FN, dk).
 # Vẽ, hạt bay, âm thanh, chuỗi ký hiệu để vẽ lại (Lj, DU, Pj, zj, Nj, gin, A5, ro, Jt): không chép.
@@ -22,7 +22,6 @@ const LP := 4               # Lp: chừa lại 4 giống mỗi loại cây
 const GS := 12.42           # gS: chu kỳ con nước (giờ)
 var Lm := 0.0               # Lm: mực nước ròng mượt (vẽ)
 var FA := {}                # FA: GF nhớ
-var os := {}                # Ur.os: số lần G$ thấy đơn kẹt
 
 func _init(game) -> void:
 	G = game
@@ -244,32 +243,6 @@ func P_() -> Array:   # P$: đơn đang mở, lời nhất trước
 			L.append({"o": o, "i": a})
 	L.sort_custom(func(t, a): return _9(a.o) < _9(t.o))
 	return L
-
-func jF(t: Array) -> bool:   # jF: kho đủ cho đơn (chừa giống đang gieo + 4 giống)
-	return t.all(func(a): return int(G.g.barn.get(a[0], 0)) - _u2(String(a[0])) - (LP if G.D.crops.has(a[0]) else 0) >= int(a[1]))
-
-func G_() -> bool:   # G$: đơn chưa đủ hàng quá 1800 lần xét thì đổi đơn khác (mỗi lần một đơn)
-	var t := {}
-	var a := false
-	var now: float = G._now_ms()
-	for r in G.g.orders.size():
-		var e = G.g.orders[r]
-		if not (e is Dictionary) or float(e.get("w", 0)) > now:
-			continue
-		var o: String = "+".join(e.items.map(func(l): return String(l[0]) + str(int(l[1])))) + "|" + str(int(e.reward))
-		t[o] = 1
-		if jF(e.items):
-			os[o] = 0
-			continue
-		os[o] = int(os.get(o, 0)) + 1
-		if not a and int(os[o]) > 1800:
-			G.swap(r)
-			os.erase(o)
-			a = true
-	for n in os.keys():
-		if not t.has(n):
-			os.erase(n)
-	return a
 
 # ------------------------------------------------------------------ hoa cỏ nhỏ (g.minis)
 func Bj(t: int, a: int):   # Bj
