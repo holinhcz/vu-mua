@@ -362,7 +362,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var op := 0.5 if miss else 1.0
 	var c := _chip(x, y, cw, rh, kind)
 	var s := minf(cw - 6.0, rh - 13.0)
-	var kids := [_dt(x + 4.0, y + 2.0, 18.0, 13.0, str(w), 11.0, 800, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
+	var kids := [_dt(x + 4.0, y + 2.5, 18.0, 10.0, str(w), 8.25, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
 		_dic(x + (cw - s) * 0.5, y + rh - s - 3.0, s, D.ic[String(gd.ic)], op)]
 	if got:
 		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))
