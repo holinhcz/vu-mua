@@ -114,3 +114,6 @@ banh_cam. Lưu sẵn chưa có món: cai_thia_xao, kho_qua_xao_trung, ca_tim_xao
 
 ## Bản 373 — hình thật
 mia_sr, st_bo_sr.
+
+## Bản 374 — hình thật
+mut_khoai, mut_tac, keo_chuoi, muoi_me.

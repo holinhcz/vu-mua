@@ -2664,5 +2664,45 @@
    455
   ],
   "nguon": "tấm ảnh người dùng (bản 372)"
+ },
+ "mut_khoai": {
+  "file": "mut_khoai.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 374)"
+ },
+ "mut_tac": {
+  "file": "mut_tac.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   457
+  ],
+  "nguon": "tấm ảnh người dùng (bản 374)"
+ },
+ "keo_chuoi": {
+  "file": "keo_chuoi.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 374)"
+ },
+ "muoi_me": {
+  "file": "muoi_me.png",
+  "bbox": [
+   41,
+   54,
+   471,
+   458
+  ],
+  "nguon": "tấm ảnh người dùng (bản 374)"
  }
 }
