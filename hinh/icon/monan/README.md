@@ -189,3 +189,6 @@ tuong_ot, dua_mon. Lưu sẵn chưa có món: kieu_muoi.
 - suon_chua_ngot.png
 - tom_chien_xu.png
 - vit_xao_gung.png
+
+## Bản 379 — hình thật
+muoi_hot, muoi_me, muoi_dp.
