@@ -70,7 +70,7 @@ func _build() -> void:
 	var kids: Array = r[0]
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
-	_mount(n, vt, kids, vy, float(r[1]), 0.0)
+	_mount(n, vt, kids, vy, minf(float(r[1]), _hb), 0.0)   # nội dung xếp vừa thân: không cho cuộn lố vài đơn vị
 	U._layout()
 
 # ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
@@ -321,7 +321,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var bot := 40.0 + (20.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
+	var bot := 38.0 + (18.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
 	var cw := (XW - g * 6.0) / 7.0
@@ -334,7 +334,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		out.append(_dt(gx + i * (cw + g), wy, cw, 24.0, DW[i], 12.0, 800, "rgb(190, 50, 40)" if i == 6 else "rgb(80, 52, 14)"))
 	var rows := mini(5, int(ceil((k + o) / 7.0)))   # lịch giấy: ngày 30, 31 tràn hàng 6 thì dồn lên ô trống hàng 1
 	var gy := wy + 29.0
-	var rh := minf(cw + 12.0, (_hb - 10.0 - bot - gy - g * (rows - 1)) / rows)
+	var rh := (_hb - 2.0 - bot - gy - g * (rows - 1)) / rows   # ô lịch cao lấp hết thân
 	for w in range(1, o + 1):
 		var gi: int = k + w - 1
 		if gi >= 35:
