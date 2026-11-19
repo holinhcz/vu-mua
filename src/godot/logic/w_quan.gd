@@ -151,7 +151,7 @@ func _late(k: String) -> void:
 	match k:
 		"quancom":
 			s.sao = maxf(1.0, float(s.sao) - 0.1)
-			G.toast.emit("Khách quán cơm chờ lâu bỏ về, quán mất 0,1 sao (còn %.1f★)." % float(s.sao))
+			G.toast.emit("Khách quán cơm chờ lâu bỏ về, danh tiếng quán giảm còn " + ("%.1f" % float(s.sao)).replace(".", ",") + ".")
 		"taphoa":
 			s.tre = int(s.get("tre", 0)) + 1
 			if int(s.tre) >= int(CF.taphoa.nghi_sau):
@@ -294,17 +294,19 @@ func _left(ms: float) -> String:
 	var m := int(ceil(maxf(0.0, ms) / 60000.0))
 	return (str(m / 60) + "g " + str(m % 60) + "p") if m >= 60 else (str(m) + " phút")
 
-func info(k: String) -> String:   # góc phải đầu bảng
+func chips(k: String) -> Array:   # hàng chip đầu bảng quán: [mã, chữ, hình?]
 	var s := st(k)
+	var out := [["sao", str(ks(k) - 1) + "/5", "res://ui/img/bong/sao.png"]]
 	match k:
 		"quancom":
-			return "%.1f★ · giá %s" % [float(s.sao), String(GIA[clampi(int(s.gia), 0, GIA.size() - 1)].n)]
+			out.append(["dt", "🏅 Danh tiếng " + ("%.1f" % float(s.sao)).replace(".", ",")])
+			out.append(["gia", "🪙 Giá: " + String(GIA[clampi(int(s.gia), 0, GIA.size() - 1)].n)])
 		"taphoa":
-			return "Nghỉ tới mai" if int(s.get("nghi", -1)) > G.day() else "Trễ " + str(int(s.get("tre", 0))) + "/" + str(int(CF.taphoa.nghi_sau))
+			out.append(["tre", "⏱ Nghỉ tới mai" if int(s.get("nghi", -1)) > G.day() else "⏱ Trễ " + str(int(s.get("tre", 0))) + "/" + str(int(CF.taphoa.nghi_sau))])
 		"cafe":
 			var pen := int(s.get("pen", 0)) if int(s.get("pd", -1)) == G.day() else 0
-			return "Khách hôm nay " + str(int(round(maxf(0.5, 1.0 - float(CF.cafe.bot_khach) * pen) * 100.0))) + "%"
-	return ""
+			out.append(["khach", "🤝 Khách hôm nay " + str(int(round(maxf(0.5, 1.0 - float(CF.cafe.bot_khach) * pen) * 100.0))) + "%"])
+	return out
 
 func menu_now(k: String) -> Array:   # món khách có thể gọi giờ này (đã lọc món làm được)
 	var sl = _slot(k, G.nv.hour())

@@ -2714,6 +2714,12 @@ func _ord_sync() -> void:
 	var H := 0.0
 	for rw in rows.size():
 		H += (hw if rows[rw] else hn) + (OD_GAP if rw > 0 else 0.0)
+	var chp: Dictionary = {}
+	var cH := 0.0
+	if od_src != "":   # (bản 357) riêng bảng khách quán: hàng chip (nâng sao, danh tiếng, giá / trễ / khách) trên các thẻ
+		chp = _od_chips()
+		cH = float(chp.r[3]) + OD_GAP
+		H += cH
 	var Hc := H
 	var mn: Dictionary = {}
 	if od_src != "":   # (bản 354) riêng bảng khách quán: hàng "món giờ này" dưới các thẻ
@@ -2722,7 +2728,7 @@ func _ord_sync() -> void:
 	var pad: float = float(od_tpl.no.r[1]) - float(Snap.find(od_shell.no, "orders").r[1])
 	var ch := H + 2.0 * pad
 	var dy := maxf(0.0, OD_UL - ch)
-	var ssig: String = ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1)) + "|" + od_src + "|" + (G.w_all.WQ.info(od_src) if od_src != "" else "")
+	var ssig: String = ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1)) + "|" + od_src
 	if ssig != od_shsig:
 		od_shsig = ssig
 		_od_shell(okn, m, dy)
@@ -2731,8 +2737,22 @@ func _ord_sync() -> void:
 	# thẻ
 	var cols := _od_colors()
 	var ul0 := od_ul0
-	var y := float(od_tpl.no.r[1]) + dy
+	var y := float(od_tpl.no.r[1]) + dy + cH
 	var keep := {}
+	if not chp.is_empty():
+		var cy := float(od_tpl.no.r[1]) + dy - od_scroll
+		var csig := str(cy) + JSON.stringify(chp.get("sig", ""))
+		keep[-2] = 1
+		var cc = od_cards.get(-2)
+		if cc == null or cc.sig != csig:
+			if cc != null:
+				cc.b.queue_free()
+			var cb := _build(Snap.moved(chp, Vector2(float(od_tpl.no.r[0]), cy) - Vector2(float(chp.r[0]), float(chp.r[1]))), {}, ul0)
+			od_ul.add(cb)
+			var qk := od_src
+			_click(_q(cb, "qkc_sao"), func(): if not _od_dragged(): ord_close(); spp.open_quan(qk), "down")
+			_click(_q(cb, "qkc_gia"), func(): if not _od_dragged(): G.w_all.WQ.gia_next(); _ord_sync(), "down")
+			od_cards[-2] = {"b": cb, "sig": csig}
 	for q in L.size():
 		var rw := q / 2
 		if q % 2 == 0 and rw > 0:
@@ -2759,7 +2779,7 @@ func _ord_sync() -> void:
 		_od_hook(b, f)
 		od_cards[f] = {"b": b, "sig": sig}
 	if not mn.is_empty():
-		var my := float(od_tpl.no.r[1]) + dy + Hc + (OD_GAP if Hc > 0.0 else 0.0) - od_scroll
+		var my := float(od_tpl.no.r[1]) + dy + Hc + (OD_GAP if Hc > cH else 0.0) - od_scroll
 		var msig := str(my) + JSON.stringify(mn.get("ids", []))
 		keep[-1] = 1
 		var mc = od_cards.get(-1)
@@ -2804,25 +2824,9 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	bd.r = [bd.tr[0], bd.r[1], bw, bd.r[3]]
 	_set_t(td, td.text, x0 + float(tk[0].r[2]) + g + bw + g)
 	td.r = [x0, td.r[1], right - x0, td.r[3]]
-	if od_src != "":   # góc phải: sao + giá quán cơm (chạm đổi giá) / tạp hóa trễ / cà phê lượng khách
-		var inf: String = String(G.w_all.WQ.info(od_src))
+	if od_src != "":   # (bản 357) bảng quán: góc phải trống (sao, danh tiếng, giá... ở hàng chip dưới đầu bảng)
 		td.kids = []
-		var iw := _tw(td, inf)
-		_set_t(td, inf, right - iw)
-		td.r = [right - iw, td.r[1], iw, td.r[3]]
-		# (bản 355) riêng bảng quán: nút "Nâng sao N★" sau chữ "Giao được N/M khách" (hình sao chung vòng nút ô ruộng)
-		var up: Dictionary = td.duplicate(true)
-		var ut := "Nâng sao " + str(G.w_all.WQ.ks(od_src) - 1) + "★"
-		var uw := _tw(up, ut)
-		var ux: float = float(em.r[0]) + _tw(em, em.text) + 12.0
-		var ih := float(td.r[3])
-		up.cls = "qkup"
-		up.kids = [{"tag": "div", "cls": "", "r": [ux, float(td.r[1]), ih, ih], "css": {}, "pic": "res://ui/img/bong/sao.png", "kids": []}]
-		_set_t(up, ut, ux + ih + 3.0, uw)
-		up.r = [ux, td.r[1], ih + 3.0 + uw, td.r[3]]
-		var hdr: Dictionary = _od_parent(n, td)
-		if not hdr.is_empty():
-			hdr.kids.append(up)
+		td.text = ""
 	# ít thẻ: khung thấp xuống (đầu bảng, khăn trên, hoa dời xuống; đáy giữ chỗ)
 	if dy > 0.0:
 		_od_low(Snap.find(n, "pwin"), dy)
@@ -2836,11 +2840,6 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	od_ul = ids.get("#orders")
 	od_ul._kids.clip_contents = true
 	_stop(od_ul)
-	if od_src == "quancom":
-		_click(_q(od_box, "odtd"), func(): G.w_all.WQ.gia_next(); od_shsig = ""; _ord_sync(), "down")
-	if od_src != "":
-		var qk := od_src
-		_click(_q(od_box, "qkup"), func(): ord_close(); spp.open_quan(qk), "down")
 	_click(ids.get("#pClose"), ord_close, "scale")
 	var bk = ids.get(".pbk")
 	if bk != null:
@@ -3045,6 +3044,42 @@ func _od_wait(o: Dictionary, full: bool, now: float) -> Dictionary:
 		_q_drop(nd, wb)
 	_od_dash(nd, 5.0, 0.35, 14.0)
 	return nd
+
+func _od_chips() -> Dictionary:   # (bản 357) hàng chip kiểu Kho: [sao] 0/5 · 🏅 Danh tiếng 2,6 · 🪙 Giá: Bình dân / ⏱ Trễ 0/3 / 🤝 Khách 100%
+	var WQ = G.w_all.WQ
+	var lbl: Dictionary = Snap.find(od_tpl.wait, "odwm").kids[0].duplicate(true)
+	lbl.erase("kids")
+	var x0 := float(od_tpl.no.r[0])
+	var y0 := float(od_tpl.no.r[1])
+	var H := 28.0
+	var pad := 10.0
+	var gap := 6.0
+	var ih := 16.0
+	var kids := []
+	var x := x0
+	var sig := ""
+	for c in WQ.chips(od_src):
+		var t: String = c[1]
+		var tw := _tw(lbl, t)
+		var pic: String = c[2] if c.size() > 2 else ""
+		var w := pad * 2.0 + tw + ((ih + 4.0) if pic != "" else 0.0)
+		var ch: Dictionary = {"tag": "div", "cls": "qkc qkc_" + String(c[0]), "r": [x, y0, w, H], "css": {}, "kids": []}
+		Snap.chip_look(ch, "qkc", true)
+		var tx := x + pad
+		if pic != "":
+			ch.kids.append({"tag": "div", "cls": "", "r": [tx, y0 + (H - ih) * 0.5, ih, ih], "css": {}, "pic": pic, "kids": []})
+			tx += ih + 4.0
+		var lb: Dictionary = lbl.duplicate(true)
+		var lh := float(lb.r[3])
+		var dty: float = float(lb.get("tr", lb.r)[1]) - float(lb.r[1])
+		lb.r = [tx, y0 + (H - lh) * 0.5, tw, lh]
+		_set_t(lb, t, tx, tw)
+		lb.tr = [tx, y0 + (H - lh) * 0.5 + dty, tw + 0.5, lb.get("tr", lb.r)[3]]
+		ch.kids.append(lb)
+		kids.append(ch)
+		x += w + gap
+		sig += t + "|"
+	return {"tag": "div", "cls": "", "r": [x0, y0, OD_COL + float(od_tpl.no.r[2]), H], "css": {}, "kids": kids, "sig": sig}
 
 func _od_menu() -> Dictionary:   # (bản 354) bảng khách quán: khung nét đứt rộng 2 cột, chữ + hình các món giờ này
 	var WQ = G.w_all.WQ
