@@ -468,12 +468,12 @@
  "dua_leo_muoi": {
   "file": "dua_leo_muoi.png",
   "bbox": [
+   106,
    41,
-   97,
-   471,
-   414
+   405,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 309)"
+  "nguon": "tấm ảnh người dùng (bản 377)"
  },
  "ga_xao": {
   "file": "ga_xao.png",
@@ -1597,22 +1597,22 @@
  "dua_cai": {
   "file": "dua_cai.png",
   "bbox": [
+   115,
    41,
-   48,
-   471,
-   463
+   396,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 319)"
+  "nguon": "tấm ảnh người dùng (bản 377)"
  },
  "ca_muoi": {
   "file": "ca_muoi.png",
   "bbox": [
+   115,
    41,
-   51,
-   471,
-   461
+   396,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 319)"
+  "nguon": "tấm ảnh người dùng (bản 377)"
  },
  "dua_mon": {
   "file": "dua_mon.png",
@@ -1627,12 +1627,12 @@
  "dua_hanh": {
   "file": "dua_hanh.png",
   "bbox": [
+   107,
    41,
-   42,
-   471,
-   470
+   404,
+   471
   ],
-  "nguon": "tấm ảnh người dùng (bản 319)"
+  "nguon": "tấm ảnh người dùng (bản 377)"
  },
  "banh_flan": {
   "file": "banh_flan.png",

@@ -123,3 +123,6 @@ bt_nuong, bt_me_chua.
 
 ## Bản 376 — hình thật
 mam_ca_linh, nuoc_mam, mam_tom, nuoc_buoi, st_saurieng, st_dau, st_dudu.
+
+## Bản 377 — hình thật
+dua_leo_muoi, dua_cai, ca_muoi, dua_hanh.
