@@ -2145,5 +2145,125 @@
    461
   ],
   "nguon": "tấm ảnh người dùng (bản 368)"
+ },
+ "me_say": {
+  "file": "me_say.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   454
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "kho_ga": {
+  "file": "kho_ga.png",
+  "bbox": [
+   41,
+   58,
+   471,
+   453
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "kho_ca_ro": {
+  "file": "kho_ca_ro.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   464
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "kho_muc": {
+  "file": "kho_muc.png",
+  "bbox": [
+   41,
+   50,
+   471,
+   461
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "bo_kho_say": {
+  "file": "bo_kho_say.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "nem_nuong": {
+  "file": "nem_nuong.png",
+  "bbox": [
+   41,
+   55,
+   471,
+   456
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "catim_mo_hanh": {
+  "file": "catim_mo_hanh.png",
+  "bbox": [
+   41,
+   52,
+   471,
+   459
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "ca_keo_nuong": {
+  "file": "ca_keo_nuong.png",
+  "bbox": [
+   41,
+   57,
+   471,
+   454
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "muc_nuong": {
+  "file": "muc_nuong.png",
+  "bbox": [
+   41,
+   47,
+   471,
+   464
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "cua_nuong": {
+  "file": "cua_nuong.png",
+  "bbox": [
+   41,
+   48,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "bap_nuong": {
+  "file": "bap_nuong.png",
+  "bbox": [
+   41,
+   49,
+   471,
+   463
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "khoai_nuong": {
+  "file": "khoai_nuong.png",
+  "bbox": [
+   41,
+   51,
+   471,
+   460
+  ],
+  "nguon": "tấm ảnh người dùng (bản 369)"
  }
 }

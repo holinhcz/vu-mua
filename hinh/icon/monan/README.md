@@ -96,3 +96,6 @@ Tấm nền trong mà các món dính nhau (lá chồm qua món bên): src/tools
 
 ## Bản 368 — hình thật
 thit_kho, mam_kho, ca_ro_kho, ca_keo_kho, tau_hu, che_thai, che_dau_den, che_bi_do, banh_mi_xm, banh_mi_op, su_kem, banh_dua.
+
+## Bản 369 — hình thật
+me_say, kho_ga, kho_ca_ro, kho_muc, bo_kho_say, nem_nuong, catim_mo_hanh, ca_keo_nuong, muc_nuong, cua_nuong, bap_nuong, khoai_nuong.
