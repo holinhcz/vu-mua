@@ -195,3 +195,6 @@ muoi_hot, muoi_me, muoi_dp.
 
 ## Bản 380 — hình thật
 xiu_mai.
+
+## Bản 381 — hình thật
+cua. Lưu sẵn chưa có món: cua_bien, ba_khia.

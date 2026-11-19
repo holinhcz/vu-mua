@@ -2854,5 +2854,35 @@
    427
   ],
   "nguon": "tấm ảnh người dùng (bản 380)"
+ },
+ "cua": {
+  "file": "cua.png",
+  "bbox": [
+   41,
+   110,
+   471,
+   401
+  ],
+  "nguon": "tấm ảnh người dùng (bản 381)"
+ },
+ "cua_bien": {
+  "file": "cua_bien.png",
+  "bbox": [
+   41,
+   135,
+   471,
+   376
+  ],
+  "nguon": "tấm ảnh người dùng (bản 381)"
+ },
+ "ba_khia": {
+  "file": "ba_khia.png",
+  "bbox": [
+   41,
+   114,
+   471,
+   397
+  ],
+  "nguon": "tấm ảnh người dùng (bản 381)"
  }
 }
