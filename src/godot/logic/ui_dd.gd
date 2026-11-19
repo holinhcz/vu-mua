@@ -128,6 +128,26 @@ func _dbx(x: float, y: float, w: float, h: float, bg: String, rad := 8.0, bd := 
 		n.css["border-" + sd] = bd if bd != "" else "0px none rgb(0, 0, 0)"
 	return n
 
+# ô chip nổi như thẻ Sổ làng (Snap.chip_look nhạt = chip Kho nền kem): viền trong + bóng giữ của chip, chỉ đổi nền theo trạng thái
+const CHIPBG := {
+	"got": "linear-gradient(rgb(214, 238, 204) 0%, rgb(222, 242, 214) 50%, rgb(232, 247, 226) 100%)",
+	"miss": "linear-gradient(rgb(222, 218, 208) 0%, rgb(228, 224, 215) 50%, rgb(236, 233, 226) 100%)",
+	"now": "linear-gradient(rgb(255, 240, 196) 0%, rgb(255, 246, 216) 50%, rgb(255, 251, 234) 100%)",
+}
+func _chip(x: float, y: float, w: float, h: float, kind: String, pink := false) -> Dictionary:
+	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 10.0)
+	n.cls = "ddchip"
+	Snap.chip_look(n, "ddchip", true)
+	if CHIPBG.has(kind):
+		n.css["background-image"] = CHIPBG[kind]
+	var sh := String(n.css["box-shadow"])
+	if kind == "now":
+		sh = "rgb(222, 160, 40) 0px 0px 0px 1.5px inset, " + sh + ", rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
+	elif pink:
+		sh = "rgb(232, 150, 150) 0px 0px 0px 1.5px inset, " + sh
+	n.css["box-shadow"] = sh
+	return n
+
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
 	var n := _cl(D.cell.fut.kids[1])
 	n.r = [x, y, s, s]
@@ -179,9 +199,7 @@ func _tab7() -> Array:
 		var w := cw * 2.0 + g if i == 6 else cw
 		var got := i < p
 		var now := d and i == p
-		var bg := "rgb(232, 245, 226)" if got else ("rgb(255, 255, 255)" if now else "rgb(255, 250, 240)")
-		var bd := "1.5px solid " + GOLD if now else ("1.33333px solid rgb(214, 84, 52)" if i == 6 else "1px solid rgb(225, 208, 170)")
-		var c := _dbx(x, y, w, rh, bg, 12.0, bd, "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px" if now else "none")
+		var c := _chip(x, y, w, rh, "got" if got else ("now" if now else "fut"), i == 6)
 		var op := 0.55 if got else (1.0 if now else 0.8)
 		var s := minf(w - 14.0, rh * 0.5) if i == 6 else minf(cw - 10.0, rh * 0.42)
 		var L: Array = T7[i]
@@ -245,8 +263,9 @@ func _tabm() -> Array:
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
 		var s := 26.0
-		var ring := _dbx(cx - 17.0, hy + 27.0, 34.0, 30.0, "rgb(255, 244, 200)" if ok and not got else "rgba(0, 0, 0, 0)", 8.0, ("1.5px solid " + GOLD) if ok and not got else "")
-		ring.kids = [_dic(cx - s * 0.5, hy + 29.0, s, String(row.kids[j].kids[0].svg), 1.0 if ok else 0.45)]
+		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
+		var ring := _chip(cx - 17.0, hy + 26.0, 34.0, 31.0, "now") if ok and not got else _dbx(cx - 17.0, hy + 26.0, 34.0, 31.0, "rgba(0, 0, 0, 0)", 8.0)
+		ring.kids = [_dic(cx - s * 0.5, hy + 28.5, s, String(row.kids[j].kids[0].svg), 1.0 if ok or nxt else 0.4)]
 		if got:
 			ring.kids.append(_dtick(cx + 7.0, hy + 26.0, 11.0))
 		if ok and not got:
@@ -254,8 +273,9 @@ func _tabm() -> Array:
 		else:
 			ring.act = _dsay.bind("Mốc " + str(n) + " ngày: " + String(R.t) + ("" if ok else " (còn " + str(n - v) + " ngày)"))
 		hk.append(ring)
-		hk.append(_dt(cx - 30.0, by + 10.0, 60.0, 12.0, (str(n) + " ngày") if not (ok and not got) else "Nhận", 10.0, 800, GREEN if got else (GOLD if ok else SUB)))
-		hk.append(_dt(cx - 34.0, by + 21.0, 68.0, 11.0, R8S[j], 9.5, 600, SUB))
+		var nxt2: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))
+		hk.append(_dt(cx - 30.0, by + 10.0, 60.0, 12.0, (str(n) + " ngày") if not (ok and not got) else "Nhận", 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt2 else SUB))))
+		hk.append(_dt(cx - 36.0, by + 21.0, 72.0, 11.0, ("còn " + str(n - v) + " ngày") if nxt2 else R8S[j], 9.5, 700 if nxt2 else 600, "rgb(214, 84, 52)" if nxt2 else SUB))
 	hc.kids = hk
 	out.append(hc)
 	# 2. thẻ hôm nay
@@ -263,8 +283,9 @@ func _tabm() -> Array:
 	var th := 50.0
 	var tc := _dcard(X0, ty, XW, th)
 	var gd: Dictionary = E.aF(r)
-	var tk := [_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gd.ic)])]
+	var tk := []
 	if E.q9():
+		tk.append(_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gd.ic)]))
 		tk.append(_dt(X0 + 54.0, ty + 8.0, 150.0, 14.0, "Hôm nay · ngày " + str(r), 10.5, 700, SUB, "left"))
 		tk.append(_dt(X0 + 54.0, ty + 23.0, 150.0, 18.0, String(gd.t), 13.0, 800, BROWN, "left"))
 		tk.append(_dbtn(X0 + XW - 96.0, ty + 12.0, 86.0, 26.0, "Điểm danh", E.tA.bind(r, false)))
@@ -273,10 +294,12 @@ func _tabm() -> Array:
 	else:
 		var nx := ""
 		if r < o:
-			nx = "Mai: " + String(E.aF(r + 1).t)
-		tk.append(_dt(X0 + 54.0, ty + 8.0, 200.0, 14.0, "Hôm nay đã nhận", 10.5, 700, GREEN, "left"))
-		tk.append(_dt(X0 + 54.0, ty + 23.0, 230.0, 18.0, nx if nx != "" else "Hết tháng, tháng sau điểm danh lại", 13.0, 800, BROWN, "left"))
-		tk.append(_dtick(X0 + 36.0, ty + 6.0, 13.0))
+			var gm: Dictionary = E.aF(r + 1)
+			nx = "Mai: " + String(gm.t)
+			tk.append(_dic(X0 + 10.0, ty + 7.0, 36.0, D.ic[String(gm.ic)]))
+		tk.append(_dtick(X0 + 54.0, ty + 9.5, 11.0))
+		tk.append(_dt(X0 + 68.0, ty + 8.0, 230.0, 14.0, "Hôm nay đã nhận " + String(gd.t), 10.5, 700, GREEN, "left"))
+		tk.append(_dt(X0 + 54.0, ty + 23.0, 240.0, 18.0, nx if nx != "" else "Hết tháng, tháng sau điểm danh lại", 13.0, 800, BROWN, "left"))
 	tc.kids = tk
 	out.append(tc)
 	# 3. lịch
@@ -304,7 +327,7 @@ func _tabm() -> Array:
 		var y := gy + (gi / 7) * (rh + g)
 		ck.append(_dday(w, x, y, cw, rh, M))
 	if misses > 0:
-		var fs := ("Bù ngày lỡ: còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần · chạm ngày lỡ để bù") if M < 5 else "Hết lượt bù tháng này"
+		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
 		ck.append(_dt(X0 + 8.0, cy + ch - 8.0 - foot + 2.0, XW - 16.0, foot - 4.0, fs, 10.5, 600, SUB))
 	cc.kids = ck
 	out.append(cc)
@@ -317,38 +340,19 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var miss := w < r and not got
 	var gd: Dictionary = E.aF(w)
 	var big := w % 7 == 0
-	var bg := "rgb(255, 250, 240)"
-	var bd := "1px solid rgb(232, 218, 186)"
-	var sh := "none"
-	var op := 0.75
-	if got:
-		bg = "rgb(226, 243, 220)"
-		bd = "1px solid rgb(170, 214, 160)"
-		op = 1.0
-	elif now:
-		bg = "rgb(255, 255, 255)"
-		bd = "1.5px solid " + GOLD
-		sh = "rgba(222, 160, 40, 0.35) 0px 0px 0px 2px"
-		op = 1.0
-	elif miss:
-		bg = "rgb(255, 255, 255)"
-		bd = "1px solid rgb(205, 196, 178)"
-		op = 0.3
-	elif big:
-		bg = "rgb(253, 232, 230)"
-		bd = "1px solid rgb(236, 190, 182)"
-	var c := _dbx(x, y, cw, rh, bg, 8.0, bd, sh)
-	var s := minf(cw - 12.0, rh - 15.0)
-	var kids := [_dt(x + 3.0, y + 1.5, 16.0, 11.0, str(w), 9.5, 800, GREEN if got else (GOLD if now else (SUB if not miss else "rgb(170, 160, 140)")), "left"),
+	var kind := "got" if got else ("now" if now else ("miss" if miss else "fut"))
+	var op := 1.0 if got or now else (0.35 if miss else 0.8)
+	var c := _chip(x, y, cw, rh, kind, big)
+	var s := minf(cw - 12.0, rh - 17.0)
+	var kids := [_dt(x + 4.0, y + 2.0, 18.0, 13.0, str(w), 11.0, 800, GREEN if got else (GOLD if now else (SUB if not miss else "rgb(150, 140, 122)")), "left"),
 		_dic(x + (cw - s) * 0.5, y + rh - s - 3.0, s, D.ic[String(gd.ic)], op)]
 	if got:
-		kids.append(_dtick(x + cw - 11.5, y + 1.5, 10.0))
+		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))
 		c.act = _dsay.bind("Ngày " + str(w) + ": đã nhận " + String(gd.t) + ".")
 	elif now:
 		c.act = E.tA.bind(w, false)
 	elif miss:
 		if bu < 5:
-			kids.append(_dt(x + cw - 15.0, y + 1.5, 13.0, 11.0, str(3 + bu), 9.0, 800, "rgb(214, 84, 52)", "right"))
 			c.act = _bu_ask.bind(w, 3 + bu)
 		else:
 			c.act = _dsay.bind("Ngày " + str(w) + " đã lỡ, hết lượt bù tháng này.")
