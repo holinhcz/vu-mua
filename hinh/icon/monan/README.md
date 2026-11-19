@@ -99,3 +99,6 @@ thit_kho, mam_kho, ca_ro_kho, ca_keo_kho, tau_hu, che_thai, che_dau_den, che_bi_
 
 ## Bản 369 — hình thật
 me_say, kho_ga, kho_ca_ro, kho_muc, bo_kho_say, nem_nuong, catim_mo_hanh, ca_keo_nuong, muc_nuong, cua_nuong, bap_nuong, khoai_nuong.
+
+## Bản 370 — hình thật
+ech_xao, de_xao, bo_xao, ga_xao.

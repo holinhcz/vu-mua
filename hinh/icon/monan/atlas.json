@@ -409,11 +409,11 @@
   "file": "bo_xao.png",
   "bbox": [
    41,
-   92,
+   51,
    471,
-   420
+   460
   ],
-  "nguon": "tấm ảnh người dùng (bản 309)"
+  "nguon": "tấm ảnh người dùng (bản 370)"
  },
  "bt_phoi": {
   "file": "bt_phoi.png",
@@ -479,11 +479,11 @@
   "file": "ga_xao.png",
   "bbox": [
    41,
-   92,
+   55,
    471,
-   420
+   457
   ],
-  "nguon": "tấm ảnh người dùng (bản 309)"
+  "nguon": "tấm ảnh người dùng (bản 370)"
  },
  "goi_cuon": {
   "file": "goi_cuon.png",
@@ -1115,11 +1115,11 @@
   "file": "de_xao.png",
   "bbox": [
    41,
-   88,
+   53,
    471,
-   424
+   458
   ],
-  "nguon": "tấm ảnh người dùng (bản 311)"
+  "nguon": "tấm ảnh người dùng (bản 370)"
  },
  "lau_ca_keo": {
   "file": "lau_ca_keo.png",
@@ -2265,5 +2265,15 @@
    460
   ],
   "nguon": "tấm ảnh người dùng (bản 369)"
+ },
+ "ech_xao": {
+  "file": "ech_xao.png",
+  "bbox": [
+   41,
+   52,
+   471,
+   459
+  ],
+  "nguon": "tấm ảnh người dùng (bản 370)"
  }
 }
