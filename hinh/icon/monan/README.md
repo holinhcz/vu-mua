@@ -86,3 +86,6 @@ xoi_thit, com_det, thinh, caphe_rang.
 
 ## Bản 365 — hình thật
 gao, bot_nep, bot (bột mì), bot_gao.
+
+## Bản 366 — hình thật
+che_khoai_mon, che_ba_ba, che_dau_xanh (thay hình cũ), caphe_den, caphe_sua, banh_chung, banh_xeo, banh_can, banh_gio. sam_dua_sua.png (Sâm dứa sữa) lưu sẵn, chưa có món.

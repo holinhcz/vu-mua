@@ -117,11 +117,11 @@
   "file": "che_dau_xanh.png",
   "bbox": [
    41,
-   63,
+   57,
    471,
-   448
+   455
   ],
-  "nguon": "tấm ảnh người dùng (bản 308)"
+  "nguon": "tấm ảnh người dùng (bản 366)"
  },
  "che_troi": {
   "file": "che_troi.png",
@@ -1855,5 +1855,95 @@
    467
   ],
   "nguon": "tấm ảnh người dùng (bản 365)"
+ },
+ "che_khoai_mon": {
+  "file": "che_khoai_mon.png",
+  "bbox": [
+   41,
+   60,
+   471,
+   451
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "che_ba_ba": {
+  "file": "che_ba_ba.png",
+  "bbox": [
+   41,
+   62,
+   471,
+   449
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "caphe_den": {
+  "file": "caphe_den.png",
+  "bbox": [
+   55,
+   41,
+   456,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "caphe_sua": {
+  "file": "caphe_sua.png",
+  "bbox": [
+   76,
+   41,
+   436,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "sam_dua_sua": {
+  "file": "sam_dua_sua.png",
+  "bbox": [
+   45,
+   41,
+   467,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "banh_chung": {
+  "file": "banh_chung.png",
+  "bbox": [
+   41,
+   49,
+   471,
+   462
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "banh_xeo": {
+  "file": "banh_xeo.png",
+  "bbox": [
+   41,
+   53,
+   471,
+   459
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "banh_can": {
+  "file": "banh_can.png",
+  "bbox": [
+   41,
+   56,
+   471,
+   455
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
+ },
+ "banh_gio": {
+  "file": "banh_gio.png",
+  "bbox": [
+   41,
+   59,
+   471,
+   452
+  ],
+  "nguon": "tấm ảnh người dùng (bản 366)"
  }
 }
