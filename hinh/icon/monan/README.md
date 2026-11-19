@@ -198,3 +198,6 @@ xiu_mai.
 
 ## Bản 381 — hình thật
 cua. Lưu sẵn chưa có món: cua_bien, ba_khia.
+
+## Bản 382 — hình thật
+ech.
