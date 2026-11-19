@@ -22,14 +22,12 @@ Cắt từ tấm ảnh người dùng (src/tools/cut_mon.py), 512 nền trong, c
 | lau_ga_la_giang.png | Lẩu gà lá giang |
 | lau_ca_hu.png | Lẩu cá hú măng chua |
 | lau_nam.png | Lẩu nấm thập cẩm |
-| banh_khoai_mi.png | Bánh khoai mì |
 | lau_thai.png | Lẩu thái chua cay (bản 310) |
 | lau_bo_giam.png | Lẩu bò nhúng giấm |
 | lau_ca_chep.png | Lẩu cá chép om dưa |
 | lau_rieu_cua.png | Lẩu riêu cua bắp bò |
 | lau_ca_loc.png | Lẩu cá lóc chua cay |
 | lau_thac_lac.png | Lẩu cá thác lác khổ qua |
-| banh_tam_khoai_mi.png | Bánh tầm khoai mì (bản 316) |
 
 ## Hình tạm (bản 327) — chờ hình thật thì thay ui/svg/kh/<mã>.svg
 pho_bo (tạm hình hu_tieu_bv), bun_bo_hue (bun_rieu), mi_quang (hu_tieu), bun_cha (bun_cha_gio), banh_canh_cl (canh_chua), ech_xao (ga_xao).
@@ -73,3 +71,6 @@ thinh (me_rang), com_det (bap_rang), muoi_me (muoi_dp), caphe_rang (dp_rang), ca
 
 ## Lò đường (bản 340) — hình tạm
 mut_gung (mut_dau), mut_khoai (mut_chomchom), mut_tac (mut_mangcut), keo_chuoi (keo_dua).
+
+## Cối xay + khoai mì (bản 341)
+banh_khoai_mi (Lò bánh nướng), banh_tam_khoai_mi (Lò bánh quê) gắn hình thật. Cây khoai_mi: icon hinh/icon/anh/khoaimi.png, hình cây trên ruộng tạm = cây khoai lang. Gạo, bột gạo, bột mì, bột nếp vẫn là icon vẽ code, chờ hình.

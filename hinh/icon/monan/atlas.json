@@ -373,7 +373,7 @@
    446
   ],
   "nguon": "tấm ảnh người dùng (bản 309)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "banh_khoai_mi"
  },
  "banh_khot": {
   "file": "banh_khot.png",
@@ -1489,7 +1489,7 @@
    416
   ],
   "nguon": "tấm ảnh người dùng (bản 316)",
-  "cho": "chưa có món trong game: làm món thì lấy hình này"
+  "game": "banh_tam_khoai_mi"
  },
  "bo_bia": {
   "file": "bo_bia.png",
