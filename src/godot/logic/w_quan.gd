@@ -1,7 +1,7 @@
 extends RefCounted
 # (bản 350) KHÁCH QUÁN: Quán cơm (g.quan.k), Tạp hóa đầu ngõ (g.tap.o), Quán cà phê võng (g.cafe.c). Một luật chung, cấu hình
 # ở data/cho/quan_khach.json: giờ mở, nhóm món theo khung giờ (xưởng + tab, hoặc danh sách món), nhịp khách giờ cao điểm /
-# giờ thường (giờ làng), số chỗ chờ, thời gian chờ (giờ làng), số lượng.
+# giờ thường (giờ làng), số lượng; "nuoc" (quán cơm): mỗi bàn thêm 1 món nước.
 #   - Chỉ ra khách / đơn lúc đang mở game; khách chỉ gọi món làm được (G._f8: đủ xưởng, cấp, nguyên liệu, hoặc có trong kho).
 #   - Có khách thì bong bóng hình món trên mái (farm._tree_bub_want), chạm để giao từ kho (giao()).
 #   - Trễ hẹn lúc đang mở game: Quán cơm mất 0,1 sao; Tạp hóa để trễ 3 đơn liền thì nghỉ tới hôm sau; Cà phê bớt 5% khách
@@ -200,6 +200,10 @@ func _spawn(k: String, now: float, h: float) -> void:
 		if tv > 0.0:   # (bản 354) tạp hóa: số lượng theo giá trị, cả đơn khoảng 2-3 lần một đơn hàng thường
 			q = clampi(int(round(tv / n / float(G.item(m).get("sell", 10)))), int(c.sl[0]), int(c.sl[1]))
 		it.append([m, q])
+	if c.has("nuoc"):   # (bản 356) quán cơm: mỗi bàn gọi thêm 1 món nước (Xe nước mía, nước uống Quán chè), có thì mới gọi
+		var NU := pool(c.nuoc)
+		if NU.size():
+			it.append([String(NU[randi() % NU.size()]), 1])
 	L.append({"items": it, "dl": now + sv(k, "cho") / 60.0 * _hms(), "t0": now})
 	G.mark()
 
