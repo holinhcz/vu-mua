@@ -15,7 +15,7 @@ var T := {}
 var pop: Control = null
 var sig := ""
 var pi := -1                  # ô đang nâng
-var kind := "plot"            # "plot" | "pen" | "work" (xưởng, bản 281)
+var kind := "plot"            # "plot" | "pen" | "work" (xưởng, bản 281) | "quan" (quán cơm / tạp hóa / cà phê, bản 355)
 var pt := ""                  # chuồng đang nâng (kind pen)
 var all := false              # n: tab "Cả N ô"
 var star_on := ""
@@ -63,17 +63,34 @@ func open_work(k: String) -> void:   # nâng sao xưởng k (bản 281): cùng b
 	sig = ""
 	_draw()
 
+func open_quan(k: String) -> void:   # nâng sao quán k (bản 355): cùng bảng xưởng, giá như xưởng
+	kind = "quan"
+	pt = k
+	pi = 0
+	all = false
+	sig = ""
+	_draw()
+
+func _uk() -> String:   # loại giá nâng (game.up_need): quán dùng giá xưởng
+	return "work" if kind == "quan" else kind
+
 func _r() -> int:   # sao hiện tại
+	if kind == "quan":
+		return G.w_all.WQ.ks(pt)
 	if kind == "work":
 		return G.xw.ks(pt)
 	return G.vn.ps(pt) if kind == "pen" else G.star(G.g.plots[pi])
 
 func _us(a: int) -> String:   # Us(kind, a)
+	if kind == "quan":
+		return G.w_all.WQ.us(pt, a)
 	if kind == "work":
 		return G.us_work(a)
 	return G.us_pen(a) if kind == "pen" else G.us_plot(a)
 
-func _one() -> String:   # tên một thứ (tab, thông báo): chuồng / xưởng
+func _one() -> String:   # tên một thứ (tab, thông báo): chuồng / xưởng / quán
+	if kind == "quan":
+		return String(G.w_all.WQ.CF[pt].ten)
 	if kind == "work":
 		return String(G.xw.sr[pt].name)
 	return String(G.lang.CO.get(pt, "Chuồng"))
@@ -89,7 +106,7 @@ func close() -> void:
 func _sig() -> String:
 	var o: int = _r()
 	var mm := []
-	for m in (G.DJ_PEN.m if kind == "pen" else (G.DJ_WORK.m if kind == "work" else G.DJ_PLOT.m)):
+	for m in (G.DJ_PEN.m if kind == "pen" else (G.DJ_WORK.m if _uk() == "work" else G.DJ_PLOT.m)):
 		mm.append(G.mat_n(m))
 	return "|".join([kind, pt, all, o, G.k4(o).size() if kind == "plot" else 1, int(G.g.coins / 50), ",".join(mm), G.lv(), int(G.g.get("ngoc", 0))])
 
@@ -134,7 +151,7 @@ func _draw() -> void:
 		n = T.sp_max.duplicate(true)
 	else:
 		o = l if all else 1
-		nd = G.up_need(r + 1, o, kind)
+		nd = G.up_need(r + 1, o, _uk())
 		c = G.lv() < int(nd.lv)
 		f = G.can_pay(nd)
 		s = G.early_ok(int(nd.lv)) if c else f
@@ -214,7 +231,7 @@ func _draw() -> void:
 	if not keep:
 		G.vib(0)
 
-var _rv := RegEx.create_from_string("^(.*?)(\\+?\\d+(?:[.,]\\d+)?\\s*(?:%|phút|giờ|ngày))(.*)$")
+var _rv := RegEx.create_from_string("^(.*?)(\\+?\\d+(?:[.,]\\d+)?\\s*(?:%|phút|giờ|ngày|bàn|đơn|võng))(.*)$")
 
 func _diff(cur: String, nxt: String) -> Array:   # (bản 290) mỗi hiệu lực một dòng "nhãn cũ → mới"; chưa có thì "(mới)"
 	var out := []
@@ -228,7 +245,7 @@ func _diff(cur: String, nxt: String) -> Array:   # (bản 290) mỗi hiệu lự
 			if at >= 0:
 				var m2 := _rv.search(cur.substr(at))
 				if m2 != null and m2.get_string(1).to_lower() == lb.to_lower():
-					t = lb + m2.get_string(2) + " → " + m.get_string(2) + m.get_string(3)
+					t = p if m2.get_string(2) == m.get_string(2) else lb + m2.get_string(2) + " → " + m.get_string(2) + m.get_string(3)   # không đổi: giữ nguyên dòng
 		out.append(t.substr(0, 1).to_upper() + t.substr(1))
 	return out
 
@@ -300,9 +317,9 @@ func up() -> void:   # click data-up → lf (lớp bọc nâng sớm)
 	var o: int = G.k4(r).size() if all else 1
 	if all and o == 0:
 		return
-	var nd: Dictionary = G.up_need(r + 1, o, kind)
+	var nd: Dictionary = G.up_need(r + 1, o, _uk())
 	var t := pt
-	var go: Callable = (func(): return G.work_up(t)) if kind == "work" else ((func(): return G.pen_up(t)) if kind == "pen" else ((func(): return G.plot_up_all(r)) if all else (func(): return G.plot_up(pi))))
+	var go: Callable = (func(): return G.w_all.WQ.up(t)) if kind == "quan" else ((func(): return G.work_up(t)) if kind == "work" else ((func(): return G.pen_up(t)) if kind == "pen" else ((func(): return G.plot_up_all(r)) if all else (func(): return G.plot_up(pi)))))
 	if G.lv() < int(nd.lv):   # e$ + zF
 		if G.early_ok(int(nd.lv)):
 			K.ns_show({"t": (_one().to_lower() if kind != "plot" else ((str(o) + " ô ruộng") if all else "ô ruộng")) + " lên " + str(r) + "★", "nd": nd,

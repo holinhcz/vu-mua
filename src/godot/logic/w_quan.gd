@@ -6,7 +6,9 @@ extends RefCounted
 #   - Có khách thì bong bóng hình món trên mái (farm._tree_bub_want), chạm để giao từ kho (giao()).
 #   - Trễ hẹn lúc đang mở game: Quán cơm mất 0,1 sao; Tạp hóa để trễ 3 đơn liền thì nghỉ tới hôm sau; Cà phê bớt 5% khách
 #     trong ngày. Hết hạn lúc tắt game thì bỏ, không phạt.
-# Sao quán (g.quan.sao 1..5) và mức giá (g.quan.gia: 0 Bình dân, 1 Vừa, 2 Sang) dùng cho/muc_gia_quan_com.json (m: nhân giá, s x5: sao lên mỗi khách).
+# (bản 355) Sao nâng cấp căn nhà (st(k).ns 1..6 = 0★..5★, nâng ở bảng nâng sao chung, giá như xưởng): quan_khach.json "sao"
+# theo bậc: toi_da (chỗ chờ), cho (phút chờ), boa (+ phần boa), nhanh (khách tới nhanh hơn), gia (tạp hóa: nhân giá).
+# Sao danh tiếng quán cơm (g.quan.sao 1..5) và mức giá (g.quan.gia: 0 Bình dân, 1 Vừa, 2 Sang) dùng cho/muc_gia_quan_com.json (m: nhân giá, s x5: sao lên mỗi khách).
 
 var G
 var CF := {}          # quan_khach.json
@@ -50,6 +52,43 @@ func built(k: String) -> bool:
 		if o is Dictionary and CF[k].obj.has(String(o.get("id", ""))):
 			return true
 	return false
+
+func ks(k: String) -> int:   # sao nâng cấp 1..6
+	return clampi(int(st(k).get("ns", 1)), 1, 6)
+
+func sv(k: String, f: String) -> float:   # hiệu lực theo sao nâng cấp
+	var a: Array = CF[k].sao.get(f, [])
+	return float(a[ks(k) - 1]) if a.size() else 0.0
+
+func us(k: String, a: int) -> String:   # dòng hiệu lực ở bảng nâng sao (bậc a 1..6)
+	var S: Dictionary = CF[k].sao
+	var i := clampi(a, 1, 6) - 1
+	var cho: String = G.ao(float(S.cho[i]) * 60.0)
+	var t := []
+	match k:
+		"quancom":
+			t = ["Chỗ " + str(int(S.toi_da[i])) + " bàn", "Chờ " + cho]
+		"taphoa":
+			t = ["Chỗ " + str(int(S.toi_da[i])) + " đơn", "Giữ đơn " + cho, "Giá +" + str(int(round((float(S.gia[i]) - 1.0) * 100.0))) + "%"]
+		"cafe":
+			t = ["Chỗ " + str(int(S.toi_da[i])) + " võng", "Chờ " + cho]
+	if S.has("boa") and float(S.boa[i]) > 0.0:
+		t.append("Boa +" + str(int(round(float(S.boa[i]) * 100.0))) + "%")
+	if float(S.nhanh[i]) > 0.0:
+		t.append(("Đơn" if k == "taphoa" else "Khách") + " tới nhanh +" + str(int(round(float(S.nhanh[i]) * 100.0))) + "%")
+	return " · ".join(t)
+
+func up(k: String) -> bool:   # nâng sao căn nhà: xu + ván, đinh, gạch (giá như xưởng)
+	var n := ks(k)
+	if n >= 6:
+		return false
+	if not G._pay(G.up_need(n + 1, 1, "work")):
+		return false
+	st(k).ns = n + 1
+	G.toast.emit(String(CF[k].ten) + " lên " + str(n) + "★: " + us(k, n + 1) + ".")
+	G.vib(15)
+	G.mark()
+	return true
 
 func _hms() -> float:   # ms thật cho 1 giờ làng (Cài đặt "Nhanh": 1 phút = 1 giờ)
 	return (60.0 if G.cfg.d == "fast" else 3600.0) * 1000.0
@@ -132,7 +171,7 @@ func _spawn(k: String, now: float, h: float) -> void:
 	var c: Dictionary = CF[k]
 	var s := st(k)
 	var L := list(k)
-	if L.size() >= int(c.toi_da):
+	if L.size() >= int(sv(k, "toi_da")):
 		return
 	if k == "taphoa" and int(s.get("nghi", -1)) > G.day():
 		return
@@ -161,12 +200,12 @@ func _spawn(k: String, now: float, h: float) -> void:
 		if tv > 0.0:   # (bản 354) tạp hóa: số lượng theo giá trị, cả đơn khoảng 2-3 lần một đơn hàng thường
 			q = clampi(int(round(tv / n / float(G.item(m).get("sell", 10)))), int(c.sl[0]), int(c.sl[1]))
 		it.append([m, q])
-	L.append({"items": it, "dl": now + float(c.cho) * _hms(), "t0": now})
+	L.append({"items": it, "dl": now + sv(k, "cho") / 60.0 * _hms(), "t0": now})
 	G.mark()
 
 func _gap(k: String, sl: Dictionary) -> float:   # ms tới khách sau
 	var c: Dictionary = CF[k]
-	var g := float(c.cao if sl.get("cao", false) else c.thuong) * _hms()
+	var g := float(c.cao if sl.get("cao", false) else c.thuong) * _hms() * (1.0 - sv(k, "nhanh"))
 	if k == "quancom":
 		g /= 0.6 + 0.2 * float(st(k).sao)   # 3★ = nhịp gốc; sao cao đông khách
 	elif k == "cafe":
@@ -223,12 +262,12 @@ func _pay(k: String, items: Array, est := false) -> Array:   # [xu, boa]; est: b
 	match k:
 		"quancom":
 			var m: Dictionary = GIA[clampi(int(s.gia), 0, GIA.size() - 1)]
-			return [int(round(v * float(m.m))), int(round(v * 0.05 * float(s.sao)))]
+			return [int(round(v * float(m.m))), int(round(v * 0.05 * float(s.sao) * (1.0 + sv(k, "boa"))))]
 		"taphoa":
-			return [int(round(v * float(CF.taphoa.gia))), 0]
+			return [int(round(v * sv(k, "gia"))), 0]
 		"cafe":
 			var b: float = (float(CF.cafe.boa[0]) + float(CF.cafe.boa[1])) * 0.5 if est else randf_range(float(CF.cafe.boa[0]), float(CF.cafe.boa[1]))
-			return [int(round(v * float(CF.cafe.gia))), int(round(v * b))]
+			return [int(round(v * float(CF.cafe.gia))), int(round(v * b * (1.0 + sv(k, "boa"))))]
 	return [int(v), 0]
 
 # ------------------------------------------------------------------ bảng quán (ui.gd dùng chung bảng Đơn hàng: od_src = k)
@@ -243,7 +282,7 @@ func cards(k: String) -> Array:   # khách đang chờ dạng thẻ đơn: {who,
 		out.append({"who": CHO[k] + " " + str(i + 1), "shop": "Còn " + _left(float(e.dl) - now), "items": e.items, "reward": pay[0] + pay[1]})
 	var s := st(k)
 	var nx := float(s.get("nx", 0))
-	if L.size() < int(CF[k].toi_da) and nx > now and _slot(k, G.nv.hour()) != null and not (k == "taphoa" and int(s.get("nghi", -1)) > G.day()):
+	if L.size() < int(sv(k, "toi_da")) and nx > now and _slot(k, G.nv.hour()) != null and not (k == "taphoa" and int(s.get("nghi", -1)) > G.day()):
 		out.append({"who": "", "shop": "", "items": [], "reward": 0, "w": nx})
 	return out
 

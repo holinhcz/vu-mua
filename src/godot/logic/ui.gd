@@ -2810,6 +2810,19 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 		var iw := _tw(td, inf)
 		_set_t(td, inf, right - iw)
 		td.r = [right - iw, td.r[1], iw, td.r[3]]
+		# (bản 355) riêng bảng quán: nút "Nâng sao N★" sau chữ "Giao được N/M khách" (hình sao chung vòng nút ô ruộng)
+		var up: Dictionary = td.duplicate(true)
+		var ut := "Nâng sao " + str(G.w_all.WQ.ks(od_src) - 1) + "★"
+		var uw := _tw(up, ut)
+		var ux: float = float(em.r[0]) + _tw(em, em.text) + 12.0
+		var ih := float(td.r[3])
+		up.cls = "qkup"
+		up.kids = [{"tag": "div", "cls": "", "r": [ux, float(td.r[1]), ih, ih], "css": {}, "pic": "res://ui/img/bong/sao.png", "kids": []}]
+		_set_t(up, ut, ux + ih + 3.0, uw)
+		up.r = [ux, td.r[1], ih + 3.0 + uw, td.r[3]]
+		var hdr: Dictionary = _od_parent(n, td)
+		if not hdr.is_empty():
+			hdr.kids.append(up)
 	# ít thẻ: khung thấp xuống (đầu bảng, khăn trên, hoa dời xuống; đáy giữ chỗ)
 	if dy > 0.0:
 		_od_low(Snap.find(n, "pwin"), dy)
@@ -2825,6 +2838,9 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	_stop(od_ul)
 	if od_src == "quancom":
 		_click(_q(od_box, "odtd"), func(): G.w_all.WQ.gia_next(); od_shsig = ""; _ord_sync(), "down")
+	if od_src != "":
+		var qk := od_src
+		_click(_q(od_box, "qkup"), func(): ord_close(); spp.open_quan(qk), "down")
 	_click(ids.get("#pClose"), ord_close, "scale")
 	var bk = ids.get(".pbk")
 	if bk != null:
@@ -3069,6 +3085,15 @@ func _od_menu() -> Dictionary:   # (bản 354) bảng khách quán: khung nét �
 	nd["ids"] = ids
 	_od_dash(nd, 5.0, 0.35, 14.0)
 	return nd
+
+static func _od_parent(n: Dictionary, x: Dictionary) -> Dictionary:   # node cha của x trong cây n
+	for k in n.get("kids", []):
+		if k == x:
+			return n
+		var p := _od_parent(k, x)
+		if not p.is_empty():
+			return p
+	return {}
 
 static func _q_drop(n: Dictionary, x: Dictionary) -> void:   # bỏ node x khỏi cây n
 	for k in n.get("kids", []):
