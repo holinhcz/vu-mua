@@ -1617,12 +1617,12 @@
  "dua_mon": {
   "file": "dua_mon.png",
   "bbox": [
-   44,
+   111,
    41,
-   468,
+   401,
    471
   ],
-  "nguon": "tấm ảnh người dùng (bản 319)"
+  "nguon": "tấm ảnh người dùng (bản 378)"
  },
  "dua_hanh": {
   "file": "dua_hanh.png",
@@ -1678,12 +1678,12 @@
  "tuong_ot": {
   "file": "tuong_ot.png",
   "bbox": [
-   58,
+   113,
    41,
-   453,
+   399,
    471
   ],
-  "nguon": "tấm ảnh người dùng (bản 320)"
+  "nguon": "tấm ảnh người dùng (bản 378)"
  },
  "mut_chomchom": {
   "file": "mut_chomchom.png",
@@ -2794,5 +2794,15 @@
    465
   ],
   "nguon": "tấm ảnh người dùng (bản 376)"
+ },
+ "kieu_muoi": {
+  "file": "kieu_muoi.png",
+  "bbox": [
+   108,
+   41,
+   404,
+   471
+  ],
+  "nguon": "tấm ảnh người dùng (bản 378)"
  }
 }
