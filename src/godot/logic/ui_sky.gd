@@ -1,19 +1,24 @@
-extends "res://logic/ui_pop.gd"
-# TRỜI ĐẤT TRONG LÀNG (RN / Hh bản web, chạm ô giờ - thời tiết góc trái trên): hộp nổi khung tre (ui_pop.gd).
-# Thời tiết bây giờ, dự báo 6 buổi, lịch lễ hội (4 lễ gần nhất), chợ nổi, nhạc đờn ca tài tử, rồi thẻ của từng phần
-# (sky() của W1 bản web: tát ao, hụi, đám, gió chướng, radio, rầy nâu, hội chợ, hạn mặn, hội thi, nồi cơm, thiên tai, hội đình),
-# cuối là nút "Chỉnh giờ ngày đêm, mùa". Mẫu: ui/snap/sky.json (wxnow, ô dự báo, hình thời tiết), hui_tab.json (.tt).
+extends "res://logic/ui_kbang.gd"
+# TRỜI ĐẤT TRONG LÀNG (RN / Hh bản web, chạm ô giờ - thời tiết góc trái trên): (bản 396) khung Kho + chip chung (ui_kbang.gd), 2 tab:
+#  - "Thời tiết": chip đỏ mùa + ngày trong mùa (thanh 7 ngày), chip bây giờ, dự báo 6 buổi (3 × 2), cảnh báo: thiên tai ngày mai,
+#    hạn mặn, gió chướng, radio (bản tin ngày mai).
+#  - "Lịch làng": hôm nay trong làng theo giờ (chợ nổi, hội chợ sân đình, đám), lễ hội 4 lễ gần nhất + hội đình.
+# Bỏ khỏi bảng (bản 396): nhạc đờn ca (bản Godot chưa có nhạc), chỉnh giờ / mùa (Cài đặt có), hụi (Sổ làng), rầy nâu (cột việc;
+# phun hết thuốc tự mua), tát ao (chạm ao), hội thi làng + nồi cơm trưa (chơi mạng, chưa có). Hình thời tiết: ui/snap/sky.json.
 
 var SK := {}
-static var nhac := true   # Kl.on: nhạc đờn ca (bản Godot chưa có nhạc nền, chỉ giữ nút)
+var cd := "t"
 
 const TK := ["Khuya", "Sáng", "Chiều", "Tối"]
 const T8 := ["Mùa xuân", "Mùa hạ", "Mùa thu", "Mùa khô"]
-const HQ := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa rào tưới giùm.",
+const HQ := {"nang": "Trời đẹp, thỉnh thoảng có mưa rào tưới giùm.",
+	"mua": "Ruộng, cây ăn trái tự thấm nước. Có sấm sét, gió quật ngã cây.",
+	"rao": "Mưa rào chốc lát, tạnh là ruộng và cây no nước.",
+	"han": "Ruộng khô nhanh gấp rưỡi, không có mưa rào."}
+const HQF := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa rào tưới giùm.",
 	"mua": "Mưa rả rích cả buổi, ruộng và cây ăn trái thấm nước dần, khỏi tưới. Có sấm sét, gió quật ngã 1–3 cây; cây đè ruộng thì ruộng ngưng lớn tới khi dọn. Đi chậm 15% nếu không mặc áo mưa.",
 	"rao": "Trận mưa rào 5 giây, tạnh là ruộng và cây ăn trái no nước.",
 	"han": "Ruộng khô nhanh gấp rưỡi, không có mưa rào. Lu nước, giếng, ao gần ruộng giúp đỡ khô."}
-const RK := ["điệu Bắc rộn ràng", "điệu Nam thong thả", "điệu Oán man mác", "điệu Oán chậm rãi"]   # rk[xi].nm
 
 func _init(ui) -> void:
 	super(ui)
@@ -25,117 +30,181 @@ func open() -> void:   # RN
 	sig = ""
 	_build()
 
-func step(dt: float) -> void:
-	if not on:
-		return
-	_sig_t -= dt
-	if _sig_t > 0.0:
-		return
-	_sig_t = 1.0
-	if _sig() != sig:
-		_build()
-
 func _sig() -> String:
-	return JSON.stringify([_now_w(), G.day(), int(G.nv.hour() * 4.0), G.g.get("hui"), G.g.get("ray", {}).get("th"), G.ray_n(), G.g.get("hc"), nhac, G.cfg.a])
+	return JSON.stringify([cd, _now_w(), G.day(), int(G.nv.hour() * 4.0), G.ray_n(), G.g.get("hc"), G.cfg.s])
 
 func _now_w() -> String:   # ti.cur || Wd()
 	return G.troi.cur if G.troi.cur != "" else G.nv.Wd()
 
-func _build() -> void:
-	sig = _sig()
-	var out := [_wxnow()]
-	out[0].gap = 0.0
-	out.append(_sec_p("Dự báo", "Mỗi ngày chia 4 buổi, mỗi buổi 6 tiếng. Mưa dầm, giông bão chỉ 2 tiếng đầu buổi rồi tạnh, nắng đẹp tới hết buổi."))
-	out[-1].gap = 4.5
-	var wf := _wxf()
-	wf.gap = 7.5
-	out.append(wf)
-	out.append(_sec_p("Lịch lễ hội", "Ba ngày trước lễ, bà con nhờ góp lễ vật. Đủ lễ thì ngày hội cả làng nhận lộc."))
-	out[-1].gap = 4.5
-	var first := true
-	for c in _cards():
-		c.gap = 7.5 if first else 6.0
-		first = false
-		out.append(c)
-	var jb := _cl(SK.jobs)
-	jb.kids[0].act = _go(func(): U.setp.open())
-	jb.gap = 7.5
-	out.append(jb)
-	_pop(out)
-
-# ------------------------------------------------------------------ bây giờ: hình, "Nắng hạn · Mùa xuân ngày 7", lời giải thích
-func _wxnow() -> Dictionary:
-	var a := _now_w()
-	var n := _cl(SK.wxnow)
-	n.kids[0].svg = SK.ic[a]
-	var d: Dictionary = n.kids[1]
-	var b: Dictionary = d.kids[0]
-	var sea: int = G.season()
-	var auto: bool = G.cfg.s == "auto"
-	var st := _cl(b)
-	st.erase("kids")
-	var hb := _put(b, [_r(String(G.troi.TEN[a]) + " · " + T8[sea] + (" ngày " + str(posmod(G.day(), 28) % 7 + 1) if auto else ""), st)], "left", float(d.r[2]))
-	b.r[3] = hb
-	var sm: Dictionary = d.kids[1]
-	_mv(sm, float(sm.r[0]), float(b.r[1]) + hb + 1.8)
-	var s2 := _cl(sm)
-	s2.erase("kids")
-	var hs := _put(sm, [_r(HQ[a], s2)], "left", float(d.r[2]))
-	sm.r[3] = hs + 3.0
-	d.r[3] = float(sm.r[1]) + float(sm.r[3]) - float(d.r[1])
-	n.r[3] = maxf(float(d.r[3]), 42.0) + 15.0
-	d.r[1] = float(n.r[1]) + (float(n.r[3]) - float(d.r[3])) * 0.5
-	_mv(n.kids[0], float(n.kids[0].r[0]), float(n.r[1]) + (float(n.r[3]) - 42.0) * 0.5)
-	var dy := float(d.r[1]) - float(b.r[1])
-	for k in [b, sm]:
-		Snap._move(k, Vector2(0, dy))
-	return n
-
-# ------------------------------------------------------------------ dự báo 6 buổi (Hx)
-func _wxf() -> Dictionary:
-	var w := _cl(SK.wxf)
-	var e: int = G.day() * 4 + int(floor(G.nv.hour() / 6.0))   # Ox
-	var o: int = G.day()
-	var x0 := float(w.r[0])
-	var y0 := float(w.r[1])
-	var cw := float(SK.cell.r[2])
-	var chh := float(SK.cell.r[3])
-	var kids := []
-	for i in 6:
-		var c: int = e + i + 1
-		var f: String = G.nv.Hx(c)
-		var s: int = int(floor(c / 4.0)) - o
-		var n := _cl(SK.cell)
-		_mv(n, x0 + (i % 4) * (cw + 4.5), y0 + (i / 4) * (chh + 4.5))
-		n.kids[0].svg = SK.ic[f]
-		_ctxt(n.kids[1], TK[posmod(c, 4)], n)
-		_ctxt(n.kids[2], "hôm nay" if s == 0 else ("mai" if s == 1 else "mốt"), n)
-		_ctxt(n.kids[3], G.troi.TEN[f], n)
-		kids.append(n)
-	w.kids = kids
-	w.r[3] = 2 * chh + 4.5
-	return w
-
-func _ctxt(n: Dictionary, s: String, box: Dictionary) -> void:   # chữ giữa ô
-	var w := _tw(n, s)
-	var x := float(box.r[0]) + (float(box.r[2]) - w) * 0.5
-	n.text = s
-	n.r = [x, n.r[1], w, n.r[3]]
-	if n.has("tr"):
-		n.tr = [x, n.tr[1], w, n.tr[3]]
-
-# ------------------------------------------------------------------ thẻ .tt
-func _t(got: bool, title: String, small: String, btn = null) -> Dictionary:
-	return _tt_p(got, [[title, false]], small, btn)
+func _tab_go(k: String) -> void:
+	if cd != k:
+		cd = k
+		scroll = 0.0
 
 func _go(f: Callable) -> Callable:   # đóng bảng rồi mở bảng khác
 	return func(): close(); f.call()
 
-func _cards() -> Array:
+func _build() -> void:
+	sig = _sig()
+	var W = G.w_all
+	var o: int = G.day()
+	var lehot := false
+	for r in 3:
+		if W.WH.mm(o + r) != null:
+			lehot = true
+	var tn_mai: bool = W.WL.tn_ok() and W.WL.tn_on(o + 1) != null
+	var sh := _kshell([["t", "Thời tiết", tn_mai], ["l", "Lịch làng", lehot]], cd, _tab_go)
+	var r: Array = _tabt() if cd == "t" else _tabl()
+	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
+
+# ------------------------------------------------------------------ một hàng chip: [ô trái nhỏ], tên đậm + 1 dòng, nút chip xanh phải
+func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full: String, btn = null) -> Array:
+	var out := []
+	var c := _chip(X0, y, XW, h, kind)
+	var x := X0 + 10.0
+	var ks := []
+	if lt != null:   # ô trái: [dòng 1, dòng 2] hoặc [svg]
+		var lw := 50.0
+		var lc := _chip(X0 + 6.0, y + 5.0, lw, h - 10.0, "fut")
+		var L: Array = lt
+		if L.size() == 1:
+			lc.kids = [_dic(X0 + 6.0 + (lw - 24.0) * 0.5, y + (h - 24.0) * 0.5, 24.0, String(L[0]))]
+		else:
+			lc.kids = [_dt(X0 + 6.0, y + h * 0.5 - 13.0, lw, 12.0, String(L[0]), 9.5, 600, SUB), _dt(X0 + 6.0, y + h * 0.5, lw, 13.0, String(L[1]), 11.0, 800, BROWN)]
+		ks.append(lc)
+		x = X0 + lw + 14.0
+	var bw := 0.0
+	if btn != null:
+		bw = Box.text_w(String(btn[0]), 11.0, 800) + 22.0
+	var tw := X0 + XW - x - (bw + 14.0 if bw > 0.0 else 8.0)
+	ks.append(_dt(x, y + h * 0.5 - 15.0, tw, 15.0, _fitw(title, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+	ks.append(_dt(x, y + h * 0.5 + 1.0, tw, 13.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
+	c.kids = ks
+	c.act = _dsay.bind(full)
+	out.append(c)
+	if btn != null:   # nút đặt ngoài chip (bấm nút không bấm luôn hàng)
+		var b := _onbtn(X0 + XW - bw - 8.0, y + (h - 26.0) * 0.5, bw, 26.0, String(btn[0]), btn[1])
+		b.kids[0].css["font-size"] = _cpx(11.0)
+		out.append(b)
+	return out
+
+# ------------------------------------------------------------------ tab Thời tiết
+func _tabt() -> Array:
 	var W = G.w_all
 	var out := []
 	var o: int = G.day()
-	# lễ hội: 4 lễ gần nhất trong 56 ngày
+	var sea: int = G.season()
+	var auto: bool = G.cfg.s == "auto"
+	var dd: int = posmod(o, 28) % 7 + 1
+	# mùa + ngày trong mùa
+	var y := 10.0
+	var mt: String = T8[sea]
+	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
+	out.append(_onbtn(X0, y, mw, 26.0, mt, null, true))
+	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
+	out.append(_dt(X0 + mw + 10.0, y, XW - mw - 10.0, 26.0, st, 11.5, 700, BROWN, "left"))
+	if auto:   # thanh 7 ngày
+		var bx := X0 + mw + 10.0
+		var bw := XW - mw - 14.0
+		var sw := (bw - 6.0 * 3.0) / 7.0
+		for i in 7:
+			out.append(_dbx(bx + i * (sw + 3.0), y + 30.0, sw, 5.0, "rgb(35, 160, 74)" if i < dd else "rgb(230, 214, 174)", 3.0))
+	# bây giờ
+	var a := _now_w()
+	var ny := y + 44.0
+	var nh := 64.0
+	var nc := _chip(X0, ny, XW, nh, "fut")
+	nc.kids = [_dic(X0 + 10.0, ny + (nh - 46.0) * 0.5, 46.0, String(SK.ic[a])),
+		_dt(X0 + 66.0, ny + 9.0, XW - 76.0, 12.0, "Bây giờ · " + String(TK[int(floor(G.nv.hour() / 6.0))]).to_lower(), 10.0, 600, SUB, "left"),
+		_dt(X0 + 66.0, ny + 21.0, XW - 76.0, 18.0, String(G.troi.TEN[a]), 14.5, 800, BROWN, "left"),
+		_dt(X0 + 66.0, ny + 40.0, XW - 76.0, 14.0, _fitw(HQ[a], 10.5, 600, XW - 76.0), 10.5, 600, SUB, "left")]
+	nc.act = _dsay.bind(HQF[a])
+	out.append(nc)
+	# dự báo 6 buổi
+	var fy := ny + nh + 12.0
+	out.append_array(_hd(fy, "Dự báo"))
+	var e: int = o * 4 + int(floor(G.nv.hour() / 6.0))
+	var g := 6.0
+	var cw := (XW - g * 2.0) / 3.0
+	var ch := 70.0
+	var gy := fy + 22.0
+	for i in 6:
+		var c: int = e + i + 1
+		var f: String = G.nv.Hx(c)
+		var s: int = int(floor(c / 4.0)) - o
+		var x := X0 + (i % 3) * (cw + g)
+		var yy := gy + (i / 3) * (ch + g)
+		var cc := _chip(x, yy, cw, ch, "fut")
+		cc.kids = [_dt(x, yy + 5.0, cw, 12.0, TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")), 9.5, 600, SUB),
+			_dic(x + (cw - 28.0) * 0.5, yy + 19.0, 28.0, String(SK.ic[f])),
+			_dt(x + 2.0, yy + 50.0, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 11.5, 800, cw - 4.0), 11.5, 800, BROWN)]
+		cc.act = _dsay.bind(TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")) + ": " + String(G.troi.TEN[f]) + ". " + HQF[f])
+		out.append(cc)
+	# cảnh báo + radio
+	var ky := gy + ch * 2.0 + g + 12.0
+	out.append_array(_hd(ky, "Cảnh báo, tin tức"))
+	var ry := ky + 22.0
+	var rh := 44.0
+	var tn = W.WL.tn_on(o + 1) if W.WL.tn_ok() else null
+	if tn != null:
+		var K: Dictionary = W.WL.TNK[String(tn.k)]
+		out.append_array(_row(ry, rh, "sen", null, "Ngày mai: " + String(K.w), String(K.d), String(K.w) + ": " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))]))
+		ry += rh + g
+	var n4: bool = W.WR.n4()
+	var ac: int = W.WR.ac()
+	if n4 or (ac >= 0 and ac <= 4):
+		var ms := "Nước mặn đang lấn vô sông, ruộng chậm lớn." if n4 else "Chừng " + str(ac) + " ngày nữa mặn lấn vô sông Vàm. Trữ nước ngọt sẵn."
+		out.append_array(_row(ry, rh, "sen" if n4 else "fut", null, "Hạn mặn", ms, ms, ["Xem", _go(W.WRU.open_man)]))
+		ry += rh + g
+	if sea == 3 or sea == 0:
+		var cg: bool = W.WCA.cg()
+		var gs := "Đang có gió, ra đồng thả diều (bảng nhân vật › Diều)." if cg else "Mùa này chiều 14–18 giờ có gió thả diều."
+		out.append_array(_row(ry, rh, "got" if cg else "fut", null, "Gió chướng", gs, gs))
+		ry += rh + g
+	var rs := "Bản tin thời tiết ngày mai, giá cả, cải lương."
+	out.append_array(_row(ry, rh, "fut", null, "Radio", rs, rs, ["Mở radio", _go(W.WCU.open_rd)]))
+	ry += rh
+	return [out, ry + 8.0]
+
+# ------------------------------------------------------------------ tab Lịch làng
+func _tabl() -> Array:
+	var W = G.w_all
+	var out := []
+	var o: int = G.day()
+	var g := 6.0
+	var rh := 46.0
+	var y := 10.0
+	out.append_array(_hd(y, "Hôm nay trong làng"))
+	y += 22.0
+	# chợ nổi
+	if W.WC.u4() != null:
+		var v: bool = W.WC.b2()
+		var cs := "Họp từ 5 giờ tới " + str(W.WC.wm()) + " giờ sáng mỗi ngày. " + ("Đang họp!" if v else "Bây giờ chưa họp.")
+		out.append_array(_row(y, rh, "got" if v else "fut", ["sáng", "5–" + str(W.WC.wm()) + "g"], "Chợ nổi sông Vàm", "Đang họp" if v else "Chưa họp", cs, ["Đi chợ", _go(W.WCU._pill_go)] if v else null))
+	else:
+		out.append_array(_row(y, rh, "miss", ["sáng", "5–8g"], "Chợ nổi sông Vàm", "Mở khúc sông Vàm để có chợ", "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi."))
+	y += rh + g
+	# hội chợ sân đình
+	var a2 := 0
+	while a2 < 4 and not W.WH.c_r(o + a2):
+		a2 += 1
+	var n2: bool = W.WH.e_r()
+	var l2: bool = W.WH.l2()
+	var hs := "Đang mở! Ra sân đình chơi ném vòng, đập niêu, lô tô." if l2 else ("Tối nay 18g30–22g30 có hội chợ." if n2 else "Hội chợ kế tiếp " + ("tối mai" if a2 == 1 else "sau " + str(a2) + " ngày") + ". Bỏ 2.000 xu tổ chức tối nay thì chơi liền.")
+	out.append_array(_row(y, rh, "got" if l2 else "fut", ["tối", "18g30"], "Hội chợ sân đình", "Đang mở" if l2 else ("Tối nay có hội" if n2 else "Tối nay không có"), hs, null if n2 else ["Tổ chức · 2.000", W.WH.b_]))
+	y += rh + g
+	# đám cưới / đám giỗ
+	var ev = W.WL.tg().get("ev")
+	if _tr(ev):
+		var a := int(floor(fmod(float(ev.t0), 24.0)))
+		var on_d: bool = W.WL.sg() != null
+		var es := "Đã dự." if _tr(ev.get("done")) else ("Đang đãi khách, ghé dự liền!" if on_d else "Lúc " + ("0" if a < 10 else "") + str(a) + ":00.")
+		out.append_array(_row(y, rh, "got" if on_d else "fut", ["giờ", str(a) + "g"], String(W.WL.qm(ev)), es, String(W.WL.qm(ev)) + ": " + es))
+		y += rh + g
+	# lễ hội: 4 lễ gần nhất trong 56 ngày + hội đình
+	y += 6.0
+	out.append_array(_hd(y, "Lễ hội"))
+	y += 22.0
 	var seen := {}
 	var p := []
 	for r in 56:
@@ -145,83 +214,20 @@ func _cards() -> Array:
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
 			p.append([d, r])
-	for x in p:
-		var f: Dictionary = x[0]
-		var r: int = x[1]
-		out.append(_t(false, String(f.n), ("Hôm nay" if r == 0 else "Còn " + str(r) + " ngày") + " · " + String(G.SEA_N[int(f.sea)]) + " ngày " + str(int(f.day)) + " · " + String(f.d),
-			["Góp lễ", true, true, _go(W.WHU.open_fest)] if r <= 2 else null))
-	# chợ nổi
-	var v: bool = W.WC.b2()
-	out.append(_t(false, "Chợ nổi sông Vàm", ("Họp từ 5 giờ tới " + str(W.WC.wm()) + " giờ sáng mỗi ngày. " + ("Đang họp!" if v else "Bây giờ chưa họp.")) if W.WC.u4() != null else "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi.",
-		["Đi chợ", true, true, _go(W.WCU._pill_go)] if v else null))
-	# nhạc đờn ca tài tử
-	out.append(_t(false, "Nhạc đờn ca tài tử", "Mùa này đàn " + RK[G.season()] + ". Kèm tiếng rao, chuông chùa chiều." + ("" if int(G.cfg.a) == 1 else " Đang tắt âm thanh chung."),
-		["Đang bật" if nhac else "Đang tắt", false, true, func(): nhac = not nhac]))
-	# tát ao
-	if W.WC._ci("ao"):
-		var am: bool = W.WCA.am()
-		out.append(_t(am, "Tát ao bắt cá", "Tuần này chưa tát! Ra bờ ao sen chạm cái gàu sòng." if am else "Tuần này tát rồi, tuần sau tát tiếp."))
-	# hụi
-	var h = G.g.get("hui")
-	var hon: bool = h is Dictionary and not _tr(h.get("done"))
-	out.append(_t(hon, "Hụi làng", ("Đang chơi hụi " + String(h.n) + ", kỳ " + str(W.WH.y6()) + "/6" + (", đã hốt" if _tr(h.get("hot")) else ", chưa hốt")) if hon else "Chưa chơi dây hụi nào.",
-		["Xem", false, true, _go(U.hui_open)]))
-	# đám cưới / đám giỗ
-	var ev = W.WL.tg().get("ev")
-	if _tr(ev):
-		var a := int(floor(fmod(float(ev.t0), 24.0)))
-		var on_d: bool = W.WL.sg() != null
-		out.append(_t(on_d, W.WL.qm(ev), "Đã dự." if _tr(ev.get("done")) else ("Đang đãi khách, ghé dự liền!" if on_d else "Lúc " + ("0" if a < 10 else "") + str(a) + ":00.")))
-	# gió chướng (mùa khô, mùa xuân)
-	if G.season() == 3 or G.season() == 0:
-		var cg: bool = W.WCA.cg()
-		out.append(_t(cg, "Gió chướng", "Đang có gió, ra đồng thả diều (bảng nhân vật › Diều)." if cg else "Mùa này chiều 14–18 giờ có gió thả diều."))
-	# radio, thư nhà
-	var th: Dictionary = W.WC.Eg()
-	var co: bool = _tr(th.get("un")) or _tr(th.get("rq"))
-	var rd := ["Mở radio", false, true, _go(W.WCU.open_rd)]
-	out.append(_t(false, "Radio, thư nhà", "Bản tin thời tiết ngày mai, giá cả, cải lương." + (" Có thư chưa xử lý." if co else " Ông đưa thư ghé khoảng 9–12 giờ."),
-		[rd, ["Đọc thư", true, true, _go(W.WTH.YN)]] if co else rd))
-	# rầy nâu
-	var es: int = G.ray_n()
-	out.append(_t(es == 0, "Rầy nâu", ("Đang có dịch: " + str(es) + " ô bị rầy." if es else "Ruộng đang sạch rầy.") + " Mùa hạ, mùa thu, trời mưa dễ có dịch. Đèn bẫy rầy (Xây dựng › Đồ vật) che ruộng trong 6 ô. Thuốc còn " + str(int(G.g.ray.th)) + " lần.",
-		["Mua bình thuốc · 150", false, true, func(): G.ray_buy(1)]))
-	# hội chợ sân đình
-	var a2 := 0
-	while a2 < 4 and not W.WH.c_r(o + a2):
-		a2 += 1
-	var n2: bool = W.WH.e_r()
-	var l2: bool = W.WH.l2()
-	out.append(_t(l2, "Hội chợ sân đình", "Đang mở! Ra sân đình chơi ném vòng, đập niêu, lô tô." if l2 else ("Tối nay 18g30–22g30 có hội chợ." if n2 else "Hội chợ kế tiếp " + ("tối mai" if a2 == 1 else "sau " + str(a2) + " ngày") + ". Muốn chơi liền thì bỏ 2.000 xu tổ chức tối nay."),
-		null if n2 else ["Tổ chức tối nay · 2.000", false, true, W.WH.b_]))
-	# hạn mặn
-	var n4: bool = W.WR.n4()
-	var ac: int = W.WR.ac()
-	if n4 or (ac >= 0 and ac <= 4):
-		out.append(_t(n4, "Hạn mặn", "Nước mặn đang lấn vô sông, ruộng chậm lớn." if n4 else "Chừng " + str(ac) + " ngày nữa mặn lấn vô sông Vàm. Trữ nước ngọt sẵn.",
-			["Xem", false, true, _go(W.WRU.open_man)]))
-	# hội thi làng, nồi cơm trưa (chơi mạng: bản Godot chưa có)
-	var hr: float = G.nv.hour()
-	var thi := hr >= 19.0 and hr < 19.25
-	out.append(_t(thi, "🔔 Hội thi làng", "Mỗi tối 19:00–19:15 ở sân đình: 10 câu đố về Nam Bộ: địa danh, đặc sản, ca dao, cải lương, lễ hội, chuyện trong làng. Đúng càng nhiều thưởng càng lớn, đúng hết được Rung chuông vàng.",
-		["Vào thi", true, true, U.say.bind(U.SOON)] if thi else null))
-	var com := hr >= 12.0 and hr < 12.5
-	var cp := int(W.WH.n5().get("p", 0))
-	out.append(_t(com, "🍚 Nồi cơm trưa của làng", "Mỗi trưa 12:00–12:30: cả làng góp nguyên liệu vào một nồi chung. Đông hay vắng thì mốc tự co giãn, vắng có hàng xóm góp phụ. Góp từ 10 điểm là có quà theo mốc nồi đạt được." + (" Hôm nay bạn góp " + str(cp) + " điểm." if cp else ""),
-		["Góp ngay" if com else "Xem nồi", com, true, U.say.bind(U.SOON)]))
-	# thiên tai ngày mai
-	var tn = W.WL.tn_on(o + 1) if W.WL.tn_ok() else null
-	if tn != null:
-		var K: Dictionary = W.WL.TNK[String(tn.k)]
-		out.append(_t(true, String(K.w), String(K.d), ["Phòng chống", true, true, _go(U.tn_open.bind("phong"))]))
-	# hội đình
+	for i in p.size():
+		var f: Dictionary = p[i][0]
+		var r: int = p[i][1]
+		var when := String(G.SEA_N[int(f.sea)]) + " ngày " + str(int(f.day))
+		out.append_array(_row(y, rh, "sen" if i == 0 else "fut", ["", "Hôm nay"] if r == 0 else ["còn", str(r) + " ngày"], String(f.n), when + " · " + String(f.d), String(f.n) + " (" + when + "): " + String(f.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null))
+		y += rh + g
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur
 		var today: bool = int(tx[1]) == 1
-		out.append(_t(true, "Hội đình làng", ("Hôm nay mở hội ở sân đình: " + ", ".join(PackedStringArray(cu.giai.map(func(id): return String(W.WH.HDNG[id]).to_lower()))) + ".") if today else "Còn " + str(int(cu.d) - o) + " ngày tới hội. Bà con đang góp lễ.",
-			["Vào thi" if today else "Chuẩn bị", true, true, _go(U.hdn_open.bind("giai" if today else "mo"))]))
-	return out
+		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(int(cu.d) - o) + " ngày tới hội. Bà con đang góp lễ."
+		out.append_array(_row(y, rh, "sen" if today else "fut", ["", "Hôm nay"] if today else ["còn", str(int(cu.d) - o) + " ngày"], "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]))
+		y += rh + g
+	return [out, y + 2.0]
 
 static func _tr(v) -> bool:
 	return not (v == null or v is bool and not v or (v is float or v is int) and v == 0 or v is String and v == "")

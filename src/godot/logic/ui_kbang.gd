@@ -50,6 +50,17 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 	_mount(n, vt, kids, vy, minf(ch, _hb), 0.0)   # nội dung xếp vừa thân: không cho cuộn lố vài đơn vị
 	U._layout()
 
+func _hd(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
+	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
+	return [_dt(X0 + 2.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"), _dbx(X0 + 2.0 + tw + 6.0, y + 8.0, XW - tw - 12.0, 1.0, "rgb(222, 204, 164)", 0.0)]
+
+func _fitw(s: String, fs: float, fw: int, w: float) -> String:   # cắt chữ thêm "…" cho vừa bề ngang
+	if Box.text_w(s, fs, fw) <= w:
+		return s
+	while s.length() > 1 and Box.text_w(s + "…", fs, fw) > w:
+		s = s.substr(0, s.length() - 1)
+	return s.strip_edges() + "…"
+
 # ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
 const X0 := 16.5      # mép trái nội dung (như thẻ trong Kho / Sổ làng)
 const XW := 305.0     # rộng nội dung
