@@ -147,10 +147,14 @@ func _tabt() -> Array:
 	var a := _now_w()
 	var WN := _warns()
 	var nwarn := WN.size()
-	var fixed := 10.0 + 40.0 + 12.0 + 22.0 + 6.0 + 12.0 + 22.0 + nwarn * (_wrh(nwarn) + 6.0) + 4.0
+	var fixed := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 12.0 + 22.0 + nwarn * 50.0 - 6.0   # cảnh báo mặc định cao 44 + khe 6
 	var spare := _hb - fixed - 64.0 - 70.0   # mặc định chip bây giờ 64, dự báo 1 hàng 70; âm = nhiều cảnh báo, thu chip lại
+	var cut := maxf(0.0, -spare)   # thiếu chỗ: bớt chip bây giờ, dự báo, rồi mới tới hàng cảnh báo
+	var dn := minf(cut * 0.4, 12.0)
+	var dc := minf(cut * 0.5, 16.0)
+	_rh = maxf(34.0, 44.0 - (cut - dn - dc) / maxf(1.0, nwarn))
 	var ny := y + 40.0
-	var nh := 64.0 + (minf(spare * 0.3, 24.0) if spare > 0.0 else maxf(spare * 0.3, -4.0))
+	var nh := 64.0 + (minf(spare * 0.3, 24.0) if spare > 0.0 else -dn)
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
 	var nis := nh - 18.0
 	var tx0 := X0 + nis + 22.0
@@ -170,8 +174,8 @@ func _tabt() -> Array:
 	var e: int = o * 4 + int(floor(G.nv.hour() / 6.0))
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
-	var ch := 70.0 + (minf(spare - minf(spare * 0.3, 24.0), 16.0) if spare > 0.0 else maxf(spare * 0.5, -8.0))
-	var isz := clampf(ch - 40.0, 22.0, 46.0)
+	var ch := 70.0 + (minf(spare - minf(spare * 0.3, 24.0), 16.0) if spare > 0.0 else -dc)
+	var isz := clampf(ch - 40.0, 16.0, 46.0)
 	var gy := fy + 22.0
 	var bs := []
 	var c0: int = e + 1
@@ -195,15 +199,14 @@ func _tabt() -> Array:
 	var ky := gy + ch + 12.0
 	out.append_array(_hd(ky, "Cảnh báo, tin tức"))
 	var ry := ky + 22.0
-	var rh := _wrh(WN.size())
+	var rh := _rh
 	for i in WN.size():
 		var q: Array = WN[i]
 		out.append_array(_row(ry, rh, String(q[0]), null, String(q[1]), String(q[2]), String(q[3]), q[4]))
 		ry += rh + (g if i < WN.size() - 1 else 0.0)
 	return [out, ry + 8.0]
 
-func _wrh(n: int) -> float:   # cao hàng cảnh báo: nhiều hàng thì thấp lại
-	return 44.0 if n <= 4 else 40.0
+var _rh := 44.0   # cao hàng cảnh báo (thiếu chỗ thì thấp lại, tính ở _tabt)
 
 # cảnh báo, tin tức: [loại chip, tên, dòng phụ, mô tả chạm, nút?]
 func _warns() -> Array:
@@ -270,8 +273,8 @@ func _warns() -> Array:
 		if rr.c != null and not G.ripe(rr) and float(rr.w) <= 0.0:
 			nd += 1
 	if nd:
-		var ds := "Đất khô thì cây lớn chậm hơn. " + ("Trời nắng hạn, ruộng khô nhanh gấp rưỡi." if _now_w() == "han" else "Tưới để ruộng lớn nhanh hơn 10%.")
-		L.append(["wx_han" if _now_w() == "han" else "fut", str(nd) + " ô ruộng đang khô", ds, ds, null, 5])
+		var ds := "Đất khô thì cây lớn chậm hơn. " + ("Trời nắng hạn, ruộng khô nhanh gấp rưỡi." if _now_w() == "han" else "Tưới thì lớn nhanh hơn 10%.")
+		L.append(["wx_han" if _now_w() == "han" else "fut", str(nd) + " ô ruộng đang khô", "Nắng hạn khô nhanh, tưới sớm." if _now_w() == "han" else "Tưới để cây lớn nhanh hơn.", ds, null, 5])
 	L.sort_custom(func(a, b): return int(a[5]) < int(b[5]))
 	return L.slice(0, 5)   # tối đa 5 dòng, bỏ bớt dòng ít gấp
 
