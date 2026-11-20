@@ -92,15 +92,15 @@ func _build() -> void:
 		return
 	sig = _sig()
 	var L := _tabs(f)
-	var sh := _kshell(L, tab, _tab_go)
+	var sh := _kshell([] if sub != "" else L, tab, _tab_go)   # hộp nổi mở: bỏ hàng tab, hộp che luôn chỗ tab
 	var n: Dictionary = sh[0]
 	var vt: Dictionary = sh[1]
 	var card := _find(n, "khcard")
-	var tabs := _find(n, "bk2tabs")
-	var y0 := float(tabs.r[1])
+	var y0 := float(sh[2]) if sub != "" else float(_find(n, "bk2tabs").r[1])
 	var hd := _head(f, y0)
 	var hh: float = hd[1]
-	Snap._move(tabs, Vector2(0, hh))   # đầu bảng chiếm chỗ trên hàng tab
+	if sub == "":
+		Snap._move(_find(n, "bk2tabs"), Vector2(0, hh))   # đầu bảng chiếm chỗ trên hàng tab
 	vt.r = [vt.r[0], float(vt.r[1]) + hh, vt.r[2], float(vt.r[3]) - hh]
 	_hb -= hh
 	card.kids.append_array(hd[0])
@@ -108,7 +108,7 @@ func _build() -> void:
 	var r: Array = _body(f)
 	if sub != "":   # hộp nổi trò chuyện / tặng quà: lớp tối + hộp đè lên thân bảng (thân đứng yên, không cuộn)
 		scroll = 0.0
-		r = [r[0] + _pop(f, 4.0, _hb - 4.0), _hb]
+		r = [_pop(f, 0.0, _hb, vt), _hb]
 	_kmount(n, vt, float(sh[2]) + hh, r[0], float(r[1]))
 
 # ------------------------------------------------------------------ khối chung
@@ -138,6 +138,11 @@ func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -
 	var b := _onbtn(x, y, w, h, t, cb, kind == "red")
 	b.kids[0].css["font-size"] = _cpx(11.0)
 	return b
+
+func _lockc(x: float, y: float, t: String) -> Dictionary:   # chip khóa: hình ổ khóa + "Thân N"
+	var lb := _chip(x, y, 84.0, 26.0, "miss")
+	lb.kids = [_dic(x + 6.0, y + 5.0, 16.0, LOCK), _dt(x + 24.0, y, 58.0, 26.0, t, 10.5, 700, "rgb(110, 104, 92)")]
+	return lb
 
 func _wrap(t: String, fs: float, fw: int, w: float) -> Array:
 	var L := []
@@ -245,18 +250,35 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	if W._tr(f.get("ho")):
 		chips.append(["Họ " + String(f.ho) + " · đời " + str(W._i(f.get("doi")) if W._i(f.get("doi")) else 1) + " ›", "fut", U.gp_open.bind(u)])
 	var jb := _vs(f)
-	chips.append([jb, "got" if jb == "Đang ở nhà" else "viec", null])
+	chips.append([jb, "info" if jb == "Đang ở nhà" else "viec", null])
+	# (bản 434) 3 chip luôn một hàng: thiếu chỗ thì cắt chữ chip nhà trước, rồi chip đang làm
+	var cf := 9.0
+	var gp := 4.0
+	var ws := []
+	var sum := gp * (chips.size() - 1)
 	for c in chips:
-		var w: float = Box.text_w(String(c[0]), 9.5, 700) + 12.0
-		if cx > x and cx + w > xr:
-			cx = x
-			cy += 21.0
-		var k := _chip(cx, cy, w, 18.0, String(c[1]))
-		k.kids = [_dt(cx, cy, w, 18.0, String(c[0]), 9.5, 700, SUB)]
+		ws.append(Box.text_w(String(c[0]), cf, 700) + 10.0)
+		sum += float(ws[-1])
+	var over := sum - (xr - x)
+	if over > 0.0 and chips.size() > 2:   # thiếu chỗ: bỏ "· đời N" của chip họ trước (xem đời ở Gia phả)
+		var h0: float = ws[1]
+		chips[1][0] = "Họ " + String(f.ho) + " ›"
+		ws[1] = Box.text_w(String(chips[1][0]), cf, 700) + 10.0
+		over -= h0 - float(ws[1])
+	for i in [0, chips.size() - 1]:
+		if over > 0.0:
+			var cut := minf(over, float(ws[i]) - 50.0)
+			ws[i] = float(ws[i]) - cut
+			over -= cut
+	for i in chips.size():
+		var c: Array = chips[i]
+		var w: float = ws[i]
+		var k := _chip(cx, cy, w, 18.0, "info" if String(c[1]) == "fut" else String(c[1]))
+		k.kids = [_dt(cx, cy, w, 18.0, _fitw(String(c[0]), cf, 700, w - 8.0), cf, 700, "rgb(52, 92, 140)" if String(c[1]) != "viec" else SUB)]
 		if c[2] is Callable:
 			k.act = c[2]
 		out.append(k)
-		cx += w + 5.0
+		cx += w + gp
 	var y := maxf(y0 + fs, cy + 18.0) + 9.0
 	# bong bóng câu nói
 	var q: String = "“" + W.talk_line(f) + "”"
@@ -274,23 +296,32 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var nl: int = W.chat_left(f)
 	var gq: bool = W._i(f.get("gq", -1)) == W._vr()
 	var hw := (XW - 8.0) * 0.5
-	out.append(_btn(X0, y, hw, 28.0, "Trò chuyện · còn " + str(nl) if nl else "Mai trò chuyện tiếp", _chat_go, "go" if nl else "off"))
+	if sub == "chat":
+		out.append(_btn(X0, y, hw, 28.0, "Đóng trò chuyện", _chat_go, "go"))
+	else:
+		out.append(_btn(X0, y, hw, 28.0, "Trò chuyện · còn " + str(nl) if nl else "Mai trò chuyện tiếp", _chat_go, "go" if nl else "off"))
 	var x2 := "Tặng quà · ngày riêng x2" if W.is_ngay_rieng(u) and f.get("bk") is Dictionary and W._tr(f.bk.get("d")) else "Tặng quà · 1 món/ngày"
-	out.append(_btn(X0 + hw + 8.0, y, hw, 28.0, "Hôm nay tặng rồi" if gq else x2, _gift_go, "off" if gq else "red"))
+	out.append(_btn(X0 + hw + 8.0, y, hw, 28.0, "Đóng tặng quà" if sub == "gift" else ("Hôm nay tặng rồi" if gq else x2), _gift_go, "red" if sub == "gift" else ("off" if gq else "red")))
 	y += 28.0 + 10.0
 	return [out, y - y0]
 
-func _chat_go() -> void:   # data-chat
-	if sub != "":
+func _chat_go() -> void:   # data-chat; bấm lại lúc đang mở: đóng hộp
+	if sub == "chat":
+		sub = ""
+		cv = null
 		return
+	sub = ""
 	var c = W.chat_start(u)
 	if c != null:
 		cv = c
 		sub = "chat"
 
-func _gift_go() -> void:   # data-gift -> giftOpen
-	if sub != "":
+func _gift_go() -> void:   # data-gift -> giftOpen; bấm lại lúc đang mở: đóng hộp
+	if sub == "gift":
+		sub = ""
 		return
+	sub = ""
+	cv = null
 	var f = W._fam_of(u)
 	if W._i(f.get("gq", -1)) == W._vr():
 		G.toast.emit("Hôm nay tặng " + String(f.n) + " rồi, mai tặng tiếp nha.")
@@ -653,15 +684,14 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	elif o < 5:
 		var fz: int = W.m_i(o)
 		var lk: bool = W._i(f.get("tim")) < o
-		var p3 := _para(X0 + 10.0, yy + 1.0, XW - 110.0, "Lên " + str(o + 1) + " sao: " + W.v_i(r, o + 1).split(": ", true, 1)[-1] + ". Cần thân " + str(o) + ", " + W._sa(fz) + " xu, học " + G.ao(W.n_l(o)) + ".", 10.0, 600, BROWN, 13.0)
-		out.append_array(p3[0])
+		var lw := XW - 110.0   # (bản 434) 2 dòng gọn: hiệu lực sao kế, rồi điều kiện
+		out.append(_dt(X0 + 10.0, yy - 1.0, lw, 14.0, _fitw("Lên " + str(o + 1) + " sao: " + W.v_i(r, o + 1).split(": ", true, 1)[-1], 10.0, 700, lw), 10.0, 700, BROWN, "left"))
+		out.append(_dt(X0 + 10.0, yy + 13.0, lw, 13.0, _fitw("Thân " + str(o) + " · " + W._sa(fz) + " xu · học " + G.ao(W.n_l(o)), 9.5, 600, lw), 9.5, 600, SUB, "left"))
 		if lk:
-			var lb := _chip(X0 + XW - 94.0, yy, 84.0, 26.0, "miss")
-			lb.kids = [_dic(X0 + XW - 88.0, yy + 5.0, 16.0, LOCK), _dt(X0 + XW - 70.0, yy, 58.0, 26.0, "Thân " + str(o), 10.5, 700, "rgb(110, 104, 92)")]
-			out.append(lb)
+			out.append(_lockc(X0 + XW - 94.0, yy, "Thân " + str(o)))
 		else:
 			out.append(_btn(X0 + XW - 94.0, yy, 84.0, 26.0, "Gửi đi học", func(): W.b_i(u), "go"))
-		yy += maxf(26.0, float(p3[1])) + 10.0
+		yy += 26.0 + 10.0
 	else:
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đã thành thợ cả 5 sao", 11.0, 800, BROWN, "left"))
 		yy += 22.0
@@ -687,8 +717,10 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 	if W.t6().has(x.id):
 		r = _job(y, "tal", "Đã học nghề " + String(x.n).to_lower(), "Mở bảng Nghề (nhóm Làm ăn) để làm.", [], 0, "", null)
 	elif W._i(f.get("tim")) < 3:
-		r = _job(y, "fut", "Nhà " + String(f.n) + " có nghề " + String(x.n).to_lower() + " gia truyền", "Thân 3 tim thì họ mới nhận dạy.", [], 0, "", null)
-		r[0].append(_dic(X0 + XW - 28.0, y + 8.0, 18.0, LOCK))
+		var lc := _chip(X0, y, XW, 46.0, "tal")   # chưa đủ thân: chip khóa như Sở trường
+		var lw := XW - 110.0
+		r = [[lc, _dt(X0 + 10.0, y + 7.0, lw, 15.0, _fitw("Nghề " + String(x.n).to_lower() + " gia truyền", 11.5, 800, lw), 11.5, 800, BROWN, "left"),
+			_dt(X0 + 10.0, y + 24.0, lw, 13.0, "Thân 3 tim thì họ mới nhận dạy.", 9.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 10.0, "Thân 3")], 46.0]
 	elif not W._tr(p):
 		var nd: Array = W.hn_in1(u, f)
 		var ot = W.nghe_by_id(H.a) if W._tr(H.get("a")) and H.a != x.id else null
@@ -728,10 +760,10 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 	return [out, 22.0 + float(r[1])]
 
 # ------------------------------------------------------------------ hộp nổi: trò chuyện, tặng quà
-func _pop(f: Dictionary, y0: float, y1: float) -> Array:   # lớp tối + hộp chip đè lên hàng tab và thân bảng
-	var out := [_dbx(X0 - 16.5, y0 - 4.0, XW + 33.0, y1 - y0 + 8.0, "rgba(40, 26, 10, 0.32)", 0.0)]
-	var box := _chip(X0 + 4.0, y0, XW - 8.0, y1 - y0, "fut")
-	out.append(box)
+func _pop(f: Dictionary, y0: float, y1: float, vt: Dictionary) -> Array:   # hộp chip phủ kín thân bảng, sát mép khung tre
+	var box := _chip(float(vt.r[0]), y0, float(vt.r[2]), y1 - y0, "fut")
+	box.css["border-radius"] = _cpx(4.0)
+	var out := [box]
 	var r: Array = _chat(f, y0, y1) if sub == "chat" else _gift(f, y0, y1)
 	out.append_array(r)
 	return out
@@ -767,7 +799,7 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 		b.act = _pick.bind(i)
 		out.append(b)
 		yy += h + 5.0
-	# các câu: dựng từ cuối lên, câu cũ không vừa thì bỏ
+	# các câu: đo từ cuối lên, câu cũ không vừa thì bỏ
 	var top := y0 + 32.0
 	var bot := oy - 8.0
 	var bl := []
@@ -800,7 +832,7 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 			break
 		y -= bh
 		var bx := x0 if k == "n" else x0 + w0 - bw
-		var c := _chip(bx, y, bw, bh, "fut" if k == "n" else "got")
+		var c := _chip(bx, y, bw, bh, "info" if k == "n" else "got")
 		var ks := []
 		if k == "n":
 			ks.append(_dt(bx + 9.0, y + 4.0, bw - 18.0, 12.0, String(f.n), 9.0, 700, SUB, "left"))
@@ -809,6 +841,9 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 		c.kids = ks
 		bl.append(c)
 		y -= 6.0
+	var dy := top - (y + 6.0)   # (bản 434) các câu xếp từ trên xuống (câu mới nhất vẫn vừa trên nút trả lời)
+	for b in bl:
+		Snap._move(b, Vector2(0, dy))
 	out.append_array(bl)
 	return out
 

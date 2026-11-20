@@ -123,6 +123,7 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"miss": ["rgb(200, 196, 186)", "rgb(208, 204, 195)", "rgb(218, 215, 207)", "rgb(145, 137, 123)"],
 	"tre": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)"],   # dải thứ: nâu vàng
 	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
+	"info": ["rgb(214, 232, 248)", "rgb(224, 238, 250)", "rgb(236, 244, 252)", "rgb(96, 146, 196)"],   # (bản 434) chip thông tin, thời gian (xanh dương nhạt)
 }
 func _ck(kind: String) -> Array:   # màu chip theo loại; bảng con thêm loại riêng thì ghi đè hàm này
 	return CHIPK[kind]

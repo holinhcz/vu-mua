@@ -314,7 +314,10 @@ func _shd(y: float, t: String, right: String) -> Array:   # tên phần trong ch
 	var w: float = Box.text_w(t, 12.5, 800) + 24.0
 	var c := _chip(X0, y, w, 26.0, "tre")
 	c.kids = [_dt(X0, y, w, 26.0, t, 12.5, 800, BROWN)]
-	return [c, _dt(X0 + w + 8.0, y + 5.0, XW - w - 8.0, 16.0, right, 10.5, 600, SUB, "left")]
+	var rw: float = Box.text_w(right, 10.0, 700) + 14.0   # (bản 434) thời gian: chip xanh dương nhạt
+	var rc := _chip(X0 + w + 8.0, y + 3.0, rw, 20.0, "info")
+	rc.kids = [_dt(X0 + w + 8.0, y + 3.0, rw, 20.0, right, 10.0, 700, "rgb(52, 92, 140)")]
+	return [c, rc]
 
 
 # ------------------------------------------------------------------ tab Tuần
@@ -344,7 +347,9 @@ func _week() -> Array:
 	var rtw: float = Box.text_w("còn " + lt, 10.0, 600) + 4.0
 	var qw := XW - 46.0 - rtw - 10.0
 	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Mốc " + str(top) + ": " + String(dc[1]) + " + 5 sen đỏ", 11.5, 800, qw), 11.5, 800, BROWN, "left"))
-	out.append(_dt(X0 + XW - 8.0 - rtw, y, rtw, RH, "còn " + lt, 10.0, 600, SUB, "right"))
+	var tcc := _chip(X0 + XW - 8.0 - rtw - 6.0, y + (RH - 20.0) * 0.5, rtw + 6.0, 20.0, "info")
+	tcc.kids = [_dt(X0 + XW - 8.0 - rtw - 6.0, y + (RH - 20.0) * 0.5, rtw + 6.0, 20.0, "còn " + lt, 10.0, 700, "rgb(52, 92, 140)")]
+	out.append(tcc)
 	y += RH + 2.0 * g
 	out.append_array(_shd(y, "Việc tuần này", "làm mới sau " + N.ao(left)))
 	y += 26.0 + g
