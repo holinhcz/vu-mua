@@ -20,12 +20,14 @@ var _q: Array = []
 var _qs := {}
 var _spr_left: Array = []
 var gtex := {}      # mac, inf, dirt, grass, mask
+var FX := {}        # gói dg_fx: ic_<món>, basket, cloud, puff0-2
+var FXS := {}
 
 func _init(pics) -> void:
 	P = pics
 
 func bundles_for(map_id: String, ids: Array, player_id: String) -> Array:
-	var out := ["dg_map_" + map_id, "dg_r_npc_1"]
+	var out := ["dg_map_" + map_id, "dg_r_npc_1", "dg_fx"]
 	for id in ids:
 		out.append(("dg_r_" + id) if id == player_id else ("dg_r_" + id + "_1"))
 	return out
@@ -63,6 +65,9 @@ func open_map() -> void:
 	for k in ["dirt", "grass", "mask"]:
 		gtex[k] = _tex(map_b, k, true, false)
 	_spr_left = SM.keys()
+	FXS = P.meta("dg_fx").get("sz", {})
+	for k in FXS:
+		FX[k] = _tex("dg_fx", k, true, true)
 	for b in RB.values():
 		RM[b] = P.meta(b)
 
@@ -95,6 +100,9 @@ func _tex(b: String, k: String, mips: bool, fix: bool) -> ImageTexture:
 
 func spr(name: String) -> Texture2D:
 	return S.get(name)
+
+func fx(name: String) -> Texture2D:
+	return FX.get(name)
 
 func sm(name: String) -> Dictionary:
 	return SM.get(name, {})
@@ -152,3 +160,4 @@ func free_all() -> void:
 	_q = []
 	_qs = {}
 	gtex = {}
+	FX = {}

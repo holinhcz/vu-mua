@@ -1,7 +1,7 @@
 extends RefCounted
 # ĐUA GÀ: luật đua, viết lại 1:1 từ bản web (dua-ga/src/v10b.html: newRace, step, aiDrive, respawn, updateRanks).
 # Đơn vị là đơn vị thế giới của web (map 5200 x 4200), góc radian, thời gian giây.
-# Bước 1: chưa có vật phẩm, kỹ năng, thời tiết (để bước 2); đường, dốc rơm, ngô tăng tốc, bó rơm, bùn, vịt, nước, trượt đều chạy như web.
+# Bước 2: thêm thúng ? + 7 vật phẩm, kỹ năng 17 con, mưa quê (đường trơn), AI dùng đồ / kỹ năng như web.
 
 const TAU_ := TAU
 const NEAR := 8.0
@@ -35,14 +35,25 @@ var ducks: Array = []
 var duck_spots: Array = []
 var parts: Array = []
 var HZ: Array = []
-var keys := {"up": false, "down": false, "left": false, "right": false, "drift": false, "brake": false}
+var keys := {"up": false, "down": false, "left": false, "right": false, "drift": false, "brake": false, "item": false, "ability": false, "trick": false}
+var boxes: Array = []
+var eggs: Array = []
+var nuts: Array = []
+var rings: Array = []
+var bolts: Array = []
+var splats: Array = []
+var flash := 0.0
+var rain_mode := "random"
+var weather := {"k": 0.0, "on": false, "warned": false, "next": 1e9, "end": 0.0}
+const IKEYS := ["ot", "trung", "chuoi", "dua", "bun", "rom", "may"]
+const INAME := {"ot": "Ớt Hiểm", "trung": "Trứng Ném", "chuoi": "Vỏ Chuối", "dua": "Dừa Lăn", "bun": "Vũng Bùn", "rom": "Khiên Rơm", "may": "Mây Giông"}
 var touch := true
 var ev: Array = []   # sự kiện cho âm thanh / chữ: [tên, ...]
 
 const PERS := {
-	"hung": {"skill": 1.0, "margin": 0.08, "bridge": 340.0, "trick": 0.5, "drift": false, "aim": false, "col": "#c62828"},
-	"hien": {"skill": 0.985, "margin": 0.3, "bridge": 270.0, "trick": 0.15, "drift": false, "aim": false, "col": "#3f7d2a"},
-	"lanh": {"skill": 1.01, "margin": 0.15, "bridge": 360.0, "trick": 1.0, "drift": true, "aim": true, "col": "#1e5aa8"},
+	"hung": {"skill": 1.0, "margin": 0.08, "bridge": 340.0, "useMin": 0.2, "useRnd": 1.0, "trick": 0.5, "drift": false, "aim": false, "col": "#c62828"},
+	"hien": {"skill": 0.985, "margin": 0.3, "bridge": 270.0, "useMin": 1.5, "useRnd": 3.0, "trick": 0.15, "drift": false, "aim": false, "col": "#3f7d2a"},
+	"lanh": {"skill": 1.01, "margin": 0.15, "bridge": 360.0, "useMin": 0.6, "useRnd": 2.0, "trick": 1.0, "drift": true, "aim": true, "col": "#1e5aa8"},
 }
 
 func _init(m) -> void:
@@ -58,8 +69,8 @@ static func wrapA(a: float) -> float:
 static func sstep(u: float) -> float:
 	return u * u * (3.0 - 2.0 * u)
 
-func say(t: String, d := 1.6) -> void:
-	msg = {"t": t, "life": d}
+func say(t: String, d := 1.6, k := "") -> void:
+	msg = {"t": t, "life": d, "k": k if k != "" else ("big" if t == t.to_upper() else "")}
 
 func near(r) -> bool:
 	return r.isPlayer or Vector2(r.x - player.x, r.y - player.y).length() < 600.0
@@ -76,11 +87,13 @@ func feathers(r) -> void:
 		var v := 60.0 + randf() * 120.0
 		parts.append({"x": r.x, "y": r.y, "h": 20.0, "vh": 80.0 + randf() * 120.0, "vx": cos(a) * v, "vy": sin(a) * v, "life": 1.0 + randf() * 0.6, "max": 1.6, "c": r.ch.color if randf() < 0.5 else r.ch.dark, "s": 5.0, "feather": true, "rot": randf() * 6.0})
 
-func hit(r, dur: float) -> bool:
+func hit(r, dur: float, src = null) -> bool:
 	if r.hopT > 0 or r.fallT > 0:
 		return false
 	if r.shieldT > 0:
 		puff(r.x, r.y, Color("#f2c14e"), 12, 120, 4, 18)
+		if r.isPlayer:
+			ev.append(["shield"])
 		return false
 	r.spinT = maxf(r.spinT, dur)
 	r.spd *= 0.3
@@ -91,9 +104,220 @@ func hit(r, dur: float) -> bool:
 	feathers(r)
 	if r.isPlayer:
 		shake = 0.4
+	if src != null and src is Racer and src.isPlayer and r != src:
+		say("Trúng " + String(r.ch.name) + "!", 1.0)
 	if near(r):
 		ev.append(["hit"])
 	return true
+
+# ------------------------------------------------------------------ vật phẩm, kỹ năng
+func roll_item(rank: int) -> String:
+	var t := rank / 5.0
+	var w := [["ot", 2 + 2.5 * t], ["trung", 3.0], ["chuoi", 3 - 1.4 * t], ["dua", 1.4 + 1.6 * t], ["bun", 2 - 0.8 * t], ["rom", 2.0], ["may", 2.4 * t if t > 0.5 else 0.15]]
+	var sm := 0.0
+	for q in w:
+		sm += q[1]
+	var x := randf() * sm
+	for q in w:
+		x -= q[1]
+		if x <= 0:
+			return q[0]
+	return "ot"
+
+func fire_egg(r, da: float) -> void:
+	var a: float = r.a + da
+	eggs.append({"x": r.x + cos(a) * 24, "y": r.y + sin(a) * 24, "a": a, "v": maxf(720.0, r.spd + 400), "owner": r, "life": 2.4, "age": 0.0, "idx": r.idx, "spin": 0.0})
+
+func _behind(r, d: float) -> Vector2:
+	return Vector2(r.x - cos(r.a) * d, r.y - sin(r.a) * d)
+
+func use_item(r) -> void:
+	if r.item == "" or r.rollT > 0 or r.spinT > 0 or r.hopT > 0 or r.fallT > 0:
+		return
+	var k: String = r.item
+	var l: int = r.lvl
+	r.item = ""
+	r.lvl = 0
+	if r.uses > 1:
+		r.uses -= 1
+		r.item = k
+		r.lvl = l
+	else:
+		r.uses = 0
+	match k:
+		"ot":
+			r.boostT = maxf(r.boostT, [0.0, 0.8, 1.2, 1.7][l])
+			r.boostPow = 1.55
+			if r.isPlayer:
+				ev.append(["boost"])
+		"trung":
+			for sp in ([0.0] if l == 1 else ([-0.1, 0.1] if l == 2 else [-0.24, 0.0, 0.24])):
+				fire_egg(r, sp)
+			if r.isPlayer:
+				ev.append(["throw"])
+		"chuoi":
+			for i in l:
+				var b := _behind(r, 32 + i * 36)
+				traps.append({"kind": "chuoi", "x": b.x, "y": b.y, "r": 18.0, "life": 40.0, "owner": r, "arm": 0.8})
+		"dua":
+			var offs := [0.0] if l == 1 else ([-0.35, 0.35] if l == 2 else [-0.5, 0.0, 0.5])
+			for o in offs:
+				nuts.append({"s": r.prog + 3, "o": clampf(r.off / M.WD[r.idx] * 0.5 + o, -0.8, 0.8), "v": maxf(640.0, r.spd + 260), "owner": r, "life": 5.0, "age": 0.0, "rot": 0.0, "x": r.x, "y": r.y, "bounce": 0.0})
+			if r.isPlayer:
+				ev.append(["throw"])
+		"bun":
+			var b := _behind(r, 40)
+			traps.append({"kind": "bun", "x": b.x, "y": b.y, "r": [0.0, 30.0, 36.0, 44.0][l], "life": 14.0, "owner": r, "arm": 0.8})
+		"rom":
+			r.shieldT = maxf(r.shieldT, [0.0, 3.0, 5.0, 7.0][l])
+			if r.isPlayer:
+				ev.append(["shield"])
+		"may":
+			flash = 0.35
+			ev.append(["zap"])
+			for o in racers:
+				if o != r and not o.finished and (l == 3 or o.prog > r.prog):
+					if hit(o, [0.0, 0.8, 1.2, 1.6][l], r):
+						bolts.append({"r": o, "life": 1.0})
+
+func _ring(r, c := "255,236,180") -> void:
+	rings.append({"x": r.x, "y": r.y, "t": 0.0, "c": c})
+
+func _hop(r, ahead: int, dur: float, pounce: bool) -> void:
+	var N: int = M.N
+	var j = (r.idx + ahead) % N
+	var o := clampf(r.off, -M.WD[j] * 0.6, M.WD[j] * 0.6)
+	r.hop = {"fx": r.x, "fy": r.y, "tx": M.PX[j] + M.NX[j] * o, "ty": M.PY[j] + M.NY[j] * o, "j": j, "dur": dur, "pounce": pounce}
+	r.hopT = dur
+
+func _cone(r, rad: float, ang: float, dur: float) -> void:
+	for o in racers:
+		if o == r or o.finished:
+			continue
+		var dx: float = o.x - r.x
+		var dy: float = o.y - r.y
+		if sqrt(dx * dx + dy * dy) < rad and absf(wrapA(atan2(dy, dx) - r.a)) < ang:
+			hit(o, dur, r)
+
+func use_ability(r) -> void:
+	if r.gauge < 1 or r.spinT > 0 or r.hopT > 0 or r.fallT > 0:
+		return
+	r.gauge = 0.0
+	var id: String = r.id
+	if r.isPlayer:
+		say(String(r.ch.ab) + "!", 1.2)
+	var nr := near(r)
+	match id:
+		"vang":
+			r.boostT = maxf(r.boostT, 2.2)
+			r.boostPow = 1.62
+			if r.isPlayer:
+				ev.append(["boost"])
+		"trong":
+			_ring(r)
+			ev.append(["crow"])
+			for o in racers:
+				if o != r and not o.finished and Vector2(o.x - r.x, o.y - r.y).length() < 300:
+					hit(o, 1.1, r)
+		"mai":
+			for sp in [-0.22, 0.0, 0.22]:
+				fire_egg(r, sp)
+			ev.append(["throw"])
+		"tay":
+			r.shieldT = maxf(r.shieldT, 5.0)
+			if r.isPlayer:
+				ev.append(["shield"])
+		"vit":
+			r.mudT = 6.0
+			r.boostT = maxf(r.boostT, 1.0)
+			r.boostPow = 1.3
+		"tre":
+			r.boostT = maxf(r.boostT, 1.5)
+			r.boostPow = 1.5
+			r.kickT = 1.5
+			if nr:
+				ev.append(["boost"])
+		"ngong":
+			_ring(r, "255,255,255")
+			ev.append(["honk"])
+			_cone(r, 400, 0.7, 1.0)
+		"dongtao":
+			r.stompN = 3
+			r.stompT = 0.0
+			r.stp = []
+		"delua":
+			r.chirpN = 3
+			r.chirpT = 0.0
+			r.chp = []
+			r.boostT = maxf(r.boostT, 1.6)
+			r.boostPow = 1.38
+		"cho":
+			r.boostT = maxf(r.boostT, 2.5)
+			r.boostPow = 1.42
+			r.kickT = 2.5
+			if nr:
+				ev.append(["bark"])
+		"meo":
+			_hop(r, 30, 0.65, true)
+			if nr:
+				ev.append(["meow"])
+		"cuu":
+			r.shieldT = maxf(r.shieldT, 4.5)
+			r.kickT = 4.5
+			if nr:
+				ev.append(["baa"])
+		"de":
+			r.boostT = maxf(r.boostT, 1.0)
+			r.boostPow = 1.7
+			if nr:
+				ev.append(["bleat"])
+			_cone(r, 270, 0.6, 1.0)
+		"heo":
+			r.mudT = 6.0
+			r.boostT = maxf(r.boostT, 1.0)
+			r.boostPow = 1.3
+			traps.append({"kind": "bun", "x": r.x - cos(r.a) * 40, "y": r.y - sin(r.a) * 40, "r": 44.0, "life": 14.0, "owner": r, "arm": 0.8})
+			if nr:
+				ev.append(["oink"])
+		"bo":
+			r.boostT = maxf(r.boostT, 6.0)
+			r.boostPow = 1.24
+			if nr:
+				ev.append(["moo"])
+		"trau":
+			r.shieldT = maxf(r.shieldT, 3.0)
+			r.boostT = maxf(r.boostT, 3.0)
+			r.boostPow = 1.32
+			r.kickT = 3.0
+			if nr:
+				ev.append(["low"])
+		"ac":
+			_hop(r, 44, 0.8, false)
+			if r.isPlayer:
+				ev.append(["whoosh"])
+
+# Dậm Đất / Gáy Thách Đấu: mỗi nhịp một vòng, con nào gần mà nhịp này chưa trúng thì trúng
+func stomp(r) -> void:
+	if near(r):
+		ev.append(["stomp"])
+		shake = maxf(shake, 0.28 if r.isPlayer else 0.14)
+	_ring(r, "200,160,110")
+	puff(r.x, r.y, Color("#d8c09a"), 12, 140, 5, 10)
+	for o in racers:
+		if o == r or o.finished or r.stp.has(o):
+			continue
+		if Vector2(o.x - r.x, o.y - r.y).length() < 220 and hit(o, 0.85, r):
+			r.stp.append(o)
+
+func chirp(r) -> void:
+	if near(r):
+		ev.append(["chirp"])
+	_ring(r, "255,214,120")
+	for o in racers:
+		if o == r or o.finished or r.chp.has(o):
+			continue
+		if Vector2(o.x - r.x, o.y - r.y).length() < 230 and hit(o, 0.8, r):
+			r.chp.append(o)
 
 class Racer extends RefCounted:
 	var ch: Dictionary
@@ -144,6 +368,17 @@ class Racer extends RefCounted:
 	var kickT := 0.0
 	var isPlayer := false
 	var ai := {}
+	var item := ""
+	var lvl := 0
+	var uses := 0
+	var rollT := 0.0
+	var hop := {}
+	var stompN := 0
+	var stompT := 0.0
+	var stp: Array = []
+	var chirpN := 0
+	var chirpT := 0.0
+	var chp: Array = []
 	# dáng (birdPose của web): va = hướng nhìn đã làm mượt
 	var pose := {}
 	var occA := 1.0
@@ -159,6 +394,16 @@ func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> voi
 		traps.append(q)
 	parts = []
 	ducks = []
+	eggs = []
+	nuts = []
+	rings = []
+	bolts = []
+	splats = []
+	flash = 0.0
+	boxes = []
+	for b in M.D.boxes:
+		boxes.append({"x": float(b[0]), "y": float(b[1]), "on": true, "t": 0.0, "ph": randf() * 6.0, "pop": 0.0})
+	weather = {"k": 0.0, "on": false, "warned": false, "end": 0.0, "next": 3.0 if rain_mode == "heavy" else (1e9 if rain_mode == "none" else 22.0 + randf() * 12.0)}
 	finish_count = 0
 	race_t = 0.0
 	count_t = 3.6
@@ -192,7 +437,7 @@ func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> voi
 		r.off = lane
 		r.rank = k
 		var pk: String = "lanh" if r.isPlayer else String(pers[k % pers.size()])
-		r.ai = {"pers": pk, "lane": randf() * 1.2 - 0.6, "laneCur": lane / M.WD[idx], "skill": base * (0.97 + randf() * 0.05) * float(PERS[pk].skill), "laneT": 0.0}
+		r.ai = {"pers": pk, "lane": randf() * 1.2 - 0.6, "laneCur": lane / M.WD[idx], "skill": base * (0.97 + randf() * 0.05) * float(PERS[pk].skill), "laneT": 0.0, "useT": 0.0, "abT": 1.0 + randf() * 3.0}
 		racers.append(r)
 	for r in racers:
 		if r.isPlayer:
@@ -286,6 +531,8 @@ func ai_drive(r, dt: float) -> void:
 	r.ctlDrift = false
 	if not wide and (M.BR[(r.idx + 8) % N] or M.BR[r.idx]) and r.spd > P.bridge:
 		r.ctlThr = 0.0
+	if r.ai.pers == "hien" and weather.k > 0.5 and absf(diffA) > 0.25 and r.spd > 300:
+		r.ctlThr = 0.0
 	if P.drift and not M.BR[r.idx] and not M.BR[(r.idx + 14) % N]:
 		var ahead := wrapA(M.TA[(r.idx + 16) % N] - M.TA[r.idx])
 		if r.drift:
@@ -297,6 +544,75 @@ func ai_drive(r, dt: float) -> void:
 		if r.ai.laneT < 0:
 			r.ai.laneT = 2.0 + randf() * 3.0
 			r.ai.lane = randf() * 1.2 - 0.6
+	if r.finished:
+		return
+	if r.item != "":
+		r.ai.useT -= dt
+		if r.ai.useT <= 0:
+			var k: String = r.item
+			var go := false
+			match k:
+				"ot":
+					go = absf(wrapA(M.TA[(r.idx + 25) % N] - M.TA[r.idx])) < 0.35 and not M.BR[(r.idx + 20) % N]
+				"trung":
+					for o in racers:
+						if o != r and Vector2(o.x - r.x, o.y - r.y).length() < (600.0 if ag else 450.0) and absf(wrapA(atan2(o.y - r.y, o.x - r.x) - r.a)) < (0.6 if ag else 0.45):
+							go = true
+				"dua":
+					for o in racers:
+						if o != r and not o.finished and o.prog > r.prog and o.prog - r.prog < (110 if ag else 70):
+							go = true
+					go = go or r.ai.useT < -6
+				"bun", "chuoi":
+					for o in racers:
+						if o != r and o.prog < r.prog and r.prog - o.prog < (40 if ag else 25):
+							go = true
+					go = go or r.ai.useT < -6
+				"rom":
+					go = ag or r.ai.useT < -8
+					for e in eggs:
+						if e.owner != r and Vector2(e.x - r.x, e.y - r.y).length() < 200:
+							go = true
+				_:
+					go = true
+			if go:
+				use_item(r)
+	if r.gauge >= 1:
+		r.ai.abT -= dt
+		if r.ai.abT <= 0:
+			var id: String = r.id
+			var go := true
+			var any := func(rad: float, ang: float, ahead: float) -> bool:
+				for o in racers:
+					if o == r or o.finished:
+						continue
+					var dx: float = o.x - r.x
+					var dy: float = o.y - r.y
+					if ahead > 0:
+						if o.prog > r.prog and o.prog - r.prog < ahead:
+							return true
+						continue
+					if sqrt(dx * dx + dy * dy) < rad and (ang >= 4 or absf(wrapA(atan2(dy, dx) - r.a)) < ang):
+						return true
+				return false
+			match id:
+				"trong":
+					go = any.call(260.0, 9.0, 0.0) or r.ai.abT < -8
+				"vang", "ac":
+					go = absf(wrapA(M.TA[(r.idx + 30) % N] - M.TA[r.idx])) < 0.5 and not M.BR[(r.idx + 25) % N]
+				"vit":
+					go = ["ruong", "muong", "song", "suoi"].has(M.ZN[r.idx]) or r.ai.abT < -10
+				"tre":
+					go = any.call(0.0, 9.0, 20.0) or r.ai.abT < -8
+				"delua":
+					go = any.call(200.0, 9.0, 0.0) or r.ai.abT < -8
+				"dongtao":
+					go = any.call(190.0, 9.0, 0.0) or r.ai.abT < -8
+				"ngong":
+					go = any.call(380.0, 0.6, 0.0) or r.ai.abT < -10
+			if go:
+				use_ability(r)
+				r.ai.abT = 1.0 + randf() * 3.0
 
 func start_fall(r) -> void:
 	r.fallT = 1.3
@@ -347,6 +663,23 @@ func step(dt: float) -> void:
 	var racing := state == "race" or state == "done" or state == "result"
 	if state == "race" or state == "done":
 		race_t += dt
+	# mưa quê: thỉnh thoảng kéo tới, đường trơn
+	if state == "race" or state == "done":
+		if not weather.on and not weather.warned and race_t > weather.next - 2.5:
+			weather.warned = true
+			say("Trời sắp mưa!", 1.6)
+		if not weather.on and race_t > weather.next:
+			weather.on = true
+			weather.end = race_t + (22.0 + randf() * 8.0 if rain_mode == "heavy" else 11.0 + randf() * 4.0)
+			say("Mưa quê! Đường trơn", 1.6)
+		if weather.on and rain_mode == "heavy" and randf() < dt * 0.07:
+			flash = maxf(flash, 0.22)
+			ev.append(["thunder"])
+		if weather.on and race_t > weather.end:
+			weather.on = false
+			weather.warned = false
+			weather.next = race_t + (10.0 + randf() * 6.0 if rain_mode == "heavy" else 38.0 + randf() * 25.0)
+	weather.k = lerpf(weather.k, 1.0 if weather.on else 0.0, minf(1.0, dt * 0.8))
 	update_ranks()
 	HZ = hazards()
 	# vịt qua đường
@@ -394,6 +727,15 @@ func step(dt: float) -> void:
 				if keys.drift:
 					r.ctlDrift = true
 					r.ctlThr = 1.0
+		if r.isPlayer and not r.finished:
+			if keys.item:
+				keys.item = false
+				if racing:
+					use_item(r)
+			if keys.ability:
+				keys.ability = false
+				if racing:
+					use_ability(r)
 		if not racing:
 			r.ctlThr = 0.0
 			r.ctlSteer = 0.0
@@ -403,6 +745,25 @@ func step(dt: float) -> void:
 		r.shieldT = maxf(0, r.shieldT - dt)
 		r.mudT = maxf(0, r.mudT - dt)
 		r.slipT = maxf(0, r.slipT - dt)
+		if r.chirpN > 0 and not r.finished:
+			r.chirpT -= dt
+			if r.chirpT <= 0:
+				r.chirpT = 0.3
+				r.chirpN -= 1
+				chirp(r)
+		if r.stompN > 0 and not r.finished:
+			r.stompT -= dt
+			if r.stompT <= 0:
+				r.stompT = 0.42
+				r.stompN -= 1
+				stomp(r)
+		if r.rollT > 0:
+			var b4 := floori(r.rollT * 14)
+			r.rollT -= dt
+			if r.isPlayer and floori(r.rollT * 14) != b4 and r.rollT > 0:
+				ev.append(["tick"])
+			if r.rollT <= 0 and r.isPlayer:
+				ev.append(["pick"])
 		if racing and not r.finished:
 			r.gauge = minf(1.0, r.gauge + dt * (1 + r.rank * 0.09) / 15.0)
 		if r.fallT > 0:
@@ -410,6 +771,11 @@ func step(dt: float) -> void:
 			if r.fallT <= 0:
 				respawn(r)
 			continue
+		if r.isPlayer and keys.trick:
+			keys.trick = false
+			if r.z > 8 and not r.trick:
+				r.trick = 1
+				ev.append(["tier", 2])
 		if r.z > 0:
 			r.z += r.vz * dt
 			r.vz -= 620 * dt
@@ -429,6 +795,28 @@ func step(dt: float) -> void:
 						ev.append(["boost"])
 				r.trick = 0
 				r.trickRot = 0.0
+		if r.hopT > 0:
+			r.hopT -= dt
+			var ht := 1.0 - maxf(0.0, r.hopT) / float(r.hop.dur)
+			r.x = lerpf(r.hop.fx, r.hop.tx, ht)
+			r.y = lerpf(r.hop.fy, r.hop.ty, ht)
+			r.a += wrapA(M.TA[r.hop.j] - r.a) * minf(1.0, dt * 4)
+			r.md = r.a
+			if r.hopT <= 0:
+				var hd: int = int(r.hop.j) - r.idx
+				if hd < 0:
+					hd += N
+				r.prog += hd
+				r.idx = int(r.hop.j)
+				r.a = M.TA[r.idx]
+				r.md = r.a
+				puff(r.x, r.y, Color("#e8dcc0"), 10, 80, 6, 4)
+				if r.hop.pounce:
+					_ring(r, "255,214,120")
+					for o in racers:
+						if o != r and not o.finished and Vector2(o.x - r.x, o.y - r.y).length() < 170:
+							hit(o, 1.0, r)
+			continue
 		var air: bool = r.z > 6
 		r.inMud = false
 		if r.mudT <= 0 and not air:
@@ -436,7 +824,7 @@ func step(dt: float) -> void:
 				if t.kind == "bun" and Vector2(t.x - r.x, t.y - r.y).length() < float(t.r):
 					r.inMud = true
 					break
-		var wet := 0.0
+		var wet: float = weather.k
 		var grip := lerpf(11.0, 2.6, wet)
 		if r.spinT > 0:
 			r.spinT -= dt
@@ -460,6 +848,8 @@ func step(dt: float) -> void:
 				maxS *= float(M.OFFROAD.get(M.ZN[r.idx], 0.58))
 			if r.inMud:
 				maxS *= 0.45
+			if wet > 0.3:
+				maxS *= 1.0 - 0.05 * wet
 			if r.boostT > 0:
 				maxS *= r.boostPow
 			if r.mudT > 0:
@@ -509,13 +899,19 @@ func step(dt: float) -> void:
 				grip = minf(grip, 1.2)
 			var zn: String = M.ZN[r.idx]
 			if offroad and absf(r.spd) > 90 and randf() < 0.6:
-				parts.append({"x": r.x - cos(r.a) * 14, "y": r.y - sin(r.a) * 14, "h": 2.0, "vh": 50.0, "vx": (randf() - 0.5) * 40, "vy": (randf() - 0.5) * 40, "life": 0.5, "max": 0.5, "c": Color("#8fc4d8") if zn == "ruong" or zn == "song" else (Color("#3f8030") if zn == "che" else Color("#5f8f32")), "s": 4.0})
+				parts.append({"grow": 1, "x": r.x - cos(r.a) * 14, "y": r.y - sin(r.a) * 14, "h": 2.0, "vh": 50.0, "vx": (randf() - 0.5) * 40, "vy": (randf() - 0.5) * 40, "life": 0.5, "max": 0.5, "c": Color("#8fc4d8") if zn == "ruong" or zn == "song" else (Color("#3f8030") if zn == "che" else Color("#5f8f32")), "s": 4.0})
 			if r.inMud and randf() < 0.5:
 				parts.append({"x": r.x, "y": r.y, "h": 2.0, "vh": 70.0, "vx": (randf() - 0.5) * 60, "vy": (randf() - 0.5) * 60, "life": 0.5, "max": 0.5, "c": Color("#5b3a1d"), "s": 4.0})
 			if not offroad and absf(r.spd) > 200 and randf() < 0.35:
-				parts.append({"x": r.x - cos(r.a) * 14, "y": r.y - sin(r.a) * 14, "h": 2.0, "vh": 30.0, "vx": (randf() - 0.5) * 30, "vy": (randf() - 0.5) * 30, "life": 0.5, "max": 0.5, "c": Color(214 / 255.0, 186 / 255.0, 136 / 255.0, 0.85), "s": 6.0})
-			if r.boostT > 0 and randf() < 0.8:
-				parts.append({"x": r.x - cos(r.a) * 18, "y": r.y - sin(r.a) * 18, "h": 16.0, "vh": 20.0, "vx": -cos(r.a) * 80 + (randf() - 0.5) * 50, "vy": -sin(r.a) * 80 + (randf() - 0.5) * 50, "life": 0.35, "max": 0.35, "c": Color("#ff7a1a") if randf() < 0.5 else Color("#ffd23f"), "s": 6.0})
+				parts.append({"x": r.x - cos(r.a) * 14, "y": r.y - sin(r.a) * 14, "h": 2.0, "vh": 30.0, "vx": (randf() - 0.5) * 30, "vy": (randf() - 0.5) * 30, "life": 0.5, "max": 0.5, "c": Color(170 / 255.0, 200 / 255.0, 220 / 255.0, 0.8) if wet > 0.5 else Color(214 / 255.0, 186 / 255.0, 136 / 255.0, 0.85), "s": 6.0, "grow": 1, "dust": 0 if wet > 0.5 else 2, "v": randi() % 3})
+			if r.boostT > 0:
+				var ca := cos(r.a)
+				var sa := sin(r.a)
+				for k in 2:
+					var sd := (-1.0 if randf() < 0.5 else 1.0) * (10 + randf() * 16)
+					parts.append({"x": r.x - ca * 6 - sa * sd, "y": r.y - sa * 6 + ca * sd, "h": 4 + randf() * 34, "vh": 0.0, "vx": -ca * 240, "vy": -sa * 240, "life": 0.26, "max": 0.26, "c": Color(1, 250 / 255.0, 235 / 255.0), "s": 2.4, "streak": 1})
+				if randf() < 0.45:
+					parts.append({"x": r.x - ca * 14, "y": r.y - sa * 14, "h": 3.0, "vh": 30.0, "vx": -ca * 50 + (randf() - 0.5) * 50, "vy": -sa * 50 + (randf() - 0.5) * 50, "life": 0.6, "max": 0.6, "c": Color("#ecd9b0"), "s": 5.0, "grow": 1})
 		# hướng chạy theo sau hướng mặt: bám đường kém thì trượt
 		r.md += wrapA(r.a - r.md) * minf(1.0, dt * grip)
 		r.x += cos(r.md) * r.spd * dt
@@ -618,6 +1014,7 @@ func step(dt: float) -> void:
 		if not r.finished and r.prog >= laps * N:
 			r.finished = true
 			r.finT = race_t
+			r.item = ""
 			finish_count += 1
 			r.place = finish_count
 			if r.isPlayer:
@@ -628,6 +1025,40 @@ func step(dt: float) -> void:
 		if r.isPlayer and racing and not r.finished:
 			var dot := cos(r.a - M.TA[r.idx])
 			wrong_t = wrong_t + dt if dot < -0.3 and absf(r.spd) > 40 else 0.0
+		# thúng ?: lấy đồ (trùng món thì lên cấp)
+		if racing and not r.finished:
+			for b in boxes:
+				if b.on and Vector2(b.x - r.x, b.y - r.y).length() < 28:
+					b.on = false
+					b.t = 3.0
+					r.gauge = minf(1.0, r.gauge + 0.04)
+					var ik := roll_item(r.rank)
+					if r.item == ik:
+						r.lvl = mini(3, r.lvl + 1)
+					else:
+						r.item = ik
+						r.lvl = 1
+					var PP: Dictionary = PERS.get(r.ai.pers, PERS.hien)
+					r.ai.useT = float(PP.useMin) + randf() * float(PP.useRnd)
+					puff(b.x, b.y, Color("#f2c14e"), 8, 90, 4, 22)
+					if near(r):
+						_box_burst(b)
+					if r.isPlayer:
+						r.rollT = 0.85
+		# vỏ chuối
+		if not air:
+			for t in traps:
+				if t.get("dead", false) or t.kind != "chuoi":
+					continue
+				if t.owner == r and t.arm > 0:
+					continue
+				if Vector2(t.x - r.x, t.y - r.y).length() < float(t.r) + 8:
+					t.dead = true
+					if hit(r, 0.75, t.owner):
+						r.slipT = 0.7
+						r.md = r.a + (-0.6 if randf() < 0.5 else 0.6)
+						if near(r):
+							ev.append(["slip"])
 	# chen nhau
 	for i in racers.size():
 		for j in range(i + 1, racers.size()):
@@ -646,8 +1077,27 @@ func step(dt: float) -> void:
 				a.y -= ny * p
 				b.x += nx * p
 				b.y += ny * p
-				a.spd *= 0.985
-				b.spd *= 0.985
+				if a.kickT > 0 and b.kickT <= 0 and b.spinT <= 0:
+					hit(b, 0.8, a)
+				elif b.kickT > 0 and a.kickT <= 0 and a.spinT <= 0:
+					hit(a, 0.8, b)
+				elif a.shieldT > 0 and b.shieldT <= 0:
+					hit(b, 0.6, a)
+				elif b.shieldT > 0 and a.shieldT <= 0:
+					hit(a, 0.6, b)
+				else:
+					a.spd *= 0.985
+					b.spd *= 0.985
+	for b in boxes:
+		if not b.on:
+			b.t -= dt
+			if b.t <= 0:
+				b.on = true
+				b.pop = clock
+	_step_eggs(dt)
+	_step_nuts(dt)
+	for t in traps:
+		t.arm = float(t.get("arm", 0)) - dt
 	for t in traps:
 		t.life = float(t.get("life", 1e9)) - dt
 	traps = traps.filter(func(t): return not t.get("dead", false) and float(t.life) > 0)
@@ -664,6 +1114,17 @@ func step(dt: float) -> void:
 	parts = parts.filter(func(p): return p.life > 0)
 	if parts.size() > 600:
 		parts = parts.slice(parts.size() - 600)
+	for g in rings:
+		g.t += dt
+	rings = rings.filter(func(g): return g.t < 0.6)
+	for b in bolts:
+		b.life -= dt
+	bolts = bolts.filter(func(b): return b.life > 0)
+	for sp in splats:
+		sp.t += dt
+	splats = splats.filter(func(sp): return sp.t < sp.life)
+	_fx_step(dt)
+	flash = maxf(0, flash - dt)
 	msg.life -= dt
 	shake = maxf(0, shake - dt)
 	if state == "done":
@@ -693,6 +1154,115 @@ func step(dt: float) -> void:
 	var fy0: float = player.fallY if player.fallT > 0 else player.y
 	cam.x = fx0 - cos(cam.th) * dist
 	cam.y = fy0 - sin(cam.th) * dist
+
+func _box_burst(b) -> void:
+	var cs := ["#ff4b3e", "#ffd52e", "#ff86b0", "#8fd24a", "#74c23c", "#fff3c4", "#e0262e", "#ffa514"]
+	for i in 16:
+		var a := randf() * TAU
+		var v := 70.0 + randf() * 130.0
+		parts.append({"x": b.x, "y": b.y, "h": 22.0, "vh": 90.0 + randf() * 120.0, "vx": cos(a) * v, "vy": sin(a) * v, "life": 0.8 + randf() * 0.6, "max": 1.4, "c": Color(cs[i % 8]), "s": 3.0 if i % 4 == 3 else 5.0, "feather": true, "rot": randf() * 6.0})
+
+func _step_eggs(dt: float) -> void:
+	var N: int = M.N
+	for e in eggs:
+		e.age += dt
+		e.life -= dt
+		e.spin += dt * 15
+		var tgt = null
+		var best := 480.0
+		for o in racers:
+			if o == e.owner or o.hopT > 0 or o.fallT > 0:
+				continue
+			var dx: float = o.x - e.x
+			var dy: float = o.y - e.y
+			var d := sqrt(dx * dx + dy * dy)
+			if d < best and absf(wrapA(atan2(dy, dx) - e.a)) < 0.7:
+				best = d
+				tgt = o
+		if tgt != null:
+			e.a += clampf(wrapA(atan2(tgt.y - e.y, tgt.x - e.x) - e.a), -2.8 * dt, 2.8 * dt)
+		else:
+			e.a += clampf(wrapA(M.TA[(int(e.idx) + 6) % N] - e.a), -1.5 * dt, 1.5 * dt)
+		e.x += cos(e.a) * e.v * dt
+		e.y += sin(e.a) * e.v * dt
+		e.idx = M.nearest(e.x, e.y, int(e.idx), 10, 24)
+		var off: float = (e.x - M.PX[e.idx]) * M.NX[e.idx] + (e.y - M.PY[e.idx]) * M.NY[e.idx]
+		if absf(off) > M.WD[e.idx] + 40:
+			e.life = 0.0
+			puff(e.x, e.y, Color("#fff6e0"), 8, 90, 4, 12)
+			puff(e.x, e.y, Color("#f2b705"), 5, 60, 4, 12)
+		for b in M.BASKETS:
+			if e.life > 0 and Vector2(b.x - e.x, b.y - e.y).length() < float(b.r) + 6:
+				e.life = 0.0
+				puff(e.x, e.y, Color("#f2b705"), 8, 90, 5, 16)
+		for o in racers:
+			if e.life <= 0:
+				break
+			if o == e.owner and e.age < 0.5:
+				continue
+			if o.hopT > 0 or o.fallT > 0 or o.z > 30:
+				continue
+			if Vector2(o.x - e.x, o.y - e.y).length() < 24:
+				e.life = 0.0
+				puff(e.x, e.y, Color("#f2b705"), 10, 100, 5, 16)
+				puff(e.x, e.y, Color("#fff6e0"), 8, 100, 4, 16)
+				if hit(o, 1.15, e.owner) and o.isPlayer:
+					splats.append({"x": randf_range(0.28, 0.72), "y": randf_range(0.2, 0.48), "r": randf_range(0.1, 0.14), "t": 0.0, "life": 2.2, "seed": randi()})
+	eggs = eggs.filter(func(e): return e.life > 0)
+
+# dừa lăn theo đường, húc ai trên lối
+func _step_nuts(dt: float) -> void:
+	var N: int = M.N
+	for n in nuts:
+		n.age += dt
+		n.life -= dt
+		n.s += n.v * dt / 12.0
+		var i := (floori(n.s) % N + N) % N
+		var j := (i + 1) % N
+		var u: float = n.s - floor(n.s)
+		var w := lerpf(M.WD[i], M.WD[j], u)
+		var o := clampf(n.o, -0.85, 0.85) * w
+		n.x = lerpf(M.PX[i], M.PX[j], u) + lerpf(M.NX[i], M.NX[j], u) * o
+		n.y = lerpf(M.PY[i], M.PY[j], u) + lerpf(M.NY[i], M.NY[j], u) * o
+		n.rot += n.v * dt / 16
+		n.bounce = absf(sin(n.age * 9)) * 6
+		for b in M.BASKETS:
+			if Vector2(b.x - n.x, b.y - n.y).length() < float(b.r) + 14:
+				n.life = 0.0
+				puff(n.x, n.y, Color("#6b4423"), 10, 100, 5, 10)
+		for r in racers:
+			if n.life <= 0:
+				break
+			if r == n.owner and n.age < 0.6:
+				continue
+			if r.hopT > 0 or r.fallT > 0 or r.z > 20:
+				continue
+			if Vector2(r.x - n.x, r.y - n.y).length() < 28:
+				hit(r, 1.0, n.owner)
+	nuts = nuts.filter(func(n): return n.life > 0)
+
+# hạt bụi / lửa / bùn theo việc con đua đang làm (fxStep của web, chỉ con gần người chơi)
+func _fx_step(dt: float) -> void:
+	for r in racers:
+		if r.finished or r.fallT > 0 or not near(r):
+			continue
+		var ca := cos(r.a)
+		var sa := sin(r.a)
+		var sp := absf(r.spd)
+		var air: bool = r.hopT > 0 or r.z > 2
+		if r.kickT > 0 and not air and sp > 60 and randf() < dt * 24:
+			var sd := -1.0 if randf() < 0.5 else 1.0
+			parts.append({"x": r.x - sa * sd * 10, "y": r.y + ca * sd * 10, "h": 3.0, "vh": 110 + randf() * 80, "vx": -sa * sd * (80 + randf() * 80) - ca * 40, "vy": ca * sd * (80 + randf() * 80) - sa * 40, "life": 0.5, "max": 0.5, "c": Color("#7a5634"), "s": 2.2, "drop": 1})
+		if r.boostT > 0 and r.boostPow >= 1.55 and not air and randf() < dt * 36:
+			var sd := -1.0 if randf() < 0.5 else 1.0
+			parts.append({"flame": 1, "x": r.x - ca * 6 - sa * sd * 6, "y": r.y - sa * 6 + ca * sd * 6, "h": 1.0, "vh": 70.0, "vx": -ca * 24, "vy": -sa * 24, "life": 0.36, "max": 0.36, "s": 6.5, "c": Color.WHITE})
+		if r.mudT > 0 and not air and sp > 60 and randf() < dt * 22:
+			var w: bool = r.id == "vit"
+			var sd := -1.0 if randf() < 0.5 else 1.0
+			parts.append({"x": r.x - ca * 8 - sa * sd * 8, "y": r.y - sa * 8 + ca * sd * 8, "h": 3.0, "vh": 120 + randf() * 90, "vx": -ca * 90 - sa * sd * 60, "vy": -sa * 90 + ca * sd * 60, "life": 0.55, "max": 0.55, "c": Color("#8fc7de") if w else (Color("#5a3a1c") if randf() < 0.5 else Color("#6e4826")), "s": 2.4 if w else 3.0, "drop": 2 if w else 1})
+	for n in nuts:
+		if randf() < dt * 12:
+			parts.append({"grow": 1, "dust": 2, "v": randi() % 3, "x": n.x, "y": n.y, "h": 1.0, "vh": 20.0, "vx": (randf() - 0.5) * 30, "vy": (randf() - 0.5) * 30, "life": 0.5, "max": 0.5, "c": Color(214 / 255.0, 186 / 255.0, 136 / 255.0, 0.8), "s": 5.0})
 
 # birdPose của web: hướng nhìn, tốc độ quay, gia tốc (để chọn góc vẽ cho mượt)
 func bird_pose(r) -> Dictionary:

@@ -267,7 +267,7 @@ func _ground_uniforms() -> void:
 	mat.set_shader_parameter("uPrj", Vector4(CH, F, HOR, VW))
 	mat.set_shader_parameter("uOrg", Vector4(0, HOR, VW, VH - HOR))
 	mat.set_shader_parameter("uT", clock)
-	mat.set_shader_parameter("uWet", 0.0)
+	mat.set_shader_parameter("uWet", float(R.weather.k))
 	var hz: Array = M.map.haze
 	mat.set_shader_parameter("uHaze", Vector3(hz[0], hz[1], hz[2]) / 255.0)
 	var P: Dictionary = SKY
@@ -342,7 +342,12 @@ func _sky(ci: CanvasItem) -> void:
 	var hy := HOR
 	var P: Dictionary = SKY
 	var tk := String(M.map.tod)
-	_vgrad(ci, 0, 0, VW, hy + 2, [[0.0, _rgb(P.zen)], [0.55, _rgb(P.mid)], [1.0, _rgb(P.hor)]])
+	# mưa: trời ngả xám (web skyMix về [150,162,178] theo wk*.75), mặt trời khuất, chim bay đi
+	var wk: float = R.weather.k
+	var zen := _mix(P.zen, [150, 162, 178], wk * 0.75)
+	var mid := _mix(P.mid, [150, 162, 178], wk * 0.75)
+	var hor := _mix(P.hor, [150, 162, 178], wk * 0.75)
+	_vgrad(ci, 0, 0, VW, hy + 2, [[0.0, _rgb(zen)], [0.55, _rgb(mid)], [1.0, _rgb(hor)]])
 	var pxPerRad := F
 	var off: float = R.cam.th * pxPerRad
 	var th: float = R.cam.th
@@ -351,13 +356,14 @@ func _sky(ci: CanvasItem) -> void:
 	var sunY: float = {"morning": 0.52, "day": 0.14, "sunset": 0.8}.get(tk, 0.14)
 	var sunX: float = VW / 2 + R.wrapA(float(M.map.sun) - th) * pxPerRad
 	var sr: float = (15.0 if tk == "day" else (17.0 if tk == "sunset" else 15.0)) * 1.6
-	if sunX > -VW and sunX < VW * 2:
+	var sa := 1.0 - wk
+	if sa > 0.05 and sunX > -VW and sunX < VW * 2:
 		var sy := hy * sunY
 		if tk != "day":
-			_glow(ci, Vector2(sunX, hy), 0, VW * 0.6, Color(glc, 0.42), 0.35)
-		_glow(ci, Vector2(sunX, sy), sr * 0.6, sr * 7, Color(glc, 0.6))
-		ci.draw_colored_polygon(A.ell_pts(Vector2(sunX, sy), sr * 1.12, sr * 1.12, 40), Color(glc, 0.35))
-		ci.draw_colored_polygon(A.ell_pts(Vector2(sunX, sy), sr, sr, 40), _rgb(P.sun))
+			_glow(ci, Vector2(sunX, hy), 0, VW * 0.6, Color(glc, 0.42 * sa), 0.35)
+		_glow(ci, Vector2(sunX, sy), sr * 0.6, sr * 7, Color(glc, 0.6 * sa))
+		ci.draw_colored_polygon(A.ell_pts(Vector2(sunX, sy), sr * 1.12, sr * 1.12, 40), Color(glc, 0.35 * sa))
+		ci.draw_colored_polygon(A.ell_pts(Vector2(sunX, sy), sr, sr, 40), Color(_rgb(P.sun), sa))
 	# mây, lớp xa trước
 	var L: Dictionary = M.sky.L
 	var U := VH / 720.0
@@ -379,10 +385,12 @@ func _sky(ci: CanvasItem) -> void:
 				ci.draw_texture_rect(tex, Rect2(x + w / 2, y, -w, h), false)
 			else:
 				ci.draw_texture_rect(tex, Rect2(x - w / 2, y, w, h), false)
+	if wk > 0.02:
+		ci.draw_rect(Rect2(0, 0, VW, hy + 2), Color(96 / 255.0, 108 / 255.0, 128 / 255.0, 0.42 * wk))
 	# chim bay
 	var bc := css(String(P.bird))
-	bc.a = 0.85
-	for b in L.birds:
+	bc.a = 0.85 * (1 - wk * 2)
+	for b in (L.birds if wk < 0.5 else []):
 		var x: float = VW / 2 + R.wrapA(float(b.b) + clock * (0.012 + 0.004 * float(b.f)) - th) * pxPerRad
 		if x < -20 or x > VW + 20:
 			continue
@@ -399,10 +407,9 @@ func _sky(ci: CanvasItem) -> void:
 		ci.draw_polyline(pts, bc, maxf(1, 1.3 * U), true)
 	# núi xa: mỗi dãy mờ vào sương ở chân
 	var hz: Array = M.map.haze
-	var hor: Array = P.hor
 	var hzc := _mix(hz, hor, 0.5)
-	var mtn: Array = P.mtn
-	var cool := _mix(P.mid, hzc, 0.3)
+	var mtn := _mix(P.mtn, [150, 162, 178], wk * 0.75)
+	var cool := _mix(mid, hzc, 0.3)
 	var fog: float = M.map.fog
 	var MR = M.sky.M
 	if MR == null:
@@ -433,7 +440,7 @@ func _sky(ci: CanvasItem) -> void:
 	var hills: Array = M.map.hills
 	for k in hills.size():
 		var hl: Array = hills[k]
-		var colh := _rgb(_hex(String(hl[0])))
+		var colh := _rgb(_mix(_hex(String(hl[0])), [150, 160, 175], wk * 0.5))
 		var amp: float = hl[1]
 		var base: float = hl[2]
 		var f1 := 3.0 + k * 2
@@ -573,6 +580,7 @@ func _world(ci: CanvasItem) -> void:
 		if p.is_empty() or p[4] >= ZFAR or absf(p[5]) >= p[4] * halfW + 45 or p[4] < CDIST * 0.4:
 			continue
 		_push(p[4], [7, q, p])
+	_world_items(halfW)
 	_arch()
 	_keys.sort()
 	for k in _keys:
@@ -589,6 +597,7 @@ func _world(ci: CanvasItem) -> void:
 			8: it[1].call(ci)
 	_tags(ci)
 	ci.draw_set_transform(Vector2.ZERO)
+	_rain(ci)
 	# viền tối kéo mắt vào giữa đường
 	_vignette(ci)
 
@@ -609,7 +618,9 @@ func _vignette(ci: CanvasItem) -> void:
 		ci.draw_colored_polygon(PackedVector2Array([c + d0 * r1, c + d1 * r1, c + d1 * r1 * 2.0, c + d0 * r1 * 2.0]), a1)
 
 func _shadow(ci: CanvasItem, x: float, y: float, rx_: float, ry_: float, col: Color) -> void:
-	ci.draw_colored_polygon(A.ell_pts(Vector2(x, y), maxf(0.1, rx_), maxf(0.1, ry_), 20), col)
+	if rx_ < 0.4 or ry_ < 0.25 or col.a <= 0.003:
+		return
+	ci.draw_colored_polygon(A.ell_pts(Vector2(x, y), rx_, ry_, 20), col)
 
 func gsq(p: Array) -> float:
 	return minf(0.6, CH / p[4])
@@ -1028,6 +1039,8 @@ func _tex_quad(ci: CanvasItem, tex: Texture2D, sx: float, sy: float, sw: float, 
 			var v0 := float(j) / n
 			var v1 := float(j + 1) / n
 			var q := PackedVector2Array([_bil(a, b, e, d, u0, v0), _bil(a, b, e, d, u1, v0), _bil(a, b, e, d, u1, v1), _bil(a, b, e, d, u0, v1)])
+			if absf(_area(q)) < 0.05:
+				continue
 			var uv := PackedVector2Array([Vector2((sx + sw * u0) / W, (sy + sh * v0) / H), Vector2((sx + sw * u1) / W, (sy + sh * v0) / H), Vector2((sx + sw * u1) / W, (sy + sh * v1) / H), Vector2((sx + sw * u0) / W, (sy + sh * v1) / H)])
 			ci.draw_polygon(q, PackedColorArray([Color(1, 1, 1, al), Color(1, 1, 1, al), Color(1, 1, 1, al), Color(1, 1, 1, al)]), uv, tex)
 
@@ -1304,13 +1317,15 @@ func _arch() -> void:
 				if tip.is_empty():
 					continue
 				var tri := PackedVector2Array([Vector2(p0[0], p0[1]), Vector2(p1[0], p1[1]), Vector2(tip[0], tip[1])])
+				if absf(_area(tri)) < 0.05:
+					continue
 				ci.draw_colored_polygon(tri, Color(BUNT[(k + (2 if di > 0 else 0)) % BUNT.size()]))
 				tri.append(tri[0])
 				ci.draw_polyline(tri, INK, maxf(0.5, 0.32 * p0[3]), true)])
 
 # ---- con đua (birdDraw): bóng, chọn góc vẽ + nhịp chạy, lật ngang phía bên kia
 func _racer(ci: CanvasItem, r, p: Array, al: float) -> void:
-	var hz: float = r.z if r.z > 0 else r.rampH
+	var hz: float = sin(PI * (1 - r.hopT / float(r.hop.dur))) * 70 if r.hopT > 0 else (r.z if r.z > 0 else r.rampH)
 	var sink: float = (1.3 - r.fallT) * 30 if r.fallT > 0 else 0.0
 	if r.fallT <= 0:
 		var k := 1 - hz / 200.0
@@ -1320,6 +1335,7 @@ func _racer(ci: CanvasItem, r, p: Array, al: float) -> void:
 		rot += sin(r.spinVis * 0.7) * 0.25
 	if r.drift:
 		rot += r.drift * 0.05
+	_racer_fx(ci, r, p, hz, false)
 	var BP: Dictionary = R.bird_pose(r)
 	var rel: float = R.wrapA(float(BP.va) + r.spinVis - R.cam.th)
 	var y: float = p[2] - hz * p[3] + sink * p[3]
@@ -1331,7 +1347,8 @@ func _racer(ci: CanvasItem, r, p: Array, al: float) -> void:
 		var pts := A.ell_pts(Vector2(p[0], p[2]), (10 + sink) * p[3], (10 + sink) * p[3] * minf(0.5, CH / p[4]), 24)
 		pts.append(pts[0])
 		ci.draw_polyline(pts, Color(220 / 255.0, 240 / 255.0, 250 / 255.0, 0.8), 2, true)
-	var top: float = p[2] - (hz + 48 * float(r.ch.get("size", 1)) + 5) * p[3]
+	_racer_fx(ci, r, p, hz, true)
+	var top: float = p[2] - (hz + fx_head(r) + 5) * p[3]
 	if r.isPlayer:
 		if R.state == "count":
 			ci.draw_colored_polygon(PackedVector2Array([Vector2(p[0] - 8, top - 14), Vector2(p[0] + 8, top - 14), Vector2(p[0], top - 4)]), Color("#b8322a"))
@@ -1400,19 +1417,66 @@ func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: fl
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 func _part(ci: CanvasItem, q: Dictionary, p: Array) -> void:
-	var U := maxf(0.6, VH / 720.0)
+	# web fxPart: lửa, lông, vệt gió, bụi (hình puff), vòng nở, giọt, chấm
+	var U := fxU()
 	var f := clampf(q.life / q.max, 0, 1)
 	var nr := clampf((p[4] - CDIST * 0.4) / (CDIST * 0.25), 0, 1)
-	var a := minf(1.0, f * 1.5) * nr
-	var c: Color = q.c
-	if q.has("feather"):
-		var rr := maxf(1.0, minf(6 * U, 5 * p[3]))
-		ci.draw_set_transform_matrix(Transform2D(float(q.get("rot", 0)), Vector2(p[0], p[1])))
-		ci.draw_colored_polygon(A.ell_pts(Vector2.ZERO, rr, rr * 0.35, 10), Color(c, c.a * a))
-		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-		return
-	var r := maxf(0.5, minf(6 * U, float(q.s) * p[3] * (0.5 + 0.5 * f)))
-	ci.draw_colored_polygon(A.ell_pts(Vector2(p[0], p[1]), r, r, 12), Color(c, c.a * a))
+	var ga := minf(1.0, f * 1.5) * nr
+	var c: Color = q.get("c", Color.WHITE)
+	if q.has("flame"):
+		var w := minf(float(q.s) * p[3] * (0.35 + 0.65 * f), 9 * U) * 0.5
+		if w < 0.6:
+			return
+		ga *= minf(1.0, f * 2.2)
+		var fc := Color("#ff8a26") if f > 0.6 else (Color("#e2401b") if f > 0.3 else Color(110 / 255.0, 90 / 255.0, 80 / 255.0, 0.5))
+		ci.draw_colored_polygon(_tongue(Vector2(p[0], p[1]), w, w * 2.7, sin(q.life * 40) * w * 0.35), Color(fc, fc.a * ga))
+		if f > 0.45:
+			ci.draw_colored_polygon(_tongue(Vector2(p[0], p[1] + w * 0.25), w * 0.55, w * 1.5, 0), Color(Color("#ffd24a"), ga))
+	elif q.has("feather"):
+		var L := maxf(2.5, minf(14 * U, float(q.s) * p[3] * 1.7))
+		var Wd := L * 0.28
+		var rot: float = q.get("rot", 0.0)
+		var xf := Transform2D(rot, Vector2(p[0], p[1])) * Transform2D(0, Vector2(1, 0.35 + 0.65 * absf(cos(rot * 1.4))), 0, Vector2.ZERO)
+		var pts := PackedVector2Array()
+		for i in 9:
+			pts.append(xf * _qb(Vector2(-L * 0.5, 0), Vector2(-L * 0.1, -Wd * 1.3), Vector2(L * 0.5, -Wd * 0.1), i / 8.0))
+		for i in range(1, 8):
+			pts.append(xf * _qb(Vector2(L * 0.5, -Wd * 0.1), Vector2(L * 0.05, Wd * 1.1), Vector2(-L * 0.5, 0), i / 8.0))
+		if absf(_area(pts)) > 0.3:
+			ci.draw_colored_polygon(pts, Color(c, c.a * ga))
+		var lp := pts.duplicate()
+		lp.append(pts[0])
+		ci.draw_polyline(lp, Color(40 / 255.0, 25 / 255.0, 10 / 255.0, 0.5 * ga), maxf(0.6, L * 0.05), true)
+		var qp := PackedVector2Array()
+		for i in 9:
+			qp.append(xf * _qb(Vector2(-L * 0.62, Wd * 0.1), Vector2(0, -Wd * 0.15), Vector2(L * 0.42, -Wd * 0.12), i / 8.0))
+		ci.draw_polyline(qp, Color(1, 1, 1, 0.6 * ga), maxf(0.5, L * 0.045), true)
+	elif q.has("streak"):
+		var e := proj(q.x + q.vx * 0.12, q.y + q.vy * 0.12, q.h)
+		if e.is_empty():
+			return
+		var w2 := maxf(1.2, minf(3.5 * U, float(q.s) * p[3] * 0.6))
+		ci.draw_line(Vector2(p[0], p[1]), Vector2(e[0], e[1]), Color(c, minf(1.0, f * 2.4) * 0.9 * nr), w2, true)
+		ci.draw_circle(Vector2(p[0], p[1]), w2 / 2, Color(c, minf(1.0, f * 2.4) * 0.9 * nr))
+	elif int(q.get("dust", 0)) > 0:
+		var r := maxf(1.0, minf(15 * U, float(q.s) * p[3] * (0.5 + 1.1 * (1 - f))))
+		_spr_rect(ci, "fx:puff%d" % int(q.get("v", 0)), p[0] - r * 2.18, p[1] - r * 2.09, r * 4.36, r * 3.64, Transform2D.IDENTITY, f * (0.6 if int(q.dust) == 2 else 0.9) * nr)
+	elif q.has("grow"):
+		var r := maxf(0.8, minf(9 * U, float(q.s) * p[3] * (0.6 + 1.5 * (1 - f))))
+		ci.draw_colored_polygon(A.ell_pts(Vector2(p[0], p[1]), r, r, 14), Color(c, c.a * f * 0.5 * nr))
+	elif q.has("drop"):
+		var r := maxf(0.9, minf(4.5 * U, float(q.s) * p[3] * 0.6))
+		var ep := A.ell_pts(Vector2(p[0], p[1]), r * 0.82, r, 12)
+		ci.draw_colored_polygon(ep, Color(c, c.a * ga))
+		if int(q.drop) == 2:
+			var lp := ep.duplicate()
+			lp.append(ep[0])
+			ci.draw_polyline(lp, Color(40 / 255.0, 96 / 255.0, 128 / 255.0, 0.55 * ga), maxf(0.6, r * 0.2), true)
+		var hc := Color(1, 1, 1, 0.9) if int(q.drop) == 2 else Color(200 / 255.0, 150 / 255.0, 100 / 255.0, 0.85)
+		ci.draw_colored_polygon(A.ell_pts(Vector2(p[0] - r * 0.28, p[1] - r * 0.34), r * 0.3, r * 0.3, 8), Color(hc, hc.a * ga))
+	else:
+		var r := maxf(0.5, minf(6 * U, float(q.s) * p[3] * (0.5 + 0.5 * f)))
+		ci.draw_colored_polygon(A.ell_pts(Vector2(p[0], p[1]), r, r, 12), Color(c, c.a * ga))
 
 func _tags(ci: CanvasItem) -> void:
 	tags.sort_custom(func(a, b): return a.z < b.z)
@@ -1437,3 +1501,475 @@ func _tags(ci: CanvasItem) -> void:
 		placed.append({"x": t.x, "y": y, "w": w, "h": h})
 		A.text(ci, t.name, t.x, y - t.fs * 0.35, t.fs, Color("#2e1f0f"), 1, 700, 1.5, Color(1, 246 / 255.0, 224 / 255.0, 0.8))
 		ci.draw_colored_polygon(A.ell_pts(Vector2(t.x - tw / 2 - t.fs * 0.6, y - t.fs * 0.35), t.fs * 0.32, t.fs * 0.32, 12), t.col)
+
+# ================================================================== bước 2: thúng ?, vật phẩm, hiệu ứng, mưa
+const BOXGLOW := [[255, 140, 180], [255, 214, 70], [255, 165, 95], [255, 185, 215], [255, 228, 120]]
+const FX_HEAD := {"delua": 27.0, "dongtao": 50.4, "vang": 38.9, "trong": 46.8, "mai": 38.9, "tay": 42.8, "vit": 34.2, "ac": 35.0, "tre": 40.5, "ngong": 51.5, "cho": 38.1, "meo": 39.7, "cuu": 38.9, "de": 42.8, "heo": 35.7, "bo": 43.6, "trau": 42.8}
+const BOLT := [[-0.3, 0], [0.5, 0], [0.12, 0.4], [0.45, 0.4], [-0.2, 1], [0.02, 0.55], [-0.4, 0.55]]
+const FLAME := [[1.0, "#e2401b"], [0.74, "#ff8a26"], [0.5, "#ffc93a"], [0.26, "#fff4c4"]]
+
+func fxU() -> float:
+	return maxf(0.6, VH / 720.0)
+
+func fx_head(r) -> float:
+	return float(FX_HEAD.get(r.id, 40.0))
+
+func _spr_rect(ci: CanvasItem, name: String, x: float, y: float, w: float, h: float, xf := Transform2D.IDENTITY, al := 1.0) -> void:
+	var t = RS.spr(name) if not name.begins_with("fx:") else RS.fx(name.substr(3))
+	if t == null:
+		return
+	ci.draw_set_transform_matrix(xf)
+	ci.draw_texture_rect(t, Rect2(x, y, w, h), false, Color(1, 1, 1, al))
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+func _world_items(halfW: float) -> void:
+	for b in R.boxes:
+		if not b.on:
+			continue
+		var p := proj(b.x, b.y, 0)
+		if p.is_empty() or p[4] >= ZFAR or absf(p[5]) >= p[4] * halfW + 48:
+			continue
+		_push(p[4], [8, _item_box.bind(b, p)])
+	for t in R.traps:
+		if t.kind == "bun":
+			continue
+		var p := proj(t.x, t.y, 0)
+		if p.is_empty() or p[4] >= ZFAR or absf(p[5]) >= p[4] * halfW + 40:
+			continue
+		_push(p[4], [8, _peel.bind(p)])
+	for e in R.eggs:
+		var p := proj(e.x, e.y, 12)
+		if p.is_empty() or p[4] >= ZFAR or absf(p[5]) >= p[4] * halfW + 20:
+			continue
+		_push(p[4], [8, _egg.bind(e, p)])
+	for n in R.nuts:
+		var p := proj(n.x, n.y, 16 + n.bounce)
+		if p.is_empty() or p[4] >= ZFAR or absf(p[5]) >= p[4] * halfW + 40:
+			continue
+		_push(p[4], [8, _nut.bind(n, p)])
+	for g in R.rings:
+		_push(1e8, [8, _fx_ring.bind(g)])
+	for b in R.bolts:
+		var q := proj(b.r.x, b.r.y, 0)
+		if not q.is_empty():
+			_push(q[4] - 1, [8, _fx_bolt.bind(b)])
+
+func _peel(ci: CanvasItem, p: Array) -> void:
+	var k: float = p[3] / 8.0 * 2
+	_spr_rect(ci, "PROP.peel", p[0] - 80 * k, p[2] - 66 * k, 160 * k, 110 * k)
+
+func _egg(ci: CanvasItem, e: Dictionary, p: Array) -> void:
+	_shadow(ci, p[0], p[2], 7 * p[3], 7 * p[3] * minf(0.5, CH / p[4]), Color(30 / 255.0, 40 / 255.0, 10 / 255.0, 0.25))
+	var k: float = p[3] / 5.0 * 1.05
+	_spr_rect(ci, "PROP.egg", -36 * k, -46 * k, 72 * k, 88 * k, Transform2D(e.spin, Vector2(p[0], p[1])))
+
+func _nut(ci: CanvasItem, n: Dictionary, p: Array) -> void:
+	_shadow(ci, p[0], p[2], 14 * p[3], 14 * p[3] * gsq(p), Color(30 / 255.0, 40 / 255.0, 10 / 255.0, 0.3))
+	var w: float = 15 * p[3] * 2 * 1.28
+	_spr_rect(ci, "PROP.coco", -w / 2, -w / 2, w, w, Transform2D(n.rot, Vector2(p[0], p[1])))
+
+# thúng tre có dấu ? (drawItemBox): khối đan xoay chậm, nhấp nhô, quầng sáng, cánh hoa bay vòng, nơ lá dừa
+func _item_box(ci: CanvasItem, b: Dictionary, p: Array) -> void:
+	var pop: float = minf(1.0, (clock - b.pop) / 0.35) if b.pop > 0 else 1.0
+	var sc: float = sin(pop * PI / 2) * (1 + 0.25 * sin(pop * PI)) if pop < 1 else 1.0
+	if sc <= 0.02:
+		return
+	var e := 11.0 * sc
+	var th: float = clock * 1.5 + b.ph
+	var bob := sin(th * 2) * 3
+	var hc := 24 + bob
+	var ct := cos(th)
+	var st := sin(th)
+	var L := []
+	for uv in [[-1, -1], [1, -1], [1, 1], [-1, 1]]:
+		L.append([b.x + (ct * uv[0] - st * uv[1]) * e, b.y + (st * uv[0] + ct * uv[1]) * e])
+	var T := []
+	var B := []
+	for q in L:
+		var t1 := proj(q[0], q[1], hc + e)
+		var b1 := proj(q[0], q[1], hc - e)
+		if t1.is_empty() or b1.is_empty():
+			return
+		T.append(t1)
+		B.append(b1)
+	_shadow(ci, p[0], p[2], 14 * p[3] * sc, 14 * p[3] * sc * gsq(p), Color(110 / 255.0, 70 / 255.0, 25 / 255.0, 0.2))
+	var cp := proj(b.x, b.y, hc)
+	if not cp.is_empty():
+		var Rr: float = 38 * cp[3] * sc
+		var u := fposmod(th / TAU * 5, 5.0)
+		var k0 := int(u)
+		var fr := u - k0
+		var A0: Array = BOXGLOW[k0]
+		var B2: Array = BOXGLOW[(k0 + 1) % 5]
+		var c := Color((A0[0] + (B2[0] - A0[0]) * fr) / 255.0, (A0[1] + (B2[1] - A0[1]) * fr) / 255.0, (A0[2] + (B2[2] - A0[2]) * fr) / 255.0)
+		A.radial(ci, Vector2(cp[0], cp[1]), Rr, [[0.0, Color(1, 252 / 255.0, 225 / 255.0, 0.55)], [0.35, Color(c, 0.3)], [1.0, Color(c, 0)]], 24)
+	var pet := []
+	if not cp.is_empty() and p[3] > 0.25:
+		for k in 4:
+			var a := -th + k * TAU / 4
+			var sp := proj(b.x + cos(a) * e * 2.1, b.y + sin(a) * e * 2.1, hc + e * 1.45 * (cos(a) * fx + sin(a) * fy))
+			if not sp.is_empty():
+				pet.append([sp, k])
+	for q in pet:
+		if q[0][4] > cp[4]:
+			_box_petal(ci, q[0], q[1], th, sc)
+	var vis := [false, false, false, false]
+	for k in 4:
+		var j := (k + 1) % 4
+		var mx: float = (L[k][0] + L[j][0]) / 2 - b.x
+		var my: float = (L[k][1] + L[j][1]) / 2 - b.y
+		var l := maxf(0.001, sqrt(mx * mx + my * my))
+		var nx := mx / l
+		var ny := my / l
+		vis[k] = _cam_facing(b.x + mx, b.y + my, hc, nx, ny, 0)
+		if not vis[k]:
+			continue
+		var P := [T[k], T[j], B[j], B[k]]
+		_tex_quad(ci, RS.spr("PROP.boxSides.%d" % k), 0, 0, 256, 256, P)
+		_shade_face(ci, P, 0.93 + 0.07 * (_sun_on([nx, ny, 0]) - 0.58) / 0.42)
+	var topV := _cam_facing(b.x, b.y, hc + e, 0, 0, 1)
+	if topV:
+		var P := [T[3], T[2], T[1], T[0]]
+		_tex_quad(ci, RS.spr("PROP.boxTop"), 0, 0, 256, 256, P)
+		_shade_face(ci, P, 0.93 + 0.07 * (_sun_on([0, 0, 1]) - 0.58) / 0.42)
+	var E := []
+	for k in 4:
+		var j := (k + 1) % 4
+		var LT := [L[k][0], L[k][1], hc + e]
+		var LTj := [L[j][0], L[j][1], hc + e]
+		var LB := [L[k][0], L[k][1], hc - e]
+		var LBj := [L[j][0], L[j][1], hc - e]
+		if vis[k] or topV:
+			E.append([LT, LTj, k % 3, false])
+		if vis[k]:
+			E.append([LB, LBj, (k + 1) % 3, false])
+		if vis[k] or vis[(k + 3) % 4]:
+			E.append([LT, LB, (k + 2) % 3, true])
+	for q in E:
+		var m := proj((q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2, (q[0][2] + q[1][2]) / 2)
+		q.append(m[4] if not m.is_empty() else 0.0)
+	E.sort_custom(func(a, b2): return a[4] > b2[4])
+	var ow := maxf(0.6, 0.2 * p[3])
+	for q in E:
+		_bamboo_pole(ci, q[0], q[1], 2.5 * sc, ow, "PROP.bambooTex.%d" % q[2], q[3])
+	var kn := proj(b.x, b.y, hc + e)
+	if not kn.is_empty():
+		var W: float = 24 * kn[3] * sc
+		var H := W * 210.0 / 240.0
+		var sw := sin(th * 2) * 0.06
+		var cards := [ct * rx + st * ry, -st * rx + ct * ry]
+		cards.sort_custom(func(a, b2): return absf(a) < absf(b2))
+		for k in cards:
+			if absf(k) < 0.08:
+				continue
+			var xf := Transform2D(sw, Vector2(kn[0], kn[1])) * Transform2D(Vector2(k, 0), Vector2(0, 1), Vector2.ZERO)
+			_spr_rect(ci, "PROP.boxBow", -W * 120 / 240, -H * 178 / 210, W, H, xf)
+		var Fz := W * 0.42
+		_spr_rect(ci, "PROP.boxBup", -W * 0.02 - Fz / 2, -H * 30 / 210 - Fz / 2, Fz, Fz, Transform2D(sw, Vector2(kn[0], kn[1])))
+	for q in pet:
+		if q[0][4] <= cp[4]:
+			_box_petal(ci, q[0], q[1], th, sc)
+
+func _box_petal(ci: CanvasItem, sp: Array, k: int, th: float, sc: float) -> void:
+	var r: float = 3.4 * sp[3] * sc
+	if r < 1:
+		return
+	var xf := Transform2D(th * 2 + k * 1.7, Vector2(sp[0], sp[1])) * Transform2D(Vector2(1, 0), Vector2(0, 0.3 + 0.7 * absf(cos(th * 2 + k))), Vector2.ZERO)
+	_spr_rect(ci, "PROP.boxPetals.%d" % k, -r * 1.2, -r * 1.2, r * 2.4, r * 2.4, xf)
+
+func _shade_face(ci: CanvasItem, P: Array, lit: float) -> void:
+	if lit < 0.99:
+		var pp := _poly_of(P)
+		if absf(_area(pp)) > 0.5:   # mặt quay xéo cạnh thì bỏ (Godot không chia tam giác được đa giác dẹt)
+			ci.draw_colored_polygon(pp, Color(40 / 255.0, 22 / 255.0, 6 / 255.0, (1 - lit) * 0.85))
+
+static func _area(p: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in p.size():
+		a += p[i].cross(p[(i + 1) % p.size()])
+	return a * 0.5
+
+# cây tre xanh giữa hai điểm thế giới a, b ([x, y, h]), dày wr; đầu quay về máy thì thấy mặt cắt
+func _bamboo_pole(ci: CanvasItem, a: Array, b: Array, wr: float, ow: float, tex: String, wrap: bool) -> void:
+	var ex: float = (b[0] - a[0]) * 0.07
+	var ey: float = (b[1] - a[1]) * 0.07
+	var eh: float = (b[2] - a[2]) * 0.07
+	var A3 := [a[0] - ex, a[1] - ey, a[2] - eh]
+	var B3 := [b[0] + ex, b[1] + ey, b[2] + eh]
+	var Ap := proj(A3[0], A3[1], A3[2])
+	var Bp := proj(B3[0], B3[1], B3[2])
+	if Ap.is_empty() or Bp.is_empty():
+		return
+	var wa: float = wr * Ap[3]
+	var wb: float = wr * Bp[3]
+	var pa := Vector2(Ap[0], Ap[1])
+	var pb := Vector2(Bp[0], Bp[1])
+	var d := pb - pa
+	var l := maxf(0.001, d.length())
+	var nx := d.y / l
+	var ny := -d.x / l
+	if ny > 0 or (ny == 0 and nx > 0):
+		nx = -nx
+		ny = -ny
+	if maxf(wa, wb) < 4:
+		ci.draw_line(pa, pb, Color("#2e4a16"), (wa + wb) / 2 + ow * 2, true)
+		ci.draw_line(pa, pb, Color("#86b245"), (wa + wb) / 2, true)
+		return
+	var L3 := maxf(0.001, Vector3(B3[0] - A3[0], B3[1] - A3[1], B3[2] - A3[2]).length())
+	var o3 := Vector3(B3[0] - A3[0], B3[1] - A3[1], B3[2] - A3[2]) / L3
+	var facing := func(Q: Array, sg: float) -> float:
+		var v := Vector3(cx - Q[0], cy - Q[1], CH - Q[2])
+		return sg * o3.dot(v) / maxf(0.001, v.length())
+	var fa: float = facing.call(A3, -1.0)
+	var fb: float = facing.call(B3, 1.0)
+	var rot := atan2(ny, nx)
+	var wm := (wa + wb) / 2
+	var xf := Transform2D(atan2(d.y, d.x), pa)
+	if nx * -d.y + ny * d.x > 0:
+		xf = xf * Transform2D(Vector2(1, 0), Vector2(0, -1), Vector2.ZERO)
+	_spr_rect(ci, tex, 0, -wm / 2, l, wm, xf)
+	ci.draw_set_transform_matrix(xf)
+	ci.draw_line(Vector2(0, -wm / 2), Vector2(l, -wm / 2), Color("#2e4a16"), ow, true)
+	ci.draw_line(Vector2(0, wm / 2), Vector2(l, wm / 2), Color("#2e4a16"), ow, true)
+	if wrap and wm >= 4:
+		var bw := maxf(1.0, wm * 0.16)
+		for t0 in [0.085, 0.885]:
+			for i in 3:
+				var x: float = l * (t0 + i * 0.016) + (0.0 if t0 > 0.5 else bw * 0.2)
+				var cv := A.quad_pts(Vector2(x, -wm / 2 - ow * 0.3), Vector2(x + wm * 0.16, 0), Vector2(x, wm / 2 + ow * 0.3), 6)
+				ci.draw_polyline(cv, Color("#5e4a1c"), bw + ow, true)
+				ci.draw_polyline(cv, Color("#e4d296"), bw, true)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	for q in [[pa, fa], [pb, fb]]:
+		if q[1] > 0:
+			var cxf := Transform2D(rot, q[0]) * Transform2D(Vector2(1, 0), Vector2(0, maxf(0.1, q[1])), Vector2.ZERO)
+			_spr_rect(ci, "PROP.boxCut", -wm / 2, -wm / 2, wm, wm, cxf)
+
+# vòng sóng âm (Gáy, Kêu, Vồ): dải khí, viền kem, bụi theo mép
+func _fx_ring(ci: CanvasItem, g: Dictionary) -> void:
+	var Rr: float = 40 + g.t * 450
+	var a := maxf(0, 1 - g.t / 0.6)
+	var cc: PackedStringArray = String(g.c).split(",")
+	var col := Color(float(cc[0]) / 255.0, float(cc[1]) / 255.0, float(cc[2]) / 255.0)
+	var U := fxU()
+	var n := 48
+	var P := []
+	for k in n + 1:
+		var t := float(k) / n * TAU
+		P.append([proj(g.x + cos(t) * (Rr - 6), g.y + sin(t) * (Rr - 6), 1), proj(g.x + cos(t) * (Rr + 5), g.y + sin(t) * (Rr + 5), 1)])
+	for L in [[0, 18.0, 16.0, Color(col, 0.2 * a)], [0, 1.6, 2.5, Color(110 / 255.0, 75 / 255.0, 35 / 255.0, 0.4 * a)], [1, 3.2, 5.0, Color(col, 0.9 * a)]]:
+		for k in n:
+			var A1: Array = P[k][L[0]]
+			var B1: Array = P[k + 1][L[0]]
+			if A1.is_empty() or B1.is_empty():
+				continue
+			ci.draw_line(Vector2(A1[0], A1[1]), Vector2(B1[0], B1[1]), L[3], maxf(1.0, minf(L[2] * U, L[1] * (A1[3] + B1[3]) / 2)), true)
+	var nd := int(round(clampf(Rr / 9, 16, 44)))
+	for k in nd:
+		var t := (k + 0.5) / nd * TAU + sin(k * 7.3) * 0.05
+		var q := proj(g.x + cos(t) * (Rr + 3), g.y + sin(t) * (Rr + 3), 2 + g.t * 10)
+		if q.is_empty() or q[4] < CDIST * 0.4:
+			continue
+		var rad := minf(18 * U, (7 + g.t * 18) * q[3])
+		_spr_rect(ci, "fx:puff%d" % (k % 3), q[0] - rad * 2.18, q[1] - rad * 2.09, rad * 4.36, rad * 3.64, Transform2D.IDENTITY, a * 0.75 * clampf((q[4] - CDIST * 0.4) / (CDIST * 0.25), 0, 1))
+
+# Mây Giông: đám mây đen trên đầu con bị trúng, mưa, tia sét lúc đầu
+func _fx_bolt(ci: CanvasItem, b: Dictionary) -> void:
+	var r = b.r
+	var hz: float = 70.0 if r.hopT > 0 else (r.z if r.z > 0 else r.rampH)
+	var hh := fx_head(r)
+	var U := fxU()
+	var base := proj(r.x, r.y, hz + hh + 20)
+	var head := proj(r.x, r.y, hz + hh + 2)
+	if base.is_empty() or head.is_empty():
+		return
+	var a := minf(1.0, b.life / 0.3)
+	var S := minf(base[3], 6 * U)
+	for k in 9:
+		var u := fposmod(k * 0.37 + clock * 2.6, 1.0)
+		var xx: float = base[0] + (fposmod(k * 0.61, 1.0) - 0.5) * 30 * S
+		var yy: float = base[1] + u * (head[1] - base[1] + 20 * S)
+		ci.draw_line(Vector2(xx, yy), Vector2(xx - 2 * S, yy + 6 * S), Color(170 / 255.0, 200 / 255.0, 240 / 255.0, 0.75 * a), maxf(0.8, 0.9 * S), true)
+	if b.life > 0.55 and int(floor(clock * 18)) % 3 != 0:
+		var W := 13 * S
+		var H: float = head[1] - base[1]
+		var dx: float = head[0] - base[0]
+		var pts := PackedVector2Array()
+		for q in BOLT:
+			pts.append(Vector2(base[0] + dx * q[1] + q[0] * W, base[1] + q[1] * H))
+		var cl := pts.duplicate()
+		cl.append(pts[0])
+		ci.draw_polyline(cl, Color(1, 226 / 255.0, 90 / 255.0, 0.35 * a), 5 * S, true)
+		ci.draw_colored_polygon(pts, Color(Color("#ffe14d"), a))
+		ci.draw_polyline(cl, Color(Color("#6e3f00"), a), maxf(1.2, 1.3 * S), true)
+	var w := minf(VW * 0.22, 42 * S)
+	_spr_rect(ci, "fx:cloud", base[0] - w / 2, base[1] - w * 0.88 * 0.625, w, w * 0.625, Transform2D.IDENTITY, a)
+
+# Khiên Rơm: ba bó rơm chạy vòng quanh bụng, có vệt và bóng; front = phần trước con đua
+func _fx_shield(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
+	var sz: float = float(r.ch.get("size", 1))
+	var Rr := 20 * sz + 6
+	var h0 := hz + fx_head(r) * 0.42
+	var rot: float = clock * 3.4 + r.id.length() * 0.9
+	var U := fxU()
+	var al := 0.35 if r.shieldT < 1 and sin(clock * 30) < 0 else 1.0
+	if not front and hz < 4:
+		var sq := minf(0.5, CH / p[4])
+		var e1 := A.ell_pts(Vector2(p[0], p[2]), Rr * p[3], Rr * p[3] * sq, 32)
+		e1.append(e1[0])
+		ci.draw_polyline(e1, Color(1, 210 / 255.0, 90 / 255.0, 0.55 * al), maxf(1.0, minf(4 * U, 1.4 * p[3])), true)
+		var e2 := A.ell_pts(Vector2(p[0], p[2]), (Rr - 2) * p[3], (Rr - 2) * p[3] * sq, 32)
+		e2.append(e2[0])
+		ci.draw_polyline(e2, Color(1, 236 / 255.0, 170 / 255.0, 0.25 * al), maxf(2.0, minf(10 * U, 4 * p[3])), true)
+	for j in 3:
+		var a := rot + j * TAU / 3
+		var x: float = r.x + cos(a) * Rr
+		var y: float = r.y + sin(a) * Rr
+		var h := h0 + sin(clock * 5 + j * 2.1) * 3
+		var q := proj(x, y, h)
+		if q.is_empty() or (q[4] < p[4]) != front:
+			continue
+		var g := proj(x, y, 0)
+		if not g.is_empty():
+			_shadow(ci, g[0], g[1], 5 * g[3], 5 * g[3] * minf(0.5, CH / g[4]), Color(30 / 255.0, 40 / 255.0, 10 / 255.0, 0.16 * al))
+		var prev := q
+		for i in range(1, 8):
+			var bb := a - i * 0.13
+			var t := proj(r.x + cos(bb) * Rr, r.y + sin(bb) * Rr, h)
+			if t.is_empty():
+				break
+			ci.draw_line(Vector2(prev[0], prev[1]), Vector2(t[0], t[1]), Color(1, 224 / 255.0, 130 / 255.0, 0.55 * (1 - i / 7.0) * al), maxf(1.0, minf(8 * U, 3 * q[3] * (1 - i / 10.0))), true)
+			prev = t
+		var s := minf(q[3], 6 * U) * 0.26
+		var k := s / 8
+		var xf := Transform2D(sin(a * 1.3 + clock * 2) * 0.45, Vector2(q[0], q[1]))
+		_spr_rect(ci, "PROP.sheaves.%d" % j, -180 * k, 156 * k - 348 * k, 360 * k, 384 * k, xf, al)
+
+func _tongue(c: Vector2, w: float, h: float, lean: float) -> PackedVector2Array:
+	var p := A.cubic_pts(c + Vector2(-w, 0), c + Vector2(-w * 1.15, -h * 0.45), c + Vector2(lean * 0.4 - w * 0.5, -h * 0.72), c + Vector2(lean, -h), 8)
+	p.append_array(A.cubic_pts(c + Vector2(lean, -h), c + Vector2(lean * 0.4 + w * 0.6, -h * 0.66), c + Vector2(w * 1.15, -h * 0.42), c + Vector2(w, 0), 8))
+	for i in range(1, 8):
+		var t := PI * i / 8.0
+		p.append(c + Vector2(cos(t) * w, sin(t) * w))
+	return p
+
+func _fire(ci: CanvasItem, T: Array, ink: float) -> void:
+	for t in T:
+		var pl := _tongue(t[0], t[1], t[2], t[3])
+		pl.append(pl[0])
+		ci.draw_polyline(pl, Color("#8c2108"), ink * 2, true)
+	for L in FLAME:
+		var k: float = L[0]
+		for t in T:
+			ci.draw_colored_polygon(_tongue(t[0] + Vector2(0, t[1] * (1 - k) * 0.7), t[1] * k, t[2] * (k * 0.92 if k < 1 else 1.0), t[3] * k), Color(L[1]))
+
+# Ớt Hiểm: lửa phụt sau đuôi
+func _fx_flames(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
+	var ca := cos(r.a)
+	var sa := sin(r.a)
+	var sz: float = float(r.ch.get("size", 1))
+	var U := fxU()
+	if not front and hz < 4:
+		var g := proj(r.x - ca * 10 * sz, r.y - sa * 10 * sz, 0)
+		if not g.is_empty():
+			_shadow(ci, g[0], g[1], 20 * g[3] * sz, 20 * g[3] * sz * minf(0.5, CH / g[4]), Color(1, 120 / 255.0, 30 / 255.0, 0.16))
+	var b := proj(r.x - ca * 12 * sz, r.y - sa * 12 * sz, hz + fx_head(r) * 0.26)
+	if b.is_empty() or (b[4] < p[4]) != front:
+		return
+	var S := minf(b[3], 5.5 * U)
+	var t := clock
+	var T := []
+	for q in [[-5, 3.4, 10, 0.0], [5, 3.4, 11, 1.7], [0, 4.6, 16, 3.1]]:
+		var f := 1 + 0.22 * sin(t * 31 + q[3]) + 0.12 * sin(t * 53 + q[3] * 2)
+		var ln: float = sin(t * 23 + q[3]) * 3 + q[0] * 0.55
+		T.append([Vector2(b[0] + q[0] * S, b[1] + 2 * S), q[1] * S, q[2] * S * f, ln * S * 0.7])
+	_fire(ci, T, maxf(0.6, 0.45 * S))
+
+# húc: bụi phụt hai bên chân
+func _fx_dust(ci: CanvasItem, r, p: Array, front: bool) -> void:
+	var ca := cos(r.a)
+	var sa := sin(r.a)
+	var sz: float = float(r.ch.get("size", 1))
+	var U := fxU()
+	for sd in [-1.0, 1.0]:
+		for k in 4:
+			var u := fposmod(clock * 2.8 + k / 4.0 + (0.5 if sd > 0 else 0.0), 1.0)
+			var d := (8 + u * 16) * sz
+			var q := proj(r.x - ca * u * 22 - sa * sd * d, r.y - sa * u * 22 + ca * sd * d, 3 + u * 8)
+			if q.is_empty() or (q[4] < p[4]) != front:
+				continue
+			var rad := minf(20 * U, (4 + u * 8) * q[3] * sz)
+			_spr_rect(ci, "fx:puff%d" % ((k + (1 if sd > 0 else 0)) % 3), q[0] - rad * 2.18, q[1] - rad * 2.09, rad * 4.36, rad * 3.64, Transform2D.IDENTITY, 0.95 * pow(1 - u, 0.8))
+
+# choáng: sao vàng quay trên đầu
+func _fx_stars(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
+	var h := hz + fx_head(r) + 7
+	var Rr := 12.0 * float(r.ch.get("size", 1))
+	var U := fxU()
+	for k in 3:
+		var a := clock * 5.5 + k * TAU / 3
+		var q := proj(r.x + cos(a) * Rr, r.y + sin(a) * Rr, h + sin(a * 2 + k) * 1.5)
+		if q.is_empty() or (q[4] < p[4]) != front:
+			continue
+		var s := clampf(4.4 * q[3], 3.4, 11 * U)
+		var al := 1.0 if front else 0.85
+		var c := Vector2(q[0], q[1])
+		var sp := A.star_pts(c, s, s * 0.45, 5, clock * 3 + k - PI / 2)
+		ci.draw_colored_polygon(sp, Color(Color("#ffd23f"), al))
+		var cl := sp.duplicate()
+		cl.append(sp[0])
+		ci.draw_polyline(cl, Color(Color("#9a5800"), al), maxf(0.7, s * 0.16), true)
+		ci.draw_colored_polygon(A.star_pts(c + Vector2(-s * 0.06, -s * 0.1), s * 0.48, s * 0.48 * 0.45, 5, clock * 3 + k - PI / 2), Color(Color("#fff3b0"), al))
+
+func _racer_fx(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
+	if r.fallT > 0:
+		return
+	var fire: bool = r.boostT > 0 and r.boostPow >= 1.55
+	if r.shieldT > 0:
+		_fx_shield(ci, r, p, hz, front)
+	if r.spinT > 0:
+		_fx_stars(ci, r, p, hz, front)
+	if fire:
+		_fx_flames(ci, r, p, hz, front)
+	if r.kickT > 0 and hz < 2:
+		_fx_dust(ci, r, p, front)
+
+# mưa: phủ xanh xám + vệt mưa; trứng văng lên kính
+func _rain(ci: CanvasItem) -> void:
+	var wk: float = R.weather.k
+	if wk > 0.02:
+		ci.draw_rect(Rect2(0, 0, VW, VH), Color(40 / 255.0, 60 / 255.0, 90 / 255.0, 0.16 * wk))
+		var n := int(round(90 * wk))
+		var pts := PackedVector2Array()
+		for i in n:
+			var x := randf() * VW * 1.2 - VW * 0.1
+			var y := randf() * VH
+			pts.append(Vector2(x, y))
+			pts.append(Vector2(x - 6, y + 22))
+		if n > 0:
+			ci.draw_multiline(pts, Color(210 / 255.0, 230 / 255.0, 1, 0.55 * wk), 1.3)
+	for s in R.splats:
+		var a: float = (s.life - s.t) / 0.6 if s.t > s.life - 0.6 else 1.0
+		var pop := minf(1.0, s.t / 0.08)
+		var r: float = s.r * minf(VW, VH) * (0.3 + 0.82 * pop if pop < 1 else 1.0)
+		var c := Vector2(s.x * VW, s.y * VH + s.t * s.t * 12)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = s.seed
+		var ph := [rng.randf() * 6, rng.randf() * 6, rng.randf() * 6]
+		var pts := PackedVector2Array()
+		for k in 44:
+			var t := k / 44.0 * TAU
+			var w: float = 1 + 0.09 * sin(t * 3 + ph[0]) + 0.06 * sin(t * 5 + ph[1]) + 0.035 * sin(t * 11 + ph[2])
+			pts.append(c + Vector2(cos(t) * r * w, sin(t) * r * w * 0.86))
+		var run := minf(1.0, s.t / 1.4)
+		for k in 3:
+			var x0: float = c.x + (rng.randf() - 0.5) * r * 1.2
+			var ln := r * (0.5 + rng.randf() * 0.7) * run
+			ci.draw_line(Vector2(x0, c.y + r * 0.5), Vector2(x0, c.y + r * 0.5 + ln), Color(1, 1, 0.97, 0.55 * a), r * 0.16, true)
+		ci.draw_colored_polygon(pts, Color(1, 1, 0.97, 0.55 * a))
+		var cl := pts.duplicate()
+		cl.append(pts[0])
+		ci.draw_polyline(cl, Color(1, 1, 1, 0.8 * a), maxf(1.0, r * 0.04), true)
+		var yc := c + Vector2(r * 0.08, -r * 0.05)
+		ci.draw_colored_polygon(A.ell_pts(yc, r * 0.36, r * 0.33, 28), Color(Color("#f6a90c"), a))
+		ci.draw_colored_polygon(A.ell_pts(yc + Vector2(-r * 0.1, -r * 0.1), r * 0.1, r * 0.07, 12), Color(1, 1, 1, 0.75 * a))

@@ -11,6 +11,7 @@ const RACE := preload("res://logic/dg/dg_race.gd")
 const MAP := preload("res://logic/dg/dg_map.gd")
 const RES := preload("res://logic/dg/dg_res.gd")
 const VIEW := preload("res://logic/dg/dg_view.gd")
+const SND := preload("res://logic/dg/dg_snd.gd")
 
 const KEM := Color("#fbf3df")
 const KEM2 := Color("#f4e8c8")
@@ -60,6 +61,7 @@ var R = null
 var M = null
 var RS = null
 var view = null
+var snd = null
 var hud: Lay
 var bg: Lay
 var btns: Array = []        # [Rect2, việc, phím giữ]
@@ -96,6 +98,8 @@ func _ready() -> void:
 	hud = Lay.new(_draw_hud)
 	add_child(hud)
 	P.load_bundle("dg_card")
+	snd = SND.new(0)   # nhạc map Nông Trại (MUSICS[0])
+	add_child(snd)
 	resize()
 
 func resize() -> void:
@@ -138,6 +142,7 @@ func _process(dt: float) -> void:
 			if R.state == "result" and not res_shown:
 				_show_results()
 		RS.pump()
+		snd.tick(dt, R.state == "race", R.player.lapShown >= R.laps, R.weather.k if R.state != "result" else 0.0, paused)
 		view.redraw()
 		_msg_pop = maxf(0, _msg_pop - dt)
 	hud.queue_redraw()
@@ -159,6 +164,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 
 # ============================================================ tải
 func _start_race() -> void:
+	snd.stop_all()
 	# năm đối thủ bốc ngẫu nhiên trong mọi con (cả con chưa mở, cho nếm trước), con mình xuất phát cuối
 	var idx: Array = []
 	for i in chars.size():
@@ -236,7 +242,7 @@ func load_frac() -> float:
 # ============================================================ sự kiện của luật đua (chữ to / số đếm)
 func _events() -> void:
 	for e in R.ev:
-		pass
+		snd.on_event(e)
 	R.ev.clear()
 	if R.msg.t != _msg_t:
 		_msg_t = R.msg.t
@@ -261,6 +267,7 @@ func reward(xu: int, left: int, mx: int) -> void:
 		res_note = "Vô top 3 là nông trại thưởng xu."
 
 func _quit_race() -> void:
+	snd.stop_all()
 	mode = "menu"
 	paused = false
 	res_shown = false
@@ -302,6 +309,10 @@ func _gui_input(e: InputEvent) -> void:
 				if b.size() > 2 and b[2] != "":
 					hold[id] = b[2]
 					_keys()
+					if R != null and b[2] in ["item", "ability"]:
+						R.keys[b[2]] = true
+					elif R != null and b[2] == "drift":
+						R.keys.trick = true
 				elif String(b[1]).begins_with("card:"):
 					_drag = {"id": id, "x": pos.x, "sx": strip_x, "moved": false, "act": b[1]}
 				else:
@@ -337,6 +348,7 @@ func _act(a: String) -> void:
 		"go":
 			_start_race()
 		"farm":
+			snd.stop_all()
 			closed.emit()
 		"pause":
 			paused = true
@@ -350,6 +362,8 @@ func _act(a: String) -> void:
 			_quit_race()
 		"auto":
 			R.auto = not R.auto
+		"mute":
+			SND.muted = not SND.muted
 
 func _unlocked(ch: Dictionary) -> bool:
 	return not ch.has("unlock")   # mở bằng Giải Làng (bước 3)
@@ -572,6 +586,9 @@ func _lock(ci: CanvasItem, c: Vector2) -> void:
 func _race_hud(ci: CanvasItem) -> void:
 	var pl = R.player
 	var ph := W <= 640
+	# chớp tối khi trúng đòn (web vẽ đè lên canvas trước HUD)
+	if R.flash > 0:
+		ci.draw_rect(Rect2(0, 0, W, H), Color(40 / 255.0, 52 / 255.0, 96 / 255.0, R.flash * 0.6))
 	# vệt gió khi turbo
 	if pl.boostT > 0 and not paused:
 		var cx := W / 2
@@ -734,8 +751,87 @@ func _touch(ci: CanvasItem) -> void:
 	var lc := Vector2(14 + big / 2, by - big / 2)
 	_tb(ci, lc, big, "left", "left", "", small)
 	_tb(ci, lc + Vector2(big + gap, 0), big, "right", "right", "", small)
-	var dc := Vector2(W - 14 - sm / 2, by - sm / 2)
+	# nhóm phải (web: Trượt, Kỹ năng, thúng vật phẩm, canh đáy)
+	var ic := Vector2(W - 14 - big / 2, by - big / 2)
+	var kc := ic - Vector2(big + gap, 0)
+	var dc := Vector2(kc.x - big / 2 - gap - sm / 2, by - sm / 2)
 	_tb(ci, dc, sm, "drift", "drift", "Trượt", small)
+	_tb_skill(ci, kc, big, small)
+	_tb_item(ci, ic, big)
+
+# nút Kỹ năng: vòng tiến độ (gauge), đầy thì sao đỏ gạch + vầng vàng nhịp 1 giây
+func _tb_skill(ci: CanvasItem, c: Vector2, d: float, small: bool) -> void:
+	var pl = R.player
+	var on: bool = hold.values().has("ability")
+	var ga := clampf(pl.gauge, 0, 1)
+	var full := ga >= 1
+	var r := d / 2
+	if on:
+		c.y += 3
+	if full:
+		var g := 0.5 - 0.5 * cos(clock * TAU)
+		_circle(ci, c, r + 7 * g, Color(244 / 255.0, 194 / 255.0, 31 / 255.0, 0.55 * g))
+	_circle(ci, c + Vector2(0, 1 if on else 4), r, Color(59 / 255.0, 36 / 255.0, 21 / 255.0, 0.5))
+	_circle(ci, c, r, VANGL if on else Color(251 / 255.0, 243 / 255.0, 223 / 255.0, 0.86))
+	_ring(ci, c, r, 3, WOOD)
+	_ring(ci, c, r - 3, 2, Color(1, 249 / 255.0, 234 / 255.0, 0.9))
+	# svg 64x64, r 28.5, nét 5, bắt đầu từ đỉnh
+	var k := d / 64.0
+	ci.draw_arc(c, 28.5 * k, 0, TAU, 48, Color("#f4e8c8"), 5 * k, true)
+	if ga > 0:
+		ci.draw_arc(c, 28.5 * k, -PI / 2, -PI / 2 + TAU * ga, maxi(4, int(48 * ga)), Color("#f4c21f") if full else Color("#4f8a2b"), 5 * k, true)
+	var isz := 24.0 if small else 28.0
+	var col := Color("#b5532f") if full else INK
+	var sc := c + Vector2(0, -5)
+	var pts := A.star_pts(sc, isz * 0.5 * 0.92, isz * 0.5 * 0.92 * 0.45)
+	ci.draw_colored_polygon(pts, col)
+	var lp := pts.duplicate()
+	lp.append(pts[0])
+	ci.draw_polyline(lp, col, isz / 24.0 * 1.6, true)
+	A.text(ci, "Kỹ năng", c.x, c.y + isz * 0.5 + 3, 10 if small else 11, INK2, 1, 700)
+	btns.append([Rect2(c - Vector2(r, r), Vector2(d, d)).grow(4), "", "ability"])
+
+# nút thúng: mặt thúng + món đang giữ (lúc quay thì lật qua lại các món), chấm cấp, xN
+func _tb_item(ci: CanvasItem, c: Vector2, d: float) -> void:
+	var pl = R.player
+	var on: bool = hold.values().has("item")
+	var r := d / 2
+	var ready: bool = pl.item != null and pl.item != "" and pl.rollT <= 0
+	if on:
+		c.y += 3
+	if ready:
+		_circle(ci, c + Vector2(0, 1 if on else 4), r + 4, Color(244 / 255.0, 194 / 255.0, 31 / 255.0, 0.6))
+	_circle(ci, c + Vector2(0, 1 if on else 4), r, Color(59 / 255.0, 36 / 255.0, 21 / 255.0, 0.5))
+	_circle(ci, c, r, VANGL if on else Color(251 / 255.0, 243 / 255.0, 223 / 255.0, 0.86))
+	# canvas inset 3px, bo tròn
+	var w := d - 6
+	var o := c - Vector2(w / 2, w / 2)
+	var bt = RS.fx("basket")
+	if bt != null:
+		ci.draw_texture_rect(bt, Rect2(o, Vector2(w, w)), false)
+	var has: bool = pl.item != null and pl.item != ""
+	var roll: bool = has and pl.rollT > 0
+	var key: String = String(R.IKEYS[int(floor(clock * 14)) % R.IKEYS.size()]) if roll else (String(pl.item) if has else "")
+	var lvl: int = 0 if roll else int(pl.lvl)
+	var uses: int = 0 if roll else int(pl.uses)
+	if key != "":
+		var it = RS.fx("ic_" + key)
+		if it != null:
+			var s := w * 0.5
+			var cy := o.y + w * (0.46 if lvl > 0 else 0.5)
+			ci.draw_texture_rect(it, Rect2(o.x + w / 2 - s, cy - s, s * 2, s * 2), false)
+	else:
+		A.text(ci, "?", o.x + w / 2, o.y + w * 0.55, roundf(w * 0.34), Color(110 / 255.0, 77 / 255.0, 49 / 255.0, 0.5), 1, 800)
+	if key != "" and lvl > 0:
+		for j in 3:
+			var pc := o + Vector2(w / 2 + (j - 1) * w * 0.1, w * 0.765)
+			_circle(ci, pc, w * 0.036, Color("#b5532f") if j < lvl else Color("#fbf3df"))
+			_ring(ci, pc, w * 0.036 + w * 0.006, w * 0.012, INK)
+	if key != "" and uses > 1:
+		A.text(ci, "x%d" % uses, o.x + w * 0.76, o.y + w * 0.26, roundf(w * 0.2), Color("#b5532f"), 1, 800, w * 0.05, Color("#fbf3df"))
+	_ring(ci, c, r, 3, Color("#c9930c") if ready else WOOD)
+	_ring(ci, c, r - 3, 2, Color(1, 249 / 255.0, 234 / 255.0, 0.9))
+	btns.append([Rect2(c - Vector2(r, r), Vector2(d, d)).grow(4), "", "item"])
 
 func _tb(ci: CanvasItem, c: Vector2, d: float, ico: String, key: String, lab: String, small: bool) -> void:
 	var on: bool = hold.values().has(key)
@@ -785,13 +881,19 @@ func _pause(ci: CanvasItem) -> void:
 		_btn_draw(ci, Rect2(r.position.x + 22, y, bw - 44, 47), b[0], b[1], b[2])
 		y += 59
 	_dash_h(ci, r.position.x + 22, r.end.x - 22, y + 2, KEM3)
-	var tr := Rect2(r.get_center().x - 64, y + 14, 128, 32)
+	var tw1 := 14 + A.tw("Tự đua", 15, 700) + 9 + 34 + 8
+	var tw2 := 14 + A.tw("Âm thanh", 15, 700) + 9 + 34 + 8
+	var x0 := r.get_center().x - (tw1 + 8 + tw2) / 2
+	_tgl(ci, Rect2(x0, y + 14, tw1, 32), "Tự đua", R.auto, "auto")
+	_tgl(ci, Rect2(x0 + tw1 + 8, y + 14, tw2, 32), "Âm thanh", not SND.muted, "mute")
+
+func _tgl(ci: CanvasItem, tr: Rect2, lab: String, on: bool, act: String) -> void:
 	A.box(ci, tr, KEM2, 16, 2, KEM3)
-	A.text(ci, "Tự đua", tr.position.x + 14, tr.get_center().y + 1, 15, INK, 0, 700)
+	A.text(ci, lab, tr.position.x + 14, tr.get_center().y + 1, 15, INK, 0, 700)
 	var sw := Rect2(tr.end.x - 42, tr.position.y + 6, 34, 20)
-	A.box(ci, sw, LA if R.auto else KEM3, 10)
-	_circle(ci, sw.position + Vector2(24 if R.auto else 10, 10), 7, Color.WHITE)
-	_btn(tr, "auto")
+	A.box(ci, sw, LA if on else KEM3, 10)
+	_circle(ci, sw.position + Vector2(24 if on else 10, 10), 7, Color.WHITE)
+	_btn(tr, act)
 
 func _dash_h(ci: CanvasItem, x0: float, x1: float, y: float, col: Color) -> void:
 	var x := x0
