@@ -176,26 +176,10 @@ func Pl() -> Dictionary:
 		n.rot = null
 		n.sw = 0
 		n.vg = null
-		n.pb = snap()
-	if not (n.get("pb") is Dictionary):
-		n.pb = snap()
 	var w := week()
 	if not (n.get("wk") is Dictionary) or int(n.wk.get("w", -1)) != w:
 		n.wk = {"w": w, "c": {}, "cl": {}, "rot": null}
 	return n
-
-func snap() -> Dictionary:   # nvSnap: mốc bộ đếm nhân vật lúc đầu ngày
-	var p: Dictionary = G.g.pc
-	var o := {}
-	for k in p.get("cnt", {}).keys():
-		o[k] = int(p.cnt[k])
-	return o
-
-func OL(k: String) -> int:
-	var p: Dictionary = G.g.pc
-	var b: Dictionary = Pl().pb
-	var v := int(p.get("cnt", {}).get(k, 0))
-	return v - int(b.get(k, 0))
 
 func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn tuần
 	var v := Pl()
@@ -261,7 +245,6 @@ const WI := [
 	{"id": "xuong", "n": "Làm {n} món ở xưởng", "tm": [2, 3, 4, 5, 6]},
 	{"id": "tharvest", "n": "Hái trái {n} lần", "tm": [3, 6, 10, 15, 20]},
 	{"id": "quan", "n": "Phục vụ {n} khách ở quán", "tm": [1, 2, 3, 4, 5]},
-	{"id": "dd", "n": "Hái {n} bụi điên điển", "tm": [2, 3, 4, 5, 6]},
 	{"id": "chat", "n": "Trò chuyện với {n} nhà", "tm": [2, 3, 4, 5, 6]},
 	{"id": "gift", "n": "Tặng quà {n} lần", "tm": [1, 2, 3, 4, 5]}]   # (bản 427) bỏ dọn bụi, chợ nổi, ghe, giúp bà con
 
@@ -271,7 +254,6 @@ func _ok(id: String) -> bool:
 		"xuong": return has_work()
 		"tharvest": return has_tree()
 		"chat", "gift": return has_fam()
-		"dd": return G.w_all != null and not G.w_all.WC.Vb().is_empty()   # mùa nước nổi, có bụi ven khúc sông đã mua
 		"quan": return has_quan()
 	return true
 
@@ -280,7 +262,6 @@ func _w(id: String, x: Dictionary) -> float:
 		"water": return 4.0 if x.wx == "han" else (0.0 if x.wx == "mua" or x.wx == "rao" else 1.0)
 		"fish": return 3.0 if x.wx == "mua" else 1.0
 		"tharvest": return 3.0 if x.sea == 1 else 1.0
-		"dd": return 4.0
 	return 1.0
 
 func task_f(t: Dictionary) -> int:   # t.f()
@@ -288,9 +269,6 @@ func task_f(t: Dictionary) -> int:   # t.f()
 	if t.get("vg", 0):
 		var v: Dictionary = t.v
 		return int(v.q) if v.get("done", 0) else int(G.g.barn.get(v.id, 0))   # việc giao hàng: số trong kho (bản 285)
-	match id:
-		"tharvest": return OL("tharvest")
-		"dd": return OL("dd")
 	return Xs(id)
 
 func ctx() -> Dictionary:
@@ -323,8 +301,8 @@ func vg_ready() -> bool:
 
 func MI() -> Array:
 	var n := Pl()
-	if int(n.get("rv", 0)) != 427:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
-		n.rv = 427
+	if int(n.get("rv", 0)) != 428:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
+		n.rv = 428
 		n.rot = null
 	if n.rot == null:
 		var R := Yu.new(int(n.day))
@@ -680,7 +658,11 @@ const NVWK := [
 	{"id": "gift", "n": "Tặng quà {n} lần", "tm": [6, 12, 18, 24, 30], "pt": 15, "ok": "fam"},
 	{"id": "chat", "n": "Trò chuyện {n} lần", "tm": [12, 18, 24, 30, 36], "pt": 10, "ok": "fam"},
 	{"id": "quan", "n": "Phục vụ {n} khách ở quán", "tm": [6, 12, 18, 24, 30], "pt": 15, "ok": "quan"},
-	{"id": "kl", "n": "Gặt được {n} trái khủng", "tm": [1, 1, 1, 1, 1], "pt": 20}]   # (bản 427) bỏ giúp bà con
+	{"id": "plant", "n": "Gieo hạt {n} ô", "tm": [60, 90, 120, 150, 180], "pt": 10},
+	{"id": "water", "n": "Tưới {n} ô ruộng", "tm": [60, 90, 120, 150, 180], "pt": 10},
+	{"id": "tharvest", "n": "Hái trái {n} lần", "tm": [18, 36, 60, 90, 120], "pt": 10, "ok": "tree"},
+	{"id": "cho", "n": "Mua bán ở chợ nổi {n} lần", "tm": [5, 5, 5, 5, 5], "pt": 10, "ok": "song"},
+	{"id": "kl", "n": "Gặt được {n} trái khủng", "tm": [1, 1, 1, 1, 1], "pt": 20}]   # (bản 427) bỏ giúp bà con; (bản 428) thêm gieo, tưới, hái trái, chợ nổi
 
 func _wok(t: Dictionary) -> bool:
 	match String(t.get("ok", "")):
@@ -688,12 +670,14 @@ func _wok(t: Dictionary) -> bool:
 		"pen": return has_pen()
 		"fam": return has_fam()
 		"quan": return has_quan()
+		"tree": return has_tree()
+		"song": return G.w_all != null and G.w_all.WC.u4() != null   # đã mở khúc sông Vàm (chợ nổi)
 	return true
 
 func wk_list() -> Array:   # nvWkList
 	var w: Dictionary = Pl().wk
-	if int(w.get("rv", 0)) != 427:   # (bản 426) bỏ góp hợp tác xã, đá dế; 8 việc: rút lại
-		w.rv = 427
+	if int(w.get("rv", 0)) != 428:   # (bản 426) bỏ góp hợp tác xã, đá dế; 8 việc: rút lại
+		w.rv = 428
 		w.rot = null
 	if w.rot == null:
 		var R := Yu.new(int(w.w) * 13 + 5)

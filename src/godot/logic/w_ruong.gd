@@ -441,6 +441,7 @@ func x5(t: int) -> bool:   # X5 (+ lớp bọc g8: kho phải đủ chỗ)
 		_a0(r.gx + r.fw / 2.0, r.gy + r.fd / 2.0, "+" + str(e) + " " + String(G.item_name(p)) + (" (có ong)" if e > int(n.yield) else ""))
 	G.vib(10)
 	G.nv.qi("harvest")
+	G.nv.S8("tharvest")   # (bản 428) việc "hái trái" (trước đếm theo bộ đếm nhân vật, không bao giờ tăng)
 	return true
 
 func hj() -> int:   # Hj: thu hết cây đã có trái

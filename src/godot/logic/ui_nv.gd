@@ -30,9 +30,9 @@ const NVC := {
 	"b4": ["rgb(255, 214, 140)", "rgb(255, 226, 168)", "rgb(255, 238, 196)", "rgb(220, 140, 20)", "rgb(230, 140, 20)"],
 }
 const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl": "g_ruong", "tharvest": "g_ruong",
-	"collect": "g_nuoi", "xuong": "g_xuong", "fish": "g_song", "dd": "g_song",
+	"collect": "g_nuoi", "xuong": "g_xuong", "fish": "g_song",
 	"chat": "g_lang", "gift": "g_lang", "giup": "g_lang", "vg": "g_lang", "quan": "g_cho", "feed": "g_nuoi",
-	"deliver": "g_cho"}
+	"deliver": "g_cho", "cho": "g_cho"}
 const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
 	if kind.begins_with("l_") and NVC.has(kind.substr(2)):   # nền dòng ngả màu nhóm thật nhạt
@@ -54,9 +54,9 @@ func _trk(lk: String) -> String:   # rãnh thanh theo nhóm: đậm hơn nền d
 
 # hình của việc (hình món Kho)
 const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai",
-	"collect": "trung", "xuong": "banh_tet", "fish": "ca_loc", "dd": "dien_dien",
+	"collect": "trung", "xuong": "banh_tet", "fish": "ca_loc",
 	"chat": "tra_tac", "gift": "banh_pia", "giup": "chieu", "vg": "long_den", "quan": "com_tam", "feed": "bap",
-	"deliver": "pc_gui", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
+	"deliver": "pc_gui", "cho": "qua_chuoi", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
 static func _ti(id: String) -> String:
 	return "kh:" + String(TIC.get(id, "lua"))
 
@@ -552,7 +552,7 @@ func _wrap(t: String, fs: float, fw: int, w: float) -> Array:   # xuống dòng 
 	return L
 
 # ------------------------------------------------------------------ Đi làm: đóng sổ, đưa tới chỗ làm việc đó
-const HINT := {"tharvest": "Ra vườn hái trái chín.", "dd": "Ra ven sông hái bụi điên điển.",
+const HINT := {"tharvest": "Ra vườn hái trái chín.",
 	"giup": "Chưa có nhà dân nào trong làng để giúp.",
 	"quan": "Ra quán xem khách gọi món, có đủ món thì giao.", "kl": "Trồng ruộng, gặt có lúc ra trái khủng.",
 	"ln_ruong": "Chạm ô ruộng khóa để mở thêm, nâng sao ô ruộng.", "ln_xuong": "Xây và nâng xưởng ở Xây dựng.", "ln_chuong": "Xây chuồng, mua con vật ở Xây dựng.",
@@ -566,6 +566,9 @@ func _go(tid: String) -> void:
 			return
 		"fish":
 			U.pcp.open("cau")
+			return
+		"cho":
+			G.w_all.WCU._pill_go()
 			return
 		"harvest", "kl":
 			if _plot(func(i): return G.ripe(G.p(i)), "Chưa có ô ruộng nào chín."):
