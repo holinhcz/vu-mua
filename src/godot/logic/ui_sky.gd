@@ -297,10 +297,13 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 	var T := []   # hôm nay trong làng: [loại, ô trái, tên, dòng phụ, mô tả chạm, nút]
 	if W.WC.u4() != null:
 		var v: bool = W.WC.b2()
-		var cs := "Họp từ 5 giờ tới " + str(W.WC.wm()) + " giờ sáng mỗi ngày. " + ("Đang họp!" if v else "Bây giờ chưa họp.")
-		T.append(["got" if v else "fut", ["sáng", "5–" + str(W.WC.wm()) + "g", "t_sang"], "Chợ nổi sông Vàm", "Đang họp" if v else "Chưa họp", cs, ["Đi chợ", _go(W.WCU._pill_go)] if v else null])
+		var lk: int = W.WC._qf("cho")
+		var hr: float = W.WC._hour()
+		var st := "Đang họp" if v else ("Cấp " + str(lk) + " mới mở" if lk > 0 else ("Chưa họp · 5g mở" if hr < float(W.WC.JB) else "Đã tan · mai 5g"))
+		var cs := "Họp từ 5 giờ tới " + str(W.WC.wm()) + " giờ sáng mỗi ngày. " + st + "."
+		T.append(["got" if v else "fut", ["sáng", "5–" + str(W.WC.wm()) + "g", "t_sang"], "Chợ nổi sông Vàm", st, cs, ["Đi chợ", _go(W.WCU._pill_go)] if v else null])
 	else:
-		T.append(["fut", ["sáng", "5–8g", "t_sang"], "Chợ nổi sông Vàm", "Mở khúc sông Vàm để có chợ", "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi.", null])
+		T.append(["fut", ["sáng", "5–" + str(W.WC.wm()) + "g", "t_sang"], "Chợ nổi sông Vàm", "Mở khúc sông Vàm để có chợ", "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi.", null])
 	var a2 := 0
 	while a2 < 4 and not W.WH.c_r(o + a2):
 		a2 += 1
@@ -324,14 +327,14 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
 			var when := String(G.SEA_N[int(d.sea)]) + " ngày " + str(int(d.day))
-			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else [String(G.SEA_N[int(d.sea)]), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
+			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else ["Mùa " + String(G.SEA_N[int(d.sea)]).to_lower(), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur
 		var today: bool = int(tx[1]) == 1
 		var rr: int = 0 if today else int(cu.d) - o
 		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(rr) + " ngày tới hội. Bà con đang góp lễ."
-		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else [String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "le_xa"]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
+		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else ["Mùa " + String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]).to_lower(), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "le_xa"]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
 	LE.sort_custom(func(x, z): return int(x[0]) < int(z[0]))
 	LE = LE.slice(0, 4)
 	if LE.size():
