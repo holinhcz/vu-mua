@@ -61,6 +61,7 @@ var cgp = null               # CỜ GÁNH (ui_cg.gd, #cgBtn trong Giải trí)
 var oqp = null               # Ô ĂN QUAN (ui_oq.gd, #oqBtn trong Giải trí)
 var xtp = null               # XẾP TRÁI (ui_xt.gd, #xtBtn trong Giải trí)
 var tsop = null              # TÌM SỐ (ui_tso.gd, #tsoBtn trong Giải trí)
+var ccp = null               # CÂU CÁ BỜ KÊNH (ui_cc.gd, nút "Câu cá" trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -102,6 +103,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	oqp = load("res://logic/ui_oq.gd").new(self)
 	xtp = load("res://logic/ui_xt.gd").new(self)
 	tsop = load("res://logic/ui_tso.gd").new(self)
+	ccp = load("res://logic/ui_cc.gd").new(self)
 	G.kho_full.connect(_kho_full)
 	var bdi := Node.new()
 	bdi.set_script(load("res://logic/ui_bd_in.gd"))
@@ -747,7 +749,7 @@ func _build_dock() -> void:
 			elif lab.contains("Sổ làng"):
 				_click(b, func(): dock_open(false); sl_open(), "scale94")
 			elif lab.contains("Câu cá"):
-				_click(b, func(): dock_open(false); pcp.open("cau"), "scale94")
+				_click(b, func(): dock_open(false); ccp.open(), "scale94")
 			elif lab.contains("Cờ gánh"):
 				_click(b, func(): dock_open(false); cgp.open(), "scale94")
 			elif lab.contains("Ô ăn quan"):
