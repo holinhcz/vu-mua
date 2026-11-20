@@ -248,40 +248,31 @@ func has_quan() -> bool:   # có quán (cơm, tạp hóa, cà phê) đã xây
 
 # ------------------------------------------------------------------ 1. hằng ngày
 const NVPT := 15
+# (bản 427) việc ngày: số lượng theo mốc cấp tm = [cấp 1-19, 20-39, 40-59, 60-79, 80+]; "{n}" trong tên = số lượng
 const NVBASE := [
-	{"id": "harvest", "n": "Thu hoạch 10 lần", "m": 10, "pt": 20},
-	{"id": "deliver", "n": "Giao 2 đơn hàng", "m": 2, "pt": 20, "go": 1}]
+	{"id": "harvest", "n": "Thu hoạch {n} lần", "tm": [10, 15, 20, 25, 30], "pt": 20},
+	{"id": "deliver", "n": "Giao {n} đơn hàng", "tm": [2, 3, 4, 5, 6], "pt": 20, "go": 1}]
 const WI := [
-	{"id": "water", "n": "Tưới 10 ô ruộng", "m": 10},
-	{"id": "plant", "n": "Gieo hạt 12 ô", "m": 12},
-	{"id": "collect", "n": "Lượm 5 sản phẩm vật nuôi", "m": 5},
-	{"id": "wc", "n": "Thu hàng xưởng 3 lần", "m": 3},
-	{"id": "fish", "n": "Câu được 2 con cá", "m": 2, "go": 1},
-	{"id": "tharvest", "n": "Hái trái 3 lần", "m": 3},
-	{"id": "chat", "n": "Trò chuyện với 2 nhà", "m": 2},
-	{"id": "scn", "n": "Dọn 3 bụi cây, gốc cây", "m": 3},
-	{"id": "dd", "n": "Hái 2 bụi điên điển", "m": 2},
-	{"id": "bun", "n": "Bắt cá kèo, mò ốc 2 lần", "m": 2},
-	{"id": "lo", "n": "Thăm lờ, lọp 2 lần", "m": 2},
-	{"id": "cho", "n": "Mua bán ở chợ nổi", "m": 1},
-	{"id": "help", "n": "Giúp bà con 3 lần", "m": 3, "go": 1},
-	{"id": "quan", "n": "Phục vụ 3 khách ở quán", "m": 3},
-	{"id": "feed", "n": "Cho vật nuôi ăn 5 lần", "m": 5},
-	{"id": "ghe", "n": "Chất hàng 1 ghe thương hồ", "m": 1}]   # (bản 426) bỏ "nồi cơm trưa": rút lúc 0 giờ, chơi chiều là trễ
+	{"id": "plant", "n": "Gieo hạt {n} ô", "tm": [10, 15, 20, 25, 30]},
+	{"id": "water", "n": "Tưới {n} ô ruộng", "tm": [10, 15, 20, 25, 30]},
+	{"id": "fish", "n": "Câu được {n} con cá", "tm": [5, 10, 15, 20, 25], "go": 1},
+	{"id": "collect", "n": "Lượm {n} sản phẩm vật nuôi", "tm": [5, 10, 15, 20, 25]},
+	{"id": "feed", "n": "Cho vật nuôi ăn {n} lần", "tm": [5, 10, 15, 20, 25]},
+	{"id": "xuong", "n": "Làm {n} món ở xưởng", "tm": [2, 3, 4, 5, 6]},
+	{"id": "tharvest", "n": "Hái trái {n} lần", "tm": [3, 6, 10, 15, 20]},
+	{"id": "quan", "n": "Phục vụ {n} khách ở quán", "tm": [1, 2, 3, 4, 5]},
+	{"id": "dd", "n": "Hái {n} bụi điên điển", "tm": [2, 3, 4, 5, 6]},
+	{"id": "chat", "n": "Trò chuyện với {n} nhà", "tm": [2, 3, 4, 5, 6]},
+	{"id": "gift", "n": "Tặng quà {n} lần", "tm": [1, 2, 3, 4, 5]}]   # (bản 427) bỏ dọn bụi, chợ nổi, ghe, giúp bà con
 
 func _ok(id: String) -> bool:
 	match id:
-		"collect": return has_pen()
-		"wc": return has_work()
+		"collect", "feed": return has_pen()
+		"xuong": return has_work()
 		"tharvest": return has_tree()
-		"chat": return has_fam()
+		"chat", "gift": return has_fam()
 		"dd": return G.w_all != null and not G.w_all.WC.Vb().is_empty()   # mùa nước nổi, có bụi ven khúc sông đã mua
-		"bun": return false     # O0() > 0
-		"lo": return false      # T1().set.length
-		"cho", "ghe": return G.w_all != null and G.w_all.WC.u4() != null   # u4(): đã mở khúc sông Vàm (chợ nổi, ghe)
-		"help": return has_fam()   # (bản 426) giúp nhà dân trong làng (qi "vlhelp"), bản Godot chưa có xã online
 		"quan": return has_quan()
-		"feed": return has_pen()
 	return true
 
 func _w(id: String, x: Dictionary) -> float:
@@ -289,10 +280,7 @@ func _w(id: String, x: Dictionary) -> float:
 		"water": return 4.0 if x.wx == "han" else (0.0 if x.wx == "mua" or x.wx == "rao" else 1.0)
 		"fish": return 3.0 if x.wx == "mua" else 1.0
 		"tharvest": return 3.0 if x.sea == 1 else 1.0
-		"scn": return 2.0 if x.sea == 0 else 1.0
 		"dd": return 4.0
-		"bun": return 3.0 if x.wx == "mua" else 1.0
-		"lo": return 3.0 if x.wx == "mua" else 1.0
 	return 1.0
 
 func task_f(t: Dictionary) -> int:   # t.f()
@@ -302,9 +290,7 @@ func task_f(t: Dictionary) -> int:   # t.f()
 		return int(v.q) if v.get("done", 0) else int(G.g.barn.get(v.id, 0))   # việc giao hàng: số trong kho (bản 285)
 	match id:
 		"tharvest": return OL("tharvest")
-		"scn": return OL("scn")
 		"dd": return OL("dd")
-		"help": return Xs("vlhelp")
 	return Xs(id)
 
 func ctx() -> Dictionary:
@@ -337,8 +323,8 @@ func vg_ready() -> bool:
 
 func MI() -> Array:
 	var n := Pl()
-	if int(n.get("rv", 0)) != 426:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
-		n.rv = 426
+	if int(n.get("rv", 0)) != 427:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
+		n.rv = 427
 		n.rot = null
 	if n.rot == null:
 		var R := Yu.new(int(n.day))
@@ -368,16 +354,12 @@ func MI() -> Array:
 				break
 	return out
 
-# (bản 426) số lượng việc theo cấp: x0,6 (cấp 1) .. x1,4 (cấp 40) .. x2 (cấp 70+); việc 1 lần giữ nguyên; tên đổi số theo
+# (bản 427) số lượng theo mốc cấp: tm[0] cấp 1-19, tm[1] 20-39, tm[2] 40-59, tm[3] 60-79, tm[4] 80+
 func _lvm(t: Dictionary) -> Dictionary:
-	var m := int(t.m)
-	if m <= 1:
-		return t
-	var k := clampf(0.6 + float(jr()) / 50.0, 0.6, 2.0)
-	var m2 := maxi(1, int(round(m * k)))
 	var o := t.duplicate()
-	o.m = m2
-	o.n = String(t.n).replace(str(m), G.fmt_n(m2))
+	var m := int(t.tm[clampi(jr() / 20, 0, 4)])
+	o.m = m
+	o.n = String(t.n).replace("{n}", G.fmt_n(m))
 	return o
 
 func is_base(t: Dictionary) -> bool:
@@ -687,18 +669,18 @@ func iY() -> void:   # ngày đủ 100 điểm: tính chuỗi
 	G.mark()
 
 # ------------------------------------------------------------------ 3. tuần
+# (bản 427) việc tuần: số lượng theo mốc cấp, khoảng 6 lần việc ngày
 const NVWK := [
-	{"id": "deliver", "n": "Giao 25 đơn hàng", "m": 25, "pt": 15, "go": 1},
-	{"id": "harvest", "n": "Thu hoạch 150 lần", "m": 150, "pt": 10},
-	{"id": "xuong", "n": "Làm 40 món ở xưởng", "m": 40, "pt": 15, "ok": "work"},
-	{"id": "collect", "n": "Lượm 40 sản phẩm vật nuôi", "m": 40, "pt": 10, "ok": "pen"},
-	{"id": "fish", "n": "Câu được 15 con cá", "m": 15, "pt": 10, "go": 1},
-	{"id": "gift", "n": "Tặng quà 5 lần", "m": 5, "pt": 15, "ok": "fam"},
-	{"id": "chat", "n": "Trò chuyện 15 lần", "m": 15, "pt": 10, "ok": "fam"},
-	{"id": "vlhelp", "n": "Giúp bà con 6 lần", "m": 6, "pt": 15, "ok": "fam"},
-	{"id": "quan", "n": "Phục vụ 20 khách ở quán", "m": 20, "pt": 15, "ok": "quan"},
-	{"id": "feed", "n": "Cho vật nuôi ăn 30 lần", "m": 30, "pt": 10, "ok": "pen"},
-	{"id": "kl", "n": "Gặt được 1 trái khủng", "m": 1, "pt": 20}]   # (bản 426) bỏ góp hợp tác xã, đá dế: bản Godot chưa có
+	{"id": "deliver", "n": "Giao {n} đơn hàng", "tm": [12, 18, 24, 30, 36], "pt": 15, "go": 1},
+	{"id": "harvest", "n": "Thu hoạch {n} lần", "tm": [60, 90, 120, 150, 180], "pt": 10},
+	{"id": "xuong", "n": "Làm {n} món ở xưởng", "tm": [12, 18, 24, 30, 36], "pt": 15, "ok": "work"},
+	{"id": "collect", "n": "Lượm {n} sản phẩm vật nuôi", "tm": [30, 60, 90, 120, 150], "pt": 10, "ok": "pen"},
+	{"id": "feed", "n": "Cho vật nuôi ăn {n} lần", "tm": [30, 60, 90, 120, 150], "pt": 10, "ok": "pen"},
+	{"id": "fish", "n": "Câu được {n} con cá", "tm": [30, 60, 90, 120, 150], "pt": 10, "go": 1},
+	{"id": "gift", "n": "Tặng quà {n} lần", "tm": [6, 12, 18, 24, 30], "pt": 15, "ok": "fam"},
+	{"id": "chat", "n": "Trò chuyện {n} lần", "tm": [12, 18, 24, 30, 36], "pt": 10, "ok": "fam"},
+	{"id": "quan", "n": "Phục vụ {n} khách ở quán", "tm": [6, 12, 18, 24, 30], "pt": 15, "ok": "quan"},
+	{"id": "kl", "n": "Gặt được {n} trái khủng", "tm": [1, 1, 1, 1, 1], "pt": 20}]   # (bản 427) bỏ giúp bà con
 
 func _wok(t: Dictionary) -> bool:
 	match String(t.get("ok", "")):
@@ -710,8 +692,8 @@ func _wok(t: Dictionary) -> bool:
 
 func wk_list() -> Array:   # nvWkList
 	var w: Dictionary = Pl().wk
-	if int(w.get("rv", 0)) != 426:   # (bản 426) bỏ góp hợp tác xã, đá dế; 8 việc: rút lại
-		w.rv = 426
+	if int(w.get("rv", 0)) != 427:   # (bản 426) bỏ góp hợp tác xã, đá dế; 8 việc: rút lại
+		w.rv = 427
 		w.rot = null
 	if w.rot == null:
 		var R := Yu.new(int(w.w) * 13 + 5)

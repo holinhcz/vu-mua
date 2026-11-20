@@ -29,10 +29,10 @@ const NVC := {
 	"b3": ["rgb(222, 206, 240)", "rgb(230, 216, 246)", "rgb(238, 228, 250)", "rgb(138, 104, 186)", "rgb(132, 96, 190)"],
 	"b4": ["rgb(255, 214, 140)", "rgb(255, 226, 168)", "rgb(255, 238, 196)", "rgb(220, 140, 20)", "rgb(230, 140, 20)"],
 }
-const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl": "g_ruong", "tharvest": "g_ruong", "scn": "g_ruong",
-	"collect": "g_nuoi", "wc": "g_xuong", "xuong": "g_xuong", "fish": "g_song", "bun": "g_song", "lo": "g_song", "dd": "g_song",
-	"chat": "g_lang", "gift": "g_lang", "help": "g_lang", "giup": "g_lang", "vlhelp": "g_lang", "vg": "g_lang", "quan": "g_cho", "feed": "g_nuoi", "ghe": "g_song",
-	"deliver": "g_cho", "cho": "g_cho"}
+const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl": "g_ruong", "tharvest": "g_ruong",
+	"collect": "g_nuoi", "xuong": "g_xuong", "fish": "g_song", "dd": "g_song",
+	"chat": "g_lang", "gift": "g_lang", "giup": "g_lang", "vg": "g_lang", "quan": "g_cho", "feed": "g_nuoi",
+	"deliver": "g_cho"}
 const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
 	if kind.begins_with("l_") and NVC.has(kind.substr(2)):   # nền dòng ngả màu nhóm thật nhạt
@@ -53,10 +53,10 @@ func _trk(lk: String) -> String:   # rãnh thanh theo nhóm: đậm hơn nền d
 	return _rgb(Color.html(_hex(String(NVC[lk][4]))).lerp(Color.WHITE, 0.72))
 
 # hình của việc (hình món Kho)
-const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai", "scn": "cui",
-	"collect": "trung", "wc": "gao", "xuong": "banh_tet", "fish": "ca_loc", "bun": "ca_keo", "lo": "tep", "dd": "dien_dien",
-	"chat": "tra_tac", "gift": "banh_pia", "help": "chieu", "giup": "chieu", "vlhelp": "chieu", "vg": "long_den", "quan": "com_tam", "feed": "bap", "ghe": "pc_xe",
-	"deliver": "pc_gui", "cho": "qua_chuoi", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
+const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai",
+	"collect": "trung", "xuong": "banh_tet", "fish": "ca_loc", "dd": "dien_dien",
+	"chat": "tra_tac", "gift": "banh_pia", "giup": "chieu", "vg": "long_den", "quan": "com_tam", "feed": "bap",
+	"deliver": "pc_gui", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
 static func _ti(id: String) -> String:
 	return "kh:" + String(TIC.get(id, "lua"))
 
@@ -552,9 +552,9 @@ func _wrap(t: String, fs: float, fw: int, w: float) -> Array:   # xuống dòng 
 	return L
 
 # ------------------------------------------------------------------ Đi làm: đóng sổ, đưa tới chỗ làm việc đó
-const HINT := {"tharvest": "Ra vườn hái trái chín.", "scn": "Chạm bụi cây, gốc cây trên làng để dọn.", "dd": "Ra ven sông hái bụi điên điển.",
-	"bun": "Ra ruộng bắt cá kèo, mò ốc.", "lo": "Ra mé sông thăm lờ, lọp.", "help": "Chưa có nhà dân nào trong làng để giúp.", "giup": "Chưa có nhà dân nào trong làng để giúp.",
-	"quan": "Ra quán xem khách gọi món, có đủ món thì giao.", "ghe": "Ghe thương hồ ghé sông Vàm thì chất hàng lên ghe.", "kl": "Trồng ruộng, gặt có lúc ra trái khủng.",
+const HINT := {"tharvest": "Ra vườn hái trái chín.", "dd": "Ra ven sông hái bụi điên điển.",
+	"giup": "Chưa có nhà dân nào trong làng để giúp.",
+	"quan": "Ra quán xem khách gọi món, có đủ món thì giao.", "kl": "Trồng ruộng, gặt có lúc ra trái khủng.",
 	"ln_ruong": "Chạm ô ruộng khóa để mở thêm, nâng sao ô ruộng.", "ln_xuong": "Xây và nâng xưởng ở Xây dựng.", "ln_chuong": "Xây chuồng, mua con vật ở Xây dựng.",
 	"ln_kho": "Chạm kho để nâng sao.", "ln_sap": "Giao đơn hàng, nâng sạp ở chợ."}
 
@@ -566,9 +566,6 @@ func _go(tid: String) -> void:
 			return
 		"fish":
 			U.pcp.open("cau")
-			return
-		"cho":
-			G.w_all.WCU._pill_go()
 			return
 		"harvest", "kl":
 			if _plot(func(i): return G.ripe(G.p(i)), "Chưa có ô ruộng nào chín."):
@@ -585,12 +582,12 @@ func _go(tid: String) -> void:
 					var p: Vector2i = G.lang.pen_pos(t)
 					_cam(p.x + 1.0, p.y + 1.0)
 					return
-		"wc", "xuong":
+		"xuong":
 			var L: Array = G.xw.list_built()
 			if L.size():
 				U.xf_open(String(L[0]))
 				return
-		"chat", "gift", "vg", "help", "vlhelp", "giup":
+		"chat", "gift", "vg", "giup":
 			var H: Array = G.w_all.WL.bl()
 			if H.size():
 				U.vl_open(int(H[0].u))
