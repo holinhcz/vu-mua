@@ -229,7 +229,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
 		U.root.move_child(U.help_pop, -1)
 	inner = ids.get(".vlin")
-	in0 = inner.r.position if inner != null else Vector2.ZERO
+	in0 = _in0(inner)
 	var io := Vector2(float(inn.r[0]), float(inn.r[1]))
 	var used := {}
 	for k in kids:
@@ -297,7 +297,7 @@ func _jump_back() -> bool:   # đổi tab về trạng thái đã dựng: chỉ 
 	_area = e[4]
 	sig = s
 	inner = ids.get(".vlin")
-	in0 = inner.r.position if inner != null else Vector2.ZERO
+	in0 = _in0(inner)
 	_scroll_to(e[5])
 	if _vis:
 		_vis = false
@@ -790,6 +790,13 @@ func _redo() -> void:
 	else:   # bấm việc khác (mua, nhận...): trạng thái có thể đổi ngoài sig, khung cất của tab khác không dùng lại nguyên được
 		_sig_sh.clear()
 	_build()
+
+func _in0(n: Control) -> Vector2:   # (bản 419) chỗ gốc của thân cuộn: ghi một lần lúc dựng khung (khung dùng lại thì thân đang dời theo cuộn, lấy lại chỗ lúc đó là cộng dồn: trôi lên rồi kẹt)
+	if n == null:
+		return Vector2.ZERO
+	if not n.has_meta("in0"):
+		n.set_meta("in0", n.r.position)
+	return n.get_meta("in0")
 
 func _scroll_to(v: float) -> void:
 	sc.s = clampf(v, 0.0, sc.hmax)
