@@ -58,6 +58,7 @@ var rkp = null               # BẢNG XẾP HẠNG (ui_rk.gd)
 var lvp = null               # bảng LÊN CẤP (ui_lv.gd)
 var pcp = null               # bảng Nhân vật (ui_pc.gd)
 var cgp = null               # CỜ GÁNH (ui_cg.gd, #cgBtn trong Giải trí)
+var oqp = null               # Ô ĂN QUAN (ui_oq.gd, #oqBtn trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -96,6 +97,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
 	cgp = load("res://logic/ui_cg.gd").new(self)
+	oqp = load("res://logic/ui_oq.gd").new(self)
 	G.kho_full.connect(_kho_full)
 	var bdi := Node.new()
 	bdi.set_script(load("res://logic/ui_bd_in.gd"))
@@ -744,6 +746,8 @@ func _build_dock() -> void:
 				_click(b, func(): dock_open(false); pcp.open("cau"), "scale94")
 			elif lab.contains("Cờ gánh"):
 				_click(b, func(): dock_open(false); cgp.open(), "scale94")
+			elif lab.contains("Ô ăn quan"):
+				_click(b, func(): dock_open(false); oqp.open(), "scale94")
 			elif lab.contains("Hệ Thống"):
 				_click(b, func(): dock_open(false); sys_open(), "scale94")
 			else:
@@ -3747,6 +3751,8 @@ func _process(dt: float) -> void:
 		spp.step()
 	if cgp != null:
 		cgp.step(dt)
+	if oqp != null:
+		oqp.step(dt)
 	_t -= dt
 	if _t <= 0.0:
 		_t = 0.25
