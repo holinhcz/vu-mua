@@ -266,15 +266,6 @@ func _warns() -> Array:
 	if nf:
 		var fd := "Cây ngã đè ruộng thì ruộng ngưng lớn tới khi dọn. Chạm cây ngã để dọn."
 		L.append(["sen", str(nf) + " cây ngã sau giông", "Đè ruộng thì ruộng ngưng lớn, dọn sớm.", fd, ["Tới dọn", _cam_to.bind(fk)], 3])
-	# ruộng khô (đất hết nước)
-	var nd := 0
-	for e in G.B0:
-		var rr: Dictionary = G.g.plots[e]
-		if rr.c != null and not G.ripe(rr) and float(rr.w) <= 0.0:
-			nd += 1
-	if nd:
-		var ds := "Đất khô thì cây lớn chậm hơn. " + ("Trời nắng hạn, ruộng khô nhanh gấp rưỡi." if _now_w() == "han" else "Tưới thì lớn nhanh hơn 10%.")
-		L.append(["wx_han" if _now_w() == "han" else "fut", str(nd) + " ô ruộng đang khô", "Nắng hạn khô nhanh, tưới sớm." if _now_w() == "han" else "Tưới để cây lớn nhanh hơn.", ds, null, 5])
 	L.sort_custom(func(a, b): return int(a[5]) < int(b[5]))
 	return L.slice(0, 4)   # tối đa 4 dòng, bỏ bớt dòng ít gấp
 
@@ -292,67 +283,73 @@ func _cam_to(sk: String) -> void:   # đóng bảng, đưa máy quay tới cây 
 	close()
 
 # ------------------------------------------------------------------ tab Lịch làng
-func _tabl() -> Array:
+func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả tab giãn / co cùng một tỉ lệ cho kín khung
 	var W = G.w_all
-	var out := []
 	var o: int = G.day()
-	var g := 6.0
-	var rh := 46.0
-	var y := 10.0
-	out.append_array(_hd(y, "Hôm nay trong làng"))
-	y += 22.0
-	# chợ nổi
+	var T := []   # hôm nay trong làng: [loại, ô trái, tên, dòng phụ, mô tả chạm, nút]
 	if W.WC.u4() != null:
 		var v: bool = W.WC.b2()
 		var cs := "Họp từ 5 giờ tới " + str(W.WC.wm()) + " giờ sáng mỗi ngày. " + ("Đang họp!" if v else "Bây giờ chưa họp.")
-		out.append_array(_row(y, rh, "got" if v else "fut", ["sáng", "5–" + str(W.WC.wm()) + "g", "t_sang"], "Chợ nổi sông Vàm", "Đang họp" if v else "Chưa họp", cs, ["Đi chợ", _go(W.WCU._pill_go)] if v else null))
+		T.append(["got" if v else "fut", ["sáng", "5–" + str(W.WC.wm()) + "g", "t_sang"], "Chợ nổi sông Vàm", "Đang họp" if v else "Chưa họp", cs, ["Đi chợ", _go(W.WCU._pill_go)] if v else null])
 	else:
-		out.append_array(_row(y, rh, "fut", ["sáng", "5–8g", "t_sang"], "Chợ nổi sông Vàm", "Mở khúc sông Vàm để có chợ", "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi."))
-	y += rh + g
-	# hội chợ sân đình
+		T.append(["fut", ["sáng", "5–8g", "t_sang"], "Chợ nổi sông Vàm", "Mở khúc sông Vàm để có chợ", "Mở khúc sông Vàm (khai hoang phía nam) để có chợ nổi.", null])
 	var a2 := 0
 	while a2 < 4 and not W.WH.c_r(o + a2):
 		a2 += 1
 	var n2: bool = W.WH.e_r()
 	var l2: bool = W.WH.l2()
 	var hs := "Đang mở! Ra sân đình chơi ném vòng, đập niêu, lô tô." if l2 else ("Tối nay 18g30–22g30 có hội chợ." if n2 else "Hội chợ kế tiếp " + ("tối mai" if a2 == 1 else "sau " + str(a2) + " ngày") + ". Bỏ 2.000 xu tổ chức tối nay thì chơi liền.")
-	out.append_array(_row(y, rh, "got" if l2 else "fut", ["tối", "18g30", "t_toi"], "Hội chợ sân đình", "Đang mở" if l2 else ("Tối nay có hội" if n2 else "Tối nay không có"), hs, null if n2 else ["Tổ chức · 2.000", W.WH.b_]))
-	y += rh + g
-	# đám cưới / đám giỗ
+	T.append(["got" if l2 else "fut", ["tối", "18g30", "t_toi"], "Hội chợ sân đình", "Đang mở" if l2 else ("Tối nay có hội" if n2 else "Tối nay không có"), hs, null if n2 else ["Tổ chức · 2.000", W.WH.b_]])
 	var ev = W.WL.tg().get("ev")
 	if _tr(ev):
 		var a := int(floor(fmod(float(ev.t0), 24.0)))
 		var on_d: bool = W.WL.sg() != null
 		var es := "Đã dự." if _tr(ev.get("done")) else ("Đang đãi khách, ghé dự liền!" if on_d else "Lúc " + ("0" if a < 10 else "") + str(a) + ":00.")
-		out.append_array(_row(y, rh, "got" if on_d else "fut", ["giờ", str(a) + "g", "t_sang" if a < 11 else ("t_chieu" if a < 17 else "t_toi")], String(W.WL.qm(ev)), es, String(W.WL.qm(ev)) + ": " + es))
-		y += rh + g
-	# lễ hội: 4 lễ gần nhất trong 56 ngày + hội đình
-	y += 6.0
-	out.append_array(_hd(y, "Lễ hội"))
-	y += 22.0
+		T.append(["got" if on_d else "fut", ["giờ", str(a) + "g", "t_sang" if a < 11 else ("t_chieu" if a < 17 else "t_toi")], String(W.WL.qm(ev)), es, String(W.WL.qm(ev)) + ": " + es, null])
+	# lễ hội: lễ gần nhất + hội đình, xếp theo ngày, tối đa 4
+	var LE := []   # [còn r ngày, dòng]
 	var seen := {}
-	var p := []
 	for r in 56:
-		if p.size() >= 4:
+		if LE.size() >= 4:
 			break
 		var d = W.WH.mm(o + r)
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
-			p.append([d, r])
-	for i in p.size():
-		var f: Dictionary = p[i][0]
-		var r: int = p[i][1]
-		var when := String(G.SEA_N[int(f.sea)]) + " ngày " + str(int(f.day))
-		out.append_array(_row(y, 58.0, "sen" if i == 0 else "fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else [String(G.SEA_N[int(f.sea)]), "ngày " + str(int(f.day)), "le_xa"]), String(f.n), (String(f.d) if r <= 2 else "Còn " + str(r) + " ngày · " + String(f.d)), String(f.n) + " (" + when + "): " + String(f.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null))
-		y += 58.0 + g
+			var when := String(G.SEA_N[int(d.sea)]) + " ngày " + str(int(d.day))
+			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else [String(G.SEA_N[int(d.sea)]), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), (String(d.d) if r <= 2 else "Còn " + str(r) + " ngày · " + String(d.d)), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur
 		var today: bool = int(tx[1]) == 1
-		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(int(cu.d) - o) + " ngày tới hội. Bà con đang góp lễ."
-		out.append_array(_row(y, rh, "sen" if today else "fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(int(cu.d) - o) + " ngày", "le_gan"] if int(cu.d) - o <= 2 else [String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "le_xa"]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]))
-		y += rh + g
-	return [out, y + 2.0]
+		var rr: int = 0 if today else int(cu.d) - o
+		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(rr) + " ngày tới hội. Bà con đang góp lễ."
+		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else [String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "le_xa"]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
+	LE.sort_custom(func(x, z): return int(x[0]) < int(z[0]))
+	LE = LE.slice(0, 4)
+	if LE.size():
+		LE[0][1][0] = "sen"   # lễ gần nhất nổi lên
+	# xếp: cùng tỉ lệ k
+	var g := 6.0
+	var nT := T.size()
+	var nL := LE.size()
+	var gaps := 10.0 + 22.0 + maxf(0.0, nT - 1) * g + 12.0 + 22.0 + maxf(0.0, nL - 1) * g + 8.0
+	var k := clampf((_hb - gaps) / (nT * 46.0 + nL * 58.0), 0.85, 1.5)
+	var out := []
+	var y := 10.0
+	out.append_array(_hd(y, "Hôm nay trong làng"))
+	y += 22.0
+	for i in nT:
+		var q: Array = T[i]
+		out.append_array(_row(y, 46.0 * k, String(q[0]), q[1], String(q[2]), String(q[3]), String(q[4]), q[5]))
+		y += 46.0 * k + (g if i < nT - 1 else 0.0)
+	y += 12.0
+	out.append_array(_hd(y, "Lễ hội"))
+	y += 22.0
+	for i in nL:
+		var q: Array = LE[i][1]
+		out.append_array(_row(y, 58.0 * k, String(q[0]), q[1], String(q[2]), String(q[3]), String(q[4]), q[5]))
+		y += 58.0 * k + (g if i < nL - 1 else 0.0)
+	return [out, y + 8.0]
 
 static func _tr(v) -> bool:
 	return not (v == null or v is bool and not v or (v is float or v is int) and v == 0 or v is String and v == "")
