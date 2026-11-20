@@ -195,18 +195,19 @@ var _pool := {}            # khoá khối -> [Control, ids của khối]
 func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, top := 0.0) -> void:
 	var inn := {"z": _z(vt), "tag": "div", "id": "", "cls": "vlin", "r": [vt.r[0], y0, vt.r[2], ch], "css": {"display": "block", "position": "static"}, "kids": []}
 	vt.kids = [inn]
-	_area = String(vt.cls).split(" ")[0]
-	hmax = maxf(0.0, ch + top - float(vt.r[3]))
-	scroll = clampf(scroll, 0.0, hmax)
+	var hm := maxf(0.0, ch + top - float(vt.r[3]))
 	var sk := JSON.stringify(n)
 	shell_new = false
 	if box == null or not is_instance_valid(box) or sk != _shell_key:
-		_shell_swap(sk)
+		_shell_swap(sk)   # (bản 410) cất khung cũ cùng số cuộn CỦA NÓ trước, rồi mới đặt số cuộn khung mới (trước cất nhầm: đổi tab về kẹt cuộn)
 	elif not box.visible:   # mở lại bảng đã cất
 		box.visible = true
 		U.root.move_child(box, -1)
 		U.anchors.append([box, 0.5, 0.5])
 		_vis = true
+	_area = String(vt.cls).split(" ")[0]
+	hmax = hm
+	scroll = clampf(scroll, 0.0, hmax)
 	if shell_new:
 		ids = {}
 		box = U._build(n, ids)
