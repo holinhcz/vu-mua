@@ -47,7 +47,7 @@ func _kshell(L: Array, cur: String, go: Callable) -> Array:
 func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -> void:
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
-	_mount(n, vt, kids, vy, minf(ch, _hb), 0.0)   # nội dung xếp vừa thân: không cho cuộn lố vài đơn vị
+	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn
 	U._layout()
 
 func _hd(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
