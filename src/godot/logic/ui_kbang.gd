@@ -124,9 +124,12 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"tre": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)"],   # dải thứ: nâu vàng
 	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 }
+func _ck(kind: String) -> Array:   # màu chip theo loại; bảng con thêm loại riêng thì ghi đè hàm này
+	return CHIPK[kind]
+
 func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	# góc bo, viền trong, vệt sáng, bóng: lấy nguyên chip chung (Snap.chip_look); chỉ thay nền + màu viền theo trạng thái
-	var C: Array = CHIPK[kind]
+	var C: Array = _ck(kind)
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)")
 	n.cls = "ddchip"
 	Snap.chip_look(n, "ddchip", true)
