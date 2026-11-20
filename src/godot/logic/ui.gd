@@ -458,7 +458,7 @@ func _pan_on() -> bool:   # đang mở bảng / hộp nào đó (lvov, bảng s�
 	for p in _pans():
 		if p != null and p.on:
 			return true
-	return (lvp != null and lvp.on) or help_pop != null or (khp != null and khp.get("on") == true)
+	return (lvp != null and lvp.on) or (vlp != null and vlp.on) or (nvp != null and nvp.on) or help_pop != null or (khp != null and khp.get("on") == true)   # (bản 433) nhà dân, Sổ nhiệm vụ đang mở: Điểm danh không tự bật đè lên
 
 func _rail_sync() -> void:
 	var rl = hid.get(".evrail")

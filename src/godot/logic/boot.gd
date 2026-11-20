@@ -199,6 +199,7 @@ func _test_hook() -> void:
 			"bug": G.p(int(a[1])).b = 1; G.mark()
 			"sellall": ui._kho_sell_all()
 			"nv": ui.nvp.open(a[1] if a.size() > 1 else "")
+			"vl": var H: Array = G.w_all.WL.bl(); if H.size(): ui.vl_open(int(H[0].u))
 			"nvday": G.nv.xI = int(floor(G.nv.d4() / 14.0)) * 14 + int(a[1]); ui.nvp.sig = ""
 			"nvx": _nvx(int(a[1]))
 			"hidev": ui.get_parent().visible = false
