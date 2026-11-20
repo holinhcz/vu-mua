@@ -693,6 +693,23 @@ func oq_end(mode: String, winner, level: int) -> Dictionary:   # message oq "end
 		G.save_game()   # Ba
 	return {"xu": xu, "left": OQ_MAXD - int(c.n), "max": OQ_MAXD}
 
+func caros() -> Dictionary:   # g.caro (Cờ caro, chỉ có bản Godot)
+	var c = G.g.get("caro")
+	if not (c is Dictionary) or str(c.get("d")) != _today():
+		c = {"d": _today(), "n": 0}
+		G.g.caro = c
+	return c
+
+func caro_end(mode: String, winner, level: int) -> Dictionary:   # thắng máy: 20/50/120/250 xu, 5 ván đầu mỗi ngày (như Ô ăn quan)
+	var xu := 0
+	var c := caros()
+	if mode == "ai" and _num(winner) and int(winner) == 0 and int(c.n) < OQ_MAXD:
+		xu = int(OQ_REW[level]) if level >= 0 and level < OQ_REW.size() else 20
+		c.n = int(c.n) + 1
+		G.g.coins = int(G.g.coins) + xu
+		G.save_game()
+	return {"xu": xu, "left": OQ_MAXD - int(c.n), "max": OQ_MAXD}
+
 func dgs() -> Dictionary:   # dgs: g.dg (Đua gà)
 	var c = G.g.get("dg")
 	if not (c is Dictionary) or str(c.get("d")) != _today():
