@@ -8,7 +8,7 @@ extends "res://logic/ui_kbang.gd"
 
 const TABS := [["ngay", "Hằng ngày"], ["tuan", "Tuần"], ["tt", "Thành tựu"], ["sk", "Sự kiện"]]
 const SWAP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><g fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 9h13l-3.5-3.5\"/><path d=\"M20 15H7l3.5 3.5\"/></g></svg>"
-const TRACK := "rgb(232, 218, 186)"
+const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 const RH := 42.0      # cao dòng
 const BW := 52.0      # chỗ nút bên phải (cố định: thanh mọi dòng dài bằng nhau)
 const GAPR := 6.0     # cách dòng
@@ -33,7 +33,22 @@ const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl"
 	"deliver": "g_cho", "cho": "g_cho"}
 const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
+	if kind.begins_with("l_") and NVC.has(kind.substr(2)):   # nền dòng ngả màu nhóm thật nhạt
+		var g := Color.html(_hex(String(NVC[kind.substr(2)][4])))
+		return [_rgb(g.lerp(Color.WHITE, 0.82)), _rgb(g.lerp(Color.WHITE, 0.87)), _rgb(g.lerp(Color.WHITE, 0.92)), _rgb(g.lerp(Color.WHITE, 0.45))]
 	return NVC[kind] if NVC.has(kind) else super(kind)
+
+static func _hex(rgb: String) -> String:   # "rgb(a, b, c)" -> "#rrggbb"
+	var p := rgb.replace("rgb(", "").replace(")", "").split(",")
+	return "#%02x%02x%02x" % [int(p[0]), int(p[1]), int(p[2])]
+
+static func _rgb(c: Color) -> String:
+	return "rgb(%d, %d, %d)" % [int(c.r8), int(c.g8), int(c.b8)]
+
+func _trk(lk: String) -> String:   # rãnh thanh theo nhóm: đậm hơn nền dòng một chút
+	if not NVC.has(lk):
+		return TRACK
+	return _rgb(Color.html(_hex(String(NVC[lk][4]))).lerp(Color.WHITE, 0.72))
 
 # hình của việc (hình món Kho)
 const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai", "scn": "cui",
@@ -99,8 +114,8 @@ func _icn(cx: float, cy: float, sz: float, ic: String) -> Dictionary:   # hình 
 	n.ic = ic.substr(3)
 	return n
 
-func _bar(x: float, y: float, w: float, f: float, h := 5.0) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
-	var out := [_dbx(x, y, w, h, TRACK, h * 0.5)]
+func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
+	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
 	if f > 0.0:
 		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))
 	return out
@@ -122,12 +137,12 @@ func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:  
 # hình việc không khung, tên + thanh dày 6, nút nhỏ. f < 0: không thanh; cnt: chữ cuối thanh; st: "go" / "claim" / "done" / "off" / ""
 # act: việc của nút; sw: việc nút đổi (null = không); tip: chạm dòng hiện chữ
 func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String, st: String, act, btxt := "", sw = null, tip := "") -> Array:
-	var kind := "got" if st == "done" else ("now" if st == "claim" else "fut")
+	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
+	var kind := "got" if st == "done" else ("now" if st == "claim" else ("l_" + lk if NVC.has(lk) else "fut"))
 	var c := _chip(X0, y, XW, RH, kind)
 	if tip != "":
 		c.act = _dsay.bind(tip)
 	var out := [c]
-	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
 	var gc: String = String(NVC[lk][4]) if NVC.has(lk) else "rgb(176, 128, 52)"
 	out.append(_dbx(X0 + 1.5, y + 8.0, 3.0, RH - 16.0, gc, 1.5))   # vạch màu nhóm
 	if String(lt[0]) != "":
@@ -148,7 +163,7 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		out.append(s)
 	if f >= 0.0:
 		var cw: float = Box.text_w(cnt, 10.0, 700) + 6.0
-		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0))
+		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk)))
 		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
 		out.append(_dt(x, y + 23.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
@@ -248,8 +263,8 @@ func _day() -> Array:
 	for i in 6:
 		var dx := X0 + 4.0 + i * (ds + gx)
 		var on_d := i < pos
-		out.append(_dbx(dx, dy + 7.5, ds, ds, FIRE if on_d else "rgb(246, 236, 212)", ds * 0.5, _cpx(1.0) + " solid " + ("rgb(196, 86, 24)" if on_d else "rgb(196, 168, 116)")))
-		out.append(_dt(dx, dy + 7.5, ds, ds, str(i + 1), 10.0, 800, "rgb(255, 255, 255)" if on_d else BROWN))
+		out.append(_dbx(dx, dy + 7.5, ds, ds, FIRE if on_d else "rgb(255, 250, 238)", ds * 0.5, _cpx(1.0) + " solid " + ("rgb(196, 86, 24)" if on_d else "rgb(236, 168, 116)")))
+		out.append(_dt(dx, dy + 7.5, ds, ds, str(i + 1), 10.0, 800, "rgb(255, 255, 255)" if on_d else "rgb(200, 110, 50)"))
 	var gxp := X0 + 4.0 + 6.0 * (ds + gx)
 	var gc := _chip(gxp, dy, 34.0, 34.0, "got" if pos >= 7 else "sen")
 	gc.kids = [_dick(gxp + 17.0, dy + 17.0, 24.0, "gift")]
