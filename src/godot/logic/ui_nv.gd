@@ -140,7 +140,7 @@ func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:  
 # act: việc của nút; sw: việc nút đổi (null = không); tip: chạm dòng hiện chữ
 func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String, st: String, act, btxt := "", sw = null, tip := "") -> Array:
 	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
-	var kind := "got" if st == "done" else ("now" if st == "claim" else ("l_" + lk if NVC.has(lk) else "fut"))
+	var kind := ("b4" if lk == "b4" else "got") if st == "done" else ("now" if st == "claim" else ("l_" + lk if NVC.has(lk) else "fut"))   # xong bậc Huyền thoại: vàng cam
 	var c := _chip(X0, y, XW, RH, kind)
 	if tip != "":
 		c.act = _dsay.bind(tip)
@@ -372,16 +372,37 @@ func _ach() -> Array:
 	var tip := "Danh hiệu theo chuỗi dài nhất đủ 100 năng động: " + ", ".join(all) + "."
 	out.append_array(_hd(y, "Danh hiệu chuỗi ngày"))
 	y += 22.0
-	if nx == null:
-		out.append_array(_row(y, ["d:gift", "", "b4"], cur, "Đã đạt đủ 5 danh hiệu", -1.0, "", "done", null, "", null, tip))
-	else:
-		out.append_array(_row(y, ["d:gift", "", "b0"], String(nx[1]), "", float(best) / float(nx[0]), str(best) + "/" + str(nx[0]),
-			"", null, "", null, tip))
-		var ct := cur if cur != "" else "Chưa có"
-		var cc := _chip(X0 + XW - BW - 6.0, y + 10.0, BW, RH - 20.0, "b4" if cur != "" else "miss")
-		cc.kids = [_dt(X0 + XW - BW - 6.0, y + 10.0, BW, RH - 20.0, _fitw(ct, 9.5, 700, BW - 4.0), 9.5, 700, BROWN if cur != "" else "rgb(110, 104, 92)")]
-		out.append(cc)
-	y += RH + 14.0
+	# (bản 423) một khối: chuỗi dài nhất + danh hiệu đang có; thanh 5 mốc 30 / 60 / 100 / 200 / 365 cách đều
+	var bh := 58.0
+	var bc := _chip(X0, y, XW, bh, "l_b4")
+	bc.act = _dsay.bind(tip)
+	out.append(bc)
+	out.append(_dbx(X0 + 1.5, y + 8.0, 3.0, bh - 16.0, String(NVC.b4[4]), 1.5))
+	out.append(_icn(X0 + 25.0, y + bh * 0.5, 28.0, "d:gift"))
+	var x0 := X0 + 46.0
+	var ct := cur if cur != "" else "Chưa có danh hiệu"
+	var cw: float = Box.text_w(ct, 10.0, 700) + 16.0
+	var tc := _chip(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, "b4" if cur != "" else "miss")
+	tc.kids = [_dt(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, ct, 10.0, 700, BROWN if cur != "" else "rgb(110, 104, 92)")]
+	out.append(tc)
+	var tl := "Chuỗi dài nhất " + str(best) + " ngày"
+	out.append(_dt(x0, y + 8.0, X0 + XW - 14.0 - cw - x0, 16.0, _fitw(tl, 12.0, 800, X0 + XW - 14.0 - cw - x0), 12.0, 800, BROWN, "left"))
+	var bw := X0 + XW - 18.0 - x0
+	var th := [0]
+	for x in N.NVSK:
+		th.append(int(x[0]))
+	var f := 1.0
+	for k in 5:
+		if best < int(th[k + 1]):
+			f = (k + float(best - int(th[k])) / float(int(th[k + 1]) - int(th[k]))) / 5.0
+			break
+	out.append_array(_bar(x0, y + 33.0, bw, f, 6.0, _trk("b4")))
+	for k in 5:
+		var mx := x0 + bw * float(k + 1) / 5.0
+		var ok := best >= int(th[k + 1])
+		out.append(_dbx(mx - 4.5, y + 31.5, 9.0, 9.0, String(NVC.b4[4]) if ok else "rgb(255, 250, 238)", 4.5, _cpx(1.0) + " solid " + ("rgb(176, 100, 10)" if ok else "rgb(214, 170, 100)")))
+		out.append(_dt(mx - 16.0, y + 42.0, 32.0, 11.0, str(th[k + 1]), 9.0, 700, SUB))
+	y += bh + 14.0
 	out.append_array(_hd(y, "Thành tựu"))
 	out.append(_sub(y + 18.0, "Mỗi thành tựu 5 bậc: " + ", ".join(N.T9).to_lower() + "."))
 	y += 36.0
