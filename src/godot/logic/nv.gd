@@ -347,7 +347,15 @@ func is_base(t: Dictionary) -> bool:
 	return false
 
 func pt(t: Dictionary) -> int:   # nvPt
-	return int(t.get("pt", NVPT)) * (2 if t.id == "help" and ff().id == "giup" else 1)
+	if t.has("pt"):
+		return int(t.pt)
+	# (bản 430) việc rút: 75 điểm chia đều cho số việc rút được (ít việc làm được thì mỗi việc nhiều điểm hơn), làm tròn 5;
+	# tổng ngày luôn khoảng 115, người mới (chưa có chuồng, xưởng, quán...) vẫn đủ 100
+	var k := 0
+	for x in MI():
+		if not x.has("pt"):
+			k += 1
+	return maxi(NVPT, int(round(75.0 / float(maxi(1, k)) / 5.0)) * 5)
 
 func done(t: Dictionary) -> bool:   # nvDone
 	if t.get("vg", 0):
