@@ -418,11 +418,11 @@ func _ach() -> Array:
 		var v: int = N.ach_f(A)
 		var lt: Array = [_ti(String(A.k)), str(t) + "/5", "b" + str(mini(t, 4))]
 		if t >= 5:
-			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[4], G.fmt_n(v) + " " + String(A.d), -1.0, "", "done", null))
+			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[4], "Danh hiệu Huyền thoại " + String(A.n).to_lower() + " · " + G.fmt_n(v) + " " + String(A.d), -1.0, "", "done", null))
 		else:
 			var need: int = N.S9(A, t)
 			var R: Dictionary = N.ach_rw(t)
-			var ok: bool = v >= need
+			var ok: bool = N.ach_ok(A)
 			var rw: String = str(R.ng) + " sen đỏ, " + G.fmt_n(R.xu) + " xu"
 			var tn: String = N.T9[t]
 			if ok:   # đủ mốc: dòng đổi luôn sang bậc mới (tên, số, màu), không màu chờ nhận riêng

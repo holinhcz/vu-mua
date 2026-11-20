@@ -165,7 +165,7 @@ func Pl() -> Dictionary:
 	if not (g.get("nv") is Dictionary):
 		g.nv = {}
 	var n: Dictionary = g.nv
-	for k in ["c", "cl", "ln", "ach", "ev"]:
+	for k in ["c", "cl", "ln", "ach", "ev", "life", "ttl"]:
 		if not (n.get(k) is Dictionary):
 			n[k] = {}
 	var d := Ao()
@@ -181,10 +181,11 @@ func Pl() -> Dictionary:
 		n.wk = {"w": w, "c": {}, "cl": {}, "rot": null}
 	return n
 
-func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn tuần
+func S8(k: String, n := 1) -> void:   # đếm một việc cho cả ngày lẫn tuần (+ cả đời: nv.life, cho thành tựu)
 	var v := Pl()
 	v.c[k] = int(v.c.get(k, 0)) + n
 	v.wk.c[k] = int(v.wk.c.get(k, 0)) + n
+	v.life[k] = int(v.life.get(k, 0)) + n
 	if G.w_all != null:   # NTWEB S8 bọc: đếm việc cho Hệ Thống
 		G.w_all.WS.htC(k, n)
 		G.w_all.WL.ut_key(k, n)   # S8 bọc: uy tín theo việc
@@ -873,56 +874,76 @@ func zI(k: String) -> void:   # nhận quà một việc công trình
 		G.mark()
 
 # ------------------------------------------------------------------ 5. thành tựu
-const CY := [10, 50, 200, 1000, 5000]
+# (bản 432) thành tựu 5 bậc, mốc riêng từng thành tựu (c); số đếm cả đời: g.sys.stats (qi) hoặc nv.life (S8)
 const T9 := ["Tập sự", "Chăm chỉ", "Lành nghề", "Cao tay", "Huyền thoại"]
 const L8 := [
-	{"k": "harvest", "n": "Nhà nông", "d": "lần thu hoạch", "m": 1.0},
-	{"k": "deliver", "n": "Bạn hàng", "d": "đơn hàng đã giao", "m": 0.2},
-	{"k": "collect", "n": "Người chăn nuôi", "d": "sản phẩm vật nuôi", "m": 1.0},
-	{"k": "xuong", "n": "Thợ cả", "d": "món làm ở xưởng", "m": 1.0},
-	{"k": "fish", "n": "Tay câu", "d": "con cá câu được", "m": 0.2},
-	{"k": "giup", "n": "Hàng xóm tốt", "d": "lần giúp bà con", "m": 0.2}]
+	{"k": "harvest", "n": "Nhà nông", "d": "lần thu hoạch ruộng", "c": [50, 300, 1500, 6000, 20000]},
+	{"k": "tharvest", "n": "Người làm vườn", "d": "lần hái trái", "c": [10, 50, 250, 1000, 4000]},
+	{"k": "deliver", "n": "Bạn hàng", "d": "đơn hàng đã giao", "c": [5, 30, 150, 600, 2000]},
+	{"k": "collect", "n": "Người chăn nuôi", "d": "sản phẩm vật nuôi", "c": [20, 100, 500, 2000, 8000]},
+	{"k": "feed", "n": "Người chăm thú", "d": "lần cho vật nuôi ăn", "c": [20, 100, 500, 2000, 8000]},
+	{"k": "xuong", "n": "Thợ cả", "d": "món làm ở xưởng", "c": [10, 50, 250, 1000, 3000]},
+	{"k": "quan", "n": "Chủ quán", "d": "khách quán cơm, tạp hóa, cà phê", "c": [5, 30, 150, 600, 2000]},
+	{"k": "fish", "n": "Tay câu", "d": "con cá câu được", "c": [20, 100, 500, 2000, 8000]},
+	{"k": "giup", "n": "Hàng xóm tốt", "d": "lần giúp bà con", "c": [3, 15, 50, 150, 400]},
+	{"k": "gift", "n": "Người tình nghĩa", "d": "lần tặng quà", "c": [3, 15, 60, 200, 600]},
+	{"k": "chat", "n": "Bạn chuyện", "d": "lần trò chuyện", "c": [5, 25, 100, 400, 1200]}]
+
+func life(k: String) -> int:   # số đếm cả đời của việc đếm bằng S8
+	return int(G.g.nv.get("life", {}).get(k, 0)) if G.g.get("nv") is Dictionary else 0
 
 func ach_f(A: Dictionary) -> int:
 	var st: Dictionary = G.g.sys.get("stats", {})
 	match String(A.k):
-		"harvest": return int(st.get("harvest", 0))
+		"harvest": return maxi(0, int(st.get("harvest", 0)) - life("tharvest"))   # hái trái cũng gọi qi("harvest"): trừ ra
 		"deliver": return int(G.g.delivered)
 		"collect": return int(st.get("collect", 0))
-		"xuong": return int(st.get("xuong", 0))   # (bản 426) trước chưa đếm: Thợ cả, Tay câu, Hàng xóm tốt đứng ở 0
+		"xuong": return int(st.get("xuong", 0))
 		"fish": return int(st.get("fish", 0))
 		"giup": return int(st.get("vlhelp", 0))
-	return 0
+	return life(String(A.k))   # tharvest, feed, quan, gift, chat
 
 static func S9(A: Dictionary, t: int) -> int:
-	return maxi(1, int(round(CY[t] * float(A.m))))
+	return int(A.c[clampi(t, 0, 4)])
 
-func A8(A: Dictionary) -> int:
+func ach_c(A: Dictionary) -> int:   # số bậc đã nhận quà
 	return int(Pl().ach.get(A.k, 0))
 
+func A8(A: Dictionary) -> int:   # bậc hiện: số bậc đã nhận, nhưng không quá số mốc đã đạt (đổi mốc thì tự tính lại)
+	var v := ach_f(A)
+	var r := 0
+	while r < 5 and v >= S9(A, r):
+		r += 1
+	return mini(ach_c(A), r)
+
+func ach_ok(A: Dictionary) -> bool:   # nhận được quà bậc kế: chưa nhận bậc đó và đủ mốc
+	var t := A8(A)
+	return t < 5 and t == ach_c(A) and ach_f(A) >= S9(A, t)
+
 func ach_rw(t: int) -> Dictionary:
-	return {"ng": [1, 1, 2, 3, 5][t], "xu": v0(200 * (t + 1) * (t + 1))}
+	return {"ng": [1, 2, 3, 5, 10][t], "xu": v0(200 * (t + 1) * (t + 1))}
 
 func qI() -> int:
 	var n := 0
 	for A in L8:
-		var t := A8(A)
-		if t < 5 and ach_f(A) >= S9(A, t):
+		if ach_ok(A):
 			n += 1
 	return n
 
 func BI(k: String) -> void:
 	for A in L8:
-		if A.k != k:
+		if A.k != k or not ach_ok(A):
 			continue
 		var t := A8(A)
-		if t >= 5 or ach_f(A) < S9(A, t):
-			return
 		Pl().ach[k] = t + 1
 		var R := ach_rw(t)
 		x0(R.ng)
 		coins(R.xu)
-		G.toast.emit("Thành tựu \"" + String(A.n) + " " + String(T9[t]).to_lower() + "\": +" + str(R.ng) + " sen đỏ, +" + G.fmt_n(R.xu) + " xu.")
+		var msg: String = "Thành tựu \"" + String(A.n) + " " + String(T9[t]).to_lower() + "\": +" + str(R.ng) + " sen đỏ, +" + G.fmt_n(R.xu) + " xu"
+		if t == 4:   # lên Huyền thoại: danh hiệu riêng
+			Pl().ttl[k] = 1
+			msg += ". Danh hiệu mới: Huyền thoại " + String(A.n)
+		G.toast.emit(msg + ".")
 		G.mark()
 
 # ------------------------------------------------------------------ 6. lịch sự kiện 14 ngày
