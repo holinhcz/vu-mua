@@ -147,12 +147,12 @@ func _tabt() -> Array:
 	var a := _now_w()
 	var WN := _warns()
 	var nwarn := WN.size()
-	# (bản 402) cả bảng giãn / co cùng một tỉ lệ k cho vừa khung: chip bây giờ 76, dự báo 64, hàng cảnh báo 44 (x k)
+	# (bản 402) cả bảng giãn / co cùng một tỉ lệ k cho vừa khung: chip bây giờ 72, dự báo 68, hàng cảnh báo 44 (x k)
 	var gaps := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 22.0 + maxf(0.0, nwarn - 1) * 6.0 + 8.0
-	var k := clampf((_hb - gaps) / (76.0 + 64.0 + nwarn * 44.0), 0.75, 1.6)
+	var k := clampf((_hb - gaps) / (72.0 + 68.0 + nwarn * 44.0), 0.75, 1.6)
 	_rh = 44.0 * k
 	var ny := y + 40.0
-	var nh := 76.0 * k
+	var nh := 72.0 * k
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
 	var nis := minf(nh - 20.0, 56.0)
 	var tx0 := X0 + 14.0 + nis + 14.0
@@ -173,9 +173,9 @@ func _tabt() -> Array:
 	var e: int = o * 4 + int(floor(G.nv.hour() / 6.0))
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
-	var ch := 64.0 * k
-	var isz := clampf(ch - 12.0 - 15.0 - 16.0, 18.0, 44.0)   # chừa 4 khe tối thiểu 4 cho chữ buổi, hình, tên
-	var fg := (ch - 12.0 - isz - 15.0) / 4.0   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
+	var ch := 68.0 * k
+	var isz := clampf(ch - 12.0 - 15.0 - 10.0, 22.0, 46.0)   # hình to, chừa 4 khe khoảng 2,5
+	var fg := maxf(2.0, (ch - 12.0 - isz - 15.0) / 4.0)   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
 	var gy := fy + 22.0
 	var bs := []
 	var c0: int = e + 1
@@ -227,7 +227,7 @@ func _warns() -> Array:
 			var K: Dictionary = W.WL.TNK[String(ev.k)]
 			var t := ("Ngày mai: " if nx == 1 else "Ngày mốt: ") + String(K.n)
 			L.append(["sen", t, String(K.d), String(K.w) + ". " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))], 1])
-		elif nx > 2:
+		elif nx > 2 and nx <= 7:   # còn xa hơn 7 ngày thì chưa báo
 			L.append(["fut", "Thiên tai kế tiếp · còn " + str(nx) + " ngày", "Báo loại thiên tai trước 2 ngày để kịp phòng chống.", "Mỗi tháng 2 trận thiên tai. Trận tới còn " + str(nx) + " ngày, trước 2 ngày sẽ báo là bão, lũ, hạn, dịch hay cháy.", null, 7])
 		var tp: Array = W.WD.tn_pill_txt()
 		if tp.size() and not bool(tp[1]):
@@ -316,7 +316,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
 			var when := String(G.SEA_N[int(d.sea)]) + " ngày " + str(int(d.day))
-			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else [String(G.SEA_N[int(d.sea)]), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), (String(d.d) if r <= 2 else "Còn " + str(r) + " ngày · " + String(d.d)), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
+			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else [String(G.SEA_N[int(d.sea)]), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur
