@@ -9,9 +9,8 @@ extends "res://logic/ui_kbang.gd"
 const TABS := [["ngay", "Hằng ngày"], ["tuan", "Tuần"], ["tt", "Thành tựu"], ["sk", "Sự kiện"]]
 const SWAP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><g fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 9h13l-3.5-3.5\"/><path d=\"M20 15H7l3.5 3.5\"/></g></svg>"
 const TRACK := "rgb(232, 218, 186)"
-const RH := 46.0      # cao dòng
-const LW := 44.0      # ô trái
-const BW := 58.0      # chỗ nút bên phải (cố định: thanh mọi dòng dài bằng nhau)
+const RH := 42.0      # cao dòng
+const BW := 52.0      # chỗ nút bên phải (cố định: thanh mọi dòng dài bằng nhau)
 const GAPR := 6.0     # cách dòng
 
 # (bản 411) màu theo nhóm việc (ô trái + thanh), theo bậc thành tựu: [gradient trên, giữa, dưới, viền], màu thanh
@@ -35,6 +34,14 @@ const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl"
 const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
 	return NVC[kind] if NVC.has(kind) else super(kind)
+
+# hình của việc (hình món Kho)
+const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai", "scn": "cui",
+	"collect": "trung", "dz": "pc_non", "wc": "gao", "xuong": "banh_tet", "fish": "ca_loc", "bun": "ca_keo", "lo": "tep", "dd": "dien_dien",
+	"chat": "tra_tac", "gift": "banh_pia", "help": "chieu", "giup": "chieu", "vg": "long_den", "com": "com_tam", "gop": "gao",
+	"deliver": "pc_gui", "cho": "qua_chuoi", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
+static func _ti(id: String) -> String:
+	return "kh:" + String(TIC.get(id, "lua"))
 
 static func _gk(id: String) -> String:   # nhóm màu của việc
 	return String(GRP.get(id, "tre"))
@@ -85,13 +92,12 @@ func _build() -> void:
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
 # ------------------------------------------------------------------ khối chung
-func _lc(x: float, y: float, h: float, l1: String, l2: String, kind: String) -> Dictionary:   # ô trái: chữ nhỏ trên, chữ đậm dưới
-	var c := _chip(x, y, LW, h, kind)
-	if l1 == "":
-		c.kids = [_dt(x, y, LW, h, l2, 12.0, 800, BROWN)]
-	else:
-		c.kids = [_dt(x, y + h * 0.5 - 12.0, LW, 11.0, l1, 9.0, 600, SUB), _dt(x, y + h * 0.5, LW, 13.0, l2, 11.5, 800, BROWN)]
-	return c
+func _icn(cx: float, cy: float, sz: float, ic: String) -> Dictionary:   # hình việc không khung: "kh:<món>" hình món Kho, "d:<loại>" hình quà
+	if ic.begins_with("d:"):
+		return _dick(cx, cy, sz, ic.substr(2))
+	var n := _dbx(cx - sz * 0.5, cy - sz * 0.5, sz, sz, "rgba(0, 0, 0, 0)", 0.0)
+	n.ic = ic.substr(3)
+	return n
 
 func _bar(x: float, y: float, w: float, f: float, h := 5.0) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
 	var out := [_dbx(x, y, w, h, TRACK, h * 0.5)]
@@ -112,7 +118,8 @@ func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:  
 	c.kids = [_dt(x, y, w, h, t, 10.5, 700, "rgb(110, 104, 92)")]
 	return c
 
-# dòng chung: lt = [chữ nhỏ, chữ đậm, loại ô]; f < 0: không thanh; cnt: chữ cuối thanh; st: "go" / "claim" / "done" / "off" / ""
+# dòng chung (bản 413): lt = [hình, chữ bên phải (điểm "+15" / bậc "2/5" / mốc), nhóm màu]; vạch màu nhóm ở mép trái,
+# hình việc không khung, tên + thanh dày 6, nút nhỏ. f < 0: không thanh; cnt: chữ cuối thanh; st: "go" / "claim" / "done" / "off" / ""
 # act: việc của nút; sw: việc nút đổi (null = không); tip: chạm dòng hiện chữ
 func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String, st: String, act, btxt := "", sw = null, tip := "") -> Array:
 	var kind := "got" if st == "done" else ("now" if st == "claim" else "fut")
@@ -121,36 +128,47 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		c.act = _dsay.bind(tip)
 	var out := [c]
 	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
-	out.append(_lc(X0 + 5.0, y + 5.0, RH - 10.0, String(lt[0]), String(lt[1]), lk))
-	if NVC.has(lk):   # vạch màu nhóm ở mép trái (như cột việc HUD)
-		out.append(_dbx(X0 + 1.5, y + 9.0, 2.5, RH - 18.0, String(NVC[lk][4]), 1.25))
-	var x := X0 + LW + 13.0
+	var gc: String = String(NVC[lk][4]) if NVC.has(lk) else "rgb(176, 128, 52)"
+	out.append(_dbx(X0 + 1.5, y + 8.0, 3.0, RH - 16.0, gc, 1.5))   # vạch màu nhóm
+	if String(lt[0]) != "":
+		out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, String(lt[0])))
+	var x := X0 + 46.0
 	var bx := X0 + XW - BW - 6.0
-	var tw := bx - 8.0 - x
+	var tag := String(lt[1])
+	var gw := 34.0   # chỗ chữ điểm / bậc: cố định cho thanh mọi dòng dài bằng nhau
+	var tw := bx - 6.0 - gw - x
+	if tag != "":
+		out.append(_dt(bx - 4.0 - gw, y, gw, RH, tag, 12.0, 800, gc, "right"))
 	var tt := tw - (26.0 if sw != null else 0.0)
-	out.append(_dt(x, y + 7.0, tt, 16.0, _fitw(title, 12.0, 800, tt), 12.0, 800, BROWN, "left"))
+	out.append(_dt(x, y + 6.0, tt, 16.0, _fitw(title, 12.0, 800, tt), 12.0, 800, BROWN, "left"))
 	if sw != null:   # nút đổi việc: hình nhỏ cuối dòng tên
-		var s := _chip(bx - 8.0 - 22.0, y + 5.0, 22.0, 18.0, "fut")
-		s.kids = [_dic(bx - 8.0 - 22.0 + 4.0, y + 6.0, 16.0, SWAP)]
+		var s := _chip(x + tw - 22.0, y + 4.0, 22.0, 18.0, "fut")
+		s.kids = [_dic(x + tw - 18.0, y + 5.0, 16.0, SWAP)]
 		s.act = sw
 		out.append(s)
 	if f >= 0.0:
 		var cw: float = Box.text_w(cnt, 10.0, 700) + 6.0
-		out.append_array(_bar(x, y + 29.0, tw - cw, f))
-		out.append(_dt(x + tw - cw, y + 24.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
+		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0))
+		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
-		out.append(_dt(x, y + 24.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
-	var by := y + (RH - 26.0) * 0.5
+		out.append(_dt(x, y + 23.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
+	var bh := 22.0
+	var by := y + (RH - bh) * 0.5
 	match st:
 		"done":
 			out.append(_dtick(bx + (BW - 20.0) * 0.5, y + (RH - 20.0) * 0.5, 20.0))
 		"claim":
-			out.append(_onbtn(bx, by, BW, 26.0, btxt if btxt != "" else "Nhận", act, true))   # nhận: chip đỏ, khác "Đi làm" xanh
+			out.append(_sbtn(_onbtn(bx, by, BW, bh, btxt if btxt != "" else "Nhận", act, true)))   # nhận: chip đỏ, khác "Đi làm" xanh
 		"go":
-			out.append(_onbtn(bx, by, BW, 26.0, btxt if btxt != "" else "Đi làm", act))
+			out.append(_sbtn(_onbtn(bx, by, BW, bh, btxt if btxt != "" else "Đi làm", act)))
 		"off":
-			out.append(_offbtn(bx, by, BW, 26.0, btxt))
+			out.append(_offbtn(bx, by, BW, bh, btxt))
 	return out
+
+func _sbtn(b: Dictionary) -> Dictionary:   # nút chip Kho cỡ nhỏ: chữ 11
+	var t: Dictionary = b.kids[0]
+	t.css["font-size"] = _cpx(11.0)
+	return b
 
 func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiêu đề phần
 	return _dt(X0 + 2.0, y, XW - 4.0, 13.0, _fitw(t, 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left")
@@ -253,7 +271,7 @@ func _day() -> Array:
 		var sw = null
 		if not dn and not n.sw and not N.is_base(t):
 			sw = _swap.bind(String(t.id))
-		out.append_array(_row(y, ["điểm", "+" + str(N.pt(t)), _gk(String(t.id))], String(t.n), "", float(c2) / float(m), G.fmt_n(mini(c2, m)) + "/" + G.fmt_n(m),
+		out.append_array(_row(y, [_ti(String(t.id)), "+" + str(N.pt(t)), _gk(String(t.id))], String(t.n), "", float(c2) / float(m), G.fmt_n(mini(c2, m)) + "/" + G.fmt_n(m),
 			"done" if dn else "go", _go.bind(String(t.id)), "", sw))
 		y += RH + GAPR
 	return [out, y + 4.0]
@@ -287,7 +305,7 @@ func _week() -> Array:
 	for t in WL:
 		var c: int = N.nvW(t.id)
 		var m := int(t.m)
-		out.append_array(_row(y, ["điểm", "+" + str(t.pt), _gk(String(t.id))], String(t.n), "", float(c) / float(m), G.fmt_n(mini(c, m)) + "/" + G.fmt_n(m),
+		out.append_array(_row(y, [_ti(String(t.id)), "+" + str(t.pt), _gk(String(t.id))], String(t.n), "", float(c) / float(m), G.fmt_n(mini(c, m)) + "/" + G.fmt_n(m),
 			"done" if c >= m else "go", _go.bind(String(t.id))))
 		y += RH + GAPR
 	return [out, y + 4.0]
@@ -313,9 +331,9 @@ func _ach() -> Array:
 	out.append_array(_hd(y, "Danh hiệu chuỗi ngày"))
 	y += 22.0
 	if nx == null:
-		out.append_array(_row(y, ["", "365"], cur, "Đã đạt đủ 5 danh hiệu", -1.0, "", "done", null, "", null, tip))
+		out.append_array(_row(y, ["d:gift", "", "b4"], cur, "Đã đạt đủ 5 danh hiệu", -1.0, "", "done", null, "", null, tip))
 	else:
-		out.append_array(_row(y, ["ngày", str(nx[0])], String(nx[1]), "", float(best) / float(nx[0]), str(best) + "/" + str(nx[0]),
+		out.append_array(_row(y, ["d:gift", "", "b0"], String(nx[1]), "", float(best) / float(nx[0]), str(best) + "/" + str(nx[0]),
 			"", null, "", null, tip))
 		var ct := cur if cur != "" else "Chưa có"
 		var cc := _chip(X0 + XW - BW - 6.0, y + 10.0, BW, RH - 20.0, "b4" if cur != "" else "miss")
@@ -328,7 +346,7 @@ func _ach() -> Array:
 	for A in N.L8:
 		var t: int = N.A8(A)
 		var v: int = N.ach_f(A)
-		var lt: Array = ["bậc", str(t) + "/5", "b" + str(mini(t, 4))]
+		var lt: Array = [_ti(String(A.k)), str(t) + "/5", "b" + str(mini(t, 4))]
 		if t >= 5:
 			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[4], G.fmt_n(v) + " " + String(A.d), -1.0, "", "done", null))
 		else:
@@ -346,13 +364,13 @@ func _ach() -> Array:
 	for L in N.w9():
 		var i: int = N.M9(L)
 		if i >= L.steps.size():
-			out.append_array(_row(y, ["", str(L.steps.size())], String(L.n), "Đã xong cả chuỗi", -1.0, "", "done", null))
+			out.append_array(_row(y, [_ti(String(L.k)), "", "tre"], String(L.n), "Đã xong cả chuỗi", -1.0, "", "done", null))
 		else:
 			var st: Dictionary = L.steps[i]
 			var c: int = N.step_f(st)
 			var R: Dictionary = N.AI(i)
 			var ok: bool = c >= int(st.m)
-			out.append_array(_row(y, ["việc", str(i + 1) + "/" + str(L.steps.size()), {"ruong": "g_ruong", "xuong": "g_xuong", "chuong": "g_nuoi", "sap": "g_cho"}.get(String(L.k), "tre")], String(L.n) + ": " + String(st.t), "", float(c) / float(st.m),
+			out.append_array(_row(y, [_ti(String(L.k)), str(i + 1) + "/" + str(L.steps.size()), {"ruong": "g_ruong", "xuong": "g_xuong", "chuong": "g_nuoi", "sap": "g_cho"}.get(String(L.k), "tre")], String(L.n) + ": " + String(st.t), "", float(c) / float(st.m),
 				G.fmt_n(mini(c, int(st.m))) + "/" + G.fmt_n(int(st.m)), "claim" if ok else "go", N.zI.bind(String(L.k)) if ok else _go.bind("ln_" + String(L.k)),
 				"", null, "Thưởng " + G.fmt_n(R.xu) + " xu, " + str(R.m) + " vật liệu " + String(L.n).to_lower() + "."))
 		y += RH + GAPR
@@ -401,7 +419,7 @@ func _event() -> Array:
 		for i in 3:
 			var ok: bool = dp >= N.GL[i]
 			var got: bool = s.cl.has("d:" + str(x.d) + ":" + str(i))
-			out.append_array(_row(y, ["mốc", str(i + 1), _gk(String(st.k))], nm[i], "", float(dp) / N.GL[i], G.fmt_n(mini(dp, N.GL[i])) + "/" + G.fmt_n(N.GL[i]),
+			out.append_array(_row(y, ["d:" + ["coin", "crate", "pearl"][i], "", _gk(String(st.k))], nm[i], "", float(dp) / N.GL[i], G.fmt_n(mini(dp, N.GL[i])) + "/" + G.fmt_n(N.GL[i]),
 				"done" if got else ("claim" if ok else "go"), N.FI.bind("d", i) if ok else _go.bind(String(st.k))))
 			y += RH + GAPR
 		y += 8.0
@@ -411,7 +429,7 @@ func _event() -> Array:
 		for i in 3:
 			var ok: bool = int(s.p) >= N.WL[i]
 			var got: bool = s.cl.has("t:" + str(i))
-			out.append_array(_row(y, ["mốc", str(i + 1), _gk(String(st.k))], nm[i], "", float(s.p) / N.WL[i], G.fmt_n(mini(int(s.p), N.WL[i])) + "/" + G.fmt_n(N.WL[i]),
+			out.append_array(_row(y, ["d:" + ["coin", "crate", "pearl"][i], "", _gk(String(st.k))], nm[i], "", float(s.p) / N.WL[i], G.fmt_n(mini(int(s.p), N.WL[i])) + "/" + G.fmt_n(N.WL[i]),
 				"done" if got else ("claim" if ok else "go"), N.FI.bind("t", i) if ok else _go.bind(String(st.k))))
 			y += RH + GAPR
 	elif ev.id == "cho":
@@ -422,7 +440,7 @@ func _event() -> Array:
 			var lim: bool = it.has("max") and int(s.buy.get(it.id, 0)) >= int(it.max)
 			var ok: bool = int(s.ve) >= int(it.c) and not lim
 			var sb := String(it.d) + (" · còn " + str(int(it.max) - int(s.buy.get(it.id, 0))) if it.has("max") else "")
-			out.append_array(_row(y, ["vé", str(it.c)], String(it.n), sb, -1.0, "", "claim" if ok else "off", N.sY.bind(String(it.id)), "Đổi" if ok else ("Hết lượt" if lim else "Thiếu vé")))
+			out.append_array(_row(y, ["d:" + String(it.get("ic", "coin")), str(it.c) + " vé", "g_cho"], String(it.n), sb, -1.0, "", "claim" if ok else "off", N.sY.bind(String(it.id)), "Đổi" if ok else ("Hết lượt" if lim else "Thiếu vé")))
 			y += RH + GAPR
 	elif ev.id == "ngoc":
 		out.append_array(_hd(y, "Đã tiêu " + str(s.sp) + " sen đỏ"))
@@ -432,7 +450,7 @@ func _event() -> Array:
 			var M: Dictionary = N.VL[i]
 			var ok: bool = int(s.sp) >= int(M.p)
 			var got: bool = s.cl.has("n" + str(i))
-			out.append_array(_row(y, ["mốc", str(i + 1)], String(M.n), "", float(s.sp) / float(M.p), G.fmt_n(mini(int(s.sp), int(M.p))) + "/" + G.fmt_n(int(M.p)),
+			out.append_array(_row(y, ["d:" + ["coin", "crate", "bua", "pearl"][i], "", "g_lang"], String(M.n), "", float(s.sp) / float(M.p), G.fmt_n(mini(int(s.sp), int(M.p))) + "/" + G.fmt_n(int(M.p)),
 				"done" if got else ("claim" if ok else "off"), N.hY.bind(i), "Chưa đủ"))
 			y += RH + GAPR
 	# sự kiện kế tiếp
@@ -448,7 +466,7 @@ func _event() -> Array:
 		out.append_array(_hd(y, "Sắp tới"))
 		y += 22.0
 		var dn := int(nx.d0) - int(x.d)
-		out.append_array(_row(y, ["sau", str(dn) + " ngày"], String(nx.n), "Nhớ để dành sen đỏ" if nx.id == "ngoc" else "Bắt đầu sau " + str(dn) + " ngày", -1.0, "", "", null))
+		out.append_array(_row(y, ["d:gift", "", "tre"], String(nx.n), "Nhớ để dành sen đỏ" if nx.id == "ngoc" else "Bắt đầu sau " + str(dn) + " ngày", -1.0, "", "", null))
 		y += RH + GAPR
 	return [out, y + 4.0]
 
