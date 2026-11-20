@@ -323,14 +323,24 @@ func _week() -> Array:
 	var L := []
 	for i in N.NVWCH.size():
 		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i)])
-	var fix := 8.0 + (89.0 + 17.0 + 26.0 + 4.0 * RH + 3.0 * GAPR) + 4.0
-	var g := clampf((_hb - fix) / 4.0, 6.0, 14.0)
+	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
+	var fix := 8.0 + (89.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
+	var g := clampf((_hb - fix) / 5.0, 6.0, 14.0)
 	var ms := _ms(y, "Điểm tuần", wpt, top, L, g)
 	out.append_array(ms[0])
-	y += float(ms[1]) + 4.0
+	y += float(ms[1]) + g
+	# quà mốc cuối: chip hồng sen cả ngang, hình đồ trang trí tuần này
+	var dc: Array = N.deco_of(N.week())
 	var lt: String = (str(int(floor(left / 86400.0))) + " ngày" if left >= 86400.0 else N.ao(left))
-	out.append(_sub(y, "Mốc cuối: " + String(N.deco_of(N.week())[1]) + " + 5 sen đỏ · còn " + lt))
-	y += 13.0 + 2.0 * g
+	var qc := _chip(X0, y, XW, RH, "sen")
+	qc.act = _dsay.bind("Mốc " + str(N.wk_p(0)) + ": túi xu · Mốc " + str(N.wk_p(1)) + ": 3 sen đỏ, then cài, bao bố, tấm tôn · Mốc " + str(N.wk_p(2)) + ": xu, bùa +50% EXP 1 ngày · Mốc " + str(N.wk_p(3)) + ": " + String(dc[1]).to_lower() + ", 5 sen đỏ.")
+	out.append(qc)
+	out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, "kh:" + String({"noibanhtet": "banh_tet"}.get(String(dc[0]), "long_den"))))
+	var rtw: float = Box.text_w("còn " + lt, 10.0, 600) + 4.0
+	var qw := XW - 46.0 - rtw - 10.0
+	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Mốc " + str(top) + ": " + String(dc[1]) + " + 5 sen đỏ", 11.5, 800, qw), 11.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + XW - 8.0 - rtw, y, rtw, RH, "còn " + lt, 10.0, 600, SUB, "right"))
+	y += RH + 2.0 * g
 	out.append_array(_shd(y, "Việc tuần này", "làm mới sau " + N.ao(left)))
 	y += 26.0 + g
 	var WL: Array = N.wk_list()
