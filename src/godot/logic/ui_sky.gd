@@ -174,8 +174,8 @@ func _tabt() -> Array:
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
 	var ch := 64.0 * k
-	var isz := clampf(ch * 0.45, 22.0, 44.0)
-	var fg := maxf(1.5, (ch - 12.0 - isz - 15.0) / 4.0)   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
+	var isz := clampf(ch - 12.0 - 15.0 - 16.0, 18.0, 44.0)   # chừa 4 khe tối thiểu 4 cho chữ buổi, hình, tên
+	var fg := (ch - 12.0 - isz - 15.0) / 4.0   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
 	var gy := fy + 22.0
 	var bs := []
 	var c0: int = e + 1
@@ -276,7 +276,7 @@ func _warns() -> Array:
 		var ds := "Đất khô thì cây lớn chậm hơn. " + ("Trời nắng hạn, ruộng khô nhanh gấp rưỡi." if _now_w() == "han" else "Tưới thì lớn nhanh hơn 10%.")
 		L.append(["wx_han" if _now_w() == "han" else "fut", str(nd) + " ô ruộng đang khô", "Nắng hạn khô nhanh, tưới sớm." if _now_w() == "han" else "Tưới để cây lớn nhanh hơn.", ds, null, 5])
 	L.sort_custom(func(a, b): return int(a[5]) < int(b[5]))
-	return L.slice(0, 5)   # tối đa 5 dòng, bỏ bớt dòng ít gấp
+	return L.slice(0, 4)   # tối đa 4 dòng, bỏ bớt dòng ít gấp
 
 func _cam_to(sk: String) -> void:   # đóng bảng, đưa máy quay tới cây ngã
 	var B = G.troi.bao
