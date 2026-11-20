@@ -201,7 +201,7 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Arra
 	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
 	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
 	var cs := 34.0
-	var iy := y + 26.0 + g
+	var iy := y + 26.0 + g + 4.0   # chip tên -> hàng quà: rộng hơn g một chút (quà nổi, dễ dính chip tên)
 	var bxl := X0 + cs * 0.5
 	var bxw := XW - cs
 	var by := iy + cs + 6.0
@@ -213,8 +213,6 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Arra
 		var ok := cur >= p
 		var c := _chip(cx - cs * 0.5, iy, cs, cs, "got" if got else ("now" if ok else "fut"))
 		var ks := [_dick(cx, iy + cs * 0.5, 24.0, String(m[1]), 0.5 if got else 1.0)]
-		if got:
-			ks.append(_dtick(cx + cs * 0.5 - 13.0, iy + cs - 13.0, 11.0))
 		c.kids = ks
 		if ok and not got:
 			c.act = m[3]
@@ -229,7 +227,7 @@ func _day() -> Array:
 	var ap: int = N.r5()
 	var out := []
 	# cách đều: g = chip tên -> nội dung, 2g = giữa hai khối; giãn sao cho đáy khung vừa đúng 4 dòng việc
-	var fix := 8.0 + (89.0 + 60.0 + 26.0 + 4.0 * RH + 3.0 * GAPR) + 4.0
+	var fix := 8.0 + (93.0 + 60.0 + 26.0 + 4.0 * RH + 3.0 * GAPR) + 4.0
 	var g := clampf((_hb - fix) / 7.0, 6.0, 14.0)
 	var y := 8.0
 	var L := []
@@ -324,15 +322,15 @@ func _week() -> Array:
 	for i in N.NVWCH.size():
 		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i)])
 	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
-	var fix := 8.0 + (89.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
+	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
 	var g := clampf((_hb - fix) / 5.0, 6.0, 14.0)
 	var ms := _ms(y, "Điểm tuần", wpt, top, L, g)
 	out.append_array(ms[0])
 	y += float(ms[1]) + g
-	# quà mốc cuối: chip hồng sen cả ngang, hình đồ trang trí tuần này
+	# quà mốc cuối: chip cam lửa cả ngang, hình đồ trang trí tuần này
 	var dc: Array = N.deco_of(N.week())
 	var lt: String = (str(int(floor(left / 86400.0))) + " ngày" if left >= 86400.0 else N.ao(left))
-	var qc := _chip(X0, y, XW, RH, "sen")
+	var qc := _chip(X0, y, XW, RH, "fire_l")   # cam lửa như chip Chuỗi
 	qc.act = _dsay.bind("Mốc " + str(N.wk_p(0)) + ": túi xu · Mốc " + str(N.wk_p(1)) + ": 3 sen đỏ, then cài, bao bố, tấm tôn · Mốc " + str(N.wk_p(2)) + ": xu, bùa +50% EXP 1 ngày · Mốc " + str(N.wk_p(3)) + ": " + String(dc[1]).to_lower() + ", 5 sen đỏ.")
 	out.append(qc)
 	out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, "kh:" + String({"noibanhtet": "banh_tet"}.get(String(dc[0]), "long_den"))))
