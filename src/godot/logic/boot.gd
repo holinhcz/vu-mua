@@ -278,7 +278,7 @@ func _nvx(k: int) -> void:
 		n.sw = 1; n.c.plant = 12; n.c.water = 12; n.c.fish = 3; s.c = 7; s.last = N.d4(); n.cl["40"] = 1; n.cl["60"] = 1
 	elif k == 3:
 		var w: Dictionary = n.wk
-		w.c.deliver = 25; w.c.harvest = 70; w.dd["1"] = 1; w.dd["2"] = 1; w.cl["40"] = 1
+		w.c.deliver = 25; w.c.harvest = 70; w.cl["m0"] = 1
 	elif k == 4:
 		G.g.sys.stats.harvest = 12; n.ach.collect = 5; n.ln.kho = 9
 	elif k == 5:

@@ -181,7 +181,7 @@ func Pl() -> Dictionary:
 		n.pb = snap()
 	var w := week()
 	if not (n.get("wk") is Dictionary) or int(n.wk.get("w", -1)) != w:
-		n.wk = {"w": w, "c": {}, "cl": {}, "rot": null, "dd": {}}
+		n.wk = {"w": w, "c": {}, "cl": {}, "rot": null}
 	return n
 
 func snap() -> Dictionary:   # nvSnap: mốc bộ đếm nhân vật lúc đầu ngày
@@ -635,7 +635,6 @@ func iY() -> void:   # ngày đủ 100 điểm: tính chuỗi
 	s.c = int(K.c) + 1
 	s.last = d
 	s.best = maxi(int(s.best), int(s.c))
-	Pl().wk.dd[str(d)] = 1
 	var b := xu(v0(500 + 100 * jr()))
 	coins(b)
 	var msg: String = "Đủ 100 điểm năng động! Chuỗi " + str(s.c) + " ngày, +" + G.fmt_n(b) + " xu"
@@ -658,7 +657,6 @@ func iY() -> void:   # ngày đủ 100 điểm: tính chuỗi
 	G.mark()
 
 # ------------------------------------------------------------------ 3. tuần
-const NVDAYPT := 10
 const NVWK := [
 	{"id": "deliver", "n": "Giao 25 đơn hàng", "m": 25, "pt": 15, "go": 1},
 	{"id": "harvest", "n": "Thu hoạch 150 lần", "m": 150, "pt": 10},
@@ -702,48 +700,53 @@ func wk_list() -> Array:   # nvWkList
 				out.append(t)
 	return out
 
-func wk_days() -> int:
-	return Pl().wk.dd.size()
-
-func WP() -> int:   # điểm tuần
-	var n := wk_days() * NVDAYPT
+func WP() -> int:   # điểm tuần (bản 410: bỏ điểm "ngày đủ 100 năng động", chỉ còn điểm việc tuần)
+	var n := 0
 	for t in wk_list():
 		if nvW(t.id) >= int(t.m):
 			n += int(t.pt)
 	return n
 
-const NVWCH := [{"p": 40, "n": "Túi xu", "ic": "coin"}, {"p": 80, "n": "Rương vật liệu", "ic": "crate"},
-	{"p": 120, "n": "Rương bạc", "ic": "coin"}, {"p": 160, "n": "Quà tuần", "ic": "pearl"}]
+func wk_top() -> int:   # tổng điểm 7 việc tuần này = mốc cuối
+	var n := 0
+	for t in wk_list():
+		n += int(t.pt)
+	return maxi(5, n)
+
+# 4 mốc quà tuần theo phần trăm tổng điểm việc tuần (25 / 50 / 75 / 100%), làm tròn 5; nhận theo thứ tự mốc ("m0".."m3")
+const NVWCH := [{"f": 0.25, "n": "Túi xu", "ic": "coin"}, {"f": 0.5, "n": "Rương vật liệu", "ic": "crate"},
+	{"f": 0.75, "n": "Rương bạc", "ic": "coin"}, {"f": 1.0, "n": "Quà tuần", "ic": "pearl"}]
+
+func wk_p(i: int) -> int:   # điểm của mốc i
+	var t := wk_top()
+	return t if i >= NVWCH.size() - 1 else maxi(5, int(round(t * float(NVWCH[i].f) / 5.0)) * 5)
 
 func wk_ready() -> int:
 	var a := WP()
 	var cl: Dictionary = Pl().wk.cl
 	var n := 0
-	for c in NVWCH:
-		if a >= int(c.p) and not cl.has(str(c.p)):
+	for i in NVWCH.size():
+		if a >= wk_p(i) and not cl.has("m" + str(i)):
 			n += 1
 	return n
 
-func wk_chest(p: int) -> void:
+func wk_chest(i: int) -> void:
 	var w: Dictionary = Pl().wk
-	var ok := false
-	for c in NVWCH:
-		ok = ok or int(c.p) == p
-	if not ok or w.cl.has(str(p)) or WP() < p:
+	if i < 0 or i >= NVWCH.size() or w.cl.has("m" + str(i)) or WP() < wk_p(i):
 		return
-	w.cl[str(p)] = 1
+	w.cl["m" + str(i)] = 1
 	var r := ""
-	match p:
-		40:
+	match i:
+		0:
 			var x := v0(1500 + 100 * jr())
 			coins(x)
 			r = "+" + G.fmt_n(x) + " xu"
-		80:
+		1:
 			x0(3)
 			for m in ["then", "bao", "ton"]:
 				S0(m, 1)
 			r = "+3 sen đỏ, +1 then cài, bao bố, tấm tôn"
-		120:
+		2:
 			var x := v0(4000 + 200 * jr())
 			coins(x)
 			bp(1)
@@ -751,7 +754,7 @@ func wk_chest(p: int) -> void:
 		_:
 			x0(5)
 			r = deco(week()) + ", +5 sen đỏ"
-	G.toast.emit("Quà tuần mốc " + str(p) + ": " + r + ".")
+	G.toast.emit("Quà tuần mốc " + str(wk_p(i)) + ": " + r + ".")
 	G.mark()
 
 # ------------------------------------------------------------------ 4. chuỗi công trình
