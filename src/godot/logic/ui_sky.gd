@@ -83,6 +83,9 @@ func _build() -> void:
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
 # ------------------------------------------------------------------ một hàng chip: [ô trái nhỏ], tên đậm + 1 dòng, nút chip xanh phải
+func _cap(t: String) -> String:   # chữ đầu viết hoa (ô giờ: Sáng, Tối, Còn)
+	return t.substr(0, 1).to_upper() + t.substr(1)
+
 func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full: String, btn = null) -> Array:
 	var out := []
 	var c := _chip(X0, y, XW, h, kind)
@@ -97,7 +100,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 		if L.size() == 1:
 			lc.kids = [_dic(X0 + 6.0 + (lw - 24.0) * 0.5, y + (h - 24.0) * 0.5, 24.0, String(L[0]))]
 		else:
-			lc.kids = [_dt(X0 + 6.0, y + h * 0.5 - 13.0, lw, 12.0, String(L[0]), 9.5, 600, "rgb(220, 222, 240)" if dk else SUB), _dt(X0 + 6.0, y + h * 0.5, lw, 13.0, String(L[1]), 11.0, 800, "rgb(255, 255, 255)" if dk else BROWN)]
+			lc.kids = [_dt(X0 + 6.0, y + h * 0.5 - 13.0, lw, 12.0, _cap(String(L[0])), 9.5, 600, "rgb(220, 222, 240)" if dk else SUB), _dt(X0 + 6.0, y + h * 0.5, lw, 13.0, String(L[1]), 11.0, 800, "rgb(255, 255, 255)" if dk else BROWN)]
 		ks.append(lc)
 		x = X0 + lw + 14.0
 	var bw := 0.0
