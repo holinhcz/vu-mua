@@ -148,7 +148,7 @@ func _tabt() -> Array:
 	var WN := _warns()
 	var nwarn := WN.size()
 	var fixed := 10.0 + 40.0 + 12.0 + 22.0 + 6.0 + 12.0 + 22.0 + nwarn * (_wrh(nwarn) + 6.0) + 4.0
-	var spare := _hb - fixed - 64.0 - 140.0   # mặc định chip bây giờ 64, dự báo 2 x 70; âm = nhiều cảnh báo, thu chip lại
+	var spare := _hb - fixed - 64.0 - 70.0   # mặc định chip bây giờ 64, dự báo 1 hàng 70; âm = nhiều cảnh báo, thu chip lại
 	var ny := y + 40.0
 	var nh := 64.0 + (minf(spare * 0.3, 24.0) if spare > 0.0 else maxf(spare * 0.3, -4.0))
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
@@ -164,29 +164,35 @@ func _tabt() -> Array:
 		nc.kids.append(_dt(tx0, ty0 + 35.0 + i * 13.0, XW - (tx0 - X0) - 10.0, 13.0, String(hl[i]), 10.5, 600, SUB, "left"))
 	nc.act = _dsay.bind(HQF[a])
 	out.append(nc)
-	# dự báo 6 buổi
+	# dự báo 3 buổi kế tiếp (bỏ khuya)
 	var fy := ny + nh + 12.0
 	out.append_array(_hd(fy, "Dự báo"))
 	var e: int = o * 4 + int(floor(G.nv.hour() / 6.0))
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
-	var ch := 70.0 + (minf((spare - minf(spare * 0.3, 24.0)) * 0.5, 30.0) if spare > 0.0 else maxf(spare * 0.35, -8.0))
+	var ch := 70.0 + (minf(spare - minf(spare * 0.3, 24.0), 16.0) if spare > 0.0 else maxf(spare * 0.5, -8.0))
 	var isz := clampf(ch - 40.0, 22.0, 46.0)
 	var gy := fy + 22.0
-	for i in 6:
-		var c: int = e + i + 1
+	var bs := []
+	var c0: int = e + 1
+	while bs.size() < 3:
+		if posmod(c0, 4) != 0:
+			bs.append(c0)
+		c0 += 1
+	for i in 3:
+		var c: int = bs[i]
 		var f: String = G.nv.Hx(c)
 		var s: int = int(floor(c / 4.0)) - o
-		var x := X0 + (i % 3) * (cw + g)
-		var yy := gy + (i / 3) * (ch + g)
+		var x := X0 + i * (cw + g)
+		var yy := gy
 		var cc := _chip(x, yy, cw, ch, _wk(f))
-		cc.kids = [_dt(x, yy + 5.0, cw, 12.0, TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")), 9.5, 600, SUB),
+		cc.kids = [_dt(x, yy + 5.0, cw, 12.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 9.5, 600, SUB),
 			_dic(x + (cw - isz) * 0.5, yy + 17.0 + (ch - 40.0 - isz) * 0.5, isz, String(SK.ic[f])),
 			_dt(x + 2.0, yy + ch - 20.0, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 11.5, 800, cw - 4.0), 11.5, 800, BROWN)]
 		cc.act = _dsay.bind(TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")) + ": " + String(G.troi.TEN[f]) + ". " + HQF[f])
 		out.append(cc)
 	# cảnh báo + radio
-	var ky := gy + ch * 2.0 + g + 12.0
+	var ky := gy + ch + 12.0
 	out.append_array(_hd(ky, "Cảnh báo, tin tức"))
 	var ry := ky + 22.0
 	var rh := _wrh(WN.size())
@@ -197,7 +203,7 @@ func _tabt() -> Array:
 	return [out, ry + 8.0]
 
 func _wrh(n: int) -> float:   # cao hàng cảnh báo: nhiều hàng thì thấp lại
-	return 44.0 if n <= 2 else 38.0
+	return 44.0 if n <= 4 else 40.0
 
 # cảnh báo, tin tức: [loại chip, tên, dòng phụ, mô tả chạm, nút?]
 func _warns() -> Array:
@@ -217,35 +223,70 @@ func _warns() -> Array:
 		if nx >= 1 and nx <= 2:
 			var K: Dictionary = W.WL.TNK[String(ev.k)]
 			var t := ("Ngày mai: " if nx == 1 else "Ngày mốt: ") + String(K.n)
-			L.append(["sen", t, String(K.d), String(K.w) + ". " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))]])
+			L.append(["sen", t, String(K.d), String(K.w) + ". " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))], 1])
 		elif nx > 2:
-			L.append(["fut", "Thiên tai kế tiếp · còn " + str(nx) + " ngày", "Báo loại thiên tai trước 2 ngày để kịp phòng chống.", "Mỗi tháng 2 trận thiên tai. Trận tới còn " + str(nx) + " ngày, trước 2 ngày sẽ báo là bão, lũ, hạn, dịch hay cháy.", null])
+			L.append(["fut", "Thiên tai kế tiếp · còn " + str(nx) + " ngày", "Báo loại thiên tai trước 2 ngày để kịp phòng chống.", "Mỗi tháng 2 trận thiên tai. Trận tới còn " + str(nx) + " ngày, trước 2 ngày sẽ báo là bão, lũ, hạn, dịch hay cháy.", null, 7])
 		var tp: Array = W.WD.tn_pill_txt()
 		if tp.size() and not bool(tp[1]):
-			L.append(["sen", String(tp[0]).split(" · ")[0], "Bà con cần giúp sửa nhà, góp đồ.", String(tp[0]), ["Giúp", _go(U.tn_open.bind("nan"))]])
+			L.append(["sen", String(tp[0]).split(" · ")[0], "Bà con cần giúp sửa nhà, góp đồ.", String(tp[0]), ["Giúp", _go(U.tn_open.bind("nan"))], 2])
 	# nước nổi: mùa thu ngày 2..6
 	var dd: int = posmod(o, 28) % 7 + 1
 	if W.WR.qs():
 		var fs := "Phù sa bồi, cây lớn nhanh 4%. Cá linh về, ven sông có điên điển, bông súng, kèo nèo."
-		L.append(["wx_rao", "Nước nổi về sông Vàm", fs, fs, null])
+		L.append(["wx_rao", "Nước nổi về sông Vàm", fs, fs, null, 4])
 	elif G.cfg.s == "auto":
 		var to := posmod(2 * 7 + 1 - (posmod(o, 28)), 28)   # tới ngày 2 mùa thu
 		if to >= 1 and to <= 7:
-			L.append(["fut", "Nước nổi · còn " + str(to) + " ngày", "Mùa thu nước sông lên, cá linh về.", "Còn " + str(to) + " ngày nữa nước nổi về sông Vàm (mùa thu, ngày 2–6).", null])
+			L.append(["fut", "Nước nổi · còn " + str(to) + " ngày", "Mùa thu nước sông lên, cá linh về.", "Còn " + str(to) + " ngày nữa nước nổi về sông Vàm (mùa thu, ngày 2–6).", null, 4])
 	# hạn mặn
 	var n4: bool = W.WR.n4()
 	var ac: int = W.WR.ac()
 	if n4 or (ac >= 0 and ac <= 4):
 		var ms := "Nước mặn đang lấn vô sông, ruộng chậm lớn." if n4 else "Chừng " + str(ac) + " ngày nữa mặn lấn vô sông Vàm. Trữ nước ngọt sẵn."
-		L.append(["sen" if n4 else "fut", "Hạn mặn", ms, ms, ["Xem", _go(W.WRU.open_man)]])
+		L.append(["sen" if n4 else "fut", "Hạn mặn", ms, ms, ["Xem", _go(W.WRU.open_man)], 4])
 	# gió chướng
 	if sea == 3 or sea == 0:
 		var cg: bool = W.WCA.cg()
 		var gs := "Đang có gió, ra đồng thả diều (bảng nhân vật › Diều)." if cg else "Mùa này chiều 14–18 giờ có gió thả diều."
-		L.append(["got" if cg else "fut", "Gió chướng", gs, gs, null])
+		L.append(["got" if cg else "fut", "Gió chướng", gs, gs, null, 6])
 	var rs := "Bản tin thời tiết ngày mai, giá cả, cải lương."
-	L.append(["fut", "Radio", rs, rs, ["Mở radio", _go(W.WCU.open_rd)]])
-	return L
+	L.append(["fut", "Radio", rs, rs, ["Mở radio", _go(W.WCU.open_rd)], 8])
+	# cây ngã đè ruộng (mưa dầm, giông)
+	var fl: Dictionary = G.troi.bao.wx().fell
+	var nf := 0
+	var fk := ""
+	for k in fl:
+		if String(fl[k].s) == "down":
+			nf += 1
+			if fk == "" or int(fl[k].p) >= 0:
+				fk = String(k)
+	if nf:
+		var fd := "Cây ngã đè ruộng thì ruộng ngưng lớn tới khi dọn. Chạm cây ngã để dọn."
+		L.append(["sen", str(nf) + " cây ngã sau giông", "Đè ruộng thì ruộng ngưng lớn, dọn sớm.", fd, ["Tới dọn", _cam_to.bind(fk)], 3])
+	# ruộng khô (đất hết nước)
+	var nd := 0
+	for e in G.B0:
+		var rr: Dictionary = G.g.plots[e]
+		if rr.c != null and not G.ripe(rr) and float(rr.w) <= 0.0:
+			nd += 1
+	if nd:
+		var ds := "Đất khô thì cây lớn chậm hơn. " + ("Trời nắng hạn, ruộng khô nhanh gấp rưỡi." if _now_w() == "han" else "Tưới để ruộng lớn nhanh hơn 10%.")
+		L.append(["wx_han" if _now_w() == "han" else "fut", str(nd) + " ô ruộng đang khô", ds, ds, null, 5])
+	L.sort_custom(func(a, b): return int(a[5]) < int(b[5]))
+	return L.slice(0, 5)   # tối đa 5 dòng, bỏ bớt dòng ít gấp
+
+func _cam_to(sk: String) -> void:   # đóng bảng, đưa máy quay tới cây ngã
+	var B = G.troi.bao
+	if not B.by.has(sk):
+		return
+	var t: Dictionary = B.by[sk]
+	var M = U.main
+	var cx := float(t.gx) + float(t.fw) / 2.0
+	var cy := float(t.gy) + float(t.fd) / 2.0
+	M.cam = Vector2(U.F.en(cx, cy), U.F.nn(cx, cy)) - U.get_viewport().get_visible_rect().size / M.zoom * 0.5
+	if M.has_method("_clamp_cam"):
+		M._clamp_cam()
+	close()
 
 # ------------------------------------------------------------------ tab Lịch làng
 func _tabl() -> Array:
