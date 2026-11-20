@@ -417,9 +417,11 @@ func _ach() -> Array:
 			var R: Dictionary = N.ach_rw(t)
 			var ok: bool = v >= need
 			var rw: String = str(R.ng) + " sen đỏ, " + G.fmt_n(R.xu) + " xu"
-			if ok:   # đủ mốc: dòng đổi luôn sang màu bậc mới (không màu chờ nhận riêng)
+			var tn: String = N.T9[t]
+			if ok:   # đủ mốc: dòng đổi luôn sang bậc mới (tên, số, màu), không màu chờ nhận riêng
 				lt = [lt[0], str(t + 1) + "/5", "b" + str(mini(t + 1, 4))]
-			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[t], "", float(v) / need, G.fmt_n(mini(v, need)) + "/" + G.fmt_n(need),
+				tn = N.T9[mini(t + 1, 4)]
+			out.append_array(_row(y, lt, String(A.n) + " · " + tn, "", float(v) / need, G.fmt_n(mini(v, need)) + "/" + G.fmt_n(need),
 				"claim" if ok else "go", N.BI.bind(String(A.k)) if ok else _go.bind(String(A.k)), "", null, "Bậc " + N.T9[t].to_lower() + ": " + rw + "."))
 		y += RH + GAPR
 	y += 8.0
