@@ -140,7 +140,7 @@ func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:  
 # act: việc của nút; sw: việc nút đổi (null = không); tip: chạm dòng hiện chữ
 func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String, st: String, act, btxt := "", sw = null, tip := "") -> Array:
 	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
-	var kind := ("b4" if lk == "b4" else "got") if st == "done" else ("now" if st == "claim" else ("l_" + lk if NVC.has(lk) else "fut"))   # xong bậc Huyền thoại: vàng cam
+	var kind := ("b4" if lk == "b4" else "got") if st == "done" else (("l_" + lk if lk.begins_with("b") else "now") if st == "claim" else ("l_" + lk if NVC.has(lk) else "fut"))   # xong bậc Huyền thoại: vàng cam
 	var c := _chip(X0, y, XW, RH, kind)
 	if tip != "":
 		c.act = _dsay.bind(tip)
@@ -417,6 +417,8 @@ func _ach() -> Array:
 			var R: Dictionary = N.ach_rw(t)
 			var ok: bool = v >= need
 			var rw: String = str(R.ng) + " sen đỏ, " + G.fmt_n(R.xu) + " xu"
+			if ok:   # đủ mốc: dòng đổi luôn sang màu bậc mới (không màu chờ nhận riêng)
+				lt = [lt[0], str(t + 1) + "/5", "b" + str(mini(t + 1, 4))]
 			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[t], "", float(v) / need, G.fmt_n(mini(v, need)) + "/" + G.fmt_n(need),
 				"claim" if ok else "go", N.BI.bind(String(A.k)) if ok else _go.bind(String(A.k)), "", null, "Bậc " + N.T9[t].to_lower() + ": " + rw + "."))
 		y += RH + GAPR
