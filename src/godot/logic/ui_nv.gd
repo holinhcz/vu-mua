@@ -74,6 +74,8 @@ func _init(ui) -> void:
 	N = ui.G.nv
 
 func open(t := "") -> void:
+	if G.lv() < LV_MO:
+		return
 	if t != "":
 		tab = t
 	U.close_all()
@@ -83,11 +85,16 @@ func open(t := "") -> void:
 	sig = ""
 	_build()
 
+const LV_MO := 2   # (bản 431) Sổ nhiệm vụ mở từ cấp 2 (cối xay); việc làm ở cấp 1 vẫn đếm, mở sổ là thấy số
+
 func step(dt: float) -> void:
 	_bt -= dt
 	if _bt <= 0.0:
 		_bt = 0.5
-		badge(U.hid.get("#nvBtn"))
+		var btn = U.hid.get("#nvBtn")
+		if btn != null:
+			btn.visible = G.lv() >= LV_MO
+		badge(btn)
 	super(dt)
 
 func _sig() -> String:
@@ -291,7 +298,7 @@ func _day() -> Array:
 		var m := int(t.m)
 		var dn: bool = N.done(t)
 		var sw = null
-		if not dn and not n.sw and not N.is_base(t):
+		if not dn and not n.sw and not int(n.get("d1", 0)) and not N.is_base(t):   # ngày đầu không đổi việc
 			sw = _swap.bind(String(t.id))
 		out.append_array(_row(y, [_ti(String(t.id)), "+" + str(N.pt(t)), _gk(String(t.id))], String(t.n), "", float(c2) / float(m), G.fmt_n(mini(c2, m)) + "/" + G.fmt_n(m),
 			"done" if dn else "go", _go.bind(String(t.id)), "", sw))

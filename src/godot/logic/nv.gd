@@ -301,8 +301,8 @@ func vg_ready() -> bool:
 
 func MI() -> Array:
 	var n := Pl()
-	if int(n.get("rv", 0)) != 428:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
-		n.rv = 428
+	if int(n.get("rv", 0)) != 431:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
+		n.rv = 431
 		n.rot = null
 	if n.rot == null:
 		var R := Yu.new(int(n.day))
@@ -310,7 +310,13 @@ func MI() -> Array:
 		var rot := []
 		for t in NVBASE:
 			rot.append(t.id)
+		n.d1 = 1 if first_day() else 0
 		var k := 4 if vg_task() != null else 5   # (bản 426) 7 việc ~115 điểm: đủ 100 thì bỏ qua được 1 việc
+		if int(n.d1):   # (bản 431) ngày đầu chơi: đủ các việc cấp 1 (thu hoạch, giao đơn, gieo, tưới, câu cá), không rút
+			for tid in ["plant", "water", "fish"]:
+				if _w(tid, x) > 0.0:
+					rot.append(tid)
+			k = 0
 		while rot.size() < 2 + k:
 			var tid = _draw(R, x, rot)
 			if tid == null:
@@ -346,7 +352,15 @@ func is_base(t: Dictionary) -> bool:
 			return true
 	return false
 
+func first_day() -> bool:   # ngày đầu của người mới (g.tt quà 7 ngày về làng: t0 = ngày bắt đầu)
+	var t = G.g.get("tt")
+	if not (t is Dictionary) and G.w_all != null:   # game mới: g.tt chưa tạo (bảng 7 ngày chưa mở lần nào)
+		t = G.w_all.WS.V1()
+	return t is Dictionary and not t.get("off") and int(t.get("t0", -1)) == d4()
+
 func pt(t: Dictionary) -> int:   # nvPt
+	if int(Pl().get("d1", 0)):   # ngày đầu: 100 điểm chia đều (5 việc mỗi việc 20)
+		return int(round(100.0 / float(maxi(1, MI().size())) / 5.0)) * 5
 	if t.has("pt"):
 		return int(t.pt)
 	# (bản 430) việc rút: 75 điểm chia đều cho số việc rút được (ít việc làm được thì mỗi việc nhiều điểm hơn), làm tròn 5;
