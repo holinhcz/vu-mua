@@ -30,8 +30,8 @@ const NVC := {
 	"b4": ["rgb(255, 214, 140)", "rgb(255, 226, 168)", "rgb(255, 238, 196)", "rgb(220, 140, 20)", "rgb(230, 140, 20)"],
 }
 const GRP := {"harvest": "g_ruong", "plant": "g_ruong", "water": "g_ruong", "kl": "g_ruong", "tharvest": "g_ruong", "scn": "g_ruong",
-	"collect": "g_nuoi", "dz": "g_nuoi", "wc": "g_xuong", "xuong": "g_xuong", "fish": "g_song", "bun": "g_song", "lo": "g_song", "dd": "g_song",
-	"chat": "g_lang", "gift": "g_lang", "help": "g_lang", "giup": "g_lang", "vg": "g_lang", "com": "g_lang", "gop": "g_lang",
+	"collect": "g_nuoi", "wc": "g_xuong", "xuong": "g_xuong", "fish": "g_song", "bun": "g_song", "lo": "g_song", "dd": "g_song",
+	"chat": "g_lang", "gift": "g_lang", "help": "g_lang", "giup": "g_lang", "vlhelp": "g_lang", "vg": "g_lang", "quan": "g_cho", "feed": "g_nuoi", "ghe": "g_song",
 	"deliver": "g_cho", "cho": "g_cho"}
 const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
@@ -54,8 +54,8 @@ func _trk(lk: String) -> String:   # rãnh thanh theo nhóm: đậm hơn nền d
 
 # hình của việc (hình món Kho)
 const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai", "scn": "cui",
-	"collect": "trung", "dz": "pc_non", "wc": "gao", "xuong": "banh_tet", "fish": "ca_loc", "bun": "ca_keo", "lo": "tep", "dd": "dien_dien",
-	"chat": "tra_tac", "gift": "banh_pia", "help": "chieu", "giup": "chieu", "vg": "long_den", "com": "com_tam", "gop": "gao",
+	"collect": "trung", "wc": "gao", "xuong": "banh_tet", "fish": "ca_loc", "bun": "ca_keo", "lo": "tep", "dd": "dien_dien",
+	"chat": "tra_tac", "gift": "banh_pia", "help": "chieu", "giup": "chieu", "vlhelp": "chieu", "vg": "long_den", "quan": "com_tam", "feed": "bap", "ghe": "pc_xe",
 	"deliver": "pc_gui", "cho": "qua_chuoi", "ruong": "lua", "chuong": "trung", "kho": "pc_xe", "sap": "qua_chuoi"}
 static func _ti(id: String) -> String:
 	return "kh:" + String(TIC.get(id, "lua"))
@@ -553,8 +553,8 @@ func _wrap(t: String, fs: float, fw: int, w: float) -> Array:   # xuống dòng 
 
 # ------------------------------------------------------------------ Đi làm: đóng sổ, đưa tới chỗ làm việc đó
 const HINT := {"tharvest": "Ra vườn hái trái chín.", "scn": "Chạm bụi cây, gốc cây trên làng để dọn.", "dd": "Ra ven sông hái bụi điên điển.",
-	"bun": "Ra ruộng bắt cá kèo, mò ốc.", "lo": "Ra mé sông thăm lờ, lọp.", "help": "Vào hợp tác xã giúp bà con trong xã.", "giup": "Vào hợp tác xã giúp bà con trong xã.",
-	"com": "Trưa 12:00–12:30 góp nồi cơm ở sân đình.", "gop": "Vào hợp tác xã góp hàng.", "dz": "Ra sân đá dế.", "kl": "Trồng ruộng, gặt có lúc ra trái khủng.",
+	"bun": "Ra ruộng bắt cá kèo, mò ốc.", "lo": "Ra mé sông thăm lờ, lọp.", "help": "Chưa có nhà dân nào trong làng để giúp.", "giup": "Chưa có nhà dân nào trong làng để giúp.",
+	"quan": "Ra quán xem khách gọi món, có đủ món thì giao.", "ghe": "Ghe thương hồ ghé sông Vàm thì chất hàng lên ghe.", "kl": "Trồng ruộng, gặt có lúc ra trái khủng.",
 	"ln_ruong": "Chạm ô ruộng khóa để mở thêm, nâng sao ô ruộng.", "ln_xuong": "Xây và nâng xưởng ở Xây dựng.", "ln_chuong": "Xây chuồng, mua con vật ở Xây dựng.",
 	"ln_kho": "Chạm kho để nâng sao.", "ln_sap": "Giao đơn hàng, nâng sạp ở chợ."}
 
@@ -579,7 +579,7 @@ func _go(tid: String) -> void:
 		"water":
 			if _plot(func(i): var a: Dictionary = G.p(i); return a.c != null and not G.ripe(a) and float(a.w) < G.water_hold(a) - 0.5, "Ruộng đang đủ nước."):
 				return
-		"collect", "ln_chuong":
+		"collect", "feed", "ln_chuong":
 			for t in ["ga", "cuu", "bo", "heo", "de"]:
 				if G.vn.ok(t):
 					var p: Vector2i = G.lang.pen_pos(t)
@@ -590,7 +590,7 @@ func _go(tid: String) -> void:
 			if L.size():
 				U.xf_open(String(L[0]))
 				return
-		"chat", "gift", "vg":
+		"chat", "gift", "vg", "help", "vlhelp", "giup":
 			var H: Array = G.w_all.WL.bl()
 			if H.size():
 				U.vl_open(int(H[0].u))

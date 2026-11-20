@@ -469,9 +469,6 @@ func htx_badge() -> int:   # tY: số trên huy hiệu #htxBdg (0 = ẩn)
 	var a = G.g.get("hx")
 	return w8().size() + v9().size() if _tr(a) and _tr(a.get("x")) and _l() else 0
 
-func nv_has_hx() -> bool:   # nvHasHx
-	return _l() and _tr(G.g.get("hx")) and _tr(G.g.hx.get("x"))
-
 func htx_step(t: float) -> void:   # ui({id: "htx"}).step
 	ZL -= t
 	if ZL > 0:

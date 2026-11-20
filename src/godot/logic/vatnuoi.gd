@@ -138,6 +138,7 @@ func feed(t: String, j: int, quiet := false) -> bool:   # pw
 	e.h = 0.0
 	if not e.get("s", 0):
 		e.t = minf(5.0, float(e.get("t", 0)) + 0.1)
+	G.nv.S8("feed")   # (bản 426) việc "cho vật nuôi ăn"
 	G.mark()
 	return true
 

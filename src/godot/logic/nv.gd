@@ -222,6 +222,14 @@ func qi(k: String, n := 1) -> void:
 		OI(k)
 		if G.w_all != null:   # NTWEB qi bọc: thi đua tuần của xã (m9)
 			G.w_all.qi(k)
+	if k != "xuong" and G.xw != null and _xw_type(k):   # (bản 426) món xưởng xong (xưởng gọi theo loại): đếm thêm "xuong"
+		qi("xuong", n)
+
+func _xw_type(k: String) -> bool:
+	for x in G.xw.sr:
+		if String(G.xw.sr[x].get("type", "")) == k:
+			return true
+	return false
 
 # điều kiện mở việc
 func has_fam() -> bool:   # nvHasFam: có nhà dân đang đứng trên làng
@@ -229,7 +237,14 @@ func has_fam() -> bool:   # nvHasFam: có nhà dân đang đứng trên làng
 func has_pen() -> bool: return G.vn != null and G.vn.has_any()   # nvHasPen
 func has_work() -> bool: return G.xw != null and not G.xw.list_built().is_empty()   # nvHasWork
 func has_tree() -> bool: return G.w_all != null and G.w_all.WR.nv_has_tree()   # nvHasTree
-func has_hx() -> bool: return G.w_all != null and G.w_all.WH.nv_has_hx()   # NTWEB nvHasHx
+func has_quan() -> bool:   # có quán (cơm, tạp hóa, cà phê) đã xây
+	if G.w_all == null:
+		return false
+	for k in G.w_all.WQ.CF:
+		for q in G.w_all.WQ.CF[k].obj:
+			if G.w_all.WQ.built(String(q)):
+				return true
+	return false
 
 # ------------------------------------------------------------------ 1. hằng ngày
 const NVPT := 15
@@ -249,8 +264,10 @@ const WI := [
 	{"id": "bun", "n": "Bắt cá kèo, mò ốc 2 lần", "m": 2},
 	{"id": "lo", "n": "Thăm lờ, lọp 2 lần", "m": 2},
 	{"id": "cho", "n": "Mua bán ở chợ nổi", "m": 1},
-	{"id": "help", "n": "Giúp bà con trong xã 3 lần", "m": 3, "go": 1},
-	{"id": "com", "n": "Góp nồi cơm trưa (12:00–12:30)", "m": 1, "go": 1}]
+	{"id": "help", "n": "Giúp bà con 3 lần", "m": 3, "go": 1},
+	{"id": "quan", "n": "Phục vụ 3 khách ở quán", "m": 3},
+	{"id": "feed", "n": "Cho vật nuôi ăn 5 lần", "m": 5},
+	{"id": "ghe", "n": "Chất hàng 1 ghe thương hồ", "m": 1}]   # (bản 426) bỏ "nồi cơm trưa": rút lúc 0 giờ, chơi chiều là trễ
 
 func _ok(id: String) -> bool:
 	match id:
@@ -261,9 +278,10 @@ func _ok(id: String) -> bool:
 		"dd": return G.w_all != null and not G.w_all.WC.Vb().is_empty()   # mùa nước nổi, có bụi ven khúc sông đã mua
 		"bun": return false     # O0() > 0
 		"lo": return false      # T1().set.length
-		"cho": return false     # u4(): chợ nổi
-		"help": return has_hx()
-		"com": return hour() < 12.5
+		"cho", "ghe": return G.w_all != null and G.w_all.WC.u4() != null   # u4(): đã mở khúc sông Vàm (chợ nổi, ghe)
+		"help": return has_fam()   # (bản 426) giúp nhà dân trong làng (qi "vlhelp"), bản Godot chưa có xã online
+		"quan": return has_quan()
+		"feed": return has_pen()
 	return true
 
 func _w(id: String, x: Dictionary) -> float:
@@ -286,10 +304,7 @@ func task_f(t: Dictionary) -> int:   # t.f()
 		"tharvest": return OL("tharvest")
 		"scn": return OL("scn")
 		"dd": return OL("dd")
-		"help": return 0
-		"com":
-			var c = G.g.get("com")
-			return 1 if c is Dictionary and int(c.get("day", 0)) == Ao() and int(c.get("p", 0)) > 0 else 0
+		"help": return Xs("vlhelp")
 	return Xs(id)
 
 func ctx() -> Dictionary:
@@ -322,13 +337,16 @@ func vg_ready() -> bool:
 
 func MI() -> Array:
 	var n := Pl()
+	if int(n.get("rv", 0)) != 426:   # (bản 426) bộ việc đổi (bỏ nồi cơm, thêm quán, cho ăn, ghe): rút lại
+		n.rv = 426
+		n.rot = null
 	if n.rot == null:
 		var R := Yu.new(int(n.day))
 		var x := ctx()
 		var rot := []
 		for t in NVBASE:
 			rot.append(t.id)
-		var k := 3 if vg_task() != null else 4
+		var k := 4 if vg_task() != null else 5   # (bản 426) 7 việc ~115 điểm: đủ 100 thì bỏ qua được 1 việc
 		while rot.size() < 2 + k:
 			var tid = _draw(R, x, rot)
 			if tid == null:
@@ -346,9 +364,21 @@ func MI() -> Array:
 			continue
 		for t in NVBASE + WI:
 			if t.id == tid:
-				out.append(t)
+				out.append(_lvm(t))
 				break
 	return out
+
+# (bản 426) số lượng việc theo cấp: x0,6 (cấp 1) .. x1,4 (cấp 40) .. x2 (cấp 70+); việc 1 lần giữ nguyên; tên đổi số theo
+func _lvm(t: Dictionary) -> Dictionary:
+	var m := int(t.m)
+	if m <= 1:
+		return t
+	var k := clampf(0.6 + float(jr()) / 50.0, 0.6, 2.0)
+	var m2 := maxi(1, int(round(m * k)))
+	var o := t.duplicate()
+	o.m = m2
+	o.n = String(t.n).replace(str(m), G.fmt_n(m2))
+	return o
 
 func is_base(t: Dictionary) -> bool:
 	for b in NVBASE:
@@ -665,22 +695,24 @@ const NVWK := [
 	{"id": "fish", "n": "Câu được 15 con cá", "m": 15, "pt": 10, "go": 1},
 	{"id": "gift", "n": "Tặng quà 5 lần", "m": 5, "pt": 15, "ok": "fam"},
 	{"id": "chat", "n": "Trò chuyện 15 lần", "m": 15, "pt": 10, "ok": "fam"},
-	{"id": "vg", "n": "Làm 4 việc của làng", "m": 4, "pt": 15, "ok": "fam"},
-	{"id": "gop", "n": "Góp cho hợp tác xã 3 lần", "m": 3, "pt": 15, "go": 1, "ok": "hx"},
-	{"id": "dz", "n": "Đá dế thắng 3 trận", "m": 3, "pt": 15, "ok": "lv12"},
-	{"id": "kl", "n": "Gặt được 1 trái khủng", "m": 1, "pt": 20}]
+	{"id": "vlhelp", "n": "Giúp bà con 6 lần", "m": 6, "pt": 15, "ok": "fam"},
+	{"id": "quan", "n": "Phục vụ 20 khách ở quán", "m": 20, "pt": 15, "ok": "quan"},
+	{"id": "feed", "n": "Cho vật nuôi ăn 30 lần", "m": 30, "pt": 10, "ok": "pen"},
+	{"id": "kl", "n": "Gặt được 1 trái khủng", "m": 1, "pt": 20}]   # (bản 426) bỏ góp hợp tác xã, đá dế: bản Godot chưa có
 
 func _wok(t: Dictionary) -> bool:
 	match String(t.get("ok", "")):
 		"work": return has_work()
 		"pen": return has_pen()
 		"fam": return has_fam()
-		"hx": return has_hx()
-		"lv12": return jr() >= 12
+		"quan": return has_quan()
 	return true
 
 func wk_list() -> Array:   # nvWkList
 	var w: Dictionary = Pl().wk
+	if int(w.get("rv", 0)) != 426:   # (bản 426) bỏ góp hợp tác xã, đá dế; 8 việc: rút lại
+		w.rv = 426
+		w.rot = null
 	if w.rot == null:
 		var R := Yu.new(int(w.w) * 13 + 5)
 		var L := []
@@ -688,7 +720,7 @@ func wk_list() -> Array:   # nvWkList
 			if t.id != "deliver" and _wok(t):
 				L.append(t)
 		var rot := ["deliver"]
-		while rot.size() < 7 and L.size() > 0:
+		while rot.size() < 8 and L.size() > 0:   # (bản 426) 8 việc, mốc cuối 80% tổng điểm
 			var i := int(floor(R.next() * L.size()))
 			rot.append(L[i].id)
 			L.remove_at(i)
@@ -697,7 +729,7 @@ func wk_list() -> Array:   # nvWkList
 	for tid in w.rot:
 		for t in NVWK:
 			if t.id == tid:
-				out.append(t)
+				out.append(_lvm(t))
 	return out
 
 func WP() -> int:   # điểm tuần (bản 410: bỏ điểm "ngày đủ 100 năng động", chỉ còn điểm việc tuần)
@@ -707,11 +739,11 @@ func WP() -> int:   # điểm tuần (bản 410: bỏ điểm "ngày đủ 100 n
 			n += int(t.pt)
 	return n
 
-func wk_top() -> int:   # tổng điểm 7 việc tuần này = mốc cuối
+func wk_top() -> int:   # mốc cuối = 80% tổng điểm 8 việc tuần này (bỏ qua được 1-2 việc), làm tròn 5
 	var n := 0
 	for t in wk_list():
 		n += int(t.pt)
-	return maxi(5, n)
+	return maxi(5, int(round(n * 0.8 / 5.0)) * 5)
 
 # 4 mốc quà tuần theo phần trăm tổng điểm việc tuần (25 / 50 / 75 / 100%), làm tròn 5; nhận theo thứ tự mốc ("m0".."m3")
 const NVWCH := [{"f": 0.25, "n": "Túi xu", "ic": "coin"}, {"f": 0.5, "n": "Rương vật liệu", "ic": "crate"},
@@ -869,6 +901,9 @@ func ach_f(A: Dictionary) -> int:
 		"harvest": return int(st.get("harvest", 0))
 		"deliver": return int(G.g.delivered)
 		"collect": return int(st.get("collect", 0))
+		"xuong": return int(st.get("xuong", 0))   # (bản 426) trước chưa đếm: Thợ cả, Tay câu, Hàng xóm tốt đứng ở 0
+		"fish": return int(st.get("fish", 0))
+		"giup": return int(st.get("vlhelp", 0))
 	return 0
 
 static func S9(A: Dictionary, t: int) -> int:

@@ -177,6 +177,7 @@ func collect(k: String) -> bool:   # Dp
 	if df(k) > 0:
 		G.toast.emit("Kho đầy (" + G.fmt_n(G.kho_n()) + "/" + G.fmt_n(G.kho_cap()) + "): còn " + str(df(k)) + " món chờ ở xưởng. Bán bớt hoặc nâng kho rồi thu tiếp.")
 	G._drop_at("work", at)
+	G.nv.S8("wc")   # (bản 426) việc "thu hàng xưởng"
 	G.vib(10)
 	G.mark()
 	return true

@@ -265,6 +265,7 @@ func giao(q: String, i := 0) -> bool:   # giao khách / đơn thứ i (bong bón
 	L.remove_at(i)
 	G.g.coins = float(G.g.coins) + pay[0] + pay[1]
 	G.add_xp(maxi(1, int(round(_val(e.items) / 12.0))), "quan")
+	G.nv.S8("quan")   # (bản 426) việc "phục vụ khách quán"
 	G.toast.emit(ten(q) + ": +" + G.fmt_n(pay[0]) + " xu" + (" (boa " + G.fmt_n(pay[1]) + ")" if pay[1] > 0 else "") + ".")
 	G.mark()
 	return true

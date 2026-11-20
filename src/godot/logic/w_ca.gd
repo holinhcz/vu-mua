@@ -779,7 +779,7 @@ func ry() -> void:   # rY: đếm cá câu cho sổ nhiệm vụ (mỗi giây)
 		M3 = t
 		return
 	if t > M3:
-		G.nv.S8("fish", t - M3)
+		G.nv.qi("fish", t - M3)   # qi: đếm cả thành tựu Tay câu, ngày câu cá của hội làng
 		G.nv.OI("fish", t - M3)
 	M3 = t
 
