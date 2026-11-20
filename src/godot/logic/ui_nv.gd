@@ -93,18 +93,19 @@ func _lc(x: float, y: float, h: float, l1: String, l2: String, kind: String) -> 
 		c.kids = [_dt(x, y + h * 0.5 - 12.0, LW, 11.0, l1, 9.0, 600, SUB), _dt(x, y + h * 0.5, LW, 13.0, l2, 11.5, 800, BROWN)]
 	return c
 
-func _bar(x: float, y: float, w: float, f: float, h := 5.0, col := GREEN) -> Array:
+func _bar(x: float, y: float, w: float, f: float, h := 5.0) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
 	var out := [_dbx(x, y, w, h, TRACK, h * 0.5)]
 	if f > 0.0:
-		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, col, h * 0.5))
+		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))
 	return out
 
-func _gobtn(x: float, y: float, w: float, h: float, t: String, cb) -> Dictionary:   # chip "Đi làm" (nâu vàng)
-	var c := _chip(x, y, w, h, "tre")
-	c.kids = [_dt(x, y, w, h, t, 11.0, 800, BROWN)]
-	if cb is Callable:
-		c.act = cb
-	return c
+static func _fcol(f: float) -> String:
+	var a := Color8(214, 72, 52)
+	var b := Color8(230, 170, 30)
+	var c := Color8(46, 150, 80)
+	f = clampf(f, 0.0, 1.0)
+	var k := a.lerp(b, f * 2.0) if f < 0.5 else b.lerp(c, (f - 0.5) * 2.0)
+	return "rgb(%d, %d, %d)" % [int(k.r8), int(k.g8), int(k.b8)]
 
 func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:   # nút chưa bấm được
 	var c := _chip(x, y, w, h, "miss")
@@ -121,6 +122,8 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 	var out := [c]
 	var lk: String = String(lt[2]) if lt.size() > 2 else "tre"
 	out.append(_lc(X0 + 5.0, y + 5.0, RH - 10.0, String(lt[0]), String(lt[1]), lk))
+	if NVC.has(lk):   # vạch màu nhóm ở mép trái (như cột việc HUD)
+		out.append(_dbx(X0 + 1.5, y + 9.0, 2.5, RH - 18.0, String(NVC[lk][4]), 1.25))
 	var x := X0 + LW + 13.0
 	var bx := X0 + XW - BW - 6.0
 	var tw := bx - 8.0 - x
@@ -133,7 +136,7 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		out.append(s)
 	if f >= 0.0:
 		var cw: float = Box.text_w(cnt, 10.0, 700) + 6.0
-		out.append_array(_bar(x, y + 29.0, tw - cw, f, 5.0, String(NVC[lk][4]) if NVC.has(lk) else GREEN))
+		out.append_array(_bar(x, y + 29.0, tw - cw, f))
 		out.append(_dt(x + tw - cw, y + 24.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
 		out.append(_dt(x, y + 24.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
@@ -142,9 +145,9 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		"done":
 			out.append(_dtick(bx + (BW - 20.0) * 0.5, y + (RH - 20.0) * 0.5, 20.0))
 		"claim":
-			out.append(_onbtn(bx, by, BW, 26.0, btxt if btxt != "" else "Nhận", act))
+			out.append(_onbtn(bx, by, BW, 26.0, btxt if btxt != "" else "Nhận", act, true))   # nhận: chip đỏ, khác "Đi làm" xanh
 		"go":
-			out.append(_gobtn(bx, by, BW, 26.0, btxt if btxt != "" else "Đi làm", act))
+			out.append(_onbtn(bx, by, BW, 26.0, btxt if btxt != "" else "Đi làm", act))
 		"off":
 			out.append(_offbtn(bx, by, BW, 26.0, btxt))
 	return out
@@ -222,12 +225,13 @@ func _day() -> Array:
 	rc.kids = [_dt(X0 + XW - rw, y - 1.0, rw, 18.0, rt, 10.0, 700, SUB)]
 	out.append(rc)
 	var dy := y + 22.0
-	var ds := 16.0
-	var gx := 8.0
+	var ds := 19.0
+	var gx := 5.0
 	for i in 6:
 		var dx := X0 + 4.0 + i * (ds + gx)
-		out.append(_dbx(dx, dy + 9.0, ds, ds, FIRE if i < pos else TRACK, ds * 0.5))
-		out.append(_dt(dx, dy + 9.0, ds, ds, str(i + 1), 8.5, 800, "rgb(255, 255, 255)" if i < pos else SUB))
+		var on_d := i < pos
+		out.append(_dbx(dx, dy + 7.5, ds, ds, FIRE if on_d else "rgb(246, 236, 212)", ds * 0.5, _cpx(1.0) + " solid " + ("rgb(196, 86, 24)" if on_d else "rgb(196, 168, 116)")))
+		out.append(_dt(dx, dy + 7.5, ds, ds, str(i + 1), 10.0, 800, "rgb(255, 255, 255)" if on_d else BROWN))
 	var gxp := X0 + 4.0 + 6.0 * (ds + gx)
 	var gc := _chip(gxp, dy, 34.0, 34.0, "got" if pos >= 7 else "sen")
 	gc.kids = [_dick(gxp + 17.0, dy + 17.0, 24.0, "gift")]
@@ -240,7 +244,9 @@ func _day() -> Array:
 	out.append_array(_hd(y, "Việc hôm nay"))
 	out.append(_sub(y + 18.0, "Làm mới lúc 0 giờ." + ("" if n.sw else " Được đổi 1 việc chưa ưng.")))
 	y += 36.0
-	for t in N.MI():
+	var TL: Array = N.MI()
+	TL = TL.filter(func(t): return not N.done(t)) + TL.filter(func(t): return N.done(t))   # việc xong xuống cuối, giữ thứ tự
+	for t in TL:
 		var c2: int = N.task_f(t)
 		var m := int(t.m)
 		var dn: bool = N.done(t)
@@ -275,7 +281,10 @@ func _week() -> Array:
 	out.append_array(_hd(y, "Việc tuần này"))
 	out.append(_sub(y + 18.0, "Làm mới 0 giờ thứ Hai."))
 	y += 36.0
-	for t in N.wk_list():
+	var WL: Array = N.wk_list()
+	var wd := func(t) -> bool: return N.nvW(t.id) >= int(t.m)
+	WL = WL.filter(func(t): return not wd.call(t)) + WL.filter(func(t): return wd.call(t))   # việc xong xuống cuối
+	for t in WL:
 		var c: int = N.nvW(t.id)
 		var m := int(t.m)
 		out.append_array(_row(y, ["điểm", "+" + str(t.pt), _gk(String(t.id))], String(t.n), "", float(c) / float(m), G.fmt_n(mini(c, m)) + "/" + G.fmt_n(m),
