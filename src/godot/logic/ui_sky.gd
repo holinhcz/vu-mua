@@ -35,6 +35,13 @@ const SKC := {
 func _ck(kind: String) -> Array:
 	return SKC[kind] if SKC.has(kind) else super(kind)
 
+# hình thời tiết vẽ lệch trong khung 24 (mây mưa nằm thấp, nhỏ hơn mặt trời): bù [phóng, dời dọc theo cỡ] cho cùng tâm, cùng cỡ
+const WIC := {"mua": [1.08, -0.10], "giong": [1.08, -0.125]}
+func _wic(cx: float, cy: float, s: float, f: String) -> Dictionary:   # hình thời tiết f, tâm (cx, cy), cỡ s
+	var w: Array = WIC.get(f, [1.0, 0.0])
+	var z := s * float(w[0])
+	return _dic(cx - z * 0.5, cy - z * 0.5 + s * float(w[1]), z, String(SK.ic[f]))
+
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
 	return "wx_" + (f if f in ["nang", "han", "rao", "mua"] else "nang")
 
@@ -158,13 +165,14 @@ func _tabt() -> Array:
 	var tx0 := X0 + 14.0 + nis + 14.0
 	var tw0 := XW - (tx0 - X0) - 12.0
 	var hl := _wrap2(HQ[a], 10.5, 600, tw0)   # hiệu ứng tối đa 2 dòng
-	var bh := 12.0 + 2.0 + 20.0 + 3.0 + hl.size() * 13.0
-	var ty0 := ny + (nh - bh) * 0.5   # khối chữ đặt giữa chip
-	nc.kids = [_dic(X0 + 14.0, ny + (nh - nis) * 0.5, nis, String(SK.ic[a])),
+	var bh := 12.0 + 20.0 + hl.size() * 13.0
+	var lg := maxf(2.0, (nh - bh) / 4.0)   # khoảng đều: trên, giữa các dòng, dưới
+	var ty0 := ny + lg
+	nc.kids = [_wic(X0 + 14.0 + nis * 0.5, ny + nh * 0.5, nis, a),
 		_dt(tx0, ty0, tw0, 12.0, "Bây giờ · " + String(TK[int(floor(G.nv.hour() / 6.0))]).to_lower(), 10.0, 600, SUB, "left"),
-		_dt(tx0, ty0 + 14.0, tw0, 20.0, String(G.troi.TEN[a]), 15.5, 800, BROWN, "left")]
+		_dt(tx0, ty0 + 12.0 + lg, tw0, 20.0, String(G.troi.TEN[a]), 15.5, 800, BROWN, "left")]
 	for li in hl.size():
-		nc.kids.append(_dt(tx0, ty0 + 37.0 + li * 13.0, tw0, 13.0, String(hl[li]), 10.5, 600, SUB, "left"))
+		nc.kids.append(_dt(tx0, ty0 + 32.0 + lg * 2.0 + li * 13.0, tw0, 13.0, String(hl[li]), 10.5, 600, SUB, "left"))
 	nc.act = _dsay.bind(HQF[a])
 	out.append(nc)
 	# dự báo 3 buổi kế tiếp (bỏ khuya)
@@ -174,8 +182,8 @@ func _tabt() -> Array:
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
 	var ch := 68.0 * k
-	var isz := clampf(ch - 12.0 - 15.0 - 10.0, 22.0, 46.0)   # hình to, chừa 4 khe khoảng 2,5
-	var fg := maxf(2.0, (ch - 12.0 - isz - 15.0) / 4.0)   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
+	var isz := clampf(ch - 12.0 - 15.0 - 20.0, 20.0, 44.0)   # lề trên / dưới 7, khe chữ - hình 3
+	var fg := (ch - 12.0 - isz - 15.0) / 2.0 - 3.0   # lề trên = lề dưới   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
 	var gy := fy + 22.0
 	var bs := []
 	var c0: int = e + 1
@@ -191,8 +199,8 @@ func _tabt() -> Array:
 		var yy := gy
 		var cc := _chip(x, yy, cw, ch, _wk(f))
 		cc.kids = [_dt(x, yy + fg, cw, 12.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 9.5, 600, SUB),
-			_dic(x + (cw - isz) * 0.5, yy + fg * 2.0 + 12.0, isz, String(SK.ic[f])),
-			_dt(x + 2.0, yy + fg * 3.0 + 12.0 + isz, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 11.5, 800, cw - 4.0), 11.5, 800, BROWN)]
+			_wic(x + cw * 0.5, yy + fg + 15.0 + isz * 0.5, isz, f),
+			_dt(x + 2.0, yy + fg + 18.0 + isz, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 11.5, 800, cw - 4.0), 11.5, 800, BROWN)]
 		cc.act = _dsay.bind(TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")) + ": " + String(G.troi.TEN[f]) + ". " + HQF[f])
 		out.append(cc)
 	# cảnh báo + radio
