@@ -255,7 +255,7 @@ func _day() -> Array:
 	var cc := _chip(X0, y, cw1, 26.0, "fire_l")   # tên khối trong chip cam nhạt (màu lửa của chấm)
 	cc.kids = [_dt(X0, y, cw1, 26.0, t1, 12.5, 800, "rgb(150, 66, 16)")]
 	out.append(cc)
-	var t2 := ("hôm nay xong" if today else "hôm nay chưa đủ 100") + (" · rương +" + str(bn) + "%" if bn else "")
+	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("hôm nay đã đủ 100" if today else "hôm nay chưa đủ 100")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
 	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
 	var t2w := XW - cw1 - 8.0 - rw - 6.0
@@ -280,9 +280,8 @@ func _day() -> Array:
 	out.append(_dt(tx, dy + 17.0, X0 + XW - tx, 16.0, _fitw(N.round_n(k), 11.5, 800, X0 + XW - tx), 11.5, 800, BROWN, "left"))
 	y = dy + 34.0 + 14.0
 	# việc hôm nay
-	out.append_array(_hd(y, "Việc hôm nay"))
-	out.append(_sub(y + 18.0, "Làm mới lúc 0 giờ." + ("" if n.sw else " Được đổi 1 việc chưa ưng.")))
-	y += 36.0
+	out.append_array(_shd(y, "Việc hôm nay", "làm mới sau " + _left((1.0 - fposmod(N._nowd(), 1.0)) * 86400.0)))
+	y += 34.0
 	var TL: Array = N.MI()
 	TL = TL.filter(func(t): return not N.done(t)) + TL.filter(func(t): return N.done(t))   # việc xong xuống cuối, giữ thứ tự
 	for t in TL:
@@ -299,6 +298,21 @@ func _day() -> Array:
 
 func _swap(tid: String) -> void:
 	N.swap(tid)
+	if N.Pl().sw:
+		_dsay("Đã đổi việc. Mỗi ngày đổi được 1 việc.")
+
+func _shd(y: float, t: String, right: String) -> Array:   # tên phần trong chip nâu vàng + chữ phụ bên phải (như khối Chuỗi)
+	var w: float = Box.text_w(t, 12.5, 800) + 24.0
+	var c := _chip(X0, y, w, 26.0, "tre")
+	c.kids = [_dt(X0, y, w, 26.0, t, 12.5, 800, BROWN)]
+	return [c, _dt(X0 + w + 8.0, y + 5.0, XW - w - 8.0, 16.0, right, 10.5, 600, SUB, "left")]
+
+static func _left(sec: float) -> String:   # "8 giờ" / "2 ngày" / "25 phút"
+	if sec >= 86400.0:
+		return str(int(ceil(sec / 86400.0 - 0.01))) + " ngày"
+	if sec >= 3600.0:
+		return str(int(ceil(sec / 3600.0))) + " giờ"
+	return str(maxi(1, int(ceil(sec / 60.0)))) + " phút"
 
 # ------------------------------------------------------------------ tab Tuần
 func _week() -> Array:
@@ -317,9 +331,8 @@ func _week() -> Array:
 	var lt: String = (str(int(floor(left / 86400.0))) + " ngày" if left >= 86400.0 else N.ao(left))
 	out.append(_sub(y, "Mốc cuối: " + String(N.deco_of(N.week())[1]) + " + 5 sen đỏ · còn " + lt))
 	y += 24.0
-	out.append_array(_hd(y, "Việc tuần này"))
-	out.append(_sub(y + 18.0, "Làm mới 0 giờ thứ Hai."))
-	y += 36.0
+	out.append_array(_shd(y, "Việc tuần này", "làm mới sau " + _left(left)))
+	y += 34.0
 	var WL: Array = N.wk_list()
 	var wd := func(t) -> bool: return N.nvW(t.id) >= int(t.m)
 	WL = WL.filter(func(t): return not wd.call(t)) + WL.filter(func(t): return wd.call(t))   # việc xong xuống cuối
