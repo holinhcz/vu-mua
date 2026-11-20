@@ -34,7 +34,11 @@ func open() -> void:
 	_layer = CanvasLayer.new()
 	_layer.layer = 100
 	var g := GAME.new()
-	g.setup(float(ui.dpr_v), ui.F.P, func(): return int(ui.G.g.coins))
+	# tiến trình đua (xu đua, đồ ăn, nón, cúp, kỷ lục, bóng ma, nhiệm vụ) lưu chung save nông trại ở g.dgsv
+	if not (ui.G.g.get("dgsv") is Dictionary):
+		ui.G.g.dgsv = {}
+	var G = ui.G
+	g.setup(float(ui.dpr_v), ui.F.P, func(): return int(G.g.coins), G.g.dgsv, func(): G.save_game())
 	g.ended.connect(Callable(get_script(), "_s_end"))
 	g.closed.connect(Callable(get_script(), "_s_close"))
 	_layer.add_child(g)

@@ -12,6 +12,7 @@ const MAP := preload("res://logic/dg/dg_map.gd")
 const RES := preload("res://logic/dg/dg_res.gd")
 const VIEW := preload("res://logic/dg/dg_view.gd")
 const SND := preload("res://logic/dg/dg_snd.gd")
+const PROG := preload("res://logic/dg/dg_prog.gd")
 
 const KEM := Color("#fbf3df")
 const KEM2 := Color("#f4e8c8")
@@ -33,7 +34,6 @@ const SONG := Color("#3c8fa6")
 const SONGD := Color("#276b7e")
 const RIMW := Color("#fff9ea")
 const SH := Color(59 / 255.0, 36 / 255.0, 21 / 255.0, 0.45)
-const MAP_ID := "nongtrai"
 const LAPS := 3
 const REW := [60, 45, 35, 25, 15, 10]
 
@@ -82,11 +82,28 @@ var _msg_pop := 0.0
 var mini_vp: SubViewport = null
 var mini_sz := Vector2(104, 84)
 var clock := 0.0
+var prog = null             # dg_prog.gd: xu đua, đồ ăn, nón, cúp, nhiệm vụ, kỷ lục
+var sel_map := "nongtrai"   # map đang chọn ở menu
+var map_id := ""            # map đang dựng (M)
+var mode_sel := "single"    # nút chế độ ở menu: single / cup / tt
+var cur_mode := "single"
+var cup = null              # Giải Làng đang chạy: {stage, pts}
+var res := {}               # tổng kết ván (prog.results)
+var menu_y := 0.0           # menu cuộn dọc
+var menu_h := 0.0
+var res_y := 0.0
+var res_h := 0.0
+var toast := ""
+var toast_t := 0.0
+var conf: Array = []        # pháo giấy kết quả
 
-func setup(k: float, pics: Node, coins: Callable = Callable()) -> void:
+# save: Dictionary giữ trong save nông trại (g.dgsv), save_fn ghi lại
+func setup(k: float, pics: Node, coins: Callable = Callable(), save := {}, save_fn := Callable()) -> void:
 	K = maxf(1.0, k)
 	P = pics
 	coins_fn = coins
+	prog = PROG.new(save, save_fn)
+	SND.muted = bool(save.get("mute", false))
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -126,11 +143,19 @@ func _notification(what: int) -> void:
 func _process(dt: float) -> void:
 	dt = minf(dt, 0.05)
 	clock += dt
+	toast_t = maxf(0, toast_t - dt)
+	_conf_step(dt)
 	if mode == "boot":
 		if P.has_bundle("dg_card"):
 			var m: Dictionary = P.meta("dg_card")
 			chars = m.get("chars", [])
 			pers = m.get("pers", {})
+			prog.set_data(m)
+			if RS == null:
+				RS = RES.new(P)
+			prog.ensure_daily()
+			var sm := String(prog.S.get("map", "nongtrai"))
+			sel_map = sm if prog.unlocked(prog.map_def(sm)) else "nongtrai"
 			mode = "menu"
 	elif mode == "load":
 		t_load += dt
@@ -163,33 +188,69 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		R.auto = not R.auto
 
 # ============================================================ tải
+func _go() -> void:
+	cur_mode = mode_sel
+	cup = {"stage": 0, "pts": {}} if mode_sel == "cup" else null
+	_start_race()
+
+func _stage_cfg() -> Dictionary:
+	var md: Dictionary = prog.map_def(sel_map)
+	if cup != null:
+		return prog.stages[int(cup.stage)]
+	if cur_mode == "tt":
+		return {"tod": md.tod, "rain": "none"}
+	return {"tod": md.tod, "rain": "random"}
+
 func _start_race() -> void:
 	snd.stop_all()
-	# năm đối thủ bốc ngẫu nhiên trong mọi con (cả con chưa mở, cho nếm trước), con mình xuất phát cuối
+	var tt := cur_mode == "tt" and cup == null
+	# năm đối thủ bốc ngẫu nhiên trong mọi con (cả con chưa mở, cho nếm trước), con mình xuất phát cuối; tính giờ thì chạy một mình
 	var idx: Array = []
 	for i in chars.size():
 		if i != sel:
 			idx.append(i)
 	idx.shuffle()
-	load_order = idx.slice(0, 5)
+	load_order = [] if tt else idx.slice(0, 5)
 	load_order.append(sel)
 	load_ids = []
 	for i in load_order:
 		load_ids.append(String(chars[i].id))
 	if RS == null:
 		RS = RES.new(P)
-	RS.request(MAP_ID, load_ids, String(chars[sel].id))
+	var pid := String(chars[sel].id)
+	var ex := []
+	var hat: String = prog.hat_of(pid)
+	if hat != "":
+		ex.append(RS.hat_bundle(pid))
+	_ghost = prog.ghost(sel_map) if tt else null
+	if _ghost != null and String(_ghost.ch) != pid:
+		ex.append("dg_r_" + String(_ghost.ch) + "_1")
+	if map_id != sel_map:
+		# đổi đường: dựng lại map, luật đua, cảnh
+		if view != null:
+			view.queue_free()
+			view = null
+		M = null
+		R = null
+		map_id = sel_map
+		prog.S.map = sel_map
+		prog.persist()
+	RS.request(map_id, load_ids, pid, ex)
 	mode = "load"
 	t_load = 0.0
 	_stage = 0
 	res_shown = false
 	paused = false
+	prog.done_now = []
+	conf = []
+
+var _ghost = null
 
 func _load_step() -> void:
 	if _stage == 0:
 		if RS.failed():
 			return
-		if RS.progress(MAP_ID, load_ids, String(chars[sel].id)) < 1.0:
+		if RS.progress(map_id, load_ids, String(chars[sel].id)) < 1.0:
 			return
 		if M == null:
 			RS.open_map()
@@ -198,6 +259,9 @@ func _load_step() -> void:
 		else:
 			for b in RS.RB.values():
 				RS.RM[b] = P.meta(b)
+		if _ghost != null:
+			RS.ghost_as(String(_ghost.ch))
+			RS.RM[RS.RB.ghost] = P.meta(RS.RB.ghost)
 		_stage = 1
 	elif _stage == 1:
 		RS.pump_sprites(12.0)
@@ -205,15 +269,22 @@ func _load_step() -> void:
 			return
 		if R == null:
 			R = RACE.new(M)
-		R.new_race(load_order, chars, sel, LAPS, diff)
+		var cfg := _stage_cfg()
+		R.rain_mode = String(cfg.rain)
+		var pid := String(chars[sel].id)
+		R.new_race(load_order, chars, sel, LAPS, diff, {"tt": cur_mode == "tt" and cup == null, "up": prog.S.up, "hat": prog.hat_of(pid)})
+		R.auto = bool(prog.S.get("auto", false))
 		if view == null:
 			view = VIEW.new()
 			view.setup(R, M, RS)
 			add_child(view)
 			move_child(view, 0)
 			view.layout(W, H)
+		view.set_tod(String(cfg.tod))
+		view.ghost = _ghost
 		R.CH = R.CH0
 		view.visible = true
+		snd.music_id = int(prog.map_def(map_id).get("music", 0))
 		# lúc đếm ngược máy quay vòng quanh: giải sẵn dáng đứng mọi góc + khung chạy từ sau lưng
 		var all := range(17)
 		for r in R.racers:
@@ -222,17 +293,24 @@ func _load_step() -> void:
 			if not m.is_empty():
 				for v in all:
 					RS.rframe(r.id, int(m.v[v].st))
+		if _ghost != null:
+			RS.prewarm("ghost", [0, 1, 2, 3, 4, 5, 6, 7, 8])
 		_stage = 2
 	elif _stage == 2:
 		RS.pump(12.0)
 		if RS._q.is_empty():
 			_stage = 3
 			mode = "race"
+			snd.later(0.25, "crow")
+			if cup != null:
+				R.say(String(prog.stages[int(cup.stage)].name), 2.2, "big")
+			elif R.tt:
+				R.say("Đua với bóng ma!" if _ghost != null else "Đua tính giờ", 1.8, "big")
 
 func load_frac() -> float:
 	if RS == null:
 		return 0.0
-	var p: float = RS.progress(MAP_ID, load_ids, String(chars[sel].id))
+	var p: float = RS.progress(map_id, load_ids, String(chars[sel].id))
 	if _stage >= 1:
 		p = 1.0
 	if _stage >= 2:
@@ -242,6 +320,13 @@ func load_frac() -> float:
 # ============================================================ sự kiện của luật đua (chữ to / số đếm)
 func _events() -> void:
 	for e in R.ev:
+		if e[0] == "mis":
+			# nhiệm vụ hằng ngày: chỉ tính lúc đang đua
+			if R.state == "race" or R.state == "done":
+				for m in prog.mission(String(e[1])):
+					R.say("Xong nhiệm vụ! +%d xu" % int(m.rw), 1.8)
+					snd.play("lap")
+			continue
 		snd.on_event(e)
 	R.ev.clear()
 	if R.msg.t != _msg_t:
@@ -256,7 +341,16 @@ func _show_results() -> void:
 	res_rows = s
 	var pl = R.player
 	res_note = ""
-	ended.emit("single", int(pl.place), diff)
+	var md := "tt" if R.tt else ("cup" if cup != null else "single")
+	res = prog.results(R, cup, map_id, diff, chars)
+	if res.get("cup_done", false):
+		cup = null
+	res_y = 0.0
+	if res.win:
+		_confetti()
+	if res.get("unlock", false):
+		snd.later(0.4, "crow")
+	ended.emit(md, int(pl.place), diff)
 
 func reward(xu: int, left: int, mx: int) -> void:
 	if xu > 0:
@@ -268,6 +362,7 @@ func reward(xu: int, left: int, mx: int) -> void:
 
 func _quit_race() -> void:
 	snd.stop_all()
+	cup = null
 	mode = "menu"
 	paused = false
 	res_shown = false
@@ -293,16 +388,31 @@ func _gui_input(e: InputEvent) -> void:
 		down = e.pressed
 		up = not e.pressed
 		id = 99
+	elif e is InputEventMouseButton and mode == "menu" and e.pressed and e.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		menu_y = clampf(menu_y + (-60.0 if e.button_index == MOUSE_BUTTON_WHEEL_UP else 60.0), 0, maxf(0, menu_h))
+		accept_event()
+		return
 	elif e is InputEventScreenDrag or e is InputEventMouseMotion:
 		if _drag != null and (e is InputEventMouseMotion or e.index == _drag.id):
-			strip_x = clampf(_drag.sx - (e.position.x - _drag.x), 0.0, maxf(0.0, _strip_len() - W + 32))
-			if absf(e.position.x - _drag.x) > 8:
+			var dx: float = e.position.x - _drag.x
+			var dy: float = e.position.y - _drag.y
+			if not _drag.moved and (absf(dx) > 8 or absf(dy) > 8):
 				_drag.moved = true
+				_drag.h = _drag.strip and absf(dx) > absf(dy)
+			if _drag.moved:
+				if _drag.h:
+					strip_x = clampf(_drag.sx - dx, 0.0, maxf(0.0, _strip_len() - W + 32))
+				elif res_shown:
+					res_y = clampf(_drag.sy - dy, 0, maxf(0, res_h))
+				else:
+					menu_y = clampf(_drag.sy - dy, 0, maxf(0, menu_h))
 		accept_event()
 		return
 	else:
 		return
 	accept_event()
+	# menu và bảng kết quả: bấm lúc nhấc ngón (để còn cuộn / lướt)
+	var tap_up := mode == "menu" or (mode == "race" and res_shown and not paused)
 	if down:
 		for b in btns:
 			if (b[0] as Rect2).has_point(pos):
@@ -313,13 +423,15 @@ func _gui_input(e: InputEvent) -> void:
 						R.keys[b[2]] = true
 					elif R != null and b[2] == "drift":
 						R.keys.trick = true
-				elif String(b[1]).begins_with("card:"):
-					_drag = {"id": id, "x": pos.x, "sx": strip_x, "moved": false, "act": b[1]}
-				else:
+					return
+				if not tap_up:
 					_act(String(b[1]))
+					return
+				_drag = {"id": id, "x": pos.x, "y": pos.y, "sx": strip_x, "sy": res_y if res_shown else menu_y, "moved": false, "act": b[1], "strip": String(b[1]).begins_with("card:"), "h": false}
 				return
-		if mode == "menu" and pos.y > _strip_y() and pos.y < _strip_y() + 96:
-			_drag = {"id": id, "x": pos.x, "sx": strip_x, "moved": false, "act": ""}
+		if tap_up:
+			var on_strip := mode == "menu" and pos.y > _strip_y() and pos.y < _strip_y() + 96
+			_drag = {"id": id, "x": pos.x, "y": pos.y, "sx": strip_x, "sy": res_y if res_shown else menu_y, "moved": false, "act": "", "strip": on_strip, "h": false}
 	elif up:
 		if hold.has(id):
 			hold.erase(id)
@@ -340,13 +452,41 @@ func _act(a: String) -> void:
 		var i := int(a.substr(5))
 		if _unlocked(chars[i]):
 			sel = i
+		else:
+			_toast("Khóa · thắng Giải Làng ở %s để mở" % prog.map_name(String(chars[i].unlock)))
+			snd.play("thud")
 		return
 	if a.begins_with("diff:"):
 		diff = int(a.substr(5))
 		return
+	if a.begins_with("map:"):
+		var md: Dictionary = prog.map_def(a.substr(4))
+		if prog.unlocked(md):
+			sel_map = String(md.id)
+			prog.S.map = sel_map
+			prog.persist()
+		else:
+			_toast("Khóa · thắng giải %s" % prog.map_name(String(md.unlock)))
+			snd.play("thud")
+		return
+	if a.begins_with("feed:"):
+		if prog.feed(String(chars[sel].id), a.substr(5)):
+			snd.play("pick")
+		return
+	if a.begins_with("hat:"):
+		for h in prog.hats:
+			if String(h.id) == a.substr(4):
+				if prog.hat_tap(String(chars[sel].id), h):
+					snd.play("pick")
+		return
 	match a:
 		"go":
-			_start_race()
+			_go()
+		"next":
+			if cup != null and R != null and R.state == "result":
+				_start_race()
+		"mode:single", "mode:cup", "mode:tt":
+			mode_sel = a.substr(5)
 		"farm":
 			snd.stop_all()
 			closed.emit()
@@ -356,17 +496,30 @@ func _act(a: String) -> void:
 			_keys()
 		"resume":
 			paused = false
-		"restart", "again":
+		"restart":
+			_start_race()
+		"again":
+			if cur_mode == "cup":
+				cur_mode = "single"
+			cup = null
 			_start_race()
 		"quit", "again2":
 			_quit_race()
 		"auto":
 			R.auto = not R.auto
+			prog.S.auto = R.auto
+			prog.persist()
 		"mute":
 			SND.muted = not SND.muted
+			prog.S.mute = SND.muted
+			prog.persist()
 
 func _unlocked(ch: Dictionary) -> bool:
-	return not ch.has("unlock")   # mở bằng Giải Làng (bước 3)
+	return prog.unlocked(ch)   # mở bằng Giải Làng
+
+func _toast(t: String) -> void:
+	toast = t
+	toast_t = 2.2
 
 func _btn(r: Rect2, act: String, key := "") -> void:
 	btns.append([r, act, key])
@@ -474,24 +627,16 @@ func _menu(ci: CanvasItem) -> void:
 	A.box(ci, r, KEM, 0 if W <= 440 else 20)
 	var x0 := bx + 16
 	var x1 := bx + bw - 16
-	# đầu: tên + xu + về vườn
-	A.text(ci, "Đua Gà", x0, 26, 24, GACH, 0, 800)
-	A.text(ci, "Nông Trại", x0, 51, 24, GACH, 0, 800)
-	var fb := Rect2(x1 - 96, 16, 96, 38)
-	_rbox(ci, fb, 14, KEM, [[2.5, WOOD]], 3, WOODD)
-	A.text(ci, "Về vườn", fb.get_center().x, fb.get_center().y + 1, 16, INK, 1, 800)
-	_btn(fb, "farm")
-	if coins_fn.is_valid():
-		var cs := "%s xu" % str(coins_fn.call())
-		var cw := A.tw(cs, 17) + 36
-		var cr := Rect2(fb.position.x - 8 - cw, 19, cw, 32)
-		A.box(ci, cr, KEM2, 16)
-		_circle(ci, cr.position + Vector2(15, 16), 8, Color("#f4c21f"))
-		_ring(ci, cr.position + Vector2(15, 16), 8, 1.5, VANGD)
-		A.text(ci, cs, cr.position.x + 27, cr.get_center().y + 1, 17, INK, 0, 800)
-	# sân khấu: con đang chọn đứng trên nia
+	var top := 70.0
+	var bot := H - 70
 	var ch: Dictionary = chars[sel]
-	var sr := Rect2(x0, 74, x1 - x0, 196)
+	var cid := String(ch.id)
+	var cm: Dictionary = P.meta("dg_card")
+	# ---- phần cuộn (vẽ trước, đầu và thanh vào đua đè lên sau)
+	var y := top + 4 - menu_y
+	var vis := func(rr: Rect2) -> bool: return rr.end.y > top and rr.position.y < bot
+	# sân khấu: con đang chọn đứng trên nia (có đồ đội)
+	var sr := Rect2(x0, y, x1 - x0, 196)
 	A.grad_poly(ci, A.rrect_pts(sr, 16), sr.position, sr.end, [[0, Color("#fff2c4")], [1, Color("#f0d48a")]])
 	A.box(ci, sr, Color(0, 0, 0, 0), 16, 2, KEM3)
 	var pc := Vector2(sr.get_center().x, sr.end.y - 40)
@@ -502,15 +647,28 @@ func _menu(ci: CanvasItem) -> void:
 		var ep := A.ell_pts(pc, 70.0 - i * 13, 15.0 - i * 2.8, 40)
 		ep.append(ep[0])
 		ci.draw_polyline(ep, Color(0.45, 0.3, 0.15, 0.22), 1.0, true)
-	var tx: Texture2D = P.tex("dg_card", String(ch.id))
-	var cm: Dictionary = P.meta("dg_card")
+	var tx: Texture2D = P.tex("dg_card", cid)
+	var hat: String = prog.hat_of(cid)
 	if tx != null and cm.has("f"):
-		var f: Array = cm.f[String(ch.id)]
-		var k := minf(1.0, 150.0 / float(f[3]))
+		var f: Array = cm.f[cid]
+		var k := minf(1.0, (150.0 if hat == "" else 132.0) / float(f[3]))
 		var bob := sin(clock * 2.4) * 1.5
 		ci.draw_texture_rect(tx, Rect2(pc.x + float(f[0]) * k, pc.y + float(f[1]) * k + bob, float(f[2]) * k, float(f[3]) * k), false)
-	# tên, kỹ năng, chỉ số
-	var y := sr.end.y + 26
+		if hat != "" and RS != null:
+			var hb: String = RS.hat_bundle(cid)
+			if not P.has_bundle(hb):
+				P.load_bundle(hb)
+			else:
+				var hm: Dictionary = RS.hat_meta(cid)
+				if hm.has("v") and hm.v.has(hat):
+					var hi := int(hm.v[hat][12].st)
+					var ht: Texture2D = RS.hat_tex(cid, hi) if hi >= 0 else null
+					if ht != null:
+						var hf: Array = hm.f[hi]
+						var kh := k * 0.5   # thẻ menu là nửa cỡ khung nét
+						ci.draw_texture_rect(ht, Rect2(pc.x + float(hf[0]) * kh, pc.y + float(hf[1]) * kh + bob, float(hf[2]) * kh, float(hf[3]) * kh), false)
+	# tên, kỹ năng, chỉ số (phần sáng = đồ ăn đã cho)
+	y = sr.end.y + 26
 	A.text(ci, String(ch.name), x0, y, 26, INK, 0, 800)
 	var nw := A.tw(String(ch.name), 26) + 14
 	_icon(ci, "star", Vector2(x0 + nw + 7, y), 15, GACH)
@@ -520,12 +678,15 @@ func _menu(ci: CanvasItem) -> void:
 		A.text(ci, ln, x0, y, 14, INK2, 0, 500)
 		y += 19
 	y += 4
-	for s in [["Tốc độ", "spd"], ["Tăng tốc", "acc"], ["Bẻ lái", "turn"]]:
-		A.text(ci, s[0], x0, y, 13, INK2, 0, 600)
+	for st in [["Tốc độ", "spd"], ["Tăng tốc", "acc"], ["Bẻ lái", "turn"]]:
+		A.text(ci, st[0], x0, y, 13, INK2, 0, 600)
 		var br := Rect2(x0 + 78, y - 5, x1 - x0 - 78, 10)
 		A.box(ci, br, KEM2, 5)
-		var v := clampf(roundf((float(ch[s[1]]) - 0.75) / 0.45 * 100.0), 0, 100) / 100.0
-		A.box(ci, Rect2(br.position, Vector2(br.size.x * v, 10)), LA, 5)
+		var v0 := clampf(roundf((float(ch[st[1]]) - 0.75) / 0.45 * 100.0), 0, 100) / 100.0
+		var v1 := clampf(roundf((prog.stat_of(ch, st[1]) - 0.75) / 0.45 * 100.0), 0, 100) / 100.0
+		if v1 > v0:
+			A.box(ci, Rect2(br.position, Vector2(br.size.x * v1, 10)), Color("#9cc95a"), 5)
+		A.box(ci, Rect2(br.position, Vector2(br.size.x * v0, 10)), LA, 5)
 		y += 20
 	# chọn tay đua: dải thẻ lướt ngang
 	y += 8
@@ -549,31 +710,171 @@ func _menu(ci: CanvasItem) -> void:
 			var f: Array = cmf[String(c.id)]
 			var k := minf(56.0 / float(f[3]), 70.0 / float(f[2]))
 			var fc := Vector2(cr.get_center().x, cr.position.y + 64)
-			ci.draw_texture_rect(t, Rect2(fc.x + float(f[0]) * k, fc.y + float(f[1]) * k, float(f[2]) * k, float(f[3]) * k), false, Color(1, 1, 1, 0.45) if lock else Color.WHITE)
-		A.text(ci, String(c.name), cr.get_center().x, cr.end.y - 13, 12.5, GACH if on else INK, 1, 700)
+			ci.draw_texture_rect(t, Rect2(fc.x + float(f[0]) * k, fc.y + float(f[1]) * k, float(f[2]) * k, float(f[3]) * k), false, Color(0.43, 0.35, 0.27, 1) if lock else Color.WHITE)
+		A.text(ci, "???" if lock else String(c.name), cr.get_center().x, cr.end.y - 13, 12.5, GACH if on else INK, 1, 700)
 		if lock:
 			_lock(ci, cr.position + Vector2(cr.size.x - 18, 18))
-		_btn(cr, "card:%d" % i)
-	# độ khó
+		if vis.call(cr):
+			_btn(cr, "card:%d" % i)
+	# chọn đường đua: 3 thẻ có hình đường
 	y = sy + 92 + 26
-	A.text(ci, "ĐỘ KHÓ", x0, y, 12, MUTED, 0, 700)
-	var segw := 3 * 74.0
-	var sg := Rect2(x1 - segw - 8, y - 20, segw + 8, 40)
-	A.box(ci, sg, KEM2, 12)
+	A.text(ci, "CHỌN ĐƯỜNG ĐUA", x0, y, 12, MUTED, 0, 700)
+	y += 12
+	var nm := maxi(1, prog.maps.size())
+	var cw := (x1 - x0 - 8 * (nm - 1)) / nm
+	var chh := cw * 0.6
+	var cardh := chh + 62
+	for i in prog.maps.size():
+		var md: Dictionary = prog.maps[i]
+		var mr := Rect2(x0 + i * (cw + 8), y, cw, cardh)
+		var on: bool = md.id == sel_map
+		var lock: bool = not prog.unlocked(md)
+		if on:
+			_rbox(ci, mr, 12, Color("#fff3cf"), [[3, GACH]], 3, GACHD)
+		else:
+			_rbox(ci, mr, 12, KEM2, [[2, KEM3]])
+		var mt: Texture2D = P.tex("dg_card", "mp_" + String(md.id))
+		if mt != null:
+			ci.draw_texture_rect(mt, Rect2(mr.position + Vector2(5, 5), Vector2(cw - 10, chh - 6)), false, Color(0.55, 0.5, 0.45, 1) if lock else Color.WHITE)
+		var ty := mr.position.y + chh + 12
+		for ln in A.wrap(String(md.name), 13, 800, cw - 12).slice(0, 2):
+			A.text(ci, ln, mr.position.x + 7, ty, 13, GACH if on else INK, 0, 800)
+			ty += 16
+		var sub: String = ("Khóa · thắng giải " + prog.map_name(String(md.unlock))) if lock else ("Đã vô địch giải" if prog.S.cups.get(String(md.id), false) else "")
+		for ln in A.wrap(sub, 10.5, 600, cw - 12).slice(0, 2):
+			A.text(ci, ln, mr.position.x + 7, ty, 10.5, MUTED, 0, 600)
+			ty += 13
+		if lock:
+			_lock(ci, mr.position + Vector2(cw - 18, 18))
+		if vis.call(mr):
+			_btn(mr, "map:" + String(md.id))
+	y += cardh + 30
+	# chế độ + độ khó
+	y = _seg(ci, "CHẾ ĐỘ", x0, x1, y, ["Đua lẻ", "Giải Làng", "Tính giờ"], ["single", "cup", "tt"].find(mode_sel), "mode:", ["single", "cup", "tt"], top, bot)
+	y = _seg(ci, "ĐỘ KHÓ", x0, x1, y, ["Dễ", "Thường", "Khó"], diff, "diff:", ["0", "1", "2"], top, bot)
+	var bk: Dictionary = prog.best(sel_map)
+	if bk.has("total"):
+		var bl := "Kỷ lục %s: cả ván %s với %s" % [prog.map_name(sel_map), PROG.fmt(float(bk.total)), String(bk.ch)] + ((" · vòng nhanh nhất " + PROG.fmt(float(bk.lap))) if bk.has("lap") else "")
+		for ln in A.wrap(bl, 13, 600, x1 - x0):
+			A.text(ci, ln, x0, y, 13, INK2, 0, 600)
+			y += 18
+		y += 10
+	# cho ăn
+	A.text(ci, ("CHO %s ĂN ĐỂ LÊN CHỈ SỐ" % String(ch.name)).to_upper(), x0, y, 12, MUTED, 0, 700)
+	y += 12
+	var fw := (x1 - x0 - 16) / 3
 	for i in 3:
-		var b := Rect2(sg.position.x + 4 + i * 74, sg.position.y + 4, 74, 32)
-		if i == diff:
-			_rbox(ci, b, 9, GACH, [], 2, GACHD)
-		A.text(ci, ["Dễ", "Thường", "Khó"][i], b.get_center().x, b.get_center().y + 1, 15, KEM if i == diff else INK2, 1, 700)
-		_btn(b, "diff:%d" % i)
-	# thanh vào đua
-	var gy := H - 70
+		var fd: Dictionary = PROG.FEEDS[i]
+		var lv: int = prog.up_of(cid, fd.k)
+		var mx := lv >= PROG.FEED_MAX
+		var cost: int = 0 if mx else int(PROG.FEED_COST[lv])
+		var dis: bool = mx or prog.coins() < cost
+		var fr := Rect2(x0 + i * (fw + 8), y, fw, 64)
+		_rbox(ci, fr, 12, KEM2 if dis else KEM, [[2, KEM3 if dis else WOOD]])
+		var al := 0.55 if dis else 1.0
+		A.text(ci, "Cho ăn " + String(fd.food), fr.position.x + 9, fr.position.y + 16, 13, Color(INK, al), 0, 800)
+		A.text(ci, "+%s · %s" % [fd.stat, "đã tối đa" if mx else "%d xu" % cost], fr.position.x + 9, fr.position.y + 34, 10.5, Color(INK2, al), 0, 600)
+		for q in PROG.FEED_MAX:
+			var pcc := fr.position + Vector2(13 + q * 12, 50)
+			_circle(ci, pcc, 4, LA if q < lv else KEM3)
+		if not dis and vis.call(fr):
+			_btn(fr, "feed:" + String(fd.k))
+	y += 64 + 24
+	# đồ đội
+	A.text(ci, ("ĐỒ CHO %s ĐỘI" % String(ch.name)).to_upper(), x0, y, 12, MUTED, 0, 700)
+	y += 12
+	var hx := x0
+	for h in prog.hats:
+		var own: bool = prog.S.hats.has(h.id)
+		var wear: bool = hat == String(h.id)
+		var lab := "đang đội" if wear else ("có rồi" if own else "%d xu" % int(h.cost))
+		var hw := A.tw(String(h.name), 13, 800) + A.tw(lab, 10.5, 600) + 30
+		if hx + hw > x1:
+			hx = x0
+			y += 40
+		var hr := Rect2(hx, y, hw, 32)
+		var dis: bool = not own and prog.coins() < int(h.cost)
+		_rbox(ci, hr, 10, VANGL if wear else (KEM2 if dis else KEM), [[2, GACH if wear else (KEM3 if dis else WOOD)]])
+		var al := 0.55 if dis else 1.0
+		A.text(ci, String(h.name), hr.position.x + 10, hr.get_center().y + 1, 13, Color(INK, al), 0, 800)
+		A.text(ci, lab, hr.position.x + 18 + A.tw(String(h.name), 13, 800), hr.get_center().y + 2, 10.5, Color(INK2, al), 0, 600)
+		if not dis and vis.call(hr):
+			_btn(hr, "hat:" + String(h.id))
+		hx += hw + 8
+	y += 32 + 26
+	# nhiệm vụ hôm nay
+	A.text(ci, "NHIỆM VỤ HÔM NAY · LÀM XONG ĂN XU LIỀN", x0, y, 12, MUTED, 0, 700)
+	y += 12
+	prog.ensure_daily()
+	for m in prog.S.daily.list:
+		var dr := Rect2(x0, y, x1 - x0, 58)
+		_rbox(ci, dr, 12, Color("#eef3dc") if m.done else KEM2, [[2, LA if m.done else KEM3]])
+		A.text(ci, prog.mission_text(m), dr.position.x + 12, dr.position.y + 16, 13.5, INK, 0, 800)
+		var pr := Rect2(dr.position.x + 12, dr.position.y + 28, dr.size.x - 24, 7)
+		A.box(ci, pr, KEM3, 3.5)
+		A.box(ci, Rect2(pr.position, Vector2(pr.size.x * clampf(float(m.p) / float(m.n), 0, 1), 7)), LA, 3.5)
+		var ms := ("Xong · đã nhận %d xu" % int(m.rw)) if m.done else ("%d/%d · thưởng %d xu" % [int(m.p), int(m.n), int(m.rw)])
+		A.text(ci, ms, dr.position.x + 12, dr.position.y + 46, 11, INK2, 0, 600)
+		y += 66
+	y += 16
+	menu_h = maxf(0, y + menu_y - bot)
+	menu_y = clampf(menu_y, 0, menu_h)
+	# ---- đầu: tên + xu đua + về vườn (đè lên phần cuộn)
+	ci.draw_rect(Rect2(bx, 0, bw, top), KEM)
+	ci.draw_line(Vector2(bx, top), Vector2(bx + bw, top), Color(KEM3, 0.6), 1)
+	A.text(ci, "Đua Gà", x0, 24, 24, GACH, 0, 800)
+	A.text(ci, "Nông Trại", x0, 49, 24, GACH, 0, 800)
+	var fb := Rect2(x1 - 96, 16, 96, 38)
+	_rbox(ci, fb, 14, KEM, [[2.5, WOOD]], 3, WOODD)
+	A.text(ci, "Về vườn", fb.get_center().x, fb.get_center().y + 1, 16, INK, 1, 800)
+	_btn(fb, "farm")
+	var cs := "%d xu" % prog.coins()
+	var cwd := A.tw(cs, 17) + 36
+	var crr := Rect2(fb.position.x - 8 - cwd, 19, cwd, 32)
+	A.box(ci, crr, KEM2, 16)
+	_circle(ci, crr.position + Vector2(15, 16), 8, Color("#f4c21f"))
+	_ring(ci, crr.position + Vector2(15, 16), 8, 1.5, VANGD)
+	A.text(ci, cs, crr.position.x + 27, crr.get_center().y + 1, 17, INK, 0, 800)
+	# ---- thanh vào đua
+	var gy := bot
 	ci.draw_rect(Rect2(bx, gy - 1, bw, 71), KEM)
 	ci.draw_line(Vector2(bx, gy - 1), Vector2(bx + bw, gy - 1), KEM3, 2)
 	A.text(ci, String(ch.name), x0, gy + 35, 20, INK, 0, 800)
-	A.text(ci, " · Nông Trại", x0 + A.tw(String(ch.name), 20), gy + 36, 15, MUTED, 0, 600)
+	A.text(ci, " · " + prog.map_name(sel_map), x0 + A.tw(String(ch.name), 20), gy + 36, 15, MUTED, 0, 600)
 	var gr := Rect2(x1 - 160, gy + 12, 160, 48)
 	_btn_draw(ci, gr, "Vào đua!", false, "go", 21)
+	_toast_draw(ci, gy - 30)
+
+# hàng nút chọn (Chế độ / Độ khó): nhãn bên trái, các nút bên phải
+func _seg(ci: CanvasItem, lab: String, x0: float, x1: float, y: float, names: Array, on: int, act: String, vals: Array, top: float, bot: float) -> float:
+	A.text(ci, lab, x0, y, 12, MUTED, 0, 700)
+	var bw2 := 0.0
+	var ws := []
+	for n in names:
+		var w := maxf(56.0, A.tw(n, 15, 700) + 24)
+		ws.append(w)
+		bw2 += w
+	var sg := Rect2(x1 - bw2 - 8, y - 20, bw2 + 8, 40)
+	A.box(ci, sg, KEM2, 12)
+	var bxx := sg.position.x + 4
+	for i in names.size():
+		var b := Rect2(bxx, sg.position.y + 4, ws[i], 32)
+		if i == on:
+			_rbox(ci, b, 9, GACH, [], 2, GACHD)
+		A.text(ci, names[i], b.get_center().x, b.get_center().y + 1, 15, KEM if i == on else INK2, 1, 700)
+		if b.end.y > top and b.position.y < bot:
+			_btn(b, act + String(vals[i]))
+		bxx += ws[i]
+	return y + 46
+
+func _toast_draw(ci: CanvasItem, y: float) -> void:
+	if toast_t <= 0 or toast == "":
+		return
+	var a := minf(1.0, toast_t / 0.3)
+	var tw := minf(W - 40, A.tw(toast, 14, 700) + 28)
+	var r := Rect2((W - tw) / 2, y - 18, tw, 34)
+	A.box(ci, r, Color(INK, 0.88 * a), 17)
+	A.text(ci, toast, r.get_center().x, r.get_center().y + 1, 14, Color(KEM, a), 1, 700)
 
 var _strip_y_v := 430.0
 
@@ -904,12 +1205,26 @@ func _dash_h(ci: CanvasItem, x0: float, x1: float, y: float, col: Color) -> void
 func _results(ci: CanvasItem) -> void:
 	_overlay(ci)
 	var pl = R.player
+	var kind := String(res.get("kind", "single"))
 	var bw := minf(520.0, W - 24)
-	var rows := res_rows.size()
-	var bh := 112.0 + rows * 50 + 6 + 20 + 18 + 47 + 22
-	var r := Rect2((W - bw) / 2, maxf(12, (H - bh) / 2), bw, bh)
+	var rows: Array = res.get("rows", [])
+	var rh := 36.0 if kind == "tt" else 50.0
+	var x0 := (W - bw) / 2 + 18
+	var x1 := (W + bw) / 2 - 18
+	var notes: Array = res.get("notes", []).duplicate()
+	if res_note != "":
+		notes.append(res_note)
+	var nl := 0
+	for n in notes:
+		nl += A.wrap(String(n), 13.5, 600, x1 - x0).size()
+	var podh := (bw - 36) * 200.0 / 440.0
+	var head := 112.0 + (26.0 if String(res.get("stage", "")) != "" else 0.0)
+	var bh := head + podh + 8 + rows.size() * rh + 10 + nl * 19 + 18 + 47 + 22
+	res_h = maxf(0, bh + 24 - H)
+	res_y = clampf(res_y, 0, res_h)
+	var r := Rect2((W - bw) / 2, maxf(12, (H - bh) / 2) - res_y, bw, bh)
 	_board(ci, r)
-	# đầu: sọc khăn rằn, tựa, câu phụ
+	# đầu: sọc khăn rằn, chặng, tựa, câu phụ
 	var hr := Rect2(r.position + Vector2(3, 3), Vector2(bw - 6, 10))
 	ci.draw_rect(hr, Color("#f3ede0"))
 	var x := hr.position.x
@@ -920,19 +1235,38 @@ func _results(ci: CanvasItem) -> void:
 				ci.draw_rect(Rect2(x, hr.position.y + j * 5, minf(5, hr.end.x - x), 5), Color(43 / 255.0, 36 / 255.0, 32 / 255.0, 0.62))
 		x += 5
 		i += 1
-	var place: int = pl.place
-	var ttl := "Về nhất!" if place == 1 else "Về thứ %d" % place
-	var sub := "Gà nhà mày đỉnh thật" if place == 1 else ("Lên bục rồi, ráng chút nữa là nhất" if place <= 3 else "Đua lại gỡ gạc không?")
-	A.text(ci, ttl, r.get_center().x, r.position.y + 52, 36, GACH, 1, 800)
-	A.text(ci, sub, r.get_center().x, r.position.y + 84, 16, INK2, 1, 600)
-	ci.draw_line(Vector2(r.position.x + 3, r.position.y + 104), Vector2(r.end.x - 3, r.position.y + 104), WOOD, 3)
-	# bảng hạng
-	var y := r.position.y + 116
+	var y := r.position.y + 22
+	var stg := String(res.get("stage", ""))
+	if stg != "":
+		var sw := A.tw(stg, 12.5, 800) + 22
+		A.box(ci, Rect2(r.get_center().x - sw / 2, y + 2, sw, 22), LA, 11)
+		A.text(ci, stg, r.get_center().x, y + 13, 12.5, KEM, 1, 800)
+		y += 26
+	var ttl := String(res.get("title", ""))
+	var tfs := 36.0
+	while tfs > 20 and A.tw(ttl, tfs) > bw - 30:
+		tfs -= 2
+	A.text(ci, ttl, r.get_center().x, y + 30, tfs, GACH, 1, 800)
+	A.text(ci, String(res.get("sub", "")), r.get_center().x, y + 62, 16, INK2, 1, 600)
+	y += 82
+	ci.draw_line(Vector2(r.position.x + 3, y), Vector2(r.end.x - 3, y), WOOD, 3)
+	y += 8
+	# bục nhận giải
+	_podium(ci, Rect2(x0, y, x1 - x0, podh), res.get("podium", []))
+	y += podh + 8
+	# bảng
 	var cm: Dictionary = P.meta("dg_card")
-	var x0 := r.position.x + 18
-	var x1 := r.end.x - 18
-	for k in rows:
-		var q = res_rows[k]
+	for k in rows.size():
+		var row: Dictionary = rows[k]
+		if kind == "tt":
+			var rr := Rect2(x0, y, x1 - x0, 32)
+			A.box(ci, rr, KEM2, 9)
+			A.text(ci, str(row.lap), x0 + 18, y + 16, 17, INK2, 1, 800)
+			A.text(ci, "Vòng %d" % int(row.lap), x0 + 42, y + 16, 15, INK, 0, 600)
+			A.text(ci, _fmt(float(row.t)), x1 - 10, y + 16, 15, INK, 2, 700)
+			y += rh
+			continue
+		var q = row.r
 		var me: bool = q.isPlayer
 		var rr := Rect2(x0, y, x1 - x0, 46)
 		A.box(ci, rr, VANGL if me else KEM2, 10)
@@ -945,28 +1279,147 @@ func _results(ci: CanvasItem) -> void:
 			var fc := Vector2(x0 + 56, y + 43)
 			ci.draw_texture_rect(t, Rect2(fc.x + float(f[0]) * kk, fc.y + float(f[1]) * kk, float(f[2]) * kk, float(f[3]) * kk), false)
 		var nm := String(q.ch.name)
-		A.text(ci, nm, x0 + 84, y + 24, 15, INK, 0, 600)
+		var ny := y + (17.0 if kind == "cup" else 24.0)
+		A.text(ci, nm, x0 + 84, ny, 15, INK, 0, 600)
 		var nx := x0 + 84 + A.tw(nm, 15, 600) + 6
 		if me:
 			var bwd := A.tw("mày", 11) + 12
-			A.box(ci, Rect2(nx, y + 15, bwd, 17), GACH, 7)
-			A.text(ci, "mày", nx + bwd / 2, y + 24, 11, KEM, 1, 800)
+			A.box(ci, Rect2(nx, ny - 9, bwd, 17), GACH, 7)
+			A.text(ci, "mày", nx + bwd / 2, ny, 11, KEM, 1, 800)
 		else:
 			var pn := String(pers.get(String(q.ai.pers), {}).get("name", ""))
-			A.text(ci, "· " + pn, nx, y + 25, 12.5, MUTED, 0, 500)
-		A.text(ci, _fmt(q.finT) if q.finished else "đang chạy", x1 - 8, y + 24, 15, INK, 2, 700)
-		y += 50
-	y += 6
-	if res_note != "":
-		for ln in A.wrap(res_note, 14, 600, x1 - x0):
-			A.text(ci, ln, x0, y + 9, 14, INK2, 0, 600)
-			y += 20
-	else:
-		y += 20
+			A.text(ci, "· " + pn, nx, ny + 1, 12.5, MUTED, 0, 500)
+		if kind == "cup":
+			A.text(ci, "chặng này: hạng %d" % int(row.rank), x0 + 84, y + 34, 11.5, MUTED, 0, 500)
+			A.text(ci, "%d đ" % int(row.pts), x1 - 8, y + 24, 16, GACH, 2, 800)
+		else:
+			A.text(ci, _fmt(q.finT) if q.finished else "đang chạy", x1 - 8, y + 24, 15, INK, 2, 700)
+		y += rh
+	y += 10
+	for n in notes:
+		for ln in A.wrap(String(n), 13.5, 600, x1 - x0):
+			A.text(ci, ln, x0, y + 9, 13.5, INK2, 0, 600)
+			y += 19
 	y += 18
 	var bwd2 := (x1 - x0 - 10) / 2
-	_btn_draw(ci, Rect2(x0, y, bwd2, 47), "Đổi gà", true, "again2")
-	_btn_draw(ci, Rect2(x0 + bwd2 + 10, y, bwd2, 47), "Đua lại", false, "again")
+	var mid: bool = res.get("next", false)
+	_btn_draw(ci, Rect2(x0, y, bwd2, 47), "Bỏ giải" if mid else ("Đổi gà" if kind == "single" else "Về menu"), true, "again2")
+	_btn_draw(ci, Rect2(x0 + bwd2 + 10, y, bwd2, 47), "Chặng tiếp" if mid else "Đua lại", false, "next" if mid else "again")
+	_conf_draw(ci)
+
+# bục gỗ: 3 thùng ván có huy chương vàng / bạc / đồng, khăn rằn trên bục nhất, tia nắng xoay phía sau (drawPodium)
+func _podium(ci: CanvasItem, pr: Rect2, order: Array) -> void:
+	var k := pr.size.x / 440.0
+	var o := pr.position
+	var P_ := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * k
+	var GY := 192.0
+	var cc: Vector2 = P_.call(220, 120)
+	for i in range(0, 16, 2):
+		var a0 := i * TAU / 16 + clock * 0.08
+		var a1 := (i + 1) * TAU / 16 + clock * 0.08
+		var pts := PackedVector2Array([cc])
+		var cols := PackedColorArray([Color(244 / 255.0, 194 / 255.0, 31 / 255.0, 0.42)])
+		for j in 7:
+			var aa := lerpf(a0, a1, j / 6.0)
+			pts.append(cc + Vector2(cos(aa), sin(aa)) * 120 * k)
+			cols.append(Color(244 / 255.0, 194 / 255.0, 31 / 255.0, 0.0))
+		ci.draw_polygon(pts, cols)
+	A.ell(ci, P_.call(220, GY + 2), 190 * k, 7 * k, Color(59 / 255.0, 36 / 255.0, 21 / 255.0, 0.18))
+	var slots := [[220, 118, 80, Color("#f4c21f"), 1], [102, 110, 54, Color("#dcd6c6"), 2], [338, 110, 38, Color("#d08a4f"), 3]]
+	for sl in slots:
+		var sx: float = sl[0]
+		var w: float = sl[1]
+		var h: float = sl[2]
+		var n: int = sl[4]
+		var x0 := sx - w / 2
+		var y0 := GY - h
+		ci.draw_rect(Rect2(P_.call(x0, y0 + 10), Vector2(w, h - 10) * k), Color("#d9a560"))
+		ci.draw_rect(Rect2(P_.call(x0, y0), Vector2(w, 10) * k), Color("#ecc27f"))
+		var yy := y0 + 22
+		while yy < GY - 4:
+			ci.draw_line(P_.call(x0 + 3, yy), P_.call(x0 + w - 3, yy), Color("#b07a3a"), 1.3 * k)
+			yy += 12
+		ci.draw_rect(Rect2(P_.call(x0, y0 + 10), Vector2(8, h - 10) * k), Color(120 / 255.0, 70 / 255.0, 25 / 255.0, 0.18))
+		ci.draw_rect(Rect2(P_.call(x0 + w - 8, y0 + 10), Vector2(8, h - 10) * k), Color(120 / 255.0, 70 / 255.0, 25 / 255.0, 0.18))
+		ci.draw_rect(Rect2(P_.call(x0, y0), Vector2(w, h) * k), INK, false, 2.2 * k)
+		ci.draw_line(P_.call(x0, y0 + 10), P_.call(x0 + w, y0 + 10), INK, 2.2 * k)
+		if n == 1:
+			# khăn rằn vắt trên bục nhất
+			var cr := Rect2(P_.call(x0 + 16, y0 + 9), Vector2(w - 32, 13) * k)
+			ci.draw_rect(cr, Color("#f3ede0"))
+			var cx := 0.0
+			while cx < w - 32:
+				ci.draw_rect(Rect2(cr.position + Vector2(cx * k, 0), Vector2(minf(4, w - 32 - cx) * k, cr.size.y)), Color(43 / 255.0, 36 / 255.0, 32 / 255.0, 0.62))
+				cx += 8
+			var cy := 0.0
+			while cy < 13:
+				ci.draw_rect(Rect2(cr.position + Vector2(0, cy * k), Vector2(cr.size.x, minf(4, 13 - cy) * k)), Color(43 / 255.0, 36 / 255.0, 32 / 255.0, 0.62))
+				cy += 8
+			ci.draw_rect(cr, INK, false, 1.6 * k)
+		var my := y0 + 46 if n == 1 else y0 + 10 + (h - 10) / 2 + 2
+		_circle(ci, P_.call(sx, my), 13 * k, sl[3])
+		_ring(ci, P_.call(sx, my), 13 * k, 2 * k, INK)
+		_ring(ci, P_.call(sx, my), 9.5 * k, 1 * k, Color(1, 1, 1, 0.6))
+		A.text(ci, str(n), P_.call(sx, my).x, P_.call(sx, my).y + 1, 17 * k, INK, 1, 800)
+		if n - 1 < order.size() and view != null:
+			var rr = order[n - 1]
+			var vs: float = float(rr.ch.get("vs", 1))
+			if String(rr.ch.get("type", "")) == "goose":
+				vs = 0.72
+			var sc := (2.15 if n == 1 else 1.8) * vs
+			var bounce := absf(sin(clock * 5)) * 4 if n == 1 else 0.0
+			var foot: Vector2 = P_.call(sx, y0 + 1 - bounce)
+			var rel := PI + sin(clock * 1.5 + n) * 0.5
+			view._bird(ci, rr.id, rel, clock * 8 if n == 1 else 0.0, 300.0 if n == 1 else 0.0, foot.x, foot.y, sc * k, 1.0, 0.0, 0.0, 0.0, rr.hat if rr.isPlayer else "")
+
+# pháo giấy: hai ống bắn lên từ hai góc dưới, rồi giấy bay lả tả xuống (confettiGo)
+func _confetti() -> void:
+	conf = []
+	var cols := [Color("#f4c21f"), Color("#b5532f"), Color("#4f8a2b"), Color("#3c8fa6"), Color("#fbf3df"), Color("#d9774f"), Color("#9cc95a"), Color("#ffe48a")]
+	var sp := maxf(W, H)
+	for i in 180:
+		var side := i & 1
+		var a := -PI / 2 + (-1.0 if side else 1.0) * (0.18 + randf() * 0.5)
+		var v := sp * (0.75 + randf() * 0.55)
+		conf.append({"x": W + 6 if side else -6.0, "y": H * 0.92, "vx": cos(a) * v, "vy": sin(a) * v, "r": randf() * TAU, "vr": (randf() - 0.5) * 12,
+			"w": 7 + randf() * 6, "h": 3.5 + randf() * 3, "c": cols[i % cols.size()], "ph": randf() * TAU, "leaf": randf() < 0.18, "d": randf() * 0.25})
+
+func _conf_step(dt: float) -> void:
+	if conf.is_empty():
+		return
+	var alive := 0
+	for q in conf:
+		if q.d > 0:
+			q.d -= dt
+			alive += 1
+			continue
+		var kk := exp(-dt * 2.2)
+		q.vx *= kk
+		q.vy = q.vy * kk + 900 * dt
+		if q.vy > 110:
+			q.vy = 110 + (q.vy - 110) * exp(-dt * 8)
+		q.x += (q.vx + sin(q.ph + q.y * 0.02) * 30) * dt
+		q.y += q.vy * dt
+		q.r += q.vr * dt
+		if q.y < H + 20:
+			alive += 1
+	if alive == 0:
+		conf = []
+
+func _conf_draw(ci: CanvasItem) -> void:
+	for q in conf:
+		if q.d > 0:
+			continue
+		var sy := cos(clock * 1000 / 240.0 + q.ph)
+		var xf := Transform2D(q.r, Vector2(q.x, q.y)) * Transform2D(Vector2(1, 0), Vector2(0, sy), Vector2.ZERO)
+		ci.draw_set_transform_matrix(xf)
+		if q.leaf:
+			ci.draw_colored_polygon(A.ell_pts(Vector2.ZERO, q.w * 0.8, q.h * 0.7, 10), Color("#5f9a3a"))
+			ci.draw_line(Vector2(-q.w * 0.8, 0), Vector2(q.w * 0.8, 0), Color("#35631a"), 0.8)
+		else:
+			ci.draw_rect(Rect2(-q.w / 2, -q.h / 2, q.w, q.h), q.c)
+			ci.draw_rect(Rect2(-q.w / 2, -q.h / 2, q.w, q.h), Color(59 / 255.0, 36 / 255.0, 21 / 255.0, 0.35), false, 0.6)
+		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # ============================================================ bản đồ nhỏ: vẽ một lần vào ảnh (buildMini của web)
 func _build_mini() -> void:

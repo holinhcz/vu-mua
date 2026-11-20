@@ -44,8 +44,10 @@ if __name__ == '__main__':
         ids = [k for k in json.load(open('out/racer/meta_all.json')) if k not in ('S', 'views', 'run')] + ['npc']
         with Pool(8) as pl: res = pl.map(racer, ids)
         pack('dg_card', [(i, w) for i, w, _ in res if i != 'npc'], {'f': {i: f for i, _, f in res}, 'S': 4.8})
-    if 'map' in what:
-        mid = 'nongtrai'
+    for w in what:
+        if not w.startswith('map'):
+            continue
+        mid = w.split(':')[1] if ':' in w else 'nongtrai'
         sm = json.load(open('out/spr/meta.json')); items = []
         for k in sm:
             items.append((k, webp(Image.open(f'out/spr/{k}.png').convert('RGBA'))))

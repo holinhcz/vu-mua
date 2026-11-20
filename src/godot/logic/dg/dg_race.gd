@@ -48,6 +48,9 @@ var weather := {"k": 0.0, "on": false, "warned": false, "next": 1e9, "end": 0.0}
 const IKEYS := ["ot", "trung", "chuoi", "dua", "bun", "rom", "may"]
 const INAME := {"ot": "Ớt Hiểm", "trung": "Trứng Ném", "chuoi": "Vỏ Chuối", "dua": "Dừa Lăn", "bun": "Vũng Bùn", "rom": "Khiên Rơm", "may": "Mây Giông"}
 var touch := true
+var tt := false
+var ghost_rec: Array = []   # đua tính giờ: x, y, hướng mỗi 0.1 giây
+const FEED_STEP := 0.025
 var ev: Array = []   # sự kiện cho âm thanh / chữ: [tên, ...]
 
 const PERS := {
@@ -106,6 +109,7 @@ func hit(r, dur: float, src = null) -> bool:
 		shake = 0.4
 	if src != null and src is Racer and src.isPlayer and r != src:
 		say("Trúng " + String(r.ch.name) + "!", 1.0)
+		ev.append(["mis", "hit"])
 	if near(r):
 		ev.append(["hit"])
 	return true
@@ -135,6 +139,8 @@ func use_item(r) -> void:
 	if r.item == "" or r.rollT > 0 or r.spinT > 0 or r.hopT > 0 or r.fallT > 0:
 		return
 	var k: String = r.item
+	if r.isPlayer:
+		ev.append(["mis", "item"])
 	var l: int = r.lvl
 	r.item = ""
 	r.lvl = 0
@@ -342,6 +348,7 @@ class Racer extends RefCounted:
 	var ctlBrake := false
 	var ctlDrift := false
 	var lapTimes: Array = []
+	var hat := ""
 	var lapStart := 0.0
 	var gauge := 0.0
 	var boostT := 0.0
@@ -383,7 +390,10 @@ class Racer extends RefCounted:
 	var pose := {}
 	var occA := 1.0
 
-func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> void:
+# opts: tt (đua tính giờ: chạy một mình, không thúng, cầm sẵn 3 ớt cấp 2), up (đồ ăn đã cho: id -> {spd,acc,turn}), hat (đồ con mình đội)
+func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int, opts := {}) -> void:
+	tt = bool(opts.get("tt", false))
+	ghost_rec = []
 	laps = nlaps
 	diff = dif
 	sel_char = sel
@@ -401,7 +411,7 @@ func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> voi
 	splats = []
 	flash = 0.0
 	boxes = []
-	for b in M.D.boxes:
+	for b in ([] if tt else M.D.boxes):
 		boxes.append({"x": float(b[0]), "y": float(b[1]), "on": true, "t": 0.0, "ph": randf() * 6.0, "pop": 0.0})
 	weather = {"k": 0.0, "on": false, "warned": false, "end": 0.0, "next": 3.0 if rain_mode == "heavy" else (1e9 if rain_mode == "none" else 22.0 + randf() * 12.0)}
 	finish_count = 0
@@ -421,13 +431,18 @@ func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> voi
 		var ci: int = order[k]
 		var row := k / 2
 		var idx := (N - 4 - row * 7 + N) % N
-		var lane: float = (0.45 if k % 2 else -0.45) * M.WD[idx]
+		var lane: float = 0.0 if tt else (0.45 if k % 2 else -0.45) * M.WD[idx]
 		var ch: Dictionary = chars[ci]
 		var r := Racer.new()
 		r.ch = ch
 		r.id = String(ch.id)
 		r.isPlayer = ci == sel
 		r.st = {"spd": float(ch.spd), "acc": float(ch.acc), "turn": float(ch.turn)}
+		if r.isPlayer:
+			var up: Dictionary = opts.get("up", {}).get(r.id, {})
+			for sk in ["spd", "acc", "turn"]:
+				r.st[sk] = float(ch[sk]) * (1 + FEED_STEP * int(up.get(sk, 0)))
+			r.hat = String(opts.get("hat", ""))
 		r.x = M.PX[idx] + M.NX[idx] * lane
 		r.y = M.PY[idx] + M.NY[idx] * lane
 		r.a = M.TA[idx]
@@ -443,6 +458,10 @@ func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int) -> voi
 		if r.isPlayer:
 			player = r
 	player.ai.lane = 0.0
+	if tt:
+		player.item = "ot"
+		player.lvl = 2
+		player.uses = 3
 	prev_rank = player.rank
 	rank_pop = 0.0
 	cam.base = player.a
@@ -793,6 +812,7 @@ func step(dt: float) -> void:
 					if r.isPlayer:
 						say("Nhào lộn!", 1.0)
 						ev.append(["boost"])
+						ev.append(["mis", "trick"])
 				r.trick = 0
 				r.trickRot = 0.0
 		if r.hopT > 0:
@@ -877,6 +897,7 @@ func step(dt: float) -> void:
 						r.boostPow = 1.42 if r.tier == 2 else 1.32
 						if r.isPlayer:
 							ev.append(["boost"])
+							ev.append(["mis", "turbo"])
 					r.drift = 0
 					r.tier = 0
 				else:
@@ -958,7 +979,9 @@ func step(dt: float) -> void:
 				r.z = RAMP_H
 				r.vz = 130 + r.spd * 0.1
 				r.drift = 0
-				if not r.isPlayer and randf() < float(PERS.get(r.ai.pers, PERS.hien).trick):
+				if r.isPlayer:
+					ev.append(["mis", "jump"])
+				elif randf() < float(PERS.get(r.ai.pers, PERS.hien).trick):
 					r.trick = 1
 		# ngô tăng tốc
 		if not air:
@@ -973,6 +996,7 @@ func step(dt: float) -> void:
 					r.boostPow = 1.45
 					if r.isPlayer:
 						ev.append(["pad"])
+						ev.append(["mis", "pad"])
 		# bó rơm chắn đường
 		if not air:
 			for b in M.BASKETS:
@@ -1127,6 +1151,9 @@ func step(dt: float) -> void:
 	flash = maxf(0, flash - dt)
 	msg.life -= dt
 	shake = maxf(0, shake - dt)
+	if tt and state == "race" and not player.finished:
+		while ghost_rec.size() / 3.0 * 0.1 <= race_t:
+			ghost_rec.append_array([roundi(player.x), roundi(player.y), snappedf(player.a, 0.01)])
 	if state == "done":
 		done_t += dt
 		if done_t > 3.2:

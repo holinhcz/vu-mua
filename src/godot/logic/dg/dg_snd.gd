@@ -99,7 +99,7 @@ func tick(dt: float, mus_on: bool, fast: bool, wk: float, paused: bool) -> void:
 	if not paused and wk > 0.3 and randf() < dt * 14 * wk:
 		play("drip%d" % (randi() % 4))
 	# nhạc: vòng 32 nhịp; vòng cuối nhanh 1.15, đổi giữa chừng thì giữ đúng chỗ trong bài
-	var want := "" if muted or paused or not mus_on else ("m115" if fast else "m1")
+	var want := "" if muted or paused or not mus_on else ("m115_%d" if fast else "m1_%d") % music_id
 	if want != _mus_k:
 		var pos := 0.0
 		var frac := -1.0
@@ -399,8 +399,13 @@ func _build() -> void:
 		RB.d[i] *= RAIN_K
 	out.rain = _wav(RB, true)
 	# nhạc nền: một vòng 32 nhịp ở tốc độ thường và vòng cuối (x1.15); đuôi nốt quấn về đầu vòng
-	var M: Dictionary = MUSICS[music_id]
-	for tp in [[1.0, "m1"], [1.15, "m115"]]:
+	for mi in MUSICS.size():
+		_music(out, mi)
+	call_deferred("_done", out)
+
+func _music(out: Dictionary, mi: int) -> void:
+	var M: Dictionary = MUSICS[mi]
+	for tp in [[1.0, "m1_%d" % mi], [1.15, "m115_%d" % mi]]:
 		var spb: float = 60.0 / (M.bpm * tp[0]) / 2.0
 		var B := Buf.new(spb * 32)
 		B.d.resize(int(round(spb * 32 * RATE)))
@@ -423,7 +428,6 @@ func _build() -> void:
 			elif M.perc == "soft" and st % 8 == 0:
 				tone(B, t, 110, .25, "sine", .06, true)
 		out[tp[1]] = _wav(B, true)
-	call_deferred("_done", out)
 
 func _done(out: Dictionary) -> void:
 	_bank = out

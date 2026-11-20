@@ -213,8 +213,15 @@ func _ready() -> void:
 	mat.set_shader_parameter("uTex", Vector2(M.TXW, M.TXH))
 	mat.set_shader_parameter("uTSC", M.TSC)
 	mat.set_shader_parameter("uZF", ZFAR)
-	SKY = M.sky.P.get(String(M.map.tod), M.sky.P.day)
-	_sky_sun(String(M.map.tod))
+	set_tod(String(M.map.tod))
+
+# giờ trong ngày của chặng (Giải Làng: sáng sớm / chiều mưa / hoàng hôn; đua lẻ: giờ của map)
+var tod := "day"
+const TODC := {"morning": {"top": [150, 200, 236], "bot": [246, 236, 214]}, "day": {"top": [95, 180, 232], "bot": [216, 240, 242]}, "sunset": {"top": [74, 62, 128], "bot": [255, 168, 104]}}
+func set_tod(tk: String) -> void:
+	tod = tk if M.sky.P.has(tk) else "day"
+	SKY = M.sky.P.get(tod, M.sky.P.day)
+	_sky_sun(tod)
 
 # resize() của web, tính thẳng bằng css px
 func layout(w: float, h: float) -> void:
@@ -270,10 +277,13 @@ func _ground_uniforms() -> void:
 	mat.set_shader_parameter("uWet", float(R.weather.k))
 	var hz: Array = M.map.haze
 	mat.set_shader_parameter("uHaze", Vector3(hz[0], hz[1], hz[2]) / 255.0)
-	var P: Dictionary = SKY
-	mat.set_shader_parameter("uSkyH", Vector3(P.hor[0], P.hor[1], P.hor[2]) / 255.0)
-	mat.set_shader_parameter("uSkyT", Vector3(P.zen[0], P.zen[1], P.zen[2]) / 255.0)
-	var el := {"morning": 0.22, "day": 0.95, "sunset": 0.12}.get(String(M.map.tod), 0.5) as float
+	var td: Dictionary = TODC.get(tod, TODC.day)
+	var wk: float = R.weather.k
+	var bh := _mix(td.bot, [170, 190, 200], wk)
+	var bt := _mix(td.top, [92, 110, 140], wk)
+	mat.set_shader_parameter("uSkyH", Vector3(bh[0], bh[1], bh[2]) / 255.0)
+	mat.set_shader_parameter("uSkyT", Vector3(bt[0], bt[1], bt[2]) / 255.0)
+	var el := {"morning": 0.22, "day": 0.95, "sunset": 0.12}.get(tod, 0.5) as float
 	var sb: float = M.map.sun
 	mat.set_shader_parameter("uSun", Vector3(cos(sb) * cos(el), sin(sb) * cos(el), sin(el)))
 	mat.set_shader_parameter("uStart", Vector4(M.PX[0], M.PY[0], M.TA[0], M.WD[0]))
@@ -341,7 +351,7 @@ func _sky(ci: CanvasItem) -> void:
 		return
 	var hy := HOR
 	var P: Dictionary = SKY
-	var tk := String(M.map.tod)
+	var tk := tod
 	# mưa: trời ngả xám (web skyMix về [150,162,178] theo wk*.75), mặt trời khuất, chim bay đi
 	var wk: float = R.weather.k
 	var zen := _mix(P.zen, [150, 162, 178], wk * 0.75)
@@ -440,7 +450,7 @@ func _sky(ci: CanvasItem) -> void:
 	var hills: Array = M.map.hills
 	for k in hills.size():
 		var hl: Array = hills[k]
-		var colh := _rgb(_mix(_hex(String(hl[0])), [150, 160, 175], wk * 0.5))
+		var colh := _rgb(_mix(_mix(_hex(String(hl[0])), [150, 160, 175], wk * 0.5), hzc, 0.0 if tod == String(M.map.tod) else 0.25))
 		var amp: float = hl[1]
 		var base: float = hl[2]
 		var f1 := 3.0 + k * 2
@@ -574,6 +584,20 @@ func _world(ci: CanvasItem) -> void:
 		if al <= 0.04:
 			continue
 		_push(p[4], [6, r, p, al])
+	# bóng ma kỷ lục (đua tính giờ)
+	if R.tt and ghost != null and (R.state == "race" or R.state == "done"):
+		var g: Array = ghost.g
+		var f: float = R.race_t / 0.1
+		var k := floori(f)
+		var n := g.size() / 3
+		if k + 1 < n:
+			var u := f - k
+			var gx := lerpf(g[k * 3], g[k * 3 + 3], u)
+			var gy := lerpf(g[k * 3 + 1], g[k * 3 + 4], u)
+			var ga: float = g[k * 3 + 2] + R.wrapA(g[k * 3 + 5] - g[k * 3 + 2]) * u
+			var p := proj(gx, gy, 0)
+			if not p.is_empty() and p[4] < ZFAR and absf(p[5]) < p[4] * halfW + 70 and p[4] > CDIST * 0.6:
+				_push(p[4], [8, _ghost.bind(p, ga)])
 	# bụi
 	for q in R.parts:
 		var p := proj(q.x, q.y, q.h)
@@ -597,9 +621,28 @@ func _world(ci: CanvasItem) -> void:
 			8: it[1].call(ci)
 	_tags(ci)
 	ci.draw_set_transform(Vector2.ZERO)
+	_sky_grade(ci)
 	_rain(ci)
 	# viền tối kéo mắt vào giữa đường
 	_vignette(ci)
+
+# skyGrade: lớp màu nắng sớm / hoàng hôn phủ cả cảnh + quầng sáng quanh mặt trời thấp, mưa thì nhạt đi
+func _sky_grade(ci: CanvasItem) -> void:
+	var G = SKY.get("grade")
+	var wk: float = R.weather.k
+	if G == null or wk > 0.9:
+		return
+	var al := 1.0 - wk
+	var st := []
+	for g in G:
+		var c := css(String(g[1]))
+		c.a *= al
+		st.append([float(g[0]), c])
+	_vgrad(ci, 0, 0, VW, VH, st)
+	var sx: float = VW / 2 + R.wrapA(float(M.map.sun) - R.cam.th) * F
+	if sx > -VW * 0.5 and sx < VW * 1.5:
+		var gl: Array = String(SKY.glow).split(",")
+		_glow(ci, Vector2(sx, HOR), 0, VW * 0.55, Color(float(gl[0]) / 255, float(gl[1]) / 255, float(gl[2]) / 255, 0.14 * al))
 
 func _vignette(ci: CanvasItem) -> void:
 	var c := Vector2(VW / 2, VH * 0.52)
@@ -719,6 +762,39 @@ func _decor(ci: CanvasItem, d: Dictionary, p: Array, a: float) -> void:
 			_img(ci, "LIFE.lotus.%d" % int(v), p[0], p[2], s * k / LIFE_S, fl, _sway(d, 0.02), a)
 		"ducks":
 			_ducks_draw(ci, d, a)
+		"smoke":
+			# khói bếp: lần đầu đặt lên ống khói của nhà nó thuộc về
+			if not d.has("h"):
+				var hh: Dictionary = M.decor[int(d.ref)]
+				var H: float = {"house": 76.0, "stilt": 122.0, "hut": 70.0}.get(String(hh.t), 80.0)
+				var kk: float = float(hh.get("k", 1))
+				var c := cos(float(hh.get("rot", 0)))
+				var sn := sin(float(hh.get("rot", 0)))
+				var ox := (-26.0 if hh.t == "stilt" else -30.0) * kk
+				var oy := 8.0 * kk
+				d.x = float(hh.x) + ox * c - oy * sn
+				d.y = float(hh.y) + ox * sn + oy * c
+				d.h = H * kk
+				return
+			_smoke(ci, d, float(d.h), 0, false, a)
+		"boat":
+			if not d.has("hd"):
+				var b := 1e9
+				for w in M.WATER:
+					var P: Array = w.pts
+					for i in P.size() - 1:
+						var dd := _seg_dist(float(d.x), float(d.y), P[i][0], P[i][1], P[i + 1][0], P[i + 1][1])
+						if dd < b:
+							b = dd
+							d.hd = atan2(P[i + 1][1] - P[i][1], P[i + 1][0] - P[i][0]) + (0.0 if v < 0.5 else PI)
+			var bob := sin(clock * 1.6 + float(d.x)) * 0.6 * s
+			var u0: float = float(RS.sm("LIFE.ghe.0").get("u", LIFE_S))
+			_img(ci, "LIFE.ghe.0", p[0], p[2] + bob, s * 1.15 / maxf(0.01, u0), not _right(float(d.hd)), 0, a)
+		"xuong":
+			var bob := sin(clock * 1.8 + ph * 6) * 0.5 * s
+			_wake(ci, d, 40, 7, a)
+			var u0: float = float(RS.sm("LIFE.xuong.0").get("u", LIFE_S))
+			_img(ci, "LIFE.xuong.%d" % (0 if fposmod(clock * 0.9 + ph, 1.0) < 0.5 else 1), p[0], p[2] + bob, s / maxf(0.01, u0), not _right(float(d.hd)), 0, a)
 		"tree":
 			var vi := 0 if v < 0.5 else (1 if v <= 0.7 else 2)
 			_img(ci, "D.tree.%d" % vi, p[0], p[1], s * k / 6.0, false, sin(clock * 1.3 + float(d.x) * 0.011) * 0.03 * 0.7, a)
@@ -729,9 +805,24 @@ func _decor(ci: CanvasItem, d: Dictionary, p: Array, a: float) -> void:
 		"pine":
 			_img(ci, "D.pine.%d" % (0 if v < 0.5 else 1), p[0], p[1], s * k / 6.0, false, sin(clock * 1.2 + float(d.x) * 0.009) * 0.015, a)
 		_:
-			var nm := "D.%s.0" % t
+			# hình nướng sẵn: biến thể gần v nhất (bảng V của ex_map.js)
+			var vs: Array = DV.get(t, [0.5])
+			var bj := 0
+			for j in vs.size():
+				if absf(float(vs[j]) - v) < absf(float(vs[bj]) - v):
+					bj = j
+			var nm := "D.%s.%d" % [t, bj]
 			if RS.spr(nm) != null:
 				_img(ci, nm, p[0], p[1], s * k / 6.0, false, 0, a)
+
+const DV := {"hay": [.5], "rock": [.5], "scare": [.5], "flower": [.5], "pine": [.25, .75], "picker": [.25, .75], "stilt": [.25, .75], "banyan": [.5], "gate": [.5], "house": [.25, .75], "stall": [0, .3, .55, .8], "boat": [.3, .8]}
+
+static func _seg_dist(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
+	var dx := bx - ax
+	var dy := by - ay
+	var l2 := dx * dx + dy * dy
+	var t := clampf(((px - ax) * dx + (py - ay) * dy) / maxf(0.0001, l2), 0, 1)
+	return Vector2(px - ax - t * dx, py - ay - t * dy).length()
 
 func _smoke(ci: CanvasItem, d: Dictionary, h0: float, h1: float, dark: bool, al: float) -> void:
 	var wx := cos(float(M.map.sun) + 1.9)
@@ -789,6 +880,16 @@ func _life_step() -> void:
 					q.hd = atan2(wa[3], wa[2]) + (0.0 if fw else PI)
 			d.x = d.list[0].x
 			d.y = d.list[0].y
+		elif d.t == "xuong":
+			var w: Dictionary = M.WATER[int(d.wi)]
+			var len_: float = float(d.b) - float(d.a)
+			var u := fposmod(float(d.s0) + clock * float(d.v), 2 * len_)
+			var fw := u < len_
+			var sx := float(d.a) + u if fw else float(d.b) - (u - len_)
+			var wa := _w_at(w, sx)
+			d.x = wa[0] - wa[3] * float(d.o)
+			d.y = wa[1] + wa[2] * float(d.o)
+			d.hd = atan2(wa[3], wa[2]) + (0.0 if fw else PI)
 		elif d.t == "egret":
 			if float(d.fly) < 0:
 				if dt > 0 and R.state != "menu":
@@ -1342,7 +1443,7 @@ func _racer(ci: CanvasItem, r, p: Array, al: float) -> void:
 	if sink > 0:
 		# rớt nước: cắt phần chìm (khung giới hạn dưới mặt nước)
 		pass
-	_bird(ci, r.id, rel, r.run, r.spd, p[0], y, p[3], al, rot, r.trickRot if (r.trick and r.z > 0) else 0.0, sink * p[3])
+	_bird(ci, r.id, rel, r.run, r.spd, p[0], y, p[3], al, rot, r.trickRot if (r.trick and r.z > 0) else 0.0, sink * p[3], r.hat if r.isPlayer else "")
 	if r.fallT > 0:
 		var pts := A.ell_pts(Vector2(p[0], p[2]), (10 + sink) * p[3], (10 + sink) * p[3] * minf(0.5, CH / p[4]), 24)
 		pts.append(pts[0])
@@ -1355,8 +1456,14 @@ func _racer(ci: CanvasItem, r, p: Array, al: float) -> void:
 	elif p[4] < 900 and al > 0.5:
 		tags.append({"x": p[0], "y": top, "z": p[4], "name": String(r.ch.name), "col": Color(String(R.PERS.get(r.ai.pers, {}).get("col", "#888888"))), "fs": roundf(clampf(6 * p[3], 9, 13))})
 
+var ghost = null   # {t, ch, g} của game khi đua tính giờ
+
+func _ghost(ci: CanvasItem, p: Array, ga: float) -> void:
+	_bird(ci, "ghost", R.wrapA(ga - R.cam.th), clock * 10, 300, p[0], p[2], p[3], 0.42, 0)
+	A.text(ci, "Bóng ma kỷ lục", p[0], p[2] - 46 * p[3], roundf(clampf(6 * p[3], 9, 13)), Color(1, 246 / 255.0, 224 / 255.0, 0.8), 1, 700)
+
 # một khung con đua: chân ở (x,y), s css px / đơn vị thế giới; spd chọn chạy hay đứng
-func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: float, y: float, s: float, al: float, rot: float, trick := 0.0, clip := 0.0) -> void:
+func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: float, y: float, s: float, al: float, rot: float, trick := 0.0, clip := 0.0, hat := "") -> void:
 	var m: Dictionary = RS.rmeta(id)
 	if m.is_empty():
 		return
@@ -1367,11 +1474,14 @@ func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: fl
 	var v: Dictionary = m.v[k]
 	var g := clampf(absf(spd) / 140.0, 0, 1)
 	var fi: int
+	var rj := -1   # chỗ trong nhịp chạy (-1 = dáng đứng), để lấy lớp nón đúng khung
 	if g < 0.12:
 		fi = int(v.st)
 	else:
 		var n: int = v.run.size()
-		fi = int(v.run[int(floor(fposmod(run / TAU, 1.0) * n)) % n])
+		rj = int(floor(fposmod(run / TAU, 1.0) * n)) % n
+		fi = int(v.run[rj])
+	var exact := true
 	var t = RS.rframe(id, fi)
 	if t == null:
 		# chưa giải xong: lấy khung gần nhất đã có của góc này / góc kế
@@ -1384,6 +1494,7 @@ func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: fl
 				if tt != null:
 					t = tt
 					fi = int(f2)
+					exact = false
 					break
 			if t != null:
 				break
@@ -1414,7 +1525,25 @@ func _bird(ci: CanvasItem, id: String, rel: float, run: float, spd: float, x: fl
 		ci.draw_texture_rect_region(t, Rect2(rect.position, Vector2(rect.size.x, rect.size.y * frac)), Rect2(0, 0, t.get_width(), t.get_height() * frac), Color(1, 1, 1, al))
 	else:
 		ci.draw_texture_rect(t, rect, false, Color(1, 1, 1, al))
+		if hat != "" and exact:
+			_hat(ci, id, hat, k, rj, s, al)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+# lớp đồ đội (cùng góc nhìn, cùng nhịp với khung vừa vẽ), vẽ trong cùng phép biến đổi
+func _hat(ci: CanvasItem, id: String, hat: String, k: int, rj: int, s: float, al: float) -> void:
+	var hm: Dictionary = RS.hat_meta(id)
+	if hm.is_empty() or not hm.v.has(hat):
+		return
+	var hv: Dictionary = hm.v[hat][k]
+	var hi: int = int(hv.st) if rj < 0 else int(hv.run[rj])
+	if hi < 0:
+		return
+	var ht = RS.hat_tex(id, hi)
+	if ht == null:
+		return
+	var hf: Array = hm.f[hi]
+	var kk: float = s / float(hm.S)
+	ci.draw_texture_rect(ht, Rect2(float(hf[0]) * kk, float(hf[1]) * kk, float(hf[2]) * kk, float(hf[3]) * kk), false, Color(1, 1, 1, al))
 
 func _part(ci: CanvasItem, q: Dictionary, p: Array) -> void:
 	# web fxPart: lửa, lông, vệt gió, bụi (hình puff), vòng nở, giọt, chấm

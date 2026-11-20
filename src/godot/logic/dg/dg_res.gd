@@ -30,16 +30,35 @@ func bundles_for(map_id: String, ids: Array, player_id: String) -> Array:
 	var out := ["dg_map_" + map_id, "dg_r_npc_1", "dg_fx"]
 	for id in ids:
 		out.append(("dg_r_" + id) if id == player_id else ("dg_r_" + id + "_1"))
+	for b in extra:
+		if not out.has(b):
+			out.append(b)
 	return out
 
-func request(map_id: String, ids: Array, player_id: String) -> void:
+# extra: gói thêm (nón của con mình, con của bóng ma) — tải chung, tính vào tiến độ
+var extra: Array = []
+func request(map_id: String, ids: Array, player_id: String, ex := []) -> void:
+	if map_b != "" and map_b != "dg_map_" + map_id:
+		# đổi map: bỏ hình cảnh map cũ cho nhẹ bộ nhớ
+		S = {}
+		SM = {}
+		gtex = {}
+		P.B.erase(map_b)
 	map_b = "dg_map_" + map_id
 	RB = {}
 	for id in ids:
 		RB[id] = ("dg_r_" + id) if id == player_id else ("dg_r_" + id + "_1")
 	RB["npc"] = "dg_r_npc_1"
+	extra = ex
 	for b in bundles_for(map_id, ids, player_id):
 		P.load_bundle(b)
+
+func ghost_as(id: String) -> void:
+	# bóng ma: con ghi kỷ lục, dùng gói nửa cỡ (khóa "ghost")
+	if RB.has(id):
+		RB["ghost"] = RB[id]
+	else:
+		RB["ghost"] = "dg_r_" + id + "_1"
 
 func progress(map_id: String, ids: Array, player_id: String) -> float:
 	var bs := bundles_for(map_id, ids, player_id)
@@ -100,6 +119,24 @@ func _tex(b: String, k: String, mips: bool, fix: bool) -> ImageTexture:
 
 func spr(name: String) -> Texture2D:
 	return S.get(name)
+
+# ---- đồ đội của con mình: gói l/dg_h_<id>.wasm, lớp nón / khăn / kính đè lên khung chạy (nướng bằng bake_hat.js)
+var HT := {}
+func hat_bundle(id: String) -> String:
+	return "dg_h_" + id
+
+func hat_meta(id: String) -> Dictionary:
+	var b := hat_bundle(id)
+	return P.meta(b) if P.has_bundle(b) else {}
+
+func hat_tex(id: String, i: int) -> Texture2D:
+	var key := id + "/" + str(i)
+	var t = HT.get(key)
+	if t == null:
+		t = _tex(hat_bundle(id), "f" + str(i), true, true)
+		if t != null:
+			HT[key] = t
+	return t
 
 func fx(name: String) -> Texture2D:
 	return FX.get(name)
