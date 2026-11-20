@@ -21,6 +21,7 @@ const NVC := {
 	"g_song": ["rgb(190, 222, 246)", "rgb(204, 230, 250)", "rgb(220, 238, 252)", "rgb(70, 140, 200)", "rgb(52, 132, 200)"],
 	"g_lang": ["rgb(250, 202, 210)", "rgb(252, 214, 222)", "rgb(254, 228, 234)", "rgb(206, 100, 126)", "rgb(214, 92, 124)"],
 	"g_cho": ["rgb(255, 230, 150)", "rgb(255, 238, 180)", "rgb(255, 246, 208)", "rgb(214, 160, 30)", "rgb(222, 156, 20)"],
+	"fire_l": ["rgb(255, 214, 178)", "rgb(255, 224, 194)", "rgb(255, 234, 212)", "rgb(226, 120, 50)", "rgb(232, 112, 40)"],
 	"b0": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)", "rgb(176, 128, 52)"],
 	"b1": ["rgb(206, 234, 178)", "rgb(216, 240, 192)", "rgb(228, 246, 208)", "rgb(96, 160, 60)", "rgb(76, 150, 48)"],
 	"b2": ["rgb(190, 222, 246)", "rgb(204, 230, 250)", "rgb(220, 238, 252)", "rgb(70, 140, 200)", "rgb(52, 132, 200)"],
@@ -191,14 +192,15 @@ func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiê
 # thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận]]; trả [khối, cao]
 func _ms(y: float, name: String, cur: int, top: int, L: Array) -> Array:
 	var out := []
-	out.append(_dt(X0 + 2.0, y, 160.0, 16.0, name, 12.5, 800, BROWN, "left"))
+	var mw: float = Box.text_w(name, 12.5, 800) + 24.0
+	out.append(_onbtn(X0, y, mw, 26.0, name, null, true))   # tên khối trong chip đỏ (như chip mùa của Trời đất)
 	var vs := str(cur)
 	var tw: float = Box.text_w("/" + str(top), 11.0, 700)
 	var vw: float = Box.text_w(vs, 14.0, 800)
-	out.append(_dt(X0 + XW - 2.0 - tw - vw, y - 1.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
-	out.append(_dt(X0 + XW - 2.0 - tw, y + 1.0, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))
+	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
+	out.append(_dt(X0 + XW - 2.0 - tw, y + 6.0, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))
 	var cs := 34.0
-	var iy := y + 22.0
+	var iy := y + 32.0
 	var bxl := X0 + cs * 0.5
 	var bxw := XW - cs
 	var by := iy + cs + 6.0
@@ -246,18 +248,22 @@ func _day() -> Array:
 	var tip := "Ngày nào đủ 100 năng động thì chuỗi thêm 1 ngày (+xu). Mỗi tuần được nghỉ 1 ngày không đứt chuỗi; bỏ quá thì chuỗi lùi về mốc 7 gần nhất. Tròn 7 ngày được quà vòng. Chuỗi dài: xu rương +5% (7 ngày) tới +50% (100 ngày)."
 	var t1 := "Chuỗi " + str(c) + " ngày"
 	var w1: float = Box.text_w(t1, 12.5, 800)
-	var hit := _dbx(X0, y - 2.0, XW, 66.0, "rgba(0, 0, 0, 0)", 0.0)
+	var hit := _dbx(X0, y - 2.0, XW, 74.0, "rgba(0, 0, 0, 0)", 0.0)
 	hit.act = _dsay.bind(tip)
 	out.append(hit)
-	out.append(_dt(X0 + 2.0, y, w1 + 2.0, 16.0, t1, 12.5, 800, BROWN, "left"))
-	var t2 := ("hôm nay xong" if today else "hôm nay chưa đủ 100") + (" · xu rương +" + str(bn) + "%" if bn else "")
-	out.append(_dt(X0 + 8.0 + w1, y + 1.0, 200.0, 15.0, "· " + t2, 10.5, 600, GREEN if today else SUB, "left"))
+	var cw1 := w1 + 24.0
+	var cc := _chip(X0, y, cw1, 26.0, "fire_l")   # tên khối trong chip cam nhạt (màu lửa của chấm)
+	cc.kids = [_dt(X0, y, cw1, 26.0, t1, 12.5, 800, "rgb(150, 66, 16)")]
+	out.append(cc)
+	var t2 := ("hôm nay xong" if today else "hôm nay chưa đủ 100") + (" · rương +" + str(bn) + "%" if bn else "")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
 	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
-	var rc := _chip(X0 + XW - rw, y - 1.0, rw, 18.0, "fut" if rest_ok else "miss")
-	rc.kids = [_dt(X0 + XW - rw, y - 1.0, rw, 18.0, rt, 10.0, 700, SUB)]
+	var t2w := XW - cw1 - 8.0 - rw - 6.0
+	out.append(_dt(X0 + cw1 + 8.0, y + 5.0, t2w, 16.0, _fitw(t2, 10.5, 600, t2w), 10.5, 600, GREEN if today else SUB, "left"))
+	var rc := _chip(X0 + XW - rw, y + 4.0, rw, 18.0, "fut" if rest_ok else "miss")
+	rc.kids = [_dt(X0 + XW - rw, y + 4.0, rw, 18.0, rt, 10.0, 700, SUB)]
 	out.append(rc)
-	var dy := y + 22.0
+	var dy := y + 30.0
 	var ds := 19.0
 	var gx := 5.0
 	for i in 6:
