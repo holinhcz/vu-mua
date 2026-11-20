@@ -1543,7 +1543,8 @@ func _gui_input(e: InputEvent) -> void:
 			return
 		_vel = 0.0
 		if pr != null:
-			if _top_hit(pos) == pr:
+			var hp = _top_hit(pos)
+			if hp != null and hp.id == pr.id:
 				_tap_top(pr.id)
 			return
 		_tap_map(pos + Vector2(0, scroll))

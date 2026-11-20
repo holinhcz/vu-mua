@@ -97,8 +97,9 @@ class Box extends Control:
 				_drag = false
 				return
 			var h = hit(pos)
-			if it != null and h == it and it.tap.is_valid():
-				it.tap.call()
+			# so theo id: mỗi lần vẽ lại là items (và lambda tap) tạo mới, so cả dict thì không bao giờ bằng
+			if it != null and h != null and h.get("id") == it.get("id") and h.tap.is_valid():
+				h.tap.call()
 			elif it == null and h == null and on_bg.is_valid():
 				on_bg.call()
 	func pressed(id) -> bool:
