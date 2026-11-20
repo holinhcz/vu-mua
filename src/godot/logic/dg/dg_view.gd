@@ -164,6 +164,12 @@ var clock := 0.0
 var sky_l: Lay
 var ground: ColorRect
 var world: Lay
+var fxu: Lay          # vết hiệu ứng trên mặt đất (vòng, vũng trứng, rãnh cày), ngay trên mặt đất
+var fxmat: ShaderMaterial
+var GX                # dg_fxgl của luật đua
+var _gm := ArrayMesh.new()
+var _bm: Array = []
+const FXSH := preload("res://logic/dg/dg_fx.gdshader")
 var mat: ShaderMaterial
 var pd_img: Image
 var pd_tex: ImageTexture
@@ -203,7 +209,14 @@ func _ready() -> void:
 	mat.shader = sh
 	ground.material = mat
 	add_child(ground)
+	# cả lớp cảnh dùng shader hiệu ứng: ảnh / chữ vẽ như thường, lưới hiệu ứng (CUSTOM0) thì shader tự vẽ hình
+	fxmat = ShaderMaterial.new()
+	fxmat.shader = FXSH
+	fxu = Lay.new(_fx_ground)
+	fxu.material = fxmat
+	add_child(fxu)
 	world = Lay.new(_world)
+	world.material = fxmat
 	add_child(world)
 	pd_img = Image.create(28, 1, false, Image.FORMAT_RGBAF)
 	pd_tex = ImageTexture.create_from_image(pd_img)
@@ -237,7 +250,7 @@ func layout(w: float, h: float) -> void:
 	R.CH0 = CH
 	R.CH = CH
 	R.CDIST = CDIST
-	for c in [sky_l, world]:
+	for c in [sky_l, fxu, world]:
 		c.position = Vector2.ZERO
 		c.size = size
 	ground.position = Vector2(0, HOR)
@@ -264,8 +277,54 @@ func redraw() -> void:
 	rx = -fy
 	ry = fx
 	_ground_uniforms()
+	_fx_prep()
 	sky_l.queue_redraw()
+	fxu.queue_redraw()
 	world.queue_redraw()
+
+# hiệu ứng shader: chiếu hạt một lần mỗi khung (theo độ sâu các con đua), gói vết trên đất
+var _fx_ok := false
+var _fx_g := false
+func _fx_prep() -> void:
+	GX = R.GX
+	_fx_ok = false
+	if GX == null or (GX.P.is_empty() and GX.RB.is_empty()):
+		return
+	GX.V = self
+	var zr := []
+	for r in R.racers:
+		if r.fallT > 0:
+			continue
+		var p := proj(r.x, r.y, 0)
+		if p.is_empty() or p[4] >= ZFAR:
+			continue
+		zr.append(p[4])
+	zr.sort()
+	zr.reverse()
+	GX.prep(zr)
+	_fx_g = GX.pack_ground(_gm)
+	_fx_ok = true
+
+func _fx_ground(ci: CanvasItem) -> void:
+	if _fx_ok and _fx_g:
+		ci.draw_mesh(_gm, null)
+
+# lưới hiệu ứng từng nhóm vào danh sách độ sâu: nhóm b vẽ ngay sau con đua thứ b-1 (xa -> gần)
+func _fx_push() -> void:
+	if not _fx_ok:
+		return
+	var ZR: Array = GX.ZR
+	while _bm.size() <= GX.nB:
+		_bm.append(ArrayMesh.new())
+	for b in range(1, GX.nB + 1):
+		if not GX.pack(b, _bm[b]):
+			continue
+		var z := 0.001
+		if b == 1 and ZR.size():
+			z = float(ZR[0]) + 0.05
+		elif b >= 2:
+			z = float(ZR[b - 2]) - 0.05
+		_push(z, [9, _bm[b]])
 
 # ------------------------------------------------------------------ mặt đất
 func _ground_uniforms() -> void:
@@ -606,6 +665,7 @@ func _world(ci: CanvasItem) -> void:
 		_push(p[4], [7, q, p])
 	_world_items(halfW)
 	_arch()
+	_fx_push()
 	_keys.sort()
 	for k in _keys:
 		var it: Array = _items[int(fposmod(k, 8192.0))]
@@ -619,6 +679,7 @@ func _world(ci: CanvasItem) -> void:
 			6: _racer(ci, it[1], it[2], it[3])
 			7: _part(ci, it[1], it[2])
 			8: it[1].call(ci)
+			9: ci.draw_mesh(it[1], null)
 	_tags(ci)
 	ci.draw_set_transform(Vector2.ZERO)
 	_sky_grade(ci)
@@ -2053,14 +2114,16 @@ func _fx_stars(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
 func _racer_fx(ci: CanvasItem, r, p: Array, hz: float, front: bool) -> void:
 	if r.fallT > 0:
 		return
-	var fire: bool = r.boostT > 0 and r.boostPow >= 1.55
-	if r.shieldT > 0:
+	# có hiệu ứng shader thì lửa, khiên (trừ khiên rơm), bụi đá 2D nhường cho nó, như web
+	var gx: bool = R.GX != null
+	var fire: bool = r.boostT > 0 and r.boostPow >= 1.55 and not gx
+	if r.shieldT > 0 and not (gx and r.shSrc != "" and r.shSrc != "rom"):
 		_fx_shield(ci, r, p, hz, front)
 	if r.spinT > 0:
 		_fx_stars(ci, r, p, hz, front)
 	if fire:
 		_fx_flames(ci, r, p, hz, front)
-	if r.kickT > 0 and hz < 2:
+	if r.kickT > 0 and hz < 2 and not gx:
 		_fx_dust(ci, r, p, front)
 
 # mưa: phủ xanh xám + vệt mưa; trứng văng lên kính

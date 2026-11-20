@@ -52,6 +52,8 @@ var tt := false
 var ghost_rec: Array = []   # đua tính giờ: x, y, hướng mỗi 0.1 giây
 const FEED_STEP := 0.025
 var ev: Array = []   # sự kiện cho âm thanh / chữ: [tên, ...]
+const FXGL := preload("res://logic/dg/dg_fxgl.gd")
+var GX = null   # hiệu ứng shader (dg_fxgl); có thì các hiệu ứng 2D tương ứng nhường (như GLX.ok của web)
 
 const PERS := {
 	"hung": {"skill": 1.0, "margin": 0.08, "bridge": 340.0, "useMin": 0.2, "useRnd": 1.0, "trick": 0.5, "drift": false, "aim": false, "col": "#c62828"},
@@ -94,7 +96,10 @@ func hit(r, dur: float, src = null) -> bool:
 	if r.hopT > 0 or r.fallT > 0:
 		return false
 	if r.shieldT > 0:
-		puff(r.x, r.y, Color("#f2c14e"), 12, 120, 4, 18)
+		if GX != null:
+			GX.block(r)
+		else:
+			puff(r.x, r.y, Color("#f2c14e"), 12, 120, 4, 18)
 		if r.isPlayer:
 			ev.append(["shield"])
 		return false
@@ -104,7 +109,10 @@ func hit(r, dur: float, src = null) -> bool:
 	r.drift = 0
 	r.driftT = 0.0
 	r.tier = 0
-	feathers(r)
+	if GX != null:
+		GX.hit(r)
+	else:
+		feathers(r)
 	if r.isPlayer:
 		shake = 0.4
 	if src != null and src is Racer and src.isPlayer and r != src:
@@ -138,6 +146,13 @@ func _behind(r, d: float) -> Vector2:
 func use_item(r) -> void:
 	if r.item == "" or r.rollT > 0 or r.spinT > 0 or r.hopT > 0 or r.fallT > 0:
 		return
+	var k0: String = r.item
+	var l0: int = r.lvl
+	_use_item(r)
+	if GX != null:
+		GX.item(r, k0, l0)
+
+func _use_item(r) -> void:
 	var k: String = r.item
 	if r.isPlayer:
 		ev.append(["mis", "item"])
@@ -208,6 +223,13 @@ func _cone(r, rad: float, ang: float, dur: float) -> void:
 func use_ability(r) -> void:
 	if r.gauge < 1 or r.spinT > 0 or r.hopT > 0 or r.fallT > 0:
 		return
+	_use_ability(r)
+	r.gsk = r.id
+	r.gskT = clock
+	if GX != null:
+		GX.cast(r)
+
+func _use_ability(r) -> void:
 	r.gauge = 0.0
 	var id: String = r.id
 	if r.isPlayer:
@@ -220,7 +242,8 @@ func use_ability(r) -> void:
 			if r.isPlayer:
 				ev.append(["boost"])
 		"trong":
-			_ring(r)
+			if GX == null:
+				_ring(r)
 			ev.append(["crow"])
 			for o in racers:
 				if o != r and not o.finished and Vector2(o.x - r.x, o.y - r.y).length() < 300:
@@ -244,7 +267,8 @@ func use_ability(r) -> void:
 			if nr:
 				ev.append(["boost"])
 		"ngong":
-			_ring(r, "255,255,255")
+			if GX == null:
+				_ring(r, "255,255,255")
 			ev.append(["honk"])
 			_cone(r, 400, 0.7, 1.0)
 		"dongtao":
@@ -307,8 +331,11 @@ func stomp(r) -> void:
 	if near(r):
 		ev.append(["stomp"])
 		shake = maxf(shake, 0.28 if r.isPlayer else 0.14)
-	_ring(r, "200,160,110")
-	puff(r.x, r.y, Color("#d8c09a"), 12, 140, 5, 10)
+	if GX != null:
+		GX.stomp(r)
+	else:
+		_ring(r, "200,160,110")
+		puff(r.x, r.y, Color("#d8c09a"), 12, 140, 5, 10)
 	for o in racers:
 		if o == r or o.finished or r.stp.has(o):
 			continue
@@ -318,7 +345,10 @@ func stomp(r) -> void:
 func chirp(r) -> void:
 	if near(r):
 		ev.append(["chirp"])
-	_ring(r, "255,214,120")
+	if GX != null:
+		GX.chirp(r)
+	else:
+		_ring(r, "255,214,120")
 	for o in racers:
 		if o == r or o.finished or r.chp.has(o):
 			continue
@@ -389,9 +419,18 @@ class Racer extends RefCounted:
 	# dáng (birdPose của web): va = hướng nhìn đã làm mượt
 	var pose := {}
 	var occA := 1.0
+	# hiệu ứng shader: skill vừa dùng (gsk, lúc gskT), tăng tốc của ai (bsrc, bpw), khiên của ai (shSrc)
+	var gsk := ""
+	var gskT := -1.0
+	var bsrc := ""
+	var bpw := 0.0
+	var shSrc := ""
 
 # opts: tt (đua tính giờ: chạy một mình, không thúng, cầm sẵn 3 ớt cấp 2), up (đồ ăn đã cho: id -> {spd,acc,turn}), hat (đồ con mình đội)
 func new_race(order: Array, chars: Array, sel: int, nlaps: int, dif: int, opts := {}) -> void:
+	if GX == null:
+		GX = FXGL.new(self)
+	GX.clear()
 	tt = bool(opts.get("tt", false))
 	ghost_rec = []
 	laps = nlaps
@@ -831,8 +870,11 @@ func step(dt: float) -> void:
 				r.a = M.TA[r.idx]
 				r.md = r.a
 				puff(r.x, r.y, Color("#e8dcc0"), 10, 80, 6, 4)
+				if GX != null:
+					GX.land(r)
 				if r.hop.pounce:
-					_ring(r, "255,214,120")
+					if GX == null:
+						_ring(r, "255,214,120")
 					for o in racers:
 						if o != r and not o.finished and Vector2(o.x - r.x, o.y - r.y).length() < 170:
 							hit(o, 1.0, r)
@@ -925,7 +967,7 @@ func step(dt: float) -> void:
 				parts.append({"x": r.x, "y": r.y, "h": 2.0, "vh": 70.0, "vx": (randf() - 0.5) * 60, "vy": (randf() - 0.5) * 60, "life": 0.5, "max": 0.5, "c": Color("#5b3a1d"), "s": 4.0})
 			if not offroad and absf(r.spd) > 200 and randf() < 0.35:
 				parts.append({"x": r.x - cos(r.a) * 14, "y": r.y - sin(r.a) * 14, "h": 2.0, "vh": 30.0, "vx": (randf() - 0.5) * 30, "vy": (randf() - 0.5) * 30, "life": 0.5, "max": 0.5, "c": Color(170 / 255.0, 200 / 255.0, 220 / 255.0, 0.8) if wet > 0.5 else Color(214 / 255.0, 186 / 255.0, 136 / 255.0, 0.85), "s": 6.0, "grow": 1, "dust": 0 if wet > 0.5 else 2, "v": randi() % 3})
-			if r.boostT > 0:
+			if r.boostT > 0 and not (GX != null and GX.owns_boost(r)):
 				var ca := cos(r.a)
 				var sa := sin(r.a)
 				for k in 2:
@@ -1148,6 +1190,8 @@ func step(dt: float) -> void:
 		sp.t += dt
 	splats = splats.filter(func(sp): return sp.t < sp.life)
 	_fx_step(dt)
+	if GX != null:
+		GX.step(dt)
 	flash = maxf(0, flash - dt)
 	msg.life -= dt
 	shake = maxf(0, shake - dt)
@@ -1216,12 +1260,18 @@ func _step_eggs(dt: float) -> void:
 		var off: float = (e.x - M.PX[e.idx]) * M.NX[e.idx] + (e.y - M.PY[e.idx]) * M.NY[e.idx]
 		if absf(off) > M.WD[e.idx] + 40:
 			e.life = 0.0
-			puff(e.x, e.y, Color("#fff6e0"), 8, 90, 4, 12)
-			puff(e.x, e.y, Color("#f2b705"), 5, 60, 4, 12)
+			if GX != null:
+				GX.egg_pop(e.x, e.y, 0)
+			else:
+				puff(e.x, e.y, Color("#fff6e0"), 8, 90, 4, 12)
+				puff(e.x, e.y, Color("#f2b705"), 5, 60, 4, 12)
 		for b in M.BASKETS:
 			if e.life > 0 and Vector2(b.x - e.x, b.y - e.y).length() < float(b.r) + 6:
 				e.life = 0.0
-				puff(e.x, e.y, Color("#f2b705"), 8, 90, 5, 16)
+				if GX != null:
+					GX.egg_pop(e.x, e.y, 0)
+				else:
+					puff(e.x, e.y, Color("#f2b705"), 8, 90, 5, 16)
 		for o in racers:
 			if e.life <= 0:
 				break
@@ -1231,8 +1281,11 @@ func _step_eggs(dt: float) -> void:
 				continue
 			if Vector2(o.x - e.x, o.y - e.y).length() < 24:
 				e.life = 0.0
-				puff(e.x, e.y, Color("#f2b705"), 10, 100, 5, 16)
-				puff(e.x, e.y, Color("#fff6e0"), 8, 100, 4, 16)
+				if GX != null:
+					GX.egg_pop(e.x, e.y, e.get("sk", 0))
+				else:
+					puff(e.x, e.y, Color("#f2b705"), 10, 100, 5, 16)
+					puff(e.x, e.y, Color("#fff6e0"), 8, 100, 4, 16)
 				if hit(o, 1.15, e.owner) and o.isPlayer:
 					splats.append({"x": randf_range(0.28, 0.72), "y": randf_range(0.2, 0.48), "r": randf_range(0.1, 0.14), "t": 0.0, "life": 2.2, "seed": randi()})
 	eggs = eggs.filter(func(e): return e.life > 0)
@@ -1277,13 +1330,13 @@ func _fx_step(dt: float) -> void:
 		var sa := sin(r.a)
 		var sp := absf(r.spd)
 		var air: bool = r.hopT > 0 or r.z > 2
-		if r.kickT > 0 and not air and sp > 60 and randf() < dt * 24:
+		if GX == null and r.kickT > 0 and not air and sp > 60 and randf() < dt * 24:
 			var sd := -1.0 if randf() < 0.5 else 1.0
 			parts.append({"x": r.x - sa * sd * 10, "y": r.y + ca * sd * 10, "h": 3.0, "vh": 110 + randf() * 80, "vx": -sa * sd * (80 + randf() * 80) - ca * 40, "vy": ca * sd * (80 + randf() * 80) - sa * 40, "life": 0.5, "max": 0.5, "c": Color("#7a5634"), "s": 2.2, "drop": 1})
-		if r.boostT > 0 and r.boostPow >= 1.55 and not air and randf() < dt * 36:
+		if GX == null and r.boostT > 0 and r.boostPow >= 1.55 and not air and randf() < dt * 36:
 			var sd := -1.0 if randf() < 0.5 else 1.0
 			parts.append({"flame": 1, "x": r.x - ca * 6 - sa * sd * 6, "y": r.y - sa * 6 + ca * sd * 6, "h": 1.0, "vh": 70.0, "vx": -ca * 24, "vy": -sa * 24, "life": 0.36, "max": 0.36, "s": 6.5, "c": Color.WHITE})
-		if r.mudT > 0 and not air and sp > 60 and randf() < dt * 22:
+		if GX == null and r.mudT > 0 and not air and sp > 60 and randf() < dt * 22:
 			var w: bool = r.id == "vit"
 			var sd := -1.0 if randf() < 0.5 else 1.0
 			parts.append({"x": r.x - ca * 8 - sa * sd * 8, "y": r.y - sa * 8 + ca * sd * 8, "h": 3.0, "vh": 120 + randf() * 90, "vx": -ca * 90 - sa * sd * 60, "vy": -sa * 90 + ca * sd * 60, "life": 0.55, "max": 0.55, "c": Color("#8fc7de") if w else (Color("#5a3a1c") if randf() < 0.5 else Color("#6e4826")), "s": 2.4 if w else 3.0, "drop": 2 if w else 1})
