@@ -199,7 +199,7 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Arra
 	var tw: float = Box.text_w("/" + str(top), 11.0, 700)
 	var vw: float = Box.text_w(vs, 14.0, 800)
 	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
-	out.append(_dt(X0 + XW - 2.0 - tw, y + 6.0, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))
+	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
 	var cs := 34.0
 	var iy := y + 26.0 + g
 	var bxl := X0 + cs * 0.5
