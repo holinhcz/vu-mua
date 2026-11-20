@@ -11,7 +11,8 @@ const SWAP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><
 const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 const RH := 42.0      # cao dòng
 const BW := 52.0      # chỗ nút bên phải (cố định: thanh mọi dòng dài bằng nhau)
-const GAPR := 6.0     # cách dòng
+const GAPR := 6.0
+const CW := 54.0      # chỗ số cuối thanh ("1.000/1.000" vừa)     # cách dòng
 
 # (bản 411) màu theo nhóm việc (ô trái + thanh), theo bậc thành tựu: [gradient trên, giữa, dưới, viền], màu thanh
 const NVC := {
@@ -152,9 +153,9 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 	var bx := X0 + XW - BW - 6.0
 	var tag := String(lt[1])
 	var gw := 34.0   # chỗ chữ điểm / bậc: cố định cho thanh mọi dòng dài bằng nhau
-	var tw := bx - 6.0 - gw - x
+	var tw := bx - 12.0 - gw - x
 	if tag != "":
-		out.append(_dt(bx - 4.0 - gw, y, gw, RH, tag, 12.0, 800, gc, "right"))
+		out.append(_dt(bx - 9.0 - gw, y, gw, RH, tag, 12.0, 800, gc, "right"))   # điểm / bậc: cách nút 9
 	var tt := tw - (26.0 if sw != null else 0.0)
 	out.append(_dt(x, y + 6.0, tt, 16.0, _fitw(title, 12.0, 800, tt), 12.0, 800, BROWN, "left"))
 	if sw != null:   # nút đổi việc: hình nhỏ cuối dòng tên
@@ -163,7 +164,7 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		s.act = sw
 		out.append(s)
 	if f >= 0.0:
-		var cw: float = Box.text_w(cnt, 10.0, 700) + 6.0
+		var cw := CW   # chỗ số "0/3" cố định: thanh mọi dòng dài bằng nhau
 		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk)))
 		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
