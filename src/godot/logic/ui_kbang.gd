@@ -358,3 +358,18 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 	var rows := int(ceil(bt.size() / float(cols)))
 	return [out, rows * bh + maxf(0, rows - 1) * g]
 
+const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
+func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
+	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
+	if f > 0.0:
+		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))
+	return out
+
+static func _fcol(f: float) -> String:
+	var a := Color8(214, 72, 52)
+	var b := Color8(230, 170, 30)
+	var c := Color8(46, 150, 80)
+	f = clampf(f, 0.0, 1.0)
+	var k := a.lerp(b, f * 2.0) if f < 0.5 else b.lerp(c, (f - 0.5) * 2.0)
+	return "rgb(%d, %d, %d)" % [int(k.r8), int(k.g8), int(k.b8)]
+

@@ -1227,23 +1227,25 @@ func ng_thi_cond(b: String) -> Array:   # ngThiCond
 	var f = _r0().fam.get(str(u)) if u else null
 	var xp := int(floor(_n(o.xp.get(b))))
 	if t > 3:
-		r.append([ng_chinh(b), "Là nghề chính (đang có " + str(o.chinh.size()) + "/" + str(NGCHINH) + ")"])
-	r.append([xp >= _n(T.xp), "Điểm tay nghề " + _sa(xp) + "/" + _sa(T.xp)])
+		r.append([ng_chinh(b), "Là nghề chính (đang có " + str(o.chinh.size()) + "/" + str(NGCHINH) + ")", "Là nghề chính", -1, -1])
+	r.append([xp >= _n(T.xp), "Điểm tay nghề " + _sa(xp) + "/" + _sa(T.xp), "Điểm tay nghề", xp, _n(T.xp)])
 	if _tr(T.get("mk")):
-		r.append([_i(o.mk.get(b)) >= _n(T.mk), "Đã làm " + str(_i(o.mk.get(b))) + "/" + _sv(T.mk) + " món"])
+		r.append([_i(o.mk.get(b)) >= _n(T.mk), "Đã làm " + str(_i(o.mk.get(b))) + "/" + _sv(T.mk) + " món", "Đã làm", _i(o.mk.get(b)), _n(T.mk)])
 	if _tr(T.get("k")):
-		r.append([_n(q[0]) >= _n(T.k), "Đã làm ra " + _sv(q[0]) + "/" + _sv(T.k) + " khéo"])
+		r.append([_n(q[0]) >= _n(T.k), "Đã làm ra " + _sv(q[0]) + "/" + _sv(T.k) + " khéo", "Món khéo", _n(q[0]), _n(T.k)])
 	if _tr(T.get("x")):
-		r.append([_n(q[1]) >= _n(T.x), "Đã làm ra " + _sv(q[1]) + "/" + _sv(T.x) + " tinh xảo"])
-	r.append([f is Dictionary and _i(f.get("tim")) >= _n(T.tim), ("Thân thầy " + String(f.n) + " " + _sv(T.tim) + " ♥ (" + str(_i(f.get("tim"))) + ")") if f is Dictionary else "Xóm không còn nhà nào giữ nghề này"])
+		r.append([_n(q[1]) >= _n(T.x), "Đã làm ra " + _sv(q[1]) + "/" + _sv(T.x) + " tinh xảo", "Món tinh xảo", _n(q[1]), _n(T.x)])
+	r.append([f is Dictionary and _i(f.get("tim")) >= _n(T.tim), ("Thân thầy " + String(f.n) + " " + _sv(T.tim) + " ♥ (" + str(_i(f.get("tim"))) + ")") if f is Dictionary else "Xóm không còn nhà nào giữ nghề này",
+		("Thân " + String(f.n)) if f is Dictionary else "Xóm không còn nhà nào giữ nghề này", _i(f.get("tim")) if f is Dictionary else -1, _n(T.tim) if f is Dictionary else -1, "h"])   # (bản 453) thêm: nhãn ngắn, có, cần, đơn vị (h = tim)
 	for z in T.nop:
 		var h := int(z[0])
-		r.append([ng_has(b, h) >= _n(z[1]), "Nộp " + _sv(z[1]) + " " + String(NGH[h].n) + (" trở lên" if h < 2 else "") + " (kho có " + str(ng_has(b, h)) + ")"])
+		r.append([ng_has(b, h) >= _n(z[1]), "Nộp " + _sv(z[1]) + " " + String(NGH[h].n) + (" trở lên" if h < 2 else "") + " (kho có " + str(ng_has(b, h)) + ")", "Nộp hàng " + String(NGH[h].n).to_lower() + (" trở lên" if h < 2 else ""), ng_has(b, h), _n(z[1])])
 	if _tr(T.get("le")) and f is Dictionary:
 		var L := hn_le(u, {"tp": "sd"})
-		r.append([hn_have(L), "Lễ: " + ", ".join(PackedStringArray(L.map(func(z): return str(z[1]) + " " + String(_ae(z[0]).get("name", "")).to_lower())))])
+		var lt := "Lễ: " + ", ".join(PackedStringArray(L.map(func(z): return str(z[1]) + " " + String(_ae(z[0]).get("name", "")).to_lower())))
+		r.append([hn_have(L), lt, lt, -1, -1])
 	if _tr(T.get("xu")):
-		r.append([_n(G.g.coins) >= _n(T.xu), "Tiền thi " + _sa(T.xu) + " xu"])
+		r.append([_n(G.g.coins) >= _n(T.xu), "Tiền thi " + _sa(T.xu) + " xu", "Tiền thi", _n(G.g.coins), _n(T.xu), "c"])
 	return r
 
 func ng_thi_ready(b: String) -> bool:   # ngThiReady

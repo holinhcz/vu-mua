@@ -8,7 +8,6 @@ extends "res://logic/ui_kbang.gd"
 
 const TABS := [["ngay", "Hằng ngày"], ["tuan", "Tuần"], ["tt", "Thành tựu"], ["sk", "Sự kiện"]]
 const SWAP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><g fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 9h13l-3.5-3.5\"/><path d=\"M20 15H7l3.5 3.5\"/></g></svg>"
-const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 const RH := 42.0      # cao dòng
 const BW := 52.0      # chỗ nút bên phải (cố định: thanh mọi dòng dài bằng nhau)
 const GAPR := 6.0
@@ -122,20 +121,6 @@ func _icn(cx: float, cy: float, sz: float, ic: String) -> Dictionary:   # hình 
 	var n := _dbx(cx - sz * 0.5, cy - sz * 0.5, sz, sz, "rgba(0, 0, 0, 0)", 0.0)
 	n.ic = ic.substr(3)
 	return n
-
-func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
-	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
-	if f > 0.0:
-		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))
-	return out
-
-static func _fcol(f: float) -> String:
-	var a := Color8(214, 72, 52)
-	var b := Color8(230, 170, 30)
-	var c := Color8(46, 150, 80)
-	f = clampf(f, 0.0, 1.0)
-	var k := a.lerp(b, f * 2.0) if f < 0.5 else b.lerp(c, (f - 0.5) * 2.0)
-	return "rgb(%d, %d, %d)" % [int(k.r8), int(k.g8), int(k.b8)]
 
 func _offbtn(x: float, y: float, w: float, h: float, t: String) -> Dictionary:   # nút chưa bấm được
 	var c := _chip(x, y, w, h, "miss")

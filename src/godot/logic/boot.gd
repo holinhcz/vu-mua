@@ -202,6 +202,7 @@ func _test_hook() -> void:
 			"vl": var H: Array = G.w_all.WL.bl(); if H.size(): ui.vl_open(int(H[0].u))
 			"xw2": for k in ["ruong", "mill"]: G.g.work[k] = {"b": 1, "q": [], "r": {}}   # test: có Ruộng muối, Cối xay
 			"ng": ui.ng_open(a[1] if a.size() > 1 else "")
+			"nglearn": G.w_all.WL.t6()[a[1]] = 1; G.mark()
 			"vlbk": var H3: Array = G.w_all.WL.bl(); if H3.size(): G.w_all.WL._fam_of(int(H3[0].u)).bk = {"a": 1, "x": 1, "d": 1}
 			"vlreq": var H2: Array = G.w_all.WL.bl(); if H2.size(): G.w_all.WL._fam_of(int(H2[0].u)).req = {"why": "đem ra chợ huyện", "xu": 998, "it": [["qua_dieu", 4], ["lua", 2]]}; G.w_all.WL._fam_of(int(H2[0].u)).dp = 145; G.w_all.WL._fam_of(int(H2[0].u)).tim = 1
 			"nvday": G.nv.xI = int(floor(G.nv.d4() / 14.0)) * 14 + int(a[1]); ui.nvp.sig = ""
