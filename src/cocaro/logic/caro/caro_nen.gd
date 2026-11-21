@@ -18,6 +18,9 @@ var LJ: Dictionary
 var leaves: Array = []
 var t0 := 0.0
 var fall_scale := 1.0
+var hen := {}
+var hen_chicks: Array = []
+var _hrng := RandomNumberGenerator.new()
 
 static var _ur := {}
 static func _used(n: String) -> Rect2:
@@ -181,10 +184,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 				# gà mẹ trên trái, ca trà đá trên phải, bụi chuối ôm góc dưới phải (thò ra mép màn); cân với tán xoài góc trên trái
 				var R := Rect2(Vector2(cardR + 6, bd.end.y + 4), Vector2(sd.end.x - cardR - 6, bot - bd.end.y - 4))
 				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
-				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.3)
-				hs = 0.4 * kk
-				add.call("mam", R.position.x + R.size.x * 0.76, R.position.y + R.size.y * 0.2, 0.55 * kk, [5, 6, 3, 0.42])
-				short_banana = Rect2(R.position + Vector2(R.size.x * 0.72, R.size.y * 0.76), Vector2(R.size.x * 1.1, 0))
+				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.42)
+				hs = 0.8 * kk                       # Link: gà to lên (ca trà bỏ ở màn nhỏ)
+				# bụi chuối to, mép lá trên chạm đáy khung phản; lá chồm qua góc màn
+				var bw: float = R.size.x * 1.7; var bz_: float = bw / 437.0
+				short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
 			elif rgap >= 70:
 				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
 				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])
@@ -230,6 +234,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
 	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
+	items = items.filter(func(it): return it[0] != "mam")   # Link 11-21: bỏ ca nước
 	for it in items:
 		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
 		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
@@ -247,14 +252,25 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			if r.size.x > room2 and room2 > 20:
 				var k2: float = room2 / r.size.x; it[3] = s0 * k2
 				it[1] = frm.end.x - (ur.position.x - tw.x / 2) * s0 * k2
+	hen = {}
 	for it in items:
 		var t := tex(it[0]); var sh: Array = it[4]; var s: float = it[3]
-		_shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
-		_spr(self, t, Vector2(it[1], it[2]), true, 0.0, s)
+		var sdw := _shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
+		var spr := _spr(self, t, Vector2(it[1], it[2]), true, 0.0, s)
+		if it[0] == "ga":
+			# gà mẹ đi lại quanh chỗ của nó, dừng mổ thóc; không bao giờ bước lên khung phản / ra khỏi màn
+			var ur := _used("ga")
+			var rr: float = maxf(ur.size.x, ur.size.y) * s * 0.5
+			hen = {"sp": spr, "sd": sdw, "off": Vector2(sh[0], sh[1]) * s, "home": Vector2(it[1], it[2]), "pos": Vector2(it[1], it[2]),
+				"r": rr, "roam": rr * 1.1, "head": 2.6, "tgt": Vector2(it[1], it[2]), "wait": 1.0, "peck": 0.0,
+				"frm": Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)), "scr": Rect2(0, 0, W, H), "sp0": spr.position}
 	var ck := tex("gacon")
+	hen_chicks = []
 	for c in chicks:
-		_shadow(self, ck, Vector2(c.x, c.y), Vector2(2, 3), 1.5, 0.4, c.z, cs_)
-		_spr(self, ck, Vector2(c.x, c.y), true, c.z, cs_)
+		var csd := _shadow(self, ck, Vector2(c.x, c.y), Vector2(2, 3), 1.5, 0.4, c.z, cs_)
+		var csp := _spr(self, ck, Vector2(c.x, c.y), true, c.z, cs_)
+		if not hen.is_empty():
+			hen_chicks.append({"sp": csp, "sd": csd, "off": Vector2(2, 3) * cs_, "rel": Vector2(c.x, c.y) - hen.pos, "pos": Vector2(c.x, c.y), "rot": c.z, "ph": randf() * 6.0})
 	# ---- mái lá (màn ngang)
 	if roof_x >= 0:
 		var band := GradientTexture2D.new(); var gr := Gradient.new()
@@ -294,10 +310,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var tr: Rect2 = canopy.top                              # vùng góc trên trái (màn), tán nằm gọn trong đó
 		var ty1 := 0.0
 		for i in 4:
-			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y + 62.0)
+			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y)
 		# nửa trên tán khuất trên mép màn (dưới thanh menu), chỉ phần dưới tán thò xuống, đáy tán + bóng vừa chạm trên khung phản
-		csc = minf(tr.size.y * 1.9 / ty1, tr.size.x * 1.3 / (tx1 - tx0))
-		cpos = Vector2(tr.end.x - tx1 * csc, tr.size.y - ty1 * csc)
+		# Link 11-21 "cây xoài to ra chạm mép bàn": tán to, mép dưới lá chạm đúng mép trên khung phản (bóng được rơi lên khung)
+		csc = minf(tr.size.y * 2.8 / ty1, W * 1.6 / (tx1 - tx0))
+		cpos = Vector2(-tx0 * csc - 0.18 * (tx1 - tx0) * csc, tr.size.y + 4.0 - ty1 * csc)
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
@@ -313,7 +330,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 				need = maxf(need, bz.end.x - (cpos.x - x1 * csc))       # mép trái lớp phải ≥ mép phải phản
 			else:
 				need = maxf(need, (cpos.x + x1 * csc) - bz.position.x)  # mép phải lớp phải ≤ mép trái phản
-	cpos.x -= fl * need
+	if not canopy.has("top"):
+		cpos.x -= fl * need
 	canopy.pos = cpos
 	var croot := Node2D.new(); croot.position = canopy.pos
 	croot.scale = Vector2(-canopy.sc if canopy.flip else canopy.sc, canopy.sc)
@@ -345,6 +363,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 
 func _process(dt: float) -> void:
 	t0 += dt
+	_hen_step(dt)
 	var k := fall_scale
 	for o in leaves:
 		var F: Dictionary = o.F
@@ -360,6 +379,62 @@ func _process(dt: float) -> void:
 		o.sp.modulate.a = fade
 		o.sd.position = Vector2(x + 38 * hgt * k, y + 52 * hgt * k); o.sd.rotation = o.sp.rotation; o.sd.scale = o.sp.scale
 		o.sd.modulate.a = (1.0 - 0.5 * hgt) * fade
+
+func _hen_ok(p: Vector2) -> bool:
+	var r: float = hen.r
+	var fr: Rect2 = hen.frm.grow(r * 0.85)
+	if fr.has_point(p): return false
+	var sc: Rect2 = hen.scr.grow(-r * 0.6)
+	return sc.has_point(p)
+
+func _hen_step(dt: float) -> void:
+	if hen.is_empty(): return
+	var pos: Vector2 = hen.pos
+	var spd: float = hen.r * 0.55                      # bước gà: ~nửa thân mỗi giây
+	if hen.wait > 0.0:
+		hen.wait -= dt
+		hen.peck += dt
+		if hen.wait <= 0.0:
+			for i in 12:                                  # chọn chỗ mới quanh nhà, không đụng phản / mép màn
+				var a := _hrng.randf() * TAU; var d := _hrng.randf_range(0.3, 1.0) * float(hen.roam)
+				var q: Vector2 = hen.home + Vector2(cos(a), sin(a)) * d
+				if _hen_ok(q):
+					hen.tgt = q; break
+	else:
+		var to: Vector2 = hen.tgt - pos
+		if to.length() < 2.0:
+			hen.wait = _hrng.randf_range(1.2, 3.2); hen.peck = 0.0
+		else:
+			var want := to.angle()
+			hen.head = rotate_toward(float(hen.head), want, dt * 3.0)
+			if absf(angle_difference(float(hen.head), want)) < 0.6:
+				var np := pos + Vector2(cos(hen.head), sin(hen.head)) * minf(spd * dt, to.length())
+				if _hen_ok(np): pos = np
+				else: hen.wait = 0.5
+	hen.pos = pos
+	# mổ thóc khi đứng: đầu chúi tới-lui; đi: nhún nhẹ theo bước
+	var fwd := Vector2(cos(hen.head), sin(hen.head))
+	var bob := 0.0
+	if hen.wait > 0.0:
+		bob = maxf(0.0, sin(float(hen.peck) * 9.0)) * float(hen.r) * 0.06
+	else:
+		bob = absf(sin(t0 * 7.0)) * float(hen.r) * 0.02
+	var sp: Sprite2D = hen.sp; var sd: Sprite2D = hen.sd
+	sp.position = pos + fwd * bob
+	sp.rotation = float(hen.head) - 2.6
+	sd.position = pos + hen.off; sd.rotation = sp.rotation
+	# gà con chạy lon ton theo mẹ, mỗi con một chỗ quanh mẹ
+	for c in hen_chicks:
+		var rel: Vector2 = c.rel
+		var tgt: Vector2 = pos + rel.rotated(float(hen.head) - 2.6) + Vector2(sin(t0 * 0.7 + c.ph), cos(t0 * 0.9 + c.ph)) * float(hen.r) * 0.15
+		var d: Vector2 = tgt - c.pos
+		if d.length() > 1.0:
+			var step := minf(d.length(), spd * 1.6 * dt)
+			c.pos += d.normalized() * step
+			c.rot = rotate_toward(float(c.rot), d.angle(), dt * 6.0)
+		var cs: Sprite2D = c.sp; var cd: Sprite2D = c.sd
+		cs.position = c.pos; cs.rotation = c.rot
+		cd.position = c.pos + c.off; cd.rotation = c.rot
 
 # tấm phản + đường phấn nét (dùng cả khi cảnh chưa tải xong)
 func _board(L: Dictionary, bimg: Rect2, board_tex: Texture2D) -> void:
