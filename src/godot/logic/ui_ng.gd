@@ -321,39 +321,15 @@ func _don_c(y: float, d: Dictionary, day: int) -> Array:   # (bản 455) khối 
 		tt = tt.substr(4)
 	out.append(_dt(x, yy, tw, 16.0, _fitw(tt, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 	yy += 16.0 + GG
-	# lưới món 2 cột rộng bằng nhau; cần hàng khéo / tinh xảo: chip nhỏ ở góc phải; chạm món thiếu: qua tab Chợ
-	var g := 5.0
-	var cw := (w - g) * 0.5
-	var n := 0
+	# món cần: chip món chung (_nchips, như Nhà dân); hàng khéo có sao xanh sẵn trong hình; chạm món thiếu: qua tab Chợ
+	var it := []
 	for z in d.it:
 		var b0 := String(z[0])
 		var h := int(z[2])
-		var id: String = W.ng_id(b0, h)
-		var hv: int = mini(W.ng_has(b0, h), int(z[1]))
-		var q := int(z[1])
-		var good := hv >= q
-		var cx := x + (n % 2) * (cw + g)
-		var cy := yy + floorf(n / 2.0) * (34.0 + g)
-		var ch := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
-		var ks := [_icn(cx + 18.0, cy + 17.0, 28.0, id)]
-		var nx := cx + 36.0
-		var nw := cw - 40.0
-		if h > 0:
-			var bt := "Khéo+" if h == 1 else "Tinh xảo"
-			var bw: float = Box.text_w(bt, 9.0, 800) + 10.0
-			var bc := _chip(cx + cw - 5.0 - bw, cy + 18.0, bw, 13.0, "info")
-			bc.kids = [_dt(cx + cw - 5.0 - bw, cy + 18.0, bw, 13.0, bt, 9.0, 800, "rgb(60, 110, 170)")]
-			ks.append(bc)
-		var nm := _nm(b0)
-		var fs := clampf(10.0 * nw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)
-		ks.append(_dt(nx, cy + 3.0, nw, 14.0, _fitw(nm, fs, 700, nw), fs, 700, BROWN, "left"))
-		ks.append(_dt(nx, cy + 17.0, 50.0, 14.0, G.fmt_n(hv) + "/" + G.fmt_n(q), 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left"))
-		ch.kids = ks
-		ch.act = _dsay.bind(nm + ": đủ rồi.") if good else _tab_go.bind("cho")
-		out.append(ch)
-		n += 1
-	var rows := int(ceil(n / 2.0))
-	yy += rows * 34.0 + maxf(0, rows - 1) * g + GG
+		it.append([W.ng_id(b0, h), _nm(b0), mini(W.ng_has(b0, h), int(z[1])), int(z[1]), _tab_go.bind("cho")])
+	var nd := _nchips(x, yy, w, it)
+	out.append_array(nd[0])
+	yy += float(nd[1]) + GG
 	# hàng cuối: thưởng (hình xu, tim) bên trái, nút Giao hàng bên phải
 	var Rw := ["+" + W._sa(d.xu), "c"]
 	if W._tr(d.get("ut")):

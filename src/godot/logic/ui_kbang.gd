@@ -280,7 +280,7 @@ func _sect(y: float, t: String, col: String) -> Array:   # tiêu đề phần: v
 	return [_dbx(X0, y + 2.0, 3.0, 13.0, col, 1.5), _dt(X0 + 8.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"),
 		_dbx(X0 + 8.0 + tw + 6.0, y + 8.0, XW - tw - 20.0, 1.0, "rgb(222, 204, 164)", 0.0)]
 
-# hàng chip món cần: [[hình, tên, có, cần]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
+# hàng chip món cần: [[hình, tên, có, cần, (việc khi thiếu)]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
 func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 	var out := []
 	var cx := x
@@ -303,6 +303,9 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 		if mn >= 84.0:
 			for i in cws.size():
 				cws[i] = floorf(float(cws[i]) * k)
+		else:   # (bản 456) không lọt 1 hàng: lưới 2 cột rộng bằng nhau cho đều
+			for i in cws.size():
+				cws[i] = floorf((w - 5.0) * 0.5)
 	for i in list.size():
 		var it: Array = list[i]
 		var id := String(it[0])
@@ -321,7 +324,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
 		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, tw, 14.0, _fitw(nm, fs, 700, tw), fs, 700, BROWN, "left"),
 			_dt(cx + 36.0, cy + 17.0, cw - 40.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
-		c.act = _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
+		c.act = it[4] if it.size() > 4 and it[4] is Callable and not good else _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")   # it[4]: việc khi chạm món còn thiếu
 		out.append(c)
 		cx += cw + 5.0
 	return [out, cy + 34.0 - y if list.size() else 0.0, ok]
