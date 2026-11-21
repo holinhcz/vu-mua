@@ -29,8 +29,11 @@ window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
   var m=/index\.(audio[a-z.]*\.js)/.exec(s);if(m)return F0('../index.'+m[1]);
   return F0(u,o)};
 if(typeof DecompressionStream=='undefined'){msg.textContent='Trình duyệt này cũ quá.';return}
+// trang cũ trong bộ nhớ đệm trình duyệt (GitHub giữ 10 phút) -> hỏi bản mới nhất, khác thì tải lại trang
+F0('ver.txt?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():B},function(){return B}).then(function(v){v=(v||'').trim()||B;
+if(v!=B&&location.search.indexOf('r='+v)<0){location.replace(location.pathname+'?r='+v);return}
 new Engine(CFG).startGame({onProgress:function(c,t){fill.style.width=Math.min(100,c/(t>0?t:38034280+PCK)*100)+'%'}})
   .then(function(){st.style.display='none'},function(e){msg.textContent='Lỗi: '+(e&&e.message||e)});
-})();
+})})();
 </script>
 </body></html>
