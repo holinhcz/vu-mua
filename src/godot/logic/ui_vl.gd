@@ -685,7 +685,7 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var out := []
 	var col: String = TABC.tal
-	var y := 6.0
+	var y := 4.0
 	# tính nết: (bản 442) tiêu đề ghi tên tính, khối chỉ câu giải thích; thích / ghét / ngày riêng chưa biết gộp 1 dòng
 	var TT: Dictionary = W.tinh_of(f)
 	var tk := String(f.get("tp", ""))
@@ -706,7 +706,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	if not any and not nd:
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết.", 10.0, 600, SUB, "left"))
 		out.append(_dt(X0 + 10.0, yy + 15.0, XW - 20.0, 15.0, _fitw("Trò chuyện, tặng quà để làm thân với " + String(f.n) + " nha.", 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
-		yy += 35.0
+		yy += 33.0
 	else:
 		if any:
 			var ix := X0 + 10.0
@@ -729,7 +729,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 14.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
 		yy += 20.0
 	c.r[3] = yy - y
-	y = yy + 12.0
+	y = yy + GG
 	# sở trường làm thuê
 	var r := String(W.x9(u, f))
 	var o: int = W._i(f.ts)
@@ -749,7 +749,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 		rows.append(["Xưởng nhanh", str(4 * o) + "%", str(4 * (o + 1)) + "%"])
 	else:
 		rows.append([_cap(String(l.d).replace(" 1", "")), str(W.b_l(o)) + "%", str(W.b_l(o + 1)) + "%"])
-	yy = y + 28.0
+	yy = y + 26.0
 	for rw in rows:
 		out.append(_dt(X0 + 46.0, yy, 90.0, 16.0, String(rw[0]), 10.5, 600, SUB, "left"))
 		out.append(_dt(X0 + 138.0, yy, 40.0, 16.0, String(rw[1]), 11.0, 800, BROWN, "left"))
@@ -757,7 +757,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 			out.append(_dt(X0 + 172.0, yy, 20.0, 16.0, "→", 11.0, 700, SUB))
 			out.append(_dt(X0 + 194.0, yy, 44.0, 16.0, String(rw[2]), 11.0, 800, "rgb(46, 130, 50)", "left"))
 		yy += 17.0
-	yy += 6.0
+	yy += 4.0
 	if W._tr(f.get("tt")):
 		var cs := maxf(0.0, (W._n(f.tt) - G._now_ms()) / 1000.0)
 		var p2 := _para(X0 + 10.0, yy + 3.0, XW - 100.0, "Đang đi học nghề lên " + str(o + 1) + " sao, còn " + G.ao(cs) + ".", 10.0, 700, BROWN, 13.0)
@@ -772,12 +772,12 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 			out.append(_lockc(X0 + XW - 94.0, yy, "Cần " + str(o) + " tim"))
 		else:
 			out.append(_btn(X0 + XW - 94.0, yy, 84.0, 26.0, "Gửi đi học", func(): W.b_i(u), "go"))
-		yy += 26.0 + 10.0
+		yy += 26.0 + 8.0
 	else:
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đã thành thợ cả 5 sao", 11.0, 800, BROWN, "left"))
 		yy += 22.0
 	c2.r[3] = yy - y
-	y = yy + 12.0
+	y = yy + GG
 	# nghề gia truyền
 	var su := _su(y, f)
 	out.append_array(su[0])
