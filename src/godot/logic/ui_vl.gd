@@ -228,12 +228,26 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 	var cx := x
 	var cy := y
 	var ok := true
-	var cwm := 0.0   # (bản 444) chip món trong một khối dài bằng nhau (theo chip dài nhất)
+	# (bản 451) mỗi chip dài theo tên; không lọt 1 hàng thì thu đều cho vừa (tên dài bóp chữ nhỏ), thu quá nhỏ mới xuống hàng
+	var cws := []
+	var sm := 0.0
 	for it in list:
 		var nm0 := String(W._ae(String(it[0])).get("name", it[0]))
 		var s0: String = G.fmt_n(mini(W._barn(String(it[0])), 99999)) + "/" + G.fmt_n(int(it[1]))
-		cwm = maxf(cwm, minf(38.0 + maxf(Box.text_w(nm0, 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w))
-	for it in list:
+		var cw0: float = minf(38.0 + maxf(Box.text_w(nm0, 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w)
+		cws.append(cw0)
+		sm += cw0
+	var gs := 5.0 * maxf(0.0, list.size() - 1.0)
+	if list.size() > 1 and sm + gs > w:
+		var k := (w - gs) / sm
+		var mn := 1e9
+		for cw0 in cws:
+			mn = minf(mn, float(cw0) * k)
+		if mn >= 84.0:
+			for i in cws.size():
+				cws[i] = floorf(float(cws[i]) * k)
+	for i in list.size():
+		var it: Array = list[i]
 		var id := String(it[0])
 		var q := int(it[1])
 		var hv: int = W._barn(id)
@@ -241,12 +255,14 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 		ok = ok and good
 		var s: String = G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
 		var nm := String(W._ae(id).get("name", id))   # (bản 435) chip 2 dòng: tên món trên, có/cần dưới
-		var cw: float = cwm
+		var cw: float = cws[i]
+		var tw := cw - 40.0
+		var fs := clampf(10.0 * tw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)
 		if cx > x and cx + cw > x + w:
 			cx = x
 			cy += 40.0
 		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
-		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, cw - 40.0, 14.0, _fitw(nm, 10.0, 700, cw - 40.0), 10.0, 700, BROWN, "left"),
+		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, tw, 14.0, _fitw(nm, fs, 700, tw), fs, 700, BROWN, "left"),
 			_dt(cx + 36.0, cy + 17.0, cw - 40.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
 		c.act = _dsay.bind(String(W._ae(id).get("name", id)) + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
 		out.append(c)
