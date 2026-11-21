@@ -124,6 +124,10 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_layout()
 	_ready_ok = true
+	if "--demo" in OS.get_cmdline_user_args():          # chỉ để chụp thử quân cờ
+		_new_game("pvp", 1)
+		for i in [112, 113, 97, 128, 127, 98, 142, 82, 96, 111]:
+			play(i)
 
 func _exit_tree() -> void:
 	_ai_tok += 1

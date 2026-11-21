@@ -157,7 +157,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			add.call("lu", sd.end.x - 40 * k, band0 + bandH * 0.6, 50.0 / 92.0 * k, [8, 10, 6, 0.45])
 		else:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
-			hs = clampf(mL / 170.0, 0.25, 130.0 / 230.0)
+			hs = clampf(mL / 200.0, 0.25, 0.5)
 			if rgap >= 70:
 				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
 				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])

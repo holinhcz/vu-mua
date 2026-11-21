@@ -13,47 +13,75 @@ def tra_mia(K, R=37.0, seed=5):
         P.over(img, P.rgba(col, a))
     def soft(m, r=0.35):
         return P.blur(m.astype(np.float32), r * K)
-    def ice(cx, cy, rad, cnt, tint, rgx):
-        # đá viên: khối vuông trong mờ, cạnh sáng
-        for _ in range(cnt):
-            a = rgx.uniform(0, 6.283); r = rad * math.sqrt(rgx.uniform(0, 0.8))
+    def ice(cx, cy, rad, cnt, tint, rgx, minsz=0.0):
+        # đá viên 3D: mặt trên vuông bo góc, cạnh vát có pháp tuyến -> sáng/tối theo nắng
+        placed = []
+        for _ in range(cnt * 6):
+            if len(placed) >= cnt: break
+            a = rgx.uniform(0, 6.283); r = rad * math.sqrt(rgx.uniform(0.05, 0.9))
             ix = cx + math.cos(a) * r; iy = cy + math.sin(a) * r
-            sz = rgx.uniform(1.3, 2.1) * rad / 9.0 + 0.6; rot = rgx.uniform(0, 1.57)
-            cr, sr = math.cos(rot), math.sin(rot)
-            u = (dx - ix) * cr + (dy - iy) * sr; v = -(dx - ix) * sr + (dy - iy) * cr
-            d = np.maximum(np.abs(u), np.abs(v)) / sz
+            sz = max(minsz, rgx.uniform(0.85, 1.15) * rad / 4.2)
+            if any(math.hypot(ix - p, iy - q) < (sz + z) * 0.95 for p, q, z in placed): continue
+            placed.append((ix, iy, sz))
+            rot = rgx.uniform(0, 1.57); cr, sr = math.cos(rot), math.sin(rot)
+            u = ((dx - ix) * cr + (dy - iy) * sr) / sz; v = (-(dx - ix) * sr + (dy - iy) * cr) / sz
+            d = (np.abs(u) ** 5 + np.abs(v) ** 5) ** 0.2
             m = d < 1
-            edge = np.clip((d - 0.7) * 4, 0, 1)
-            lit = np.clip(0.6 - 0.25 * (u + v) / sz, 0, 1)
-            col = np.array(tint, np.float32) * 0.6 + np.array([235, 240, 238], np.float32) * 0.4
-            col = col * (0.75 + 0.35 * lit)[..., None] + (edge * 40)[..., None]
-            put(col, soft(m) * (0.35 + 0.4 * edge))
-    # ---------------- CA NHỰA TRÀ ĐÁ (xanh ngọc trong, có quai)
+            bw = 0.38
+            nu = np.sign(u) * np.clip((np.abs(u) - (1 - bw)) / bw, 0, 1) * 0.8
+            nv = np.sign(v) * np.clip((np.abs(v) - (1 - bw)) / bw, 0, 1) * 0.8
+            nx = nu * cr - nv * sr; ny = nu * sr + nv * cr
+            nz = np.sqrt(np.clip(1 - nx ** 2 - ny ** 2, 0.05, 1))
+            sh = P.lam(nx, ny, nz)
+            base = np.array(tint, np.float32) * 0.25 + np.array([236, 246, 250], np.float32) * 0.75
+            col = base * (0.45 + 0.75 * sh)[..., None]
+            spec = np.clip(1 - np.hypot(u + 0.45, v + 0.45) / 0.35, 0, 1) ** 2
+            col = col + (spec * 90)[..., None]
+            bev = np.clip((d - 0.55) * 2.5, 0, 1)
+            # bóng tối mép dưới viên đá trong nước (cảm giác nổi lên)
+            sx, sy = ix + 0.35 * sz, iy + 0.35 * sz
+            sd = (np.abs((dx - sx) * cr + (dy - sy) * sr) ** 5 + np.abs(-(dx - sx) * sr + (dy - sy) * cr) ** 5) ** 0.2 / sz
+            put(np.zeros((n, n, 3)) + np.array(tint, np.float32) * 0.35, soft(sd < 1, 0.5) * 0.35 * (1 - m))
+            put(col, soft(m, 0.18) * (0.32 + 0.55 * bev + 0.2 * spec))
+    # ---------------- CA NHỰA TRÀ ĐÁ (xanh ngọc, có quai, mỏ rót liền vành)
     px, py, pr = -8.0, -3.0, 14.5
-    e = np.hypot(dx - px, dy - py)
-    # quai: vòng dẹt bên trái
-    qa = np.abs(np.hypot((dx - (px - pr - 3.2)) / 1.0, (dy - py) / 1.6) - 4.2) < 1.3
-    qa &= dx < px - pr + 1.5
-    put(np.zeros((n, n, 3)) + np.array([96, 176, 166]) * (0.75 + 0.3 * np.clip(-(dy - py) / 6, -1, 1))[..., None], soft(qa) * 0.95)
-    # vòi (mỏ rót) bên phải: bầu nhọn nhỏ
-    sp = np.hypot((dx - (px + pr + 0.5)) / 3.0, (dy - py) / 2.6) < 1
-    put(np.zeros((n, n, 3)) + np.array([110, 190, 180]), soft(sp) * 0.9)
-    # thành ca: vành nhựa
-    rim = (e < pr) & (e > pr - 1.6)
-    rn = (e - (pr - 0.8)) / 0.8
-    ls = P.lam(rn * (dx - px) / np.maximum(e, 1e-3), rn * (dy - py) / np.maximum(e, 1e-3), np.sqrt(np.clip(1 - np.clip(rn, -1, 1) ** 2, 0, 1)))
-    # nước trà bên trong: hổ phách, đậm dần ra mép, ánh sáng xuyên
-    inner = e < pr - 1.4
-    t = e / (pr - 1.4)
-    tea = np.array([168, 92, 34], np.float32) * (1.05 - 0.35 * t ** 2)[..., None] * (0.92 + 0.12 * fine)[..., None]
-    caust = np.clip(1 - np.hypot(dx - px + 4, dy - py + 4) / 7, 0, 1) ** 2
-    tea += (caust * 70)[..., None] * np.array([1.0, 0.8, 0.45])
-    put(tea, soft(inner) * 0.97)
-    ice(px, py, pr - 3, 14, (200, 150, 90), np.random.default_rng(seed + 1))
-    # mặt nước phản sáng (vệt cong)
-    gl = np.clip(1 - np.abs(np.hypot(dx - px - 3, dy - py - 3) - (pr - 4)) / 0.9, 0, 1) * ((dx - px) < -2) * ((dy - py) < -2)
-    put(np.zeros((n, n, 3)) + 255, gl * 0.35 * inner)
-    put(np.zeros((n, n, 3)) + np.array([120, 200, 190]) * (0.6 + 0.6 * ls)[..., None], soft(rim) * 0.95)
+    th = np.arctan2(dy - py, dx - px)
+    e0 = np.hypot(dx - px, dy - py)
+    R = pr + 3.2 * np.clip(np.cos(th), 0, 1) ** 14      # vành phình nhọn về bên phải = mỏ rót
+    e = e0 / R * pr
+    # quai: ống nhựa cong bên trái, đổ bóng tròn như ống
+    qx = px - pr - 3.6
+    qd = np.hypot((dx - qx) / 1.0, (dy - py) / 1.55)
+    qr = (qd - 4.4) / 1.35
+    qa = (np.abs(qr) < 1) & (dx < px - pr + 2.0)
+    qn = np.sqrt(np.clip(1 - qr ** 2, 0, 1))
+    qnx = qr * (dx - qx) / np.maximum(qd, 1e-3); qny = qr * (dy - py) / 1.55 / np.maximum(qd, 1e-3)
+    qs = P.lam(qnx, qny, qn)
+    put(np.array([72, 158, 150], np.float32) * (0.55 + 0.65 * qs)[..., None], soft(qa, 0.25) * 0.97)
+    # thân ca: vành nhựa dày
+    rw = 2.0
+    rim = (e < pr) & (e > pr - rw)
+    rn = (e - (pr - rw / 2)) / (rw / 2)
+    nxr = rn * (dx - px) / np.maximum(e0, 1e-3); nyr = rn * (dy - py) / np.maximum(e0, 1e-3)
+    ls = P.lam(nxr, nyr, np.sqrt(np.clip(1 - np.clip(rn, -1, 1) ** 2, 0, 1)))
+    # nước trà: hổ phách, tối dần sát thành (độ sâu), nắng xuyên vệt sáng
+    inner = e < pr - rw + 0.3
+    t = np.clip(e / (pr - rw), 0, 1)
+    tea = np.array([170, 90, 30], np.float32) * (1.08 - 0.45 * t ** 3)[..., None] * (0.93 + 0.1 * fine)[..., None]
+    caust = np.clip(1 - np.hypot(dx - px - 3, dy - py - 3) / 8, 0, 1) ** 2
+    tea += (caust * 60)[..., None] * np.array([1.0, 0.75, 0.4])
+    # bóng thành ca đổ vào nước phía trên-trái (nắng từ trên trái)
+    wsh = np.clip(1 - np.hypot(dx - px + 1.6, dy - py + 1.6) / (pr - rw), 0, 1)
+    tea *= (0.72 + 0.28 * np.clip(wsh * 6, 0, 1))[..., None]
+    put(tea, soft(inner) * 0.98)
+    ice(px, py, pr - 4.5, 7, (205, 140, 70), np.random.default_rng(seed + 1))
+    # vệt phản sáng mặt nước
+    gl = np.clip(1 - np.abs(e0 - (pr - 4.5)) / 0.7, 0, 1) * np.clip(np.cos(th - 2.35) * 3 - 2, 0, 1)
+    put(np.zeros((n, n, 3)) + 255, gl * 0.3 * inner)
+    put(np.array([96, 192, 182], np.float32) * (0.5 + 0.7 * ls)[..., None], soft(rim, 0.22) * 0.97)
+    # mép vành trong (bậc nhựa) mảnh tối
+    lip = np.abs(e - (pr - rw)) < 0.3
+    put(np.zeros((n, n, 3)) + np.array([40, 96, 92]), soft(lip, 0.2) * 0.6)
     # ---------------- 3 LY NƯỚC MÍA (ly nhựa trong, nước mía vàng xanh, bọt, ống hút)
     cups = [(13.0, -14.0), (17.5, 4.0), (5.0, 16.5)]
     for k, (cx, cy) in enumerate(cups):
@@ -74,7 +102,10 @@ def tra_mia(K, R=37.0, seed=5):
         bub = np.clip((B.fbm(n, n, 0.25 * K, 1, rgk) - 0.78) * 6, 0, 1)
         mia += (bub * 30)[..., None]
         put(mia, soft(inn))
-        ice(cx, cy, cr_ - 2, 4, (200, 200, 120), rgk)
+        ice(cx, cy, cr_ - 2.6, 3, (200, 200, 120), rgk)
+        # thành ly trong suốt ngay trên mặt nước: vòng mờ
+        wall = np.abs(e - (cr_ - 1.3)) < 0.35
+        put(np.zeros((n, n, 3)) + np.array([250, 250, 236]), soft(wall, 0.25) * 0.28)
         # ống hút đỏ trắng: nhìn từ trên = 1 khoanh tròn + thân nghiêng
         ox, oy = cx + 2.0, cy - 2.2
         ang = -0.6 + k * 0.9
@@ -87,4 +118,11 @@ def tra_mia(K, R=37.0, seed=5):
         put(np.zeros((n, n, 3)) + np.array([200, 50, 44]), soft(hole < 0.95, 0.2))
         put(np.zeros((n, n, 3)) + np.array([90, 30, 26]), soft(hole < 0.45, 0.15))
         put(np.zeros((n, n, 3)) + np.array([225, 235, 232]) * (0.65 + 0.5 * ls)[..., None], soft(ring, 0.25) * 0.85)
+        # giọt nước đọng trên vành ly
+        for j in range(5):
+            aa = rgk.uniform(0, 6.283); rr = cr_ + rgk.uniform(-0.2, 0.5)
+            gx_, gy_ = cx + math.cos(aa) * rr, cy + math.sin(aa) * rr
+            gd = np.hypot(dx - gx_, dy - gy_) / rgk.uniform(0.35, 0.55)
+            put(np.zeros((n, n, 3)) + 255, soft(gd < 0.45, 0.12) * 0.75)
+            put(np.zeros((n, n, 3)) + np.array([150, 160, 160]), soft((gd < 1) & (gd > 0.6), 0.12) * 0.35)
     return img
