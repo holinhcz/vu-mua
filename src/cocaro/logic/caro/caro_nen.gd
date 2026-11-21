@@ -85,20 +85,23 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	leaves.clear()
 	LJ = JSON.parse_string(FileAccess.get_file_as_string(D + "layout.json"))
 	var port: bool = L.port
-	# BỐ CỤC CẢNH: tấm phản (to nhất có thể, chính giữa) do caro_game đặt. Cảnh chỉ lấp phần trống quanh phản:
-	# mỗi món co theo khoảng trống của nó, không bao giờ đè lên phản, không méo.
-	var u := 1.0
+	# BỐ CỤC CẢNH = 1 KHỐI co giãn cùng tấm phản (Link): bản thiết kế (ngang 1920x920, dọc 412x891) đặt mọi món
+	# quanh tấm phản; trên màn thật cả khối được co theo đúng tỉ lệ tấm phản (u) và neo vào tấm phản.
 	if _tex.is_empty() and not Q_fixed:
 		Q = clampf(ceilf(scale.x), 2.0, 9.0)   # = điểm ảnh màn / css cảnh
 	var f: Rect2 = L.face
 	var bimg: Rect2 = L.bimg
-	var fm := f.size.x * 0.046 + 4                 # khung gỗ + bóng ngoài lòng phản
-	var bo := f.grow(fm)                           # mép ngoài tấm phản
-	var wL := bo.position.x; var wR := W - bo.end.x; var hB := H - bo.end.y
+	var dB: Vector2; var dF: float
+	if port:
+		dB = Vector2(9, 171); dF = 394.0
+	else:
+		dB = Vector2(float(LJ.board[0]), float(LJ.board[1])); dF = float(LJ.board[2])
+	var u: float = f.size.x / dF
+	var P := func(x: float, y: float) -> Vector2: return f.position + (Vector2(x, y) - dB) * u
 	# ---- sân đất (lặp)
-	var g := _spr(self, tex("dat"), Vector2.ZERO, false)
+	var g := _spr(self, tex("dat"), Vector2.ZERO, false, 0.0, u)
 	g.region_enabled = true; g.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	g.region_rect = Rect2(0, 0, W * PXU, H * PXU)
+	g.region_rect = Rect2(0, 0, W / u * PXU, H / u * PXU)
 	var lt: Array = []
 	for i in 6: lt.append(tex("la%d" % i))
 	var items := []      # [tên, x, y, cỡ, bóng]
@@ -107,65 +110,50 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var bc := Vector3.ZERO
 	var canopy := {}
 	var gl := []
-	var cs_ := 1.0
-	var sh_of := {}
-	for p in LJ.props: sh_of[p[0]] = p[4]
-	var side := minf(wL, wR) >= 70.0 or not port
-	if side:
-		# ---- 2 dải trái / phải (màn ngang, màn gần vuông). Bản thiết kế 1920x920: dải trái 606, dải phải 336.
-		var hy := H / 920.0
-		var sL := clampf(minf(wL / 606.0, hy), 0.3, 1.6)
-		var sR := clampf(minf(wR / 336.0, hy), 0.3, 1.6)
-		var colx := (bo.end.x + W) / 2.0
-		if wR >= 300.0:
-			roof_x = W - 202.0
-			colx = (bo.end.x + roof_x) / 2.0
-			sR = clampf(minf((roof_x - bo.end.x) / 150.0, hy), 0.3, 1.6)
-		var put := func(nm: String, x: float, y: float, sc: float, half: float, lo: float, hi: float):
-			var sz := minf(sc, (hi - lo) / (2.0 * half))       # vẫn nhét vừa dải
-			x = clampf(x, lo + half * sz, hi - half * sz)
-			items.append([nm, x, y, sz, sh_of[nm]])
-			return sz
-		put.call("ro", colx, H * 0.15, sR, 34, bo.end.x + 4, roof_x if roof_x >= 0 else W)
-		put.call("mam", colx, H * 0.41, sR, 40, bo.end.x + 4, roof_x if roof_x >= 0 else W)
-		put.call("bong", colx, H * 0.65, sR, 42, bo.end.x + 4, roof_x if roof_x >= 0 else W)
-		put.call("lu", (roof_x - 10) if roof_x >= 0 else colx, H * 0.88, sR, 48, bo.end.x + 4, W)
-		# dải trái (dưới thẻ người chơi): gà + gà con, nong lúa, nón; chuối ở góc dưới trái
-		var gx := wL * 0.62
-		var hs: float = put.call("ga", gx, H * 0.40, sL, 70, 0, wL)
-		var hp: Vector2 = Vector2(items[-1][1], items[-1][2])
+	var cs_ := u
+	if not port:
+		var rxd: float = float(LJ.roof[0])
+		roof_x = maxf(P.call(rxd, 0).x, W - 202.0 * u)
+		var shift: float = roof_x - P.call(rxd, 0).x        # mái dạt ra mép phải thì lu đi theo mái
+		for p in LJ.props:
+			var q: Vector2 = P.call(float(p[1]), float(p[2]))
+			if p[0] == "lu": q.x += shift
+			items.append([p[0], q.x, q.y, u, p[4]])
 		for c in LJ.chicks:
-			chicks.append(Vector3(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs, c[2]))
-		cs_ = hs
-		put.call("nong", wL * 0.6, H * 0.65, sL, 72, 0, wL)
-		put.call("non", wL * 0.75, H * 0.91, sL, 42, 0, wL)
-		bc = Vector3(minf(120.0 * sL, wL * 0.25), H - 120.0 * sL, sL)
-		var cv := clampf(minf(wL / 606.0, hy), 0.4, 1.4)
-		canopy = {"pos": Vector2.ZERO, "sc": cv, "flip": false}
-		fall_scale = cv
+			var q: Vector2 = P.call(float(c[0]), float(c[1]))
+			chicks.append(Vector3(q.x, q.y, c[2]))
+		var bq: Vector2 = P.call(float(LJ.chuoi[0]), float(LJ.chuoi[1]))
+		bc = Vector3(bq.x, bq.y, u)
+		canopy = {"pos": P.call(0, 0), "sc": u, "flip": false}
+		for q in LJ.ground_leaves:
+			var v: Vector2 = P.call(float(q[0]), float(q[1]))
+			gl.append([v.x, v.y, q[2], q[3]])
+		fall_scale = u
 	else:
-		# ---- màn dọc hẹp: đồ ở dải dưới tấm phản, tán xoài góc trên phải
-		var ps := clampf(minf(W / 412.0, (hB - 140.0) / 120.0 + 0.2), 0.35, 1.4)
-		items.append(["nong", W * 0.53, H - 42 * ps, 66.0 / 140.0 * ps, [6, 8, 5, 0.42]])
-		items.append(["lu", W - 46 * ps, H - 64 * ps, 50.0 / 92.0 * ps, [8, 10, 6, 0.45]])
-		items.append(["mam", W - 52 * ps, clampf(bo.end.y + 40 * ps, bo.end.y, H - 120 * ps), 32.0 / 74.0 * ps, [5, 6, 3, 0.42]])
-		var hs := 130.0 / 230.0 * ps
-		var hp := Vector2(W * 0.68, maxf(H - 178 * ps, bo.end.y + 40 * ps))
-		items.append(["ga", hp.x, hp.y, hs, [4, 6, 3, 0.42]])
+		var W0 := 412.0; var H0 := 891.0
+		var add := func(nm: String, x: float, y: float, sc: float, sh: Array):
+			var q: Vector2 = P.call(x, y); items.append([nm, q.x, q.y, sc * u, sh])
+		add.call("nong", W0 * 0.53, H0 - 42, 66.0 / 140.0, [6, 8, 5, 0.42])
+		add.call("lu", W0 - 46, H0 - 64, 50.0 / 92.0, [8, 10, 6, 0.45])
+		add.call("mam", W0 - 52, 171 + 394 + 72, 32.0 / 74.0, [5, 6, 3, 0.42])
+		var hs := 130.0 / 230.0
+		var hp := Vector2(W0 * 0.68, H0 - 178)
+		add.call("ga", hp.x, hp.y, hs, [4, 6, 3, 0.42])
 		for c in LJ.chicks:
-			chicks.append(Vector3(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs, c[2]))
-		cs_ = hs
-		bc = Vector3(52 * ps, H - 70 * ps, 120.0 / 230.0 * ps)
-		canopy = {"pos": Vector2(W + 60 * ps, -200 * ps), "sc": 0.5 * ps, "flip": true}
-		fall_scale = 0.55 * ps
-	# lá rụng nằm sẵn: rải ngẫu nhiên ngoài tấm phản
-	var rg := RandomNumberGenerator.new(); rg.seed = 5
-	var want := int(clampf((W * H - bo.get_area()) / 30000.0, 6, 22)); var tries := 0
-	while gl.size() < want and tries < 400:
-		tries += 1
-		var x := rg.randf_range(10, W - 10); var y := rg.randf_range(70, H - 10)
-		if bo.grow(10).has_point(Vector2(x, y)) or (roof_x >= 0 and x > roof_x - 10): continue
-		gl.append([x, y, rg.randf_range(0, 360), rg.randi_range(0, 5)])
+			var q: Vector2 = P.call(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs)
+			chicks.append(Vector3(q.x, q.y, c[2]))
+		cs_ = hs * u
+		var bq: Vector2 = P.call(52, H0 - 70)
+		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u)
+		canopy = {"pos": P.call(W0 + 60, -200), "sc": 0.5 * u, "flip": true}
+		var rg := RandomNumberGenerator.new(); rg.seed = 5
+		var bo := Rect2(dB, Vector2(dF, dF)).grow(24)
+		while gl.size() < 9:
+			var x := rg.randf_range(10, W0 - 10); var y := rg.randf_range(70, H0 - 10)
+			if bo.has_point(Vector2(x, y)): continue
+			var v: Vector2 = P.call(x, y)
+			gl.append([v.x, v.y, rg.randf_range(0, 360), rg.randi_range(0, 5)])
+		fall_scale = 0.55 * u
 	# ---- lá rụng nằm sẵn (dưới đồ vật)
 	for q in gl:
 		var s := fall_scale
@@ -184,17 +172,18 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	if roof_x >= 0:
 		var band := GradientTexture2D.new(); var gr := Gradient.new()
 		gr.set_color(0, Color(0.09, 0.11, 0.18, 0.0)); gr.set_color(1, Color(0.09, 0.11, 0.18, 0.47)); band.gradient = gr; band.width = 64; band.height = 4
-		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72, 0); bd.scale = Vector2(80.0 / 64.0, H / 4.0); add_child(bd)
-		var m := _spr(self, tex("mai"), Vector2(roof_x, -10), false)
-		m.region_enabled = true; m.region_rect = Rect2(0, 0, m.texture.get_width(), minf(m.texture.get_height(), (H + 20) * PXU))
+		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72 * u, 0); bd.scale = Vector2(80.0 * u / 64.0, H / 4.0); add_child(bd)
+		var m := _spr(self, tex("mai"), Vector2(roof_x, -10 * u), false, 0.0, u)
+		m.region_enabled = true; m.region_rect = Rect2(0, 0, m.texture.get_width(), minf(m.texture.get_height(), (H / u + 20) * PXU))
 	# ---- hiên gạch tàu
-	var gt := tex("gach"); var ph := 54.0 if port else 30.0
+	var gt := tex("gach"); var ph := 54.0 if port else 30.0      # (css thiết kế, co theo u)
 	var th := gt.get_height() / PXU
-	var gs := _spr(self, gt, Vector2.ZERO, false)
+	var gs := _spr(self, gt, Vector2.ZERO, false, 0.0, u)
 	gs.region_enabled = true; gs.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	gs.region_rect = Rect2(0, (th - fmod(ph, th)) * PXU, ((roof_x if roof_x >= 0 else W)) * PXU, ph * PXU)
-	var st := ColorRect.new(); st.color = Color8(168, 160, 146); st.position = Vector2(0, ph); st.size = Vector2(roof_x if roof_x >= 0 else W, 7); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(st)
-	var sd := ColorRect.new(); sd.position = Vector2(0, ph + 7); sd.size = Vector2(roof_x if roof_x >= 0 else W, 10); sd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rw_ := (roof_x if roof_x >= 0 else W)
+	gs.region_rect = Rect2(0, (th - fmod(ph, th)) * PXU, rw_ / u * PXU, ph * PXU)
+	var st := ColorRect.new(); st.color = Color8(168, 160, 146); st.position = Vector2(0, ph * u); st.size = Vector2(rw_, 7 * u); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(st)
+	var sd := ColorRect.new(); sd.position = Vector2(0, (ph + 7) * u); sd.size = Vector2(rw_, 10 * u); sd.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sd.color = Color(0.12, 0.06, 0.02, 0.25); add_child(sd)
 	# ---- tấm phản
 	var b := Sprite2D.new(); b.texture = board_tex; b.centered = false
@@ -204,8 +193,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	add_child(b)
 	# ---- đường phấn NÉT: kẻ lại 16x16 đường bằng hình chữ nhật khớp điểm ảnh màn, đè lên vệt phấn vẽ sẵn
 	var sc := scale.x
-	var lw: float = maxf(2.0, roundf(1.6 * sc / u))      # độ dày (điểm màn)
-	var gx0: float = L.gx * sc / u; var gy0: float = L.gy * sc / u; var cpx: float = L.cs * sc / u
+	var lw: float = maxf(2.0, roundf(1.6 * sc))      # độ dày (điểm màn)
+	var gx0: float = L.gx * sc; var gy0: float = L.gy * sc; var cpx: float = L.cs * sc
 	var span := cpx * 15
 	for k in 16:
 		for vert in [true, false]:
