@@ -85,13 +85,6 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 func _nm(id: String) -> String:
 	return String(W._ae(id).get("name", id))
 
-func _sbtn(x: float, y: float, t: String, cb, red := false) -> Array:   # nút phụ nhỏ: chip kem (red: hồng); trả [khối, rộng]
-	var w: float = Box.text_w(t, 10.5, 700) + 18.0
-	var c := _chip(x, y, w, 26.0, "sen" if red else "fut")
-	c.kids = [_dt(x, y, w, 26.0, t, 10.5, 700, "rgb(170, 50, 60)" if red else BROWN)]
-	c.act = cb
-	return [c, w]
-
 func _stars(x: float, y: float, s: int, mx: int, z := 13.0) -> Array:   # hàng sao: s vàng, tới mx xám
 	var out := []
 	for i in mx:
@@ -289,57 +282,85 @@ func _don() -> Array:
 		y += float(r[1]) + GG
 	return [out, y]
 
-func _don_c(y: float, d: Dictionary, day: int) -> Array:   # khối 1 đơn: tiêu đề + hạn, chip món, thưởng / phạt bằng hình, nút
+func _don_c(y: float, d: Dictionary, day: int) -> Array:   # (bản 455) khối 1 đơn: tiêu đề + Từ chối + hạn; lưới món 2 cột; thưởng bằng hình + Giao hàng
 	var left := int(d.dl) - day
 	var ok: bool = W.ng_don_ok(d)
 	var f = W._fam_of(d.u) if W._tr(d.get("u")) else null
 	var P: Dictionary = W.NGPHAT.get(String(d.get("src", "")), {})
+	var id0 := String(d.id)
 	var out := []
 	var c := _chip(X0, y, XW, 10.0, "don")
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
 	var yy := y + 10.0
+	# tiêu đề (bỏ chữ "Nhà" đầu) · chip Từ chối (bấm lần 1 hiện mức phạt) · chip hạn
 	var ht: String = "Còn " + str(left) + " ngày" if left > 0 else "Hạn hôm nay"
 	var hc := _tchip(x, yy - 1.0, ht, "info" if left > 1 else "sen", "rgb(60, 110, 170)" if left > 1 else "rgb(170, 50, 60)")
 	Snap._move(hc[0], Vector2(w - float(hc[1]), 0))
 	out.append(hc[0])
-	var tw := w - float(hc[1]) - 8.0
-	out.append(_dt(x, yy, tw, 16.0, _fitw(String(d.t), 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+	var rx := x + w - float(hc[1]) - 5.0
+	var am := arm == "tu" + id0
+	var TP := ["Từ chối"]
+	if am:
+		TP = ["Lần nữa:"]
+		if W._tr(P.get("th")) and f != null:
+			TP.append_array([" −" + W._sv(P.th), "h"])
+		if W._tr(P.get("ut")):
+			TP.append(" −" + W._sv(P.ut) + " uy tín")
+		if TP.size() == 1:
+			TP = ["Bấm lần nữa"]
+	var tpw := float(_rowi(0.0, 0.0, 18.0, TP, 10.0, 700, "")[1]) + 14.0
+	var tc := _chip(rx - tpw, yy - 1.0, tpw, 18.0, "sen" if am else "fut")
+	tc.kids = _rowi(rx - tpw + 7.0, yy - 1.0, 18.0, TP, 10.0, 700, "rgb(170, 50, 60)" if am else SUB)[0]
+	tc.act = _tu.bind(id0)
+	out.append(tc)
+	var tw := rx - tpw - 6.0 - x
+	var tt := String(d.t)
+	if tt.begins_with("Nhà "):
+		tt = tt.substr(4)
+	out.append(_dt(x, yy, tw, 16.0, _fitw(tt, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 	yy += 16.0 + GG
-	var it := []
+	# lưới món 2 cột rộng bằng nhau; cần hàng khéo / tinh xảo: chip nhỏ ở góc phải; chạm món thiếu: qua tab Chợ
+	var g := 5.0
+	var cw := (w - g) * 0.5
+	var n := 0
 	for z in d.it:
-		var id: String = W.ng_id(String(z[0]), int(z[2]))
-		it.append([id, _nm(id) + (" trở lên" if int(z[2]) == 1 else ""), mini(W.ng_has(String(z[0]), int(z[2])), int(z[1])), int(z[1])])
-	var nd := _nchips(x, yy, w, it)
-	out.append_array(nd[0])
-	yy += float(nd[1]) + GG
-	# thưởng
-	var Rw := ["Trả " + W._sa(d.xu), "c"]
+		var b0 := String(z[0])
+		var h := int(z[2])
+		var id: String = W.ng_id(b0, h)
+		var hv: int = mini(W.ng_has(b0, h), int(z[1]))
+		var q := int(z[1])
+		var good := hv >= q
+		var cx := x + (n % 2) * (cw + g)
+		var cy := yy + floorf(n / 2.0) * (34.0 + g)
+		var ch := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
+		var ks := [_icn(cx + 18.0, cy + 17.0, 28.0, id)]
+		var nx := cx + 36.0
+		var nw := cw - 40.0
+		if h > 0:
+			var bt := "Khéo+" if h == 1 else "Tinh xảo"
+			var bw: float = Box.text_w(bt, 9.0, 800) + 10.0
+			var bc := _chip(cx + cw - 5.0 - bw, cy + 18.0, bw, 13.0, "info")
+			bc.kids = [_dt(cx + cw - 5.0 - bw, cy + 18.0, bw, 13.0, bt, 9.0, 800, "rgb(60, 110, 170)")]
+			ks.append(bc)
+		var nm := _nm(b0)
+		var fs := clampf(10.0 * nw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)
+		ks.append(_dt(nx, cy + 3.0, nw, 14.0, _fitw(nm, fs, 700, nw), fs, 700, BROWN, "left"))
+		ks.append(_dt(nx, cy + 17.0, 50.0, 14.0, G.fmt_n(hv) + "/" + G.fmt_n(q), 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left"))
+		ch.kids = ks
+		ch.act = _dsay.bind(nm + ": đủ rồi.") if good else _tab_go.bind("cho")
+		out.append(ch)
+		n += 1
+	var rows := int(ceil(n / 2.0))
+	yy += rows * 34.0 + maxf(0, rows - 1) * g + GG
+	# hàng cuối: thưởng (hình xu, tim) bên trái, nút Giao hàng bên phải
+	var Rw := ["+" + W._sa(d.xu), "c"]
 	if W._tr(d.get("ut")):
 		Rw.append(" · +" + W._sv(d.ut) + " uy tín")
 	if W._tr(d.get("th")) and f != null:
-		Rw.append_array([" · +", "h", " nhà " + String(f.n)])
-	out.append_array(_rowi(x, yy, 16.0, Rw, 11.0, 800, "rgb(40, 130, 50)")[0])
-	yy += 16.0
-	var Pn := []
-	if W._tr(P.get("th")) and f != null:
-		Pn.append_array(["−" + W._sv(P.th), "h"])
-	if W._tr(P.get("ut")):
-		Pn.append((" · " if Pn.size() else "") + "−" + W._sv(P.ut) + " uy tín")
-	if Pn.size():
-		out.append_array(_rowi(x, yy, 15.0, ["Bỏ đơn: "] + Pn, 10.5, 600, "rgb(170, 60, 50)")[0])
-		yy += 15.0
-	yy += GG
-	# nút: phụ bên trái, Giao hàng bên phải
-	var id0 := String(d.id)
-	var bx := x
-	if not ok:
-		var a := _sbtn(bx, yy, "Thương lái", _tab_go.bind("cho"))
-		out.append(a[0])
-		bx += float(a[1]) + 6.0
-	var t2 := _sbtn(bx, yy, "Bấm lần nữa để từ chối" if arm == "tu" + id0 else "Từ chối", _tu.bind(id0), true)
-	out.append(t2[0])
+		Rw.append_array([" · +", "h"])
+	out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 11.5, 800, "rgb(40, 130, 50)")[0])
 	out.append(_btn(x + w - 84.0, yy, 84.0, 26.0, "Giao hàng", func(): W.ng_giao(id0), "go" if ok else "off"))
 	yy += 26.0 + 10.0
 	c.r[3] = yy - y
