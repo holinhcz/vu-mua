@@ -10,6 +10,8 @@ var op := ""                # (bản 453) nghề đang mở danh sách điều k
 
 const TABC := {"nghe": "rgb(176, 136, 70)", "don": "rgb(214, 160, 30)", "cho": "rgb(60, 140, 40)"}
 const NGC := {   # màu chip riêng bảng Nghề: [gradient trên, giữa, dưới, viền]
+	"n_chinh": ["rgb(251, 229, 216)", "rgb(252, 236, 227)", "rgb(253, 244, 238)", "rgb(242, 176, 137)"],   # (bản 461) nghề chính: cam lửa nhạt như dòng việc Sổ nhiệm vụ
+	"n_thi": ["rgb(223, 238, 222)", "rgb(232, 243, 231)", "rgb(241, 247, 240)", "rgb(157, 203, 153)"],   # đủ điều kiện thi: xanh nhạt
 	"nghe": ["rgb(250, 243, 226)", "rgb(252, 247, 234)", "rgb(255, 251, 242)", "rgb(186, 148, 86)"],   # (bản 457) nhạt hơn cho chip món nổi
 	"don": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
 }
@@ -173,7 +175,7 @@ func _card(y: float, gx: Dictionary, S: Dictionary, Lk: int) -> Array:   # (bả
 	var rd: bool = W.ng_thi_ready(b)
 	var ch: bool = W.ng_chinh(b)
 	var out := []
-	var c := _chip(X0, y, XW, 10.0, "got" if W.ng_thi_ready(String(gx.id)) else ("fire_l" if W.ng_chinh(String(gx.id)) else "nghe"))   # (bản 460) đủ thi: xanh; nghề chính: cam lửa; thường: kem
+	var c := _chip(X0, y, XW, 10.0, "n_thi" if W.ng_thi_ready(String(gx.id)) else ("n_chinh" if W.ng_chinh(String(gx.id)) else "nghe"))   # (bản 461) đủ thi: xanh nhạt; nghề chính: cam lửa nhạt; thường: kem
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
