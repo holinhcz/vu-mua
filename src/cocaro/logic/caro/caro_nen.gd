@@ -115,18 +115,23 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var rxd: float = float(LJ.roof[0])
 		roof_x = maxf(P.call(rxd, 0).x, W - 202.0 * u)
 		var shift: float = roof_x - P.call(rxd, 0).x        # mái dạt ra mép phải thì lu đi theo mái
+		# màn hẹp hơn bản thiết kế: dải trái bị khuất → dồn VỊ TRÍ các món bên trái vào phần thấy được (cỡ giữ nguyên u)
+		var sdx: float = maxf(0.0, dB.x - f.position.x / u)
+		var Lx := func(x: float) -> float: return sdx + x * (dB.x - sdx) / dB.x if x < dB.x else x
 		for p in LJ.props:
-			var q: Vector2 = P.call(float(p[1]), float(p[2]))
+			var q: Vector2 = P.call(Lx.call(float(p[1])), float(p[2]))
 			if p[0] == "lu": q.x += shift
 			items.append([p[0], q.x, q.y, u, p[4]])
+		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
+		var hdx: float = Lx.call(hx0) - hx0                 # gà con đi theo gà mẹ
 		for c in LJ.chicks:
-			var q: Vector2 = P.call(float(c[0]), float(c[1]))
+			var q: Vector2 = P.call(float(c[0]) + hdx, float(c[1]))
 			chicks.append(Vector3(q.x, q.y, c[2]))
-		var bq: Vector2 = P.call(float(LJ.chuoi[0]), float(LJ.chuoi[1]))
+		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
 		bc = Vector3(bq.x, bq.y, u)
-		canopy = {"pos": P.call(0, 0), "sc": u, "flip": false}
+		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
 		for q in LJ.ground_leaves:
-			var v: Vector2 = P.call(float(q[0]), float(q[1]))
+			var v: Vector2 = P.call(Lx.call(float(q[0])), float(q[1]))
 			gl.append([v.x, v.y, q[2], q[3]])
 		fall_scale = u
 	else:
@@ -137,29 +142,42 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var add := func(nm: String, x: float, y: float, sc: float, sh: Array):
 			var q: Vector2 = P.call(x, y); items.append([nm, q.x, q.y, sc * u, sh])
 		var bot := sd.end.y
-		add.call("nong", sd.position.x + sd.size.x * 0.53, bot - 42, 66.0 / 140.0, [6, 8, 5, 0.42])
-		add.call("lu", sd.end.x - 46, bot - 64, 50.0 / 92.0, [8, 10, 6, 0.45])
+		var D := func(v: Vector2) -> Vector2: return dB + (v - f.position) / u      # màn → thiết kế
+		var cardR: float = D.call(L.me.end).x                   # mép phải thẻ "Bạn"
+		var band0: float = D.call(Vector2(0, L.tip.end.y)).y + 6  # dải trống dưới dòng luật
+		var bandH: float = bot - band0
+		var rgap: float = sd.end.x - cardR                      # khe phải bên cạnh thẻ
 		var hs := 130.0 / 230.0
-		var hp := Vector2(sd.position.x + sd.size.x * 0.68, maxf(bot - 178, bd.end.y + 40))
-		if mB < 150 and maxf(mL, mR) >= 60:       # dưới phản hết chỗ → gà ra lề trái
-			hs = clampf(mL / 150.0, 0.3, 130.0 / 230.0)
-			hp = Vector2(sd.position.x + mL * 0.5, bd.position.y + dF * 0.45)
+		var hp: Vector2
+		if bandH >= 70:            # điện thoại: dải dưới cùng rộng cả ngang
+			var k := clampf(bandH / 170.0, 0.45, 1.0)
+			add.call("nong", sd.position.x + sd.size.x * 0.3, band0 + bandH * 0.55, 66.0 / 140.0 * k, [6, 8, 5, 0.42])
+			hs *= k
+			hp = Vector2(sd.position.x + sd.size.x * 0.66, band0 + bandH * 0.5)
+			add.call("lu", sd.end.x - 40 * k, band0 + bandH * 0.6, 50.0 / 92.0 * k, [8, 10, 6, 0.45])
+		else:
+			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
+			hs = clampf(mL / 170.0, 0.25, 130.0 / 230.0)
+			if rgap >= 70:
+				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
+				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])
 		if mR >= 60:
 			var rs := clampf(mR / 110.0, 0.35, 1.0)
 			add.call("ro", sd.end.x - mR * 0.5, bd.position.y + dF * 0.15, rs * 0.7, [5, 6, 3, 0.42])
 			add.call("mam", sd.end.x - mR * 0.5, bd.position.y + dF * 0.45, rs * 0.6, [5, 6, 3, 0.42])
 			add.call("bong", sd.end.x - mR * 0.5, bd.position.y + dF * 0.75, rs * 0.65, [6, 7, 4, 0.42])
-		else:
-			add.call("mam", sd.end.x - 52, minf(bd.end.y + 50, bot - 140), 32.0 / 74.0, [5, 6, 3, 0.42])
+		elif rgap >= 60 and bd.end.y < D.call(Vector2(0, L.me.position.y)).y:
+			add.call("mam", sd.end.x - rgap * 0.5, (bd.end.y + band0) * 0.5, clampf(rgap / 150.0, 0.3, 32.0 / 74.0), [5, 6, 3, 0.42])
 		if mL >= 60:
-			add.call("non", sd.position.x + mL * 0.5, bd.position.y + dF * 0.8, clampf(mL / 160.0, 0.3, 0.5), [5, 6, 4, 0.42])
+			var ns := clampf(mL / 160.0, 0.3, 0.5)
+			add.call("non", sd.position.x + maxf(mL * 0.5, 40 * ns + 4), bd.position.y + dF * 0.8, ns, [5, 6, 4, 0.42])
 		add.call("ga", hp.x, hp.y, hs, [4, 6, 3, 0.42])
 		for c in LJ.chicks:
 			var q: Vector2 = P.call(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs)
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		cs_ = hs * u
-		var bq: Vector2 = P.call(sd.position.x + 52, bot - 70)
-		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u)
+		var bq: Vector2 = P.call(sd.end.x - 30, bd.position.y - 10) if bandH < 70 else P.call(sd.position.x + 30, bot - 20)
+		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u * (0.8 if bandH < 70 else clampf(bandH / 170.0, 0.45, 1.0)))
 		canopy = {"pos": P.call(sd.end.x + 60, sd.position.y - 200), "sc": 0.5 * u, "flip": true}
 		var rg := RandomNumberGenerator.new(); rg.seed = 5
 		var tries := 0
