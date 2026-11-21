@@ -67,9 +67,6 @@ func setup(k: float) -> void:
 # ảnh NÉT: thu ảnh gốc (9px) đúng bằng số điểm ảnh trên màn 1 lần (Lanczos), vẽ 1:1 không mipmap → đường phấn sắc
 var _raw := {}
 var _crisp := {}
-var night := false
-var _ff: CPUParticles2D = null
-var _grade: ShaderMaterial = null
 func crisp(name: String, n: Vector2i) -> Texture2D:
 	n = Vector2i(maxi(4, n.x), maxi(4, n.y))
 	var key := "%s@%dx%d" % [name, n.x, n.y]
@@ -121,20 +118,8 @@ func _ready() -> void:
 	# lớp chỉnh màu nằm giữa quân cờ và thẻ: cảnh + quân tươi ấm hơn, chữ/thẻ giữ nguyên màu
 	var gr := ColorRect.new(); gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	gr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var gm := ShaderMaterial.new(); gr.material = gm
-	var hr: int = int(Time.get_datetime_dict_from_system().hour)
-	night = hr >= 18 or hr < 6
-	if "--night" in OS.get_cmdline_user_args(): night = true
-	if "--day" in OS.get_cmdline_user_args(): night = false
-	if OS.has_feature("web"):
-		var q = JavaScriptBridge.eval("location.search", true)
-		if q is String and "dem" in q: night = true
-		if q is String and "ngay" in q: night = false
-	NEN.night = night
-	gm.shader = load("res://logic/caro/night.gdshader" if night else "res://logic/caro/grade.gdshader")
+	var gm := ShaderMaterial.new(); gm.shader = load("res://logic/caro/grade.gdshader"); gr.material = gm
 	add_child(gr); move_child(gr, _hud.get_index())
-	_grade = gm
-	if night: _fireflies()
 	_bg.draw.connect(_draw_bg)
 	_pc.draw.connect(_draw_pieces)
 	_hud.draw.connect(_draw_hud)
@@ -465,16 +450,6 @@ func _process(dt: float) -> void:
 	var vs := get_viewport_rect().size
 	if vs != _vs:
 		_layout()
-	if night and _grade and L.has("face"):
-		_ff_fit(vs)
-		var f: Rect2 = L.face; var fc := (f.position + f.size * 0.5) * K
-		_grade.set_shader_parameter("lamp", fc / vs)
-		_grade.set_shader_parameter("aspect", vs.x / vs.y)
-		_grade.set_shader_parameter("rad", f.size.x * K * 0.62 / minf(vs.x, vs.y))
-		var lp: Vector2 = _nen.lamp_pos if _nen else Vector2(-1, -1)
-		_grade.set_shader_parameter("lamp2", (lp * K + (_nen.position if _nen else Vector2.ZERO)) / vs if lp.x >= 0 else Vector2(-5, -5))
-		_grade.set_shader_parameter("rad2", 95.0 * K / minf(vs.x, vs.y))
-		_grade.set_shader_parameter("flick", 0.96 + 0.03 * sin(_clock * 7.3) + 0.02 * sin(_clock * 13.1 + 1.0))
 	if _anim > 0:
 		_anim -= dt
 		_pc.queue_redraw()
@@ -946,35 +921,3 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 # ------------------------------------------------------------ test (chỉ dùng trong project thử)
 func t_state() -> Dictionary:
 	return {"ov": ov, "turn": Gm.turn, "hist": Gm.hist.size(), "over": Gm.over, "winner": Gm.winner, "ghost": Gm.ghost, "think": Gm.think}
-
-
-# đom đóm bay lập lòe (chỉ ban đêm), nằm trên lớp chỉnh màu để sáng rõ
-func _fireflies() -> void:
-	var im := Image.create(32, 32, false, Image.FORMAT_RGBA8)
-	for y in 32:
-		for x in 32:
-			var d := Vector2(x - 15.5, y - 15.5).length() / 15.5
-			var a := clampf(1.0 - d, 0.0, 1.0)
-			im.set_pixel(x, y, Color(1, 1, 1, pow(a, 2.2)))
-	var p := CPUParticles2D.new()
-	p.texture = ImageTexture.create_from_image(im)
-	p.amount = 34; p.lifetime = 5.0; p.preprocess = 5.0
-	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	p.gravity = Vector2.ZERO; p.direction = Vector2(0, -1); p.spread = 180.0
-	p.initial_velocity_min = 6.0; p.initial_velocity_max = 18.0
-	p.orbit_velocity_min = -0.02; p.orbit_velocity_max = 0.02
-	p.scale_amount_min = 0.5; p.scale_amount_max = 0.95
-	var g := Gradient.new()
-	g.set_color(0, Color(0.85, 1.0, 0.45, 0.0)); g.set_color(1, Color(0.85, 1.0, 0.45, 0.0))
-	g.add_point(0.25, Color(0.9, 1.0, 0.5, 1.0)); g.add_point(0.5, Color(0.8, 1.0, 0.4, 0.25))
-	g.add_point(0.75, Color(0.9, 1.0, 0.5, 1.0))
-	p.color_ramp = g
-	var m := CanvasItemMaterial.new(); m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD; p.material = m
-	add_child(p); move_child(p, _hud.get_index())
-	_ff = p
-
-func _ff_fit(vs: Vector2) -> void:
-	if _ff:
-		_ff.position = vs * 0.5
-		_ff.emission_rect_extents = vs * 0.5
-		_ff.scale_amount_min = 0.5 * K; _ff.scale_amount_max = 0.95 * K
