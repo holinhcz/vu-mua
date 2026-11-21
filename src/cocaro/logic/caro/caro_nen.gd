@@ -166,6 +166,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var rgap: float = sd.end.x - cardR                      # khe phải bên cạnh thẻ
 		var hs := 130.0 / 230.0
 		var hp: Vector2
+		var short_banana := Rect2()
 		if bandH >= 70:            # điện thoại: dải dưới cùng rộng cả ngang
 			var k := clampf(bandH / 170.0, 0.45, 1.0)
 			add.call("nong", sd.position.x + sd.size.x * 0.3, band0 + bandH * 0.55, 66.0 / 140.0 * k, [6, 8, 5, 0.42])
@@ -176,13 +177,14 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
 			hs = clampf(mL / 200.0, 0.25, 0.5)
 			if rgap >= 70 and mL < 60:
-				# điện thoại ngắn (Link 11-21): góc dưới phải cạnh thẻ "Bạn" = sân nhỏ: lu ở góc, gà mẹ + gà con, ca trà đá
+				# điện thoại ngắn (Link 11-21 "bỏ lu, chuối xuống góc dưới phải, xếp cân đối"): góc dưới phải cạnh thẻ "Bạn":
+				# gà mẹ trên trái, ca trà đá trên phải, bụi chuối ôm góc dưới phải (thò ra mép màn); cân với tán xoài góc trên trái
 				var R := Rect2(Vector2(cardR + 6, bd.end.y + 4), Vector2(sd.end.x - cardR - 6, bot - bd.end.y - 4))
 				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
-				add.call("lu", R.end.x - 44 * kk, R.end.y - 44 * kk, 50.0 / 92.0 * kk * 1.4, [8, 10, 6, 0.45])
-				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.52)
-				hs = 0.42 * kk
-				add.call("mam", R.position.x + R.size.x * 0.7, R.position.y + R.size.y * 0.2, 0.6 * kk, [5, 6, 3, 0.42])
+				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.3)
+				hs = 0.4 * kk
+				add.call("mam", R.position.x + R.size.x * 0.76, R.position.y + R.size.y * 0.2, 0.55 * kk, [5, 6, 3, 0.42])
+				short_banana = Rect2(R.position + Vector2(R.size.x * 0.72, R.size.y * 0.76), Vector2(R.size.x * 1.1, 0))
 			elif rgap >= 70:
 				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
 				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])
@@ -205,10 +207,13 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u * (0.8 if bandH < 70 else clampf(bandH / 170.0, 0.45, 1.0)))
 		canopy = {"pos": P.call(sd.end.x + 60, sd.position.y - 200), "sc": 0.5 * u, "flip": true}
 		if mL < 60 and mR < 60:
-			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối bỏ
+			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối xuống góc dưới phải
 			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
 			canopy.flip = false
 			bc = Vector3(-99999, -99999, 0.01)
+			if short_banana.size.x > 0:
+				var bp: Vector2 = P.call(short_banana.position.x, short_banana.position.y)
+				bc = Vector3(bp.x, bp.y, short_banana.size.x / (3934.0 / PXU) * u)   # 3934 = bề ngang lá chuối thật trong ảnh
 		var rg := RandomNumberGenerator.new(); rg.seed = 5
 		var tries := 0
 		while gl.size() < 10 and tries < 300:
