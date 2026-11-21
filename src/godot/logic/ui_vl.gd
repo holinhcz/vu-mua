@@ -385,7 +385,7 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
-	var yy := y + 8.0
+	var yy := y + 10.0   # (bản 446) cách đều: mép trên 10 · tiêu đề · 10 · hàng chip · 10 mép dưới
 	var rt := ""
 	if xu > 0:
 		rt = "+" + W._sa(xu)
@@ -393,28 +393,26 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	out.append(_dt(x, yy, w - rw, 16.0, _fitw(t, 12.0, 800, w - rw), 12.0, 800, BROWN, "left"))
 	if rt != "":
 		out.append(_dick(x + w - 8.0, yy + 8.0, 17.0, "coin"))
-		var xt := _dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 900, "rgb(255, 214, 70)", "right")   # (bản 444) số xu nổi: vàng sáng, viền nâu, bóng đổ
-		xt.css["text-shadow"] = "rgb(122, 72, 8) 1px 0px 0px, rgb(122, 72, 8) -1px 0px 0px, rgb(122, 72, 8) 0px 1px 0px, rgb(122, 72, 8) 0px -1px 0px, rgba(80, 40, 0, 0.45) 0px 2px 2px"
-		out.append(xt)
-	yy += 18.0
+		out.append(_dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))   # (bản 446) số xu thưởng: xanh lá đậm như các số "được thêm"
+	yy += 16.0 + (10.0 if list.size() and s == "" else 4.0)
 	if s != "":
 		var pp := _para(x, yy, w, s, 10.5, 600, SUB, 14.0)
 		out.append_array(pp[0])
-		yy += float(pp[1]) + 4.0
+		yy += float(pp[1]) + (10.0 if list.size() else 6.0)
 	var ok := true
 	var ny := yy   # hàng chip món đầu: nút canh giữa hàng này
 	if list.size():
 		var nd := _needs(x, yy, w - 74.0 if lb != "" else w, list)
 		out.append_array(nd[0])
 		ok = nd[2]
-		yy += float(nd[1]) + 6.0
+		yy += float(nd[1]) + 10.0
 	if lb != "":
 		var by: float = ny + 4.0 if list.size() else yy
 		out.append(_btn(X0 + XW - 10.0 - 66.0, by, 66.0, 26.0, lb, act, "go" if (ok or force) and act != null else "off"))
 		if not list.size():
 			yy += 32.0
-	c.r[3] = yy - y + 2.0
-	return [out, yy - y + 2.0]
+	c.r[3] = yy - y
+	return [out, yy - y]
 
 func _viec(f: Dictionary) -> Array:   # _vT.viec; (bản 435) cách đều: tiêu đề -> khối GG, khối -> tiêu đề sau GG
 	var out := []
