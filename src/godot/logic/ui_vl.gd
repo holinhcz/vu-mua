@@ -231,10 +231,16 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var TT: Dictionary = W.tinh_of(f)
 	var tk := String(f.get("tp", ""))
 	var nm := String(f.n)
-	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 2.0, xr - x - 90.0)
+	# (bản 438) hàng tên: tên + chip tính nết + chip họ (chạm mở Gia phả)
+	var ho := ("Họ " + String(f.ho) + " ›") if W._tr(f.get("ho")) else ""
+	var tcw: float = Box.text_w(String(TT.n), 10.0, 700) + 14.0
+	var hcw: float = (Box.text_w(ho, 10.0, 700) + 14.0) if ho != "" else 0.0
+	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 2.0, xr - x - tcw - hcw - 16.0)
 	out.append(_dt(x, y0, nw, 20.0, _fitw(nm, 14.0, 800, nw), 14.0, 800, BROWN, "left"))
 	var tc := _tchip(x + nw + 8.0, y0 + 1.0, String(TT.n), "t_" + tk if VLC.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)))
 	out.append(tc[0])
+	if ho != "":
+		out.append(_tchip(x + nw + 8.0 + float(tc[1]) + 5.0, y0 + 1.0, ho, "info", "rgb(52, 92, 140)", U.gp_open.bind(u))[0])
 	# tim + thân
 	var tim: int = W._i(f.get("tim"))
 	var hy := y0 + 23.0
@@ -247,57 +253,26 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	if p > 0.0:
 		out.append(_dbx(bx, hy + 4.0, maxf(5.0, bw * p), 5.0, "rgb(226, 64, 72)", 2.5))
 	out.append(_dt(xr - 52.0, hy - 1.0, 52.0, 15.0, "Thân " + str(tim) + "/5", 10.0, 700, "rgb(190, 60, 70)", "right"))
-	# chip nhà · họ · đang làm
+	# nhà · đang làm: chữ trơn (không chip)
 	var r = W.r1(u)
 	var rid := String(r.r.id)
 	var cy := y0 + 40.0
-	var cx := x
-	var chips := [[String(_yd().get(rid.trim_suffix("2"), "Nhà")) + " · " + str(int(W.CX.get(rid, 0))) + " người", "fut", null]]
-	if W._tr(f.get("ho")):
-		chips.append(["Họ " + String(f.ho) + " · đời " + str(W._i(f.get("doi")) if W._i(f.get("doi")) else 1) + " ›", "fut", U.gp_open.bind(u)])
+	var hs := String(_yd().get(rid.trim_suffix("2"), "Nhà")) + " · " + str(int(W.CX.get(rid, 0))) + " người"
 	var jb := _vs(f)
-	chips.append([jb, "info" if jb == "Đang ở nhà" else "viec", null])
-	# (bản 434) 3 chip luôn một hàng: thiếu chỗ thì cắt chữ chip nhà trước, rồi chip đang làm
-	var cf := 9.0
-	var gp := 4.0
-	var ws := []
-	var sum := gp * (chips.size() - 1)
-	for c in chips:
-		ws.append(Box.text_w(String(c[0]), cf, 700) + 10.0)
-		sum += float(ws[-1])
-	var over := sum - (xr - x)
-	if over > 0.0 and chips.size() > 2:   # thiếu chỗ: bỏ "· đời N" của chip họ trước (xem đời ở Gia phả)
-		var h0: float = ws[1]
-		chips[1][0] = "Họ " + String(f.ho) + " ›"
-		ws[1] = Box.text_w(String(chips[1][0]), cf, 700) + 10.0
-		over -= h0 - float(ws[1])
-	for i in [0, chips.size() - 1]:
-		if over > 0.0:
-			var cut := minf(over, float(ws[i]) - 50.0)
-			ws[i] = float(ws[i]) - cut
-			over -= cut
-	for i in chips.size():
-		var c: Array = chips[i]
-		var w: float = ws[i]
-		var k := _chip(cx, cy, w, 18.0, "info" if String(c[1]) == "fut" else String(c[1]))
-		k.kids = [_dt(cx, cy, w, 18.0, _fitw(String(c[0]), cf, 700, w - 8.0), cf, 700, "rgb(52, 92, 140)" if String(c[1]) != "viec" else SUB)]
-		if c[2] is Callable:
-			k.act = c[2]
-		out.append(k)
-		cx += w + gp
-	var y := maxf(y0 + fs, cy + 18.0) + 9.0
-	# bong bóng câu nói
+	var hsw: float = minf(Box.text_w(hs, 10.0, 700) + 2.0, xr - x)
+	out.append(_dt(x, cy, hsw, 16.0, _fitw(hs, 10.0, 700, hsw), 10.0, 700, SUB, "left"))
+	var jx := x + hsw + 4.0
+	if jx + 30.0 < xr:
+		out.append(_dt(jx, cy, xr - jx, 16.0, _fitw("· " + jb, 10.0, 700, xr - jx), 10.0, 700, "rgb(46, 120, 50)" if jb == "Đang ở nhà" else "rgb(176, 110, 20)", "left"))
+	var y := maxf(y0 + fs, cy + 16.0) + 8.0
+	# câu nói: chữ nghiêng, không khung
 	var q: String = "“" + W.talk_line(f) + "”"
-	var qL := _wrap(q, 10.5, 600, XW - 20.0)
-	var qh := qL.size() * 14.0 + 10.0
-	out.append(_dic(X0 + 18.0, y - 5.0, 12.0, TAIL))
-	var qc := _chip(X0, y, XW, qh, "fut")
-	var qk := []
+	var qL := _wrap(q, 11.0, 600, XW - 8.0)
 	for i in qL.size():
-		qk.append(_dt(X0 + 10.0, y + 5.0 + i * 14.0, XW - 20.0, 14.0, qL[i], 10.5, 600, BROWN, "left"))
-	qc.kids = qk
-	out.append(qc)
-	y += qh + 8.0
+		var qt := _dt(X0 + 4.0, y + i * 15.0, XW - 8.0, 15.0, qL[i], 11.0, 600, "rgb(120, 88, 50)", "left")
+		qt.css["font-style"] = "italic"
+		out.append(qt)
+	y += qL.size() * 15.0 + 8.0
 	# 2 nút
 	var nl: int = W.chat_left(f)
 	var gq: bool = W._i(f.get("gq", -1)) == W._vr()

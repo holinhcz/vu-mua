@@ -8,6 +8,13 @@ static var _tex := {}
 static var _shader: Shader = null
 
 static func font(w: int) -> Font:
+	if w >= 1000:   # (bản 438) w + 1000 = chữ nghiêng (font-style: italic): nghiêng bằng FontVariation
+		if not _fonts.has(w):
+			var iv := FontVariation.new()
+			iv.base_font = font(w - 1000)
+			iv.variation_transform = Transform2D(Vector2(1, 0), Vector2(0.2, 1), Vector2.ZERO)
+			_fonts[w] = iv
+		return _fonts[w]
 	var ws := [400, 600, 700, 800]
 	var best := 700
 	var bd := 9999

@@ -215,7 +215,7 @@ static func _text(b: Control, n: Dictionary, R: Array, z: float, icon: Dictionar
 	var c: Dictionary = n.css
 	var s: String = n.get("text", "")
 	var fs := Css.px(c.get("font-size", "15px")) * z
-	var fw := int(c.get("font-weight", "400"))
+	var fw := int(c.get("font-weight", "400")) + (1000 if c.get("font-style", "") == "italic" else 0)
 	var col := Css.color(c.get("color", "rgb(0,0,0)"))
 	var al: String = c.get("text-align", "center")
 	if al == "start" or al == "left":
