@@ -67,6 +67,7 @@ const XW := 305.0     # rộng nội dung
 const BROWN := "rgb(74, 52, 20)"
 const SUB := "rgb(128, 98, 58)"
 const GOLD := "rgb(222, 160, 40)"
+const GG := 10.0   # khoảng cách đều giữa tiêu đề phần và khối, giữa các khối
 const GREEN := "rgb(46, 150, 80)"
 var _hb := 455.0      # cao thân (tính ở _build theo khung Kho)
 
@@ -201,4 +202,159 @@ func _dbtn(x: float, y: float, w: float, h: float, s: String, cb: Callable) -> D
 
 func _dsay(s: String) -> void:
 	G.toast.emit(s)
+
+# ------------------------------------------------------------------ (bản 453) khối chung dời từ Nhà dân sang (Nhà dân, Nghề dùng chung)
+const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(226,64,72)\" stroke=\"rgb(170,36,44)\" stroke-width=\"1.2\"/></svg>"
+
+func _icn(cx: float, cy: float, s: float, id: String) -> Dictionary:   # hình món Kho (không khung)
+	var b := _dbx(cx - s * 0.5, cy - s * 0.5, s, s, "rgba(0, 0, 0, 0)", 0.0)
+	b.ic = id
+	return b
+
+func _pic(x: float, y: float, w: float, h: float, path: String) -> Dictionary:   # ảnh res://ui/img/...
+	var b := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 0.0)
+	b.pic = path
+	return b
+
+func _tchip(x: float, y: float, t: String, kind: String, col := BROWN, cb = null, h := 18.0, fs := 10.0) -> Array:   # chip chữ nhỏ; trả [khối, rộng]
+	var w: float = Box.text_w(t, fs, 700) + 14.0
+	var c := _chip(x, y, w, h, kind)
+	c.kids = [_dt(x, y, w, h, t, fs, 700, col)]
+	if cb is Callable:
+		c.act = cb
+	return [c, w]
+
+func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, off: xám
+	if kind == "off":
+		var c := _chip(x, y, w, h, "miss")
+		c.kids = [_dt(x, y, w, h, t, 10.5, 700, "rgb(110, 104, 92)")]
+		return c
+	var b := _onbtn(x, y, w, h, t, cb, kind == "red")
+	b.kids[0].css["font-size"] = _cpx(11.0)
+	return b
+
+func _rowi(x: float, y: float, h: float, parts: Array, fs: float, fw: int, col: String) -> Array:   # (bản 452) dòng chữ xen hình: "h" tim, "s" sao, "c" xu; trả [khối, rộng]
+	var out := []
+	var cx := x
+	var z := fs + 3.0
+	for pt in parts:
+		var t := String(pt)
+		if t == "h" or t == "s" or t == "c":
+			cx += 2.0
+			if t == "h":
+				out.append(_dic(cx, y + (h - z) * 0.5, z, HEART))
+			elif t == "s":
+				out.append(_pic(cx, y + (h - z) * 0.5, z, z, "res://ui/img/bong/sao.png"))
+			else:
+				out.append(_dick(cx + z * 0.5, y + h * 0.5, z, "coin"))
+			cx += z + 2.0
+		else:
+			var tw: float = Box.text_w(t, fs, fw) + 1.0
+			out.append(_dt(cx, y, tw, h, t, fs, fw, col, "left"))
+			cx += tw
+	return [out, cx - x]
+
+func _wrap(t: String, fs: float, fw: int, w: float) -> Array:
+	var L := []
+	var cur := ""
+	for wd in t.split(" ", false):
+		var tr := (cur + " " + wd) if cur != "" else wd
+		if cur != "" and Box.text_w(tr, fs, fw) > w:
+			L.append(cur)
+			cur = wd
+		else:
+			cur = tr
+	if cur != "":
+		L.append(cur)
+	return L
+
+func _para(x: float, y: float, w: float, t: String, fs := 10.5, fw := 600, col := SUB, lh := 14.0) -> Array:   # đoạn chữ xuống dòng: [khối, cao]
+	var out := []
+	var L := _wrap(t, fs, fw, w)
+	for i in L.size():
+		out.append(_dt(x, y + i * lh, w, lh, L[i], fs, fw, col, "left"))
+	return [out, L.size() * lh]
+
+func _sect(y: float, t: String, col: String) -> Array:   # tiêu đề phần: vạch màu tab + chữ đậm
+	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
+	return [_dbx(X0, y + 2.0, 3.0, 13.0, col, 1.5), _dt(X0 + 8.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"),
+		_dbx(X0 + 8.0 + tw + 6.0, y + 8.0, XW - tw - 20.0, 1.0, "rgb(222, 204, 164)", 0.0)]
+
+# hàng chip món cần: [[hình, tên, có, cần]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
+func _nchips(x: float, y: float, w: float, list: Array) -> Array:
+	var out := []
+	var cx := x
+	var cy := y
+	var ok := true
+	# (bản 451) mỗi chip dài theo tên; không lọt 1 hàng thì thu đều cho vừa (tên dài bóp chữ nhỏ), thu quá nhỏ mới xuống hàng
+	var cws := []
+	var sm := 0.0
+	for it in list:
+		var s0: String = G.fmt_n(mini(int(it[2]), 99999)) + "/" + G.fmt_n(int(it[3]))
+		var cw0: float = minf(38.0 + maxf(Box.text_w(String(it[1]), 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w)
+		cws.append(cw0)
+		sm += cw0
+	var gs := 5.0 * maxf(0.0, list.size() - 1.0)
+	if list.size() > 1 and sm + gs > w:
+		var k := (w - gs) / sm
+		var mn := 1e9
+		for cw0 in cws:
+			mn = minf(mn, float(cw0) * k)
+		if mn >= 84.0:
+			for i in cws.size():
+				cws[i] = floorf(float(cws[i]) * k)
+	for i in list.size():
+		var it: Array = list[i]
+		var id := String(it[0])
+		var nm := String(it[1])
+		var hv := int(it[2])
+		var q := int(it[3])
+		var good := hv >= q
+		ok = ok and good
+		var s: String = G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
+		var cw: float = cws[i]
+		var tw := cw - 40.0
+		var fs := clampf(10.0 * tw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)
+		if cx > x and cx + cw > x + w:
+			cx = x
+			cy += 40.0
+		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
+		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, tw, 14.0, _fitw(nm, fs, 700, tw), fs, 700, BROWN, "left"),
+			_dt(cx + 36.0, cy + 17.0, cw - 40.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
+		c.act = _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
+		out.append(c)
+		cx += cw + 5.0
+	return [out, cy + 34.0 - y if list.size() else 0.0, ok]
+
+const ICS := {"chieu": 1.2, "trung": 1.12, "gao": 1.08}   # hình thưa (dẹt / tròn nhỏ): phóng cho cùng cỡ nhìn
+# lưới chip: [{b tên, s dòng phụ, ic hình, st "on"|"dis"|"hint"|"", k loại chip, act}] cols cột
+func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
+	var out := []
+	var g := 6.0
+	var bw := (XW - (cols - 1) * g) / cols
+	var bh := 44.0 if cols == 2 else 40.0
+	for i in bt.size():
+		var o: Dictionary = bt[i]
+		var x := X0 + (i % cols) * (bw + g)
+		var yy := y + floorf(i / float(cols)) * (bh + g)
+		var st := String(o.st)
+		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" or st == "hint" else String(o.get("k", "fut"))))
+		var ks := []
+		var tx := x + 8.0
+		if String(o.get("ic", "")) != "":   # (bản 447) hình cách đều 2 bên 8: tâm 21, cỡ 26 (phóng theo độ đầy hình), chữ từ 42
+			ks.append(_icn(x + 21.0, yy + bh * 0.5, 26.0 * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
+			tx = x + 42.0
+		var tw := x + bw - 6.0 - tx
+		var dim := st == "dis" or st == "hint"
+		ks.append(_dt(tx, yy + 6.0, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
+		if String(o.get("s", "")) != "":
+			ks.append(_dt(tx, yy + 22.0, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
+		if st == "on":   # đang chọn: dấu tick góc phải
+			ks.append(_dtick(x + bw - 17.0, yy + 5.0, 12.0))
+		c.kids = ks
+		if st != "dis" and o.has("act"):
+			c.act = o.act
+		out.append(c)
+	var rows := int(ceil(bt.size() / float(cols)))
+	return [out, rows * bh + maxf(0, rows - 1) * g]
 

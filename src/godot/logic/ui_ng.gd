@@ -1,27 +1,29 @@
-extends "res://logic/ui_bang.gd"
-# BẢNG NGHỀ THỦ CÔNG (ngcOpen / ngcRender bản web, nút "Nghề" trong Menu): khung chung với Kho (ui_bang.gd),
-# 5 tab .khseg.lstabs: Nghề (ngcTabNghe), Đơn làng (ngcTabDon), Đặt thợ (ngcTabDat), Chợ (ngcTabCho), Thợ giỏi (ngcTabTho).
-# Đặt thợ, hàng bạn bè, thợ giỏi bạn bè cần chơi online (bản Godot chưa có bạn bè): hiện như web lúc không online.
-# Mẫu: ui/snap/ng.json (khung + tab), ng_tab.json (thân từng tab). Luật ở w_lang.gd.
+extends "res://logic/ui_kbang.gd"
+# BẢNG NGHỀ THỦ CÔNG (ngcOpen / ngcRender bản web, nút "Nghề" trong Menu). (bản 453) làm lại trên khung Kho + chip chung (ui_kbang.gd).
+# 3 tab: Nghề (ngcTabNghe), Đơn làng (ngcTabDon), Chợ (ngcTabLai). Đặt thợ, hàng bạn bè, thợ giỏi cần chơi online
+# (bản Godot chưa có bạn bè) nên ẩn. Đoạn luật dài đưa vào nút ? cạnh tiêu đề phần. Luật ở w_lang.gd.
 
 var W          # w_lang.gd
 var tab := "nghe"           # NGCV.tab
 var arm := ""               # NGCV.arm: nút đang chờ bấm lần nữa
-var rk := ""                # NGCV.rk: nghề đang xem ở Thợ giỏi
-var NB := {}                # #pov của bảng Nghề
-var NT := {}                # thân mẫu từng tab
-const TABS := [["nghe", "Nghề"], ["don", "Đơn làng"], ["dat", "Đặt thợ"], ["cho", "Chợ"], ["tho", "Thợ giỏi"]]
-const ONLINE := "Phần này cần chơi online: mở game từ đường link chia sẻ, đăng nhập Claude là thấy bạn bè."
+
+const TABC := {"nghe": "rgb(176, 136, 70)", "don": "rgb(214, 160, 30)", "cho": "rgb(60, 140, 40)"}
+const NGC := {   # màu chip riêng bảng Nghề: [gradient trên, giữa, dưới, viền]
+	"nghe": ["rgb(244, 230, 196)", "rgb(248, 238, 210)", "rgb(252, 246, 228)", "rgb(176, 136, 70)"],
+	"don": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
+}
+const XM := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 12\"><circle cx=\"6\" cy=\"6\" r=\"5.5\" fill=\"rgb(226,90,80)\"/><path d=\"M3.8 3.8 L8.2 8.2 M8.2 3.8 L3.8 8.2\" stroke=\"white\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg>"
+
+func _ck(kind: String) -> Array:
+	return NGC[kind] if NGC.has(kind) else super(kind)
 
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
-	NB = Snap.load_snap("ng")["#pov"][0]
-	NT = Snap.load_snap("ng_tab")
 
 func open(t := "") -> void:   # ngcOpen
 	if t != "":
-		tab = t
+		tab = t if TABC.has(t) else "nghe"
 	on = true
 	arm = ""
 	scroll = 0.0
@@ -39,31 +41,23 @@ func step(dt: float) -> void:   # ngcRender mỗi giây
 		_build()
 
 func _sig() -> String:
-	return JSON.stringify([tab, arm, rk, G.g.coins, G.g.barn, G.g.get("nghe"), G.g.get("ngs"), G.g.get("ndn"), G.g.get("ndt"), G.g.get("hn"), G.g.get("hnk"), W.ng_lock(), W._vr()])
+	return JSON.stringify([tab, arm, G.g.coins, G.g.barn, G.g.get("nghe"), G.g.get("ngs"), G.g.get("ndn"), G.g.get("ndt"), G.g.get("hn"), G.g.get("hnk"), W.ng_lock(), W._vr()])
 
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
-	var n := _cl(NB)
-	var seg := _find(n, "lstabs")
-	var vt := _find(n, "lsbody")
 	var red: bool = W.ng_red() > 0
-	var L := TABS.map(func(x): return [x[0], String(x[1]) + (" •" if x[0] == "don" and red else ""), false])
-	_seg_tabs(seg, L, tab, _tab_go, {})
-	var blocks: Array
+	var L := [["nghe", "Nghề", false], ["don", "Đơn làng", red], ["cho", "Chợ", false]]
+	var sh := _kshell(L, tab, _tab_go)
+	var r: Array
 	match tab:
 		"don":
-			blocks = _don()
-		"dat":
-			blocks = [_sum([_r(ONLINE, _sp())])]
+			r = _don()
 		"cho":
-			blocks = _cho()
-		"tho":
-			blocks = _tho()
+			r = _cho()
 		_:
-			blocks = _nghe()
-	_show(n, vt, blocks)
-	U._layout()
+			r = _nghe()
+	_kmount(sh[0], sh[1], float(sh[2]), r[0], float(r[1]))
 
 func _tab_go(k: String) -> void:   # data-ngc="tab"
 	if tab != k:
@@ -71,111 +65,33 @@ func _tab_go(k: String) -> void:   # data-ngc="tab"
 		scroll = 0.0
 		arm = ""
 
-# ------------------------------------------------------------------ khối của bảng Nghề
-func _sp() -> Dictionary:   # kiểu chữ p.lssum
-	return NT.don.kids[0]
+# ------------------------------------------------------------------ khối chung bảng Nghề
+func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + nút ? (đoạn luật) ở mép phải
+	var out := _sect(y, t, String(TABC[tab]))
+	if help != "":
+		var rl: Dictionary = out[2]
+		rl.r[2] = maxf(0.0, float(rl.r[2]) - 26.0)
+		var q := _chip(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "info")
+		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 11.0, 800, "rgb(60, 110, 170)")]
+		q.act = func(): U.tre_help(t, help)
+		out.append(q)
+	return out
 
-func _sum(runs: Array) -> Dictionary:   # p.lssum
-	var n := _cl(NT.don.kids[0])
-	var h := _put(n, runs)
-	n.r[3] = _px(n, "padding-top") + h + _px(n, "padding-bottom")
-	return n
+func _nm(id: String) -> String:
+	return String(W._ae(id).get("name", id))
 
-func _lock(s: String) -> Dictionary:   # p.note.lockline
-	var n := _cl(NT.lock.kids[0])
-	var h := _put(n, [_r(s, n)])
-	n.r[3] = _px(n, "padding-top") + h + _px(n, "padding-bottom")
-	return n
+func _sbtn(x: float, y: float, t: String, cb, red := false) -> Array:   # nút phụ nhỏ: chip kem (red: hồng); trả [khối, rộng]
+	var w: float = Box.text_w(t, 10.5, 700) + 18.0
+	var c := _chip(x, y, w, 26.0, "sen" if red else "fut")
+	c.kids = [_dt(x, y, w, 26.0, t, 10.5, 700, "rgb(170, 50, 60)" if red else BROWN)]
+	c.act = cb
+	return [c, w]
 
-func _jobs(tpl: Dictionary, bt: Array, x: float, y: float, W0: float) -> Dictionary:   # .vl-jobs: nút xếp hàng, giãn đều cho kín dòng
-	# bt: [chữ, kiểu ("primary" | "plain"), bật, act]
-	var g := _cl(tpl)
-	var K: Array = tpl.kids
-	var tp: Dictionary = K[0]
-	var tn: Dictionary = K[K.size() - 1]
-	var rows := [[]]
-	var rw := [0.0]
-	for o in bt:
-		var t: Dictionary = tp if o[1] == "primary" else tn
-		var w := _tw(t, String(o[0])) + _px(t, "padding-left") + _px(t, "padding-right") + 2.0
-		if rows[-1].size() and rw[-1] + 4.5 + w > W0 + 0.5:
-			rows.append([])
-			rw.append(0.0)
-		rw[-1] += (4.5 if rows[-1].size() else 0.0) + w
-		rows[-1].append([o, t, w])
+func _stars(x: float, y: float, s: int, mx: int, z := 13.0) -> Array:   # hàng sao: s vàng, tới mx xám
 	var out := []
-	var yy := y
-	for i in rows.size():
-		var R: Array = rows[i]
-		var ex: float = (W0 - float(rw[i])) / maxf(1.0, R.size())
-		var xx := x
-		for e in R:
-			var o: Array = e[0]
-			var c := _cl(e[1])
-			var w: float = e[2] + ex
-			_mv(c, xx, yy)
-			c.r[2] = w
-			var tw := _tw(c, String(o[0]))
-			c.text = o[0]
-			c.tr = [xx + (w - tw) * 0.5, c.tr[1], tw, c.tr[3]]
-			c.kids = []
-			_act(c, o[3], o[2])
-			out.append(c)
-			xx += w + 4.5
-		yy += 25.5 + 4.5
-	g.kids = out
-	g.r = [x, y, W0, yy - 4.5 - y]
-	return g
-
-func _list(rows: Array, tpl: Dictionary, tbtn = null) -> Dictionary:   # .lslist: [đậm, nhỏ, nút [chữ, bật, act] | null, "me"?]
-	var ls := _cl(NT.nghe.kids[3])
-	var y := float(ls.r[1])
-	var out := []
-	for R in rows:
-		var c := _cl(tpl)
-		if R.size() > 3 and R[3] == "me":
-			c = _cl(_find(NT.tho, "me"))
-		_mv(c, float(ls.r[0]), y)
-		var nm := _find(c, "lsrn")
-		var bb: Dictionary = nm.kids[0]
-		var sm: Dictionary = nm.kids[1]
-		var pad := float(nm.r[0]) - float(c.r[0])
-		var bw := float(c.r[2]) - pad * 2.0
-		var kids := []
-		var btn = null
-		if R[2] != null and tbtn != null:
-			btn = _cl(tbtn)
-			var tw := _tw(btn, String(R[2][0]))
-			var w := tw + _px(btn, "padding-left") + _px(btn, "padding-right") + 2.0
-			btn.r[2] = w
-			bw -= w + 6.0
-		var hb := _put(bb, [_r(String(R[0]), bb)], "left", bw)
-		bb.r = [nm.r[0], float(c.r[1]) + pad, bw, hb]
-		_mv(bb, float(nm.r[0]), float(c.r[1]) + pad)
-		var sy := float(c.r[1]) + pad + hb + 1.5
-		_mv(sm, float(nm.r[0]), sy)
-		var hs := _put(sm, [_r(String(R[1]), sm)], "left", bw)
-		sm.r = [nm.r[0], sy, bw, hs]
-		_mv(sm, float(nm.r[0]), sy)
-		nm.kids = [bb, sm]
-		nm.r = [nm.r[0], float(c.r[1]) + pad, bw, hb + 1.5 + hs]
-		var h := maxf(pad * 2.0 + hb + 1.5 + hs, 36.0 if btn != null else 0.0)
-		kids.append(nm)
-		if btn != null:
-			var bx := float(c.r[0]) + float(c.r[2]) - pad - float(btn.r[2])
-			_mv(btn, bx, y + (h - float(btn.r[3])) * 0.5)
-			var tw2 := _tw(btn, String(R[2][0]))
-			btn.text = R[2][0]
-			btn.tr = [bx + (float(btn.r[2]) - tw2) * 0.5, btn.tr[1], tw2, btn.tr[3]]
-			_act(btn, R[2][2], R[2][1])
-			kids.append(btn)
-		c.kids = kids
-		c.r[3] = h
-		out.append(c)
-		y += h + 3.6
-	ls.kids = out
-	ls.r[3] = y - 3.6 - float(ls.r[1])
-	return ls
+	for i in mx:
+		out.append(_pic(x + i * (z + 2.0), y, z, z, "res://ui/img/bong/" + ("sao.png" if i < s else "sao_xam.png")))
+	return out
 
 # ------------------------------------------------------------------ tab Nghề (ngcTabNghe)
 func _nghe() -> Array:
@@ -187,46 +103,59 @@ func _nghe() -> Array:
 	var nl: int = W.hn_learned()
 	var hc: int = W.ng_hoc_cho()
 	var out := []
+	var y := 6.0
 	if Lk:
-		out.append(_lock("🔒 Nghề thủ công mở ở cấp " + str(Lk) + ". Giờ xem trước được, tới cấp mới học, mới làm."))
-	# thẻ đầu
-	var c0 := _cl(NT.nghe.kids[0])
-	var x := float(c0.r[0]) + _px(c0, "padding-left")
-	var W0 := float(c0.r[2]) - _px(c0, "padding-left") - _px(c0, "padding-right")
-	var y := float(c0.r[1]) + _px(c0, "padding-top")
-	var hd: Dictionary = c0.kids[0]
-	var sm: Dictionary = c0.kids[1]
-	y += _nvsh(hd, "Nghề chính " + str(S.chinh.size()) + "/" + str(W.NGCHINH), [["đã học ", false], [str(nl), true], ["/" + str(W.M6.size()), false]], x, y, W0) + 6.0
-	_mv(sm, x, y)
-	var h := _put(sm, [_r("Học ở nhà thầy (tab Sở trường), cả dòng họ chung một nghề. Mỗi món làm ra +1 điểm tay nghề, tối đa " + str(W.ht_ngay()) +
-		" điểm một ngày mỗi nghề. Đủ điểm, đủ hàng đã làm thì qua thầy thi lên sao. Chỉ " + str(W.NGCHINH) + " nghề chính lên được 4★, 5★." +
-		((" Nghề kế tiền học " + W._sa(W.hn_hp()) + " xu" + (", " + str(hc) + " ngày nữa mới theo học nghề mới" if hc else "") + ".") if nl < W.M6.size() else ""), sm)], "left", W0)
-	sm.r[3] = h
-	y += h
-	c0.r[3] = y + _px(c0, "padding-bottom") - float(c0.r[1])
-	out.append(c0)
+		var lc := _chip(X0, y, XW, 30.0, "sen")
+		lc.kids = [_dt(X0 + 10.0, y, XW - 20.0, 30.0, _fitw("Nghề thủ công mở ở cấp " + str(Lk) + ". Giờ xem trước, tới cấp mới học, mới làm.", 10.5, 700, XW - 20.0), 10.5, 700, "rgb(170, 50, 60)", "left")]
+		out.append(lc)
+		y += 30.0 + GG
+	var help := "Học ở nhà thầy (tab Sở trường bên nhà dân), cả dòng họ chung một nghề. Mỗi món làm ra +1 điểm tay nghề, tối đa " + str(W.ht_ngay()) + \
+		" điểm một ngày mỗi nghề. Đủ điểm, đủ hàng đã làm thì qua thầy thi lên sao. Chỉ " + str(W.NGCHINH) + " nghề chính lên được 4 sao, 5 sao."
+	out.append_array(_sq(y, "Nghề chính " + str(S.chinh.size()) + "/" + str(W.NGCHINH) + " · Đã học " + str(nl) + "/" + str(W.M6.size()), help))
+	y += 18.0
+	if nl < W.M6.size():
+		var P := ["Học nghề kế: " + W._sa(W.hn_hp()), "c"]
+		if hc:
+			P.append(" · " + str(hc) + " ngày nữa mới theo học được")
+		out.append_array(_rowi(X0, y, 16.0, P, 10.5, 600, SUB)[0])
+		y += 16.0
+	y += GG
 	var own: Array = W.M6.filter(func(gx): return W._tr(n.get(gx.id)) and W.ng_base(gx.id) != "")
 	var rest: Array = W.M6.filter(func(gx): return not W._tr(n.get(gx.id)) and W.ng_base(gx.id) != "")
 	for gx in own:
-		out.append(_nghe_card(gx, S, K, Lk))
+		var c := _card(y, gx, S, K, Lk)
+		out.append_array(c[0])
+		y += float(c[1]) + GG
 	if rest.size():
-		out.append(_sec("Nghề chưa học"))
-		var rows := []
+		out.append_array(_sq(y, "Nghề chưa học", ""))
+		y += 16.0 + GG
+		var bt := []
 		for gx in rest:
 			var p = H.p.get(gx.id)
 			var who: Array = W.nghe_who(gx.id)
 			var hu: int = W._i(K[gx.id].get("h")) if K.get(gx.id) is Dictionary else 0
 			var s := ""
+			var k := "fut"   # (bản 453) có thầy dạy: xanh nhạt; đang học: vàng; chưa ai giữ: kem
 			if p is Dictionary:
-				var pf = W._fam_of(p.get("u"))
-				s = ("Đang học" if H.a == gx.id else "Đang gác") + " ở bước " + str(p.st) + "/4" + (" · nhà " + String(pf.n) if pf != null else "")
+				s = ("Đang học" if H.a == gx.id else "Đang gác") + " bước " + str(p.st) + "/4"
+				k = "now"
+			elif who.size():
+				s = ", ".join(PackedStringArray(who)) + " dạy"
+				k = "got"
 			else:
-				s = ("Học ở nhà " + ", ".join(PackedStringArray(who)) if who.size() else "Làng chưa có dòng họ nào giữ nghề này") + ". " + String(gx.d)
-			rows.append([gx.n, s + (" · làm thử hư " + str(hu) + " lần" if hu else ""), null])
-		out.append(_list(rows, NT.nghe.kids[3].kids[0]))
-	return out
+				s = "Chưa ai giữ nghề"
+			var pid := _pid(gx)
+			var tip := String(gx.n) + ": " + String(gx.d) + (" Làm thử hư " + str(hu) + " lần." if hu else "")
+			bt.append({"b": String(gx.n), "s": s, "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip)})
+		var g := _grid(y, bt, 2, "got")
+		out.append_array(g[0])
+		y += float(g[1]) + GG
+	return [out, y]
 
-func _nghe_card(gx: Dictionary, S: Dictionary, K: Dictionary, Lk: int) -> Dictionary:
+func _pid(gx: Dictionary) -> String:   # hình món làm ra của nghề
+	return String(gx.id) if not W._ae(gx.id).is_empty() else String(gx["in"][0][0])
+
+func _card(y: float, gx: Dictionary, S: Dictionary, K: Dictionary, Lk: int) -> Array:   # khối nghề đã học
 	var b := String(gx.id)
 	var s: int = W.ng_sao(b)
 	var q: Array = S.hq.get(b, [0, 0])
@@ -237,66 +166,66 @@ func _nghe_card(gx: Dictionary, S: Dictionary, K: Dictionary, Lk: int) -> Dictio
 	var rd: bool = W.ng_thi_ready(b)
 	var ch: bool = W.ng_chinh(b)
 	var hu: int = W._i(K[b].get("h")) if K.get(b) is Dictionary else 0
-	var c := _cl(NT.nghe.kids[1])
-	var T0: Array = c.kids
-	var x := float(c.r[0]) + _px(c, "padding-left")
-	var W0 := float(c.r[2]) - _px(c, "padding-left") - _px(c, "padding-right")
-	var y := float(c.r[1]) + _px(c, "padding-top")
-	var kids := []
-	var hd: Dictionary = T0[0]
-	y += _nvsh(hd, String(gx.n) + " " + W.ng_stars(s), [["nghề chính", true]] if ch else [["tối đa 3★", false]], x, y, W0) + 6.0
-	kids.append(hd)
-	var sm: Dictionary = T0[1]
-	_mv(sm, x, y)
-	var h := _put(sm, [_r("Đã làm " + str(W._i(S.mk.get(b))) + " món · khéo " + str(q[0]) + " · tinh xảo " + str(q[1]) + " · hôm nay +" + str(W.ng_diem_nay(b)) + "/" + str(W.ht_ngay()) +
-		" điểm · ra khéo " + str(W._rnd(float(R[0]) * 100.0)) + "%" + (", tinh xảo " + str(W._rnd(float(R[1]) * 100.0)) + "%" if float(R[1]) else "") + " · chợ trả " + W._sa(W.ng_kho(b)) + " xu" +
-		(" · làm thử hư " + str(hu) + " lần" if hu else ""), sm)], "left", W0)
-	sm.r[3] = h
-	kids.append(sm)
-	y += h + 6.0
-	var nd := _chips(_find(NT.don, "need"), gx["in"].map(func(z): return [z[0], z[1]]), x, y, _find(NT.nghe.kids[1], "ok"))
-	kids.append(nd)
-	y += float(nd.r[3]) + 9.0
-	var sec: Dictionary = T0[3]
+	var out := []
+	var c := _chip(X0, y, XW, 10.0, "nghe")
+	out.append(c)
+	var x := X0 + 10.0
+	var w := XW - 20.0
+	var yy := y + 10.0
+	# đầu khối: hình món, tên + sao, chip nghề chính
+	out.append(_icn(x + 17.0, yy + 17.0, 34.0, _pid(gx)))
+	var tx := x + 42.0
+	var tw: float = Box.text_w(String(gx.n), 12.0, 800) + 2.0
+	out.append(_dt(tx, yy, minf(tw, w - 140.0), 17.0, _fitw(String(gx.n), 12.0, 800, w - 140.0), 12.0, 800, BROWN, "left"))
+	out.append_array(_stars(tx, yy + 20.0, s, 5))
+	var tg := _tchip(x, yy, "Nghề chính" if ch else "Tối đa 3 sao", "got" if ch else "fut", "rgb(46, 120, 50)" if ch else SUB)
+	Snap._move(tg[0], Vector2(w - float(tg[1]), 0))
+	out.append(tg[0])
+	yy += 40.0
+	# số liệu
+	var l1: String = "Đã làm " + W._sa(W._i(S.mk.get(b))) + " · khéo " + str(q[0]) + " · tinh xảo " + str(q[1]) + (" · hư " + str(hu) if hu else "")
+	out.append(_dt(x, yy, w, 15.0, _fitw(l1, 10.5, 600, w), 10.5, 600, SUB, "left"))
+	yy += 15.0
+	var l2: String = "Hôm nay +" + str(W.ng_diem_nay(b)) + "/" + str(W.ht_ngay()) + " điểm · ra khéo " + str(W._rnd(float(R[0]) * 100.0)) + "%" + (", tinh xảo " + str(W._rnd(float(R[1]) * 100.0)) + "%" if float(R[1]) else "")
+	out.append(_dt(x, yy, w, 15.0, _fitw(l2, 10.5, 600, w), 10.5, 600, SUB, "left"))
+	yy += 15.0
+	out.append_array(_rowi(x, yy, 15.0, ["Chợ trả " + W._sa(W.ng_kho(b)), "c", " mỗi món"], 10.5, 600, SUB)[0])
+	yy += 15.0 + GG
+	# món cần để làm
+	var it := []
+	for z in gx["in"]:
+		it.append([String(z[0]), _nm(String(z[0])), W._barn(String(z[0])), int(z[1])])
+	var nd := _nchips(x, yy, w, it)
+	out.append_array(nd[0])
+	yy += float(nd[1]) + GG
+	# thi lên sao
 	if s < mx and C.size():
-		var sb: Dictionary = sec.kids[0]
-		var ss: Dictionary = sec.kids[1]
-		_mv(sec, x, y)
-		var hb := _put(sb, [_r("Thi lên " + str(s + 1) + "★", sb)], "left", W0)
-		sb.r = [x, y, W0, hb]
-		var yy := y + hb + 0.75
-		var lines := []
+		out.append(_dt(x, yy, w, 16.0, "Thi lên " + str(s + 1) + " sao", 11.0, 800, BROWN, "left"))
+		yy += 18.0
 		for cc in C:
-			var ln := _cl(ss)
-			_mv(ln, x, yy)
-			var lh := _put(ln, [_r(("✓ " if cc[0] else "✗ ") + String(cc[1]), ss)], "left", W0)
-			ln.r = [x, yy, W0, lh]
-			lines.append(ln)
-			yy += lh
-		sec.kids = [sb] + lines
-		sec.r = [x, y, W0, yy - y]
-		kids.append(sec)
-		y = yy + 6.0
+			out.append(_dtick(x, yy + 2.0, 11.0) if cc[0] else _dic(x, yy + 2.0, 11.0, XM))
+			out.append(_dt(x + 16.0, yy, w - 16.0, 15.0, _fitw(String(cc[1]), 10.5, 600, w - 16.0), 10.5, 600, "rgb(46, 120, 50)" if cc[0] else "rgb(170, 60, 50)", "left"))
+			yy += 15.0
+		yy += GG
 	else:
-		var tn := _cl(sm)
-		_mv(tn, x, y)
-		var th := _put(tn, [_r("Thợ cả, tay nghề cao nhất." if s >= 5 else "Tới 3★ rồi. Chọn làm nghề chính mới lên tiếp được.", sm)], "left", W0)
-		tn.r = [x, y, W0, th]
-		kids.append(tn)
-		y += th + 6.0
-	var bt := [["Làm", "primary" if ok else "plain", ok, _lam.bind(b)]]
-	if s < mx:
-		bt.append(["Thi lên " + str(s + 1) + "★", "primary" if rd else "plain", rd, _thi.bind(b)])
+		out.append(_dt(x, yy, w, 15.0, "Thợ cả, tay nghề cao nhất." if s >= 5 else "Tới 3 sao rồi. Chọn làm nghề chính mới lên tiếp được.", 10.5, 700, BROWN, "left"))
+		yy += 15.0 + GG
+	# nút: phụ bên trái, chính bên phải
+	var bx := x
 	if ch:
-		bt.append(["Bấm lần nữa: tụt về 3★" if arm == b else "Bỏ nghề chính", "plain", true, _chinh.bind(b)])
+		var a := _sbtn(bx, yy, "Bấm lần nữa: tụt về 3 sao" if arm == b else "Bỏ nghề chính", _chinh.bind(b), arm == b)
+		out.append(a[0])
 	elif S.chinh.size() < W.NGCHINH:
-		bt.append(["Chọn nghề chính", "plain", true, _chinh.bind(b)])
-	var jb := _jobs(T0[4], bt, x, y, W0)
-	kids.append(jb)
-	y += float(jb.r[3])
-	c.kids = kids
-	c.r[3] = y + _px(c, "padding-bottom") - float(c.r[1])
-	return c
+		var a2 := _sbtn(bx, yy, "Chọn nghề chính", _chinh.bind(b))
+		out.append(a2[0])
+	var rx := x + w
+	out.append(_btn(rx - 66.0, yy, 66.0, 26.0, "Làm", _lam.bind(b), "go" if ok else "off"))
+	rx -= 66.0 + 6.0
+	if s < mx:
+		out.append(_btn(rx - 84.0, yy, 84.0, 26.0, "Thi lên " + str(s + 1) + " sao", _thi.bind(b), "go" if rd else "off"))
+	yy += 26.0 + 10.0
+	c.r[3] = yy - y
+	return [out, yy - y]
 
 func _lam(b: String) -> void:   # data-ngc="lam": đóng bảng, nhân vật về nhà làm
 	close()
@@ -316,86 +245,88 @@ func _chinh(b: String) -> void:
 func _don() -> Array:
 	var o: Dictionary = W.ng_d()
 	var day: int = W._vr()
+	var out := []
+	var y := 6.0
+	var help := "Bà con đặt đồ nghề cho đám cưới, hội đình, nhà gặp nạn, công trình, lễ Tết. Giao đủ được gần gấp đôi giá chợ, thêm thân và uy tín. Quá hạn không giao thì mất thân, mất uy tín; không kịp thì từ chối sớm (trước hạn từ 1 ngày) chỉ bị nửa phạt."
+	out.append_array(_sq(y, "Đơn làng", help))
+	y += 16.0 + GG
 	if not W.ng_on():
 		var Lk: int = W.ng_lock()
-		return [_sum([_r("Lên ", _sp()), _r("cấp " + str(Lk), _nbs()), _r(" thì bà con mới đặt đồ nghề.", _sp())] if Lk else [_r("Có hàng xóm thì bà con mới đặt đồ nghề.", _sp())])]
-	var out := [_sum([_r("Bà con đặt đồ nghề cho đám cưới, hội đình, nhà gặp nạn, công trình, lễ Tết. Giao đủ được gần gấp đôi giá chợ, thêm thân và uy tín. Quá hạn không giao thì mất thân, mất uy tín; không kịp thì từ chối sớm (trước hạn từ 1 ngày) chỉ bị nửa phạt.", _sp())])]
+		out.append(_dt(X0, y, XW, 16.0, ("Lên cấp " + str(Lk) + " thì bà con mới đặt đồ nghề.") if Lk else "Có hàng xóm thì bà con mới đặt đồ nghề.", 11.0, 700, SUB, "left"))
+		return [out, y + 16.0 + GG]
 	var xau: int = W.ng_xau()
 	if xau:
-		out.append(_card_txt("Đang mang tiếng hứa rồi bỏ", [["còn ", false], [str(xau), true], [" ngày", false]], "Bỏ hoặc từ chối 3 đơn trong 7 ngày nên bà con chưa đặt hàng mới, đơn đang có chỉ trả 80%."))
+		var pp := _para(X0 + 10.0, y + 30.0, XW - 20.0, "Bỏ hoặc từ chối 3 đơn trong 7 ngày nên bà con chưa đặt hàng mới, đơn đang có chỉ trả 80%.", 10.5, 600, SUB, 14.0)
+		var xc := _chip(X0, y, XW, 30.0 + float(pp[1]) + 10.0, "sen")
+		out.append(xc)
+		out.append(_dt(X0 + 10.0, y + 10.0, XW - 90.0, 16.0, "Đang mang tiếng hứa rồi bỏ", 11.5, 800, "rgb(170, 50, 60)", "left"))
+		out.append(_dt(X0 + XW - 90.0, y + 10.0, 80.0, 16.0, "Còn " + str(xau) + " ngày", 10.5, 800, "rgb(170, 50, 60)", "right"))
+		out.append_array(pp[0])
+		y += float(xc.r[3]) + GG
 	if o.l.is_empty():
-		out.append(_sum([_r("Chưa có đơn nào" + ("." if xau else ", mỗi ngày có đơn mới."), _sp())]))
-		return out
+		out.append(_dt(X0, y, XW, 16.0, "Chưa có đơn nào" + ("." if xau else ", mỗi ngày có đơn mới."), 11.0, 700, SUB, "left"))
+		return [out, y + 16.0 + GG]
 	for d in o.l:
-		out.append(_don_card(d, day))
-	return out
+		var r := _don_c(y, d, day)
+		out.append_array(r[0])
+		y += float(r[1]) + GG
+	return [out, y]
 
-func _nbs() -> Dictionary:   # chữ đậm trong p.lssum
-	var b := _cl(_sp())
-	b.css["font-weight"] = "800"
-	return b
-
-func _card_txt(left: String, right: Array, s: String) -> Dictionary:   # .vlcard: .nvsh + small
-	var c := _cl(NT.don.kids[1])
-	var x := float(c.r[0]) + _px(c, "padding-left")
-	var W0 := float(c.r[2]) - _px(c, "padding-left") - _px(c, "padding-right")
-	var y := float(c.r[1]) + _px(c, "padding-top")
-	var hd: Dictionary = c.kids[0]
-	y += _nvsh(hd, left, right, x, y, W0) + 6.0
-	var sm: Dictionary = _tag_kids(c, "small")[0]
-	_mv(sm, x, y)
-	var h := _put(sm, [_r(s, sm)], "left", W0)
-	sm.r[3] = h
-	y += h
-	c.kids = [hd, sm]
-	c.r[3] = y + _px(c, "padding-bottom") - float(c.r[1])
-	return c
-
-func _don_card(d: Dictionary, day: int) -> Dictionary:
+func _don_c(y: float, d: Dictionary, day: int) -> Array:   # khối 1 đơn: tiêu đề + hạn, chip món, thưởng / phạt bằng hình, nút
 	var left := int(d.dl) - day
 	var ok: bool = W.ng_don_ok(d)
 	var f = W._fam_of(d.u) if W._tr(d.get("u")) else null
 	var P: Dictionary = W.NGPHAT.get(String(d.get("src", "")), {})
-	var pt := []
-	if W._tr(P.get("th")) and f != null:
-		pt.append(W._sv(P.th) + " thân")
-	if W._tr(P.get("ut")):
-		pt.append(W._sv(P.ut) + " uy tín")
-	var c := _cl(NT.don.kids[1])
-	var T0: Array = c.kids
-	var x := float(c.r[0]) + _px(c, "padding-left")
-	var W0 := float(c.r[2]) - _px(c, "padding-left") - _px(c, "padding-right")
-	var y := float(c.r[1]) + _px(c, "padding-top")
-	var kids := []
-	var hd: Dictionary = T0[0]
-	y += _nvsh(hd, String(d.t), [["còn ", false], [str(left), true], [" ngày", false]] if left > 0 else [["hạn hôm nay", true]], x, y, W0) + 6.0
-	kids.append(hd)
-	var ch := []
+	var out := []
+	var c := _chip(X0, y, XW, 10.0, "don")
+	out.append(c)
+	var x := X0 + 10.0
+	var w := XW - 20.0
+	var yy := y + 10.0
+	var ht: String = "Còn " + str(left) + " ngày" if left > 0 else "Hạn hôm nay"
+	var hc := _tchip(x, yy - 1.0, ht, "info" if left > 1 else "sen", "rgb(60, 110, 170)" if left > 1 else "rgb(170, 50, 60)")
+	Snap._move(hc[0], Vector2(w - float(hc[1]), 0))
+	out.append(hc[0])
+	var tw := w - float(hc[1]) - 8.0
+	out.append(_dt(x, yy, tw, 16.0, _fitw(String(d.t), 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+	yy += 16.0 + GG
+	var it := []
 	for z in d.it:
 		var id: String = W.ng_id(String(z[0]), int(z[2]))
-		ch.append([id, mini(W.ng_has(String(z[0]), int(z[2])), int(z[1])), int(z[1]), String(G.item(id).get("name", id)) + (" trở lên" if int(z[2]) == 1 else "")])
-	var nd := _chips(T0[1], ch, x, y, _find(NT.nghe.kids[1], "ok"))
-	kids.append(nd)
-	y += float(nd.r[3]) + 6.0
-	var sm: Dictionary = T0[2]
-	_mv(sm, x, y)
-	var h := _put(sm, [_r("Trả " + W._sa(d.xu) + " xu" + (" · +" + W._sv(d.ut) + " uy tín" if W._tr(d.get("ut")) else "") + (" · thêm thân nhà " + String(f.n) if W._tr(d.get("th")) and f != null else "") +
-		(" · bỏ thì −" + ", −".join(PackedStringArray(pt)) if pt.size() else ""), sm)], "left", W0)
-	sm.r[3] = h
-	kids.append(sm)
-	y += h + 6.0
+		it.append([id, _nm(id) + (" trở lên" if int(z[2]) == 1 else ""), mini(W.ng_has(String(z[0]), int(z[2])), int(z[1])), int(z[1])])
+	var nd := _nchips(x, yy, w, it)
+	out.append_array(nd[0])
+	yy += float(nd[1]) + GG
+	# thưởng
+	var Rw := ["Trả " + W._sa(d.xu), "c"]
+	if W._tr(d.get("ut")):
+		Rw.append(" · +" + W._sv(d.ut) + " uy tín")
+	if W._tr(d.get("th")) and f != null:
+		Rw.append_array([" · +", "h", " nhà " + String(f.n)])
+	out.append_array(_rowi(x, yy, 16.0, Rw, 11.0, 800, "rgb(40, 130, 50)")[0])
+	yy += 16.0
+	var Pn := []
+	if W._tr(P.get("th")) and f != null:
+		Pn.append_array(["−" + W._sv(P.th), "h"])
+	if W._tr(P.get("ut")):
+		Pn.append((" · " if Pn.size() else "") + "−" + W._sv(P.ut) + " uy tín")
+	if Pn.size():
+		out.append_array(_rowi(x, yy, 15.0, ["Bỏ đơn: "] + Pn, 10.5, 600, "rgb(170, 60, 50)")[0])
+		yy += 15.0
+	yy += GG
+	# nút: phụ bên trái, Giao hàng bên phải
 	var id0 := String(d.id)
-	var bt := [["Giao hàng", "primary" if ok else "plain", ok, func(): W.ng_giao(id0)]]
+	var bx := x
 	if not ok:
-		bt.append(["Thương lái", "plain", true, _tab_go.bind("cho")])
-		bt.append(["Đặt thợ", "plain", true, _tab_go.bind("dat")])
-	bt.append(["Bấm lần nữa để từ chối" if arm == "tu" + id0 else "Từ chối", "plain", true, _tu.bind(id0)])
-	var jb := _jobs(_find(NT.nghe.kids[1], "vl-jobs"), bt, x, y, W0)
-	kids.append(jb)
-	y += float(jb.r[3])
-	c.kids = kids
-	c.r[3] = y + _px(c, "padding-bottom") - float(c.r[1])
-	return c
+		var a := _sbtn(bx, yy, "Thương lái", _tab_go.bind("cho"))
+		out.append(a[0])
+		bx += float(a[1]) + 6.0
+	var t2 := _sbtn(bx, yy, "Bấm lần nữa để từ chối" if arm == "tu" + id0 else "Từ chối", _tu.bind(id0), true)
+	out.append(t2[0])
+	out.append(_btn(x + w - 84.0, yy, 84.0, 26.0, "Giao hàng", func(): W.ng_giao(id0), "go" if ok else "off"))
+	yy += 26.0 + 10.0
+	c.r[3] = yy - y
+	return [out, yy - y]
 
 func _tu(id: String) -> void:   # data-ngc="tu": bấm 2 lần
 	if arm != "tu" + id:
@@ -404,45 +335,38 @@ func _tu(id: String) -> void:   # data-ngc="tu": bấm 2 lần
 		arm = ""
 		W.ng_tu_choi(id)
 
-# ------------------------------------------------------------------ tab Chợ (ngcTabBan + ngcTabLai)
+# ------------------------------------------------------------------ tab Chợ (ngcTabLai): thương lái, chạm chip là mua
 func _cho() -> Array:
-	var out := [_sec("Hàng bạn bè"), _sum([_r(ONLINE, _sp())]), _sec("Thương lái"),
-		_sum([_r("Chở hàng nghề từ chợ huyện: chỉ có hàng thường, giá gấp 3, mỗi món 1 cái một ngày. Mua của thợ bạn bè rẻ và tốt hơn.", _sp())])]
+	var out := []
+	var y := 6.0
+	out.append_array(_sq(y, "Thương lái", "Chở hàng nghề từ chợ huyện: chỉ có hàng thường, giá gấp 3, mỗi món 1 cái một ngày. Chạm vào món để mua."))
+	y += 16.0 + GG
 	var L: Dictionary = W.ng_lai()
-	var rows := []
-	for x in W.M6:
-		if W.ng_base(x.id) == "":
+	var g := 6.0
+	var bw := (XW - g) * 0.5
+	var bh := 44.0
+	var i := 0
+	for x0 in W.M6:
+		if W.ng_base(x0.id) == "":
 			continue
-		var id := String(x.id)
+		var id := String(x0.id)
 		var p: int = W._ai(id) * 3
 		var n: int = 1 + int(W.htv("t_lai")) - W._i(L.n.get(id))
-		var ok: bool = n > 0 and W._n(G.g.coins) >= p
-		rows.append([String(G.item(id).get("name", id)) + " · " + W._sa(p) + " xu", ("Còn " + str(n) + " cái hôm nay" if n > 0 else "Hết, mai ghé lại") + " · kho có " + str(_barn(id)),
-			["Mua", ok, func(): W.ng_lai_mua(id)]])
-	var ls := _list(rows, NT.cho.kids[4].kids[0], NT.cho.kids[4].kids[0].kids[1])
-	out.append(ls)
-	return out
-
-# ------------------------------------------------------------------ tab Thợ giỏi (ngcTabTho, phần không cần mạng)
-func _tho() -> Array:
-	var ks: Array = W.M6.filter(func(x): return W.ng_base(x.id) != "")
-	if rk == "" or not ks.any(func(x): return x.id == rk):
-		rk = String(ks[0].id)
-	var bt := []
-	for x in ks:
-		var id := String(x.id)
-		bt.append([String(G.item(id).get("name", id)), "primary" if id == rk else "plain", true, _rk.bind(id)])
-	var jb := _jobs(NT.tho.kids[0], bt, 16.5, 0.0, 305.0)
-	jb.cls = "vl-jobs"
-	var S: Dictionary = W.ng_s()
-	var out := [jb, _sum([_r("Thợ " + String(G.item(rk).get("name", rk)).to_lower() + " trong đám bạn bè, xếp theo tay nghề rồi số món làm ra.", _sp())]), _sum([_r(ONLINE, _sp())])]
-	if W._tr(W.t6().get(rk)):
-		var nm := String(G.g.pc.get("name", "")) if G.g.get("pc") is Dictionary else ""
-		nm = (nm if nm != "" else "Bạn").substr(0, 16)   # Os()
-		out.append(_list([["1. " + nm + " (mình)", W.ng_stars(W.ng_sao(rk)) + " · " + W._sa(W._i(S.mk.get(rk))) + " món đã làm", null, "me"]], NT.tho.kids[3].kids[0]))
-	else:
-		out.append(_sum([_r("Chưa ai học nghề này.", _sp())]))
-	return out
-
-func _rk(id: String) -> void:   # data-ngc="rk"
-	rk = id
+		var cx := X0 + (i % 2) * (bw + g)
+		var cy := y + floorf(i / 2.0) * (bh + g)
+		var c := _chip(cx, cy, bw, bh, "fut" if n > 0 else "miss")
+		var tx := cx + 42.0
+		var tw := cx + bw - 6.0 - tx
+		var ks := [_icn(cx + 21.0, cy + bh * 0.5, 26.0, id), _dt(tx, cy + 6.0, tw, 15.0, _fitw(_nm(id), 11.5, 800, tw), 11.5, 800, BROWN if n > 0 else "rgb(120, 112, 98)", "left")]
+		if n > 0:
+			var rich: bool = W._n(G.g.coins) >= p
+			ks.append_array(_rowi(tx, cy + 22.0, 14.0, [W._sa(p), "c", " · còn " + str(n)], 10.5, 700, SUB if rich else "rgb(190, 60, 50)")[0])
+			c.act = (func(): W.ng_lai_mua(id)) if rich else _dsay.bind("Thiếu xu: " + _nm(id) + " giá " + W._sa(p) + " xu.")
+		else:
+			ks.append(_dt(tx, cy + 22.0, tw, 14.0, "Hết, mai ghé lại", 10.5, 600, "rgb(130, 124, 112)", "left"))
+		c.kids = ks
+		out.append(c)
+		i += 1
+	var rows := int(ceil(i / 2.0))
+	y += rows * bh + maxf(0, rows - 1) * g + GG
+	return [out, y]
