@@ -12,4 +12,4 @@ for d in ['ui/img','ui/font']:
 open('/home/user/cocaro_full.pck','wb').write(write_pck(hdr, sorted(F.items(), key=lambda e:(_rank(e[0]),e[0]))))
 open('/home/user/nen.pck','wb').write(write_pck(hdr, sorted(N.items(), key=lambda e:(_rank(e[0]),e[0]))))
 PY
-cd /home/user/vu-mua/cocaro && cp /home/user/cocaro_full.pck caro.pck && O=$(grep -o "PCK=[0-9]*" index.html|cut -d= -f2) && OB=$(grep -o "B='[0-9a-f]*'" index.html) && S=$(stat -c %s caro.pck) && sed -i "s/$O/$S/g; s/$OB/B='$(md5sum caro.pck|cut -c1-8)'/" index.html && ls -la caro.pck
+cd /home/user/vu-mua/cocaro && cp /home/user/cocaro_full.pck caro.pck && O=$(grep -o "PCK=[0-9]*" index.html|cut -d= -f2) && OB=$(grep -o "B='[0-9a-f]*'" index.html) && S=$(stat -c %s caro.pck) && sed -i "s/$O/$S/g; s/$OB/B='$(md5sum caro.pck|cut -c1-8)'/" index.html && grep -o "B='[0-9a-f]*'" index.html | cut -d"'" -f2 > ver.txt && ls -la caro.pck
