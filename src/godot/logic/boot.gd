@@ -208,6 +208,8 @@ func _test_hook() -> void:
 			"nvday": G.nv.xI = int(floor(G.nv.d4() / 14.0)) * 14 + int(a[1]); ui.nvp.sig = ""
 			"nvx": _nvx(int(a[1]))
 			"ngsim": _ngsim(a)
+			"tnsim": _tnsim(a)
+			"tn": ui.tn_open(a[1] if a.size() > 1 else "")
 			"hidev": ui.get_parent().visible = false
 			"gio": G.troi.hh = float(a[1])
 			"troi": G.troi.force = a[1]
@@ -271,6 +273,18 @@ func _test_hook() -> void:
 
 func R2(rid: String) -> Array:
 	return G.xw.R[rid].in
+
+func _tnsim(a: Array) -> void:   # thử Thiên tai: tnsim:next (dời ngày tới hôm trước trận kế) | tnsim:hit:loại (trận xảy ra hôm nay)
+	var W = G.w_all.WL
+	match String(a[1]):
+		"next":
+			for n in 60:
+				if W.tn_on(G._day0() + n + 1) != null:
+					G.day_off = n
+					break
+		"hit":
+			G.w_all.WD._tn_hit0({"k": String(a[2]), "d": G.day()}, false)
+	G.mark()
 
 func _ngsim(a: Array) -> void:   # thử bảng Nghề: ngsim:sao:nghề:số sao[:c] | ngsim:thi:nghề | ngsim:don4
 	var W = G.w_all.WL

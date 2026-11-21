@@ -212,6 +212,19 @@ func _icn(cx: float, cy: float, s: float, id: String) -> Dictionary:   # hình m
 	b.ic = id
 	return b
 
+func _icx(cx: float, cy: float, s: float, id: String) -> Dictionary:   # (bản 462) hình theo mã: "xu" đồng xu, "svg:<đường dẫn>" hình svg, "pic:<đường dẫn>" ảnh, còn lại hình món Kho
+	if id == "xu":
+		return _dick(cx, cy, s * 0.8, "coin")
+	if id.begins_with("svg:"):
+		return _dic(cx - s * 0.5, cy - s * 0.5, s, FileAccess.get_file_as_string(id.substr(4)))
+	if id.begins_with("pic:"):   # ảnh chữ nhật: giữ tỉ lệ, vừa khung s
+		var t: Texture2D = Css.image(id.substr(4))
+		var a := (float(t.get_width()) / maxf(1.0, float(t.get_height()))) if t != null else 1.0
+		var w := s * (1.15 if a > 1.0 else a)
+		var h := w / a
+		return _pic(cx - w * 0.5, cy - h * 0.5, w, h, id.substr(4))
+	return _icn(cx, cy, s, id)
+
 func _pic(x: float, y: float, w: float, h: float, path: String) -> Dictionary:   # ảnh res://ui/img/...
 	var b := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 0.0)
 	b.pic = path
@@ -323,7 +336,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 			cx = x
 			cy += 40.0
 		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
-		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, tw, 14.0, _fitw(nm, fs, 700, tw), fs, 700, BROWN, "left"),
+		c.kids = [_icx(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, tw, 14.0, _fitw(nm, fs, 700, tw), fs, 700, BROWN, "left"),
 			_dt(cx + 36.0, cy + 17.0, cw - 40.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
 		c.act = it[4] if it.size() > 4 and it[4] is Callable and not good else _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")   # it[4]: việc khi chạm món còn thiếu
 		out.append(c)
@@ -348,9 +361,9 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String, bh0 := 0.0) -> Array
 		var tx := x + 8.0
 		if String(o.get("ic", "")) != "":   # (bản 447) hình cách đều 2 bên 8: tâm 21, cỡ 26 (phóng theo độ đầy hình), chữ từ 42
 			var z := 34.0 if big else 26.0
-			ks.append(_icn(x + (24.0 if big else 21.0), yy + bh * 0.5, z * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
+			ks.append(_icx(x + (24.0 if big else 21.0), yy + bh * 0.5, z * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
 			tx = x + (48.0 if big else 42.0)
-		var tw := x + bw - 6.0 - tx
+		var tw := x + bw - (22.0 if st == "on" else 6.0) - tx   # (bản 462) chừa chỗ dấu tick
 		var dim := st == "dis" or st == "hint"
 		var L2: Array = _wrap(String(o.get("s2", "")), 10.0, 600, tw) if big and String(o.get("s2", "")) != "" else []
 		if L2.size() > 2:

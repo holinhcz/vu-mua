@@ -268,7 +268,11 @@ func reset_game() -> void:   # #reset bấm lần 2
 	changed.emit()
 
 # ------------------------------------------------------------------ calendar (vr, t3)
+var day_off := 0   # (thử) lệch ngày game, lệnh thử dayoff
 func day() -> int:   # vr
+	return _day0() + day_off
+
+func _day0() -> int:
 	# ngày game = ngày lịch thật theo giờ máy, tính từ 12/10/2026; Cài đặt "Nhanh": 1 phút ngoài đời = 1 giờ làng
 	if cfg.d == "fast":
 		return int(floor(Time.get_unix_time_from_system() / 1440.0)) - int(floor(Time.get_unix_time_from_datetime_string("2026-10-12T00:00:00") / 1440.0))
