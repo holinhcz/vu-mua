@@ -214,9 +214,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var q: Vector2 = P.call(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs)
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		cs_ = hs * u
-		var bq: Vector2 = P.call(sd.end.x - 30, bd.position.y - 10) if bandH < 70 else P.call(sd.position.x + 30, bot - 20)
-		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u * (0.8 if bandH < 70 else clampf(bandH / 170.0, 0.45, 1.0)))
-		canopy = {"pos": P.call(sd.end.x + 60, sd.position.y - 200), "sc": 0.5 * u, "flip": true}
+		# màn dọc rộng (2 bên phản còn chỗ): bố cục như màn ngang — xoài góc trên trái chạm mép phản, chuối dưới trái trên thẻ "Bạn"
+		var meY: float = D.call(Vector2(0, L.me.position.y)).y
+		var bq: Vector2 = P.call(sd.position.x + 20, minf(meY - 10, bot - 20))
+		bc = Vector3(bq.x, bq.y, clampf(mL * 1.5 / 437.0, 0.3, 0.85) * u)     # lá chuối không lấn lên khung phản
+		canopy = {"pos": P.call(sd.position.x * 0.6, sd.position.y - 40), "sc": u, "flip": false}
 		if mL < 60 and mR < 60:
 			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối xuống góc dưới phải
 			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
@@ -311,7 +313,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var fr: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037))               # mép ngoài khung gỗ thật (không tính lề trong ảnh)
 	var gap: float = (W - fr.end.x) if canopy.flip else fr.position.x
 	# khe bên phản hẹp: thu tán cho khoảng nửa cây lọt khe (gốc cây khuất ngoài mép màn), mép trên luôn khuất
-	csc = minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0))
+	# Link 11-21 "tán xoài chạm lên bàn cờ": cây giữ cỡ thật (không thu bé theo khe), mép lá chạm đúng mép khung phản
+	csc = maxf(minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0)), canopy.sc * 0.8)
 	cpos.y = minf(cpos.y, 20.0 * csc)
 	if canopy.has("top"):
 		var tr: Rect2 = canopy.top                              # vùng góc trên trái (màn), tán nằm gọn trong đó
@@ -320,16 +323,16 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y)
 		# nửa trên tán khuất trên mép màn (dưới thanh menu), chỉ phần dưới tán thò xuống, đáy tán + bóng vừa chạm trên khung phản
 		# Link 11-21 "cây xoài to ra chạm mép bàn": tán to, mép dưới lá chạm đúng mép trên khung phản (bóng được rơi lên khung)
-		csc = minf(tr.size.y * 2.8 / ty1, W * 1.6 / (tx1 - tx0))
-		cpos = Vector2(-tx0 * csc - 0.18 * (tx1 - tx0) * csc, tr.size.y + 4.0 - ty1 * csc)
+		csc = minf(tr.size.y * 3.6 / ty1, W * 1.8 / (tx1 - tx0))
+		cpos = Vector2(-tx0 * csc - 0.08 * (tx1 - tx0) * csc, tr.size.y + 4.0 - ty1 * csc)
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
-	var bz: Rect2 = fr.grow(4)
+	var bz: Rect2 = fr.grow(-3)                              # lá chạm mép khung (bóng lá được rơi lên khung)
 	for i in 4:
 		var w2: Array = LJ.mango_wins[i]
 		var ur := _used("xoai%d" % i)
-		for off in [Vector2.ZERO, Vector2(46, 62)]:
+		for off in [Vector2.ZERO]:
 			var x0: float = float(w2[0]) + ur.position.x + off.x; var x1: float = float(w2[0]) + ur.end.x + off.x
 			var y0: float = cpos.y + (float(w2[1]) + ur.position.y + off.y) * csc; var y1: float = cpos.y + (float(w2[1]) + ur.end.y + off.y) * csc
 			if y1 < bz.position.y or y0 > bz.end.y: continue
