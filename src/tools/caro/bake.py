@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import board2 as B
 
 OUT = sys.argv[1]
-KB = 4.0                      # điểm ảnh / css của ảnh nướng
+KB = float(os.environ.get("KB", "4"))     # điểm ảnh / css của ảnh nướng
 os.makedirs(OUT, exist_ok=True)
 
 def save(arr, name):
