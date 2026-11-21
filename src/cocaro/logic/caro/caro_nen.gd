@@ -19,6 +19,15 @@ var leaves: Array = []
 var t0 := 0.0
 var fall_scale := 1.0
 
+static var _ur := {}
+static func _used(n: String) -> Rect2:
+	# vùng có lá thật của ảnh (css thiết kế)
+	if not _ur.has(n):
+		var t := tex(n); var im := t.get_image()
+		var r := im.get_used_rect(); var k := float(t.get_width()) / float(im.get_width()) / PXU
+		_ur[n] = Rect2(Vector2(r.position) * k, Vector2(r.size) * k)
+	return _ur[n]
+
 static func tex(n: String) -> Texture2D:
 	if _tex.has(n):
 		return _tex[n]
@@ -120,7 +129,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var Lx := func(x: float) -> float: return sdx + x * (dB.x - sdx) / dB.x if x < dB.x else x
 		for p in LJ.props:
 			var q: Vector2 = P.call(Lx.call(float(p[1])), float(p[2]))
-			if p[0] == "lu": q.x += shift
+			if p[0] == "lu": q.x = minf(q.x + shift, roof_x - 58.0 * u)
 			items.append([p[0], q.x, q.y, u, p[4]])
 		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
 		var hdx: float = Lx.call(hx0) - hx0                 # gà con đi theo gà mẹ
@@ -193,7 +202,25 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var s := fall_scale
 		_shadow(self, lt[int(q[3])], Vector2(q[0], q[1]), Vector2(1.2, 1.6), 0.8, 0.35, deg_to_rad(q[2]), s)
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
-	# ---- đồ vật + gà
+	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
+	var frm: Rect2 = f.grow(f.size.x * 0.046 + 6 + 6)
+	for it in items:
+		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
+		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
+		if roof_x >= 0 and r.end.x > roof_x - 6: it[1] -= r.end.x - (roof_x - 6); r.position.x -= r.end.x - (roof_x - 6)
+		if not r.intersects(frm): continue
+		if it[1] < frm.get_center().x:
+			it[1] -= r.end.x - frm.position.x
+			var room: float = frm.position.x - 2.0
+			if r.size.x > room and room > 20:                 # khe hẹp hơn món: thu món lại cho lọt khe, không lẹm mép màn
+				var k: float = room / r.size.x; it[3] = s0 * k
+				it[1] = frm.position.x - (ur.end.x - tw.x / 2) * s0 * k
+		else:
+			it[1] += frm.end.x - r.position.x
+			var room2: float = (roof_x - 6.0 if roof_x >= 0 else W - 2.0) - frm.end.x
+			if r.size.x > room2 and room2 > 20:
+				var k2: float = room2 / r.size.x; it[3] = s0 * k2
+				it[1] = frm.end.x - (ur.position.x - tw.x / 2) * s0 * k2
 	for it in items:
 		var t := tex(it[0]); var sh: Array = it[4]; var s: float = it[3]
 		_shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
@@ -208,7 +235,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		gr.set_color(0, Color(0.09, 0.11, 0.18, 0.0)); gr.set_color(1, Color(0.09, 0.11, 0.18, 0.47)); band.gradient = gr; band.width = 64; band.height = 4
 		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72 * u, 0); bd.scale = Vector2(80.0 * u / 64.0, H / 4.0); add_child(bd)
 		var m := _spr(self, tex("mai"), Vector2(roof_x, -10 * u), false, 0.0, u)
-		m.region_enabled = true; m.region_rect = Rect2(0, 0, m.texture.get_width(), minf(m.texture.get_height(), (H / u + 20) * PXU))
+		# mái phủ hết chiều cao màn: lặp soi gương theo chiều dọc (liền mạch, không cắt đáy)
+		m.texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
+		m.region_enabled = true; m.region_rect = Rect2(0, 0, m.texture.get_width(), (H / u + 20) * PXU)
 	# ---- hiên gạch tàu
 	var gt := tex("gach"); var ph := 54.0 if port else 30.0      # (css thiết kế, co theo u)
 	var th := gt.get_height() / PXU
@@ -242,6 +271,36 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			add_child(r)
 	# ---- bóng tán xoài, bụi chuối, lá rơi, chuối, tán
 	var M: Dictionary = LJ.mango
+	# tán + bóng tán KHÔNG BAO GIỜ đè lên tấm phản (Link): đẩy tán ra xa mép phản, mép trên tán luôn khuất ngoài màn
+	var cpos: Vector2 = canopy.pos
+	var csc: float = canopy.sc
+	# khe bên phản hẹp hơn tán: thu cả cây lại cho ~70% tán lọt vào khe (thấy rõ cây, không đè phản)
+	var tx0 := 1e9; var tx1 := -1e9
+	for i in 4:
+		var w3: Array = LJ.mango_wins[i]; var u3 := _used("xoai%d" % i)
+		tx0 = minf(tx0, float(w3[0]) + u3.position.x); tx1 = maxf(tx1, float(w3[0]) + u3.end.x + 46.0)
+	var fr: Rect2 = f.grow(f.size.x * 0.046 + 6)               # mép ngoài khung gỗ thật (không tính lề trong ảnh)
+	var gap: float = (W - fr.end.x) if canopy.flip else fr.position.x
+	# khe bên phản hẹp: thu tán cho khoảng nửa cây lọt khe (gốc cây khuất ngoài mép màn), mép trên luôn khuất
+	csc = minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0))
+	canopy.sc = csc
+	cpos.y = minf(cpos.y, 20.0 * csc)
+	var fl := -1.0 if canopy.flip else 1.0
+	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
+	var bz: Rect2 = fr.grow(4)
+	for i in 4:
+		var w2: Array = LJ.mango_wins[i]
+		var ur := _used("xoai%d" % i)
+		for off in [Vector2.ZERO, Vector2(46, 62)]:
+			var x0: float = float(w2[0]) + ur.position.x + off.x; var x1: float = float(w2[0]) + ur.end.x + off.x
+			var y0: float = cpos.y + (float(w2[1]) + ur.position.y + off.y) * csc; var y1: float = cpos.y + (float(w2[1]) + ur.end.y + off.y) * csc
+			if y1 < bz.position.y or y0 > bz.end.y: continue
+			if canopy.flip:
+				need = maxf(need, bz.end.x - (cpos.x - x1 * csc))       # mép trái lớp phải ≥ mép phải phản
+			else:
+				need = maxf(need, (cpos.x + x1 * csc) - bz.position.x)  # mép phải lớp phải ≤ mép trái phản
+	cpos.x -= fl * need
+	canopy.pos = cpos
 	var croot := Node2D.new(); croot.position = canopy.pos
 	croot.scale = Vector2(-canopy.sc if canopy.flip else canopy.sc, canopy.sc)
 	add_child(croot)
