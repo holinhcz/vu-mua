@@ -53,6 +53,7 @@ const LOCK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><
 const QMARK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"rgb(232,222,200)\" stroke=\"rgb(190,170,130)\" stroke-width=\"1.4\"/><path d=\"M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.2\" fill=\"none\" stroke=\"rgb(150,120,70)\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"17.4\" r=\"1.3\" fill=\"rgb(150,120,70)\"/></svg>"
 const TAIL := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M0 0 L12 0 L4 10 Z\" fill=\"rgb(252,247,234)\" stroke=\"rgba(150,112,48,0.55)\" stroke-width=\"0.8\"/></svg>"
 const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "gao"}   # hình sở trường (thay emoji)
+const ICS := {"chieu": 1.2, "trung": 1.12, "gao": 1.08}   # hình thưa (dẹt / tròn nhỏ): phóng cho cùng cỡ nhìn
 const JOBIC := {"": "chieu", "ruong": "lua", "vuon": "qua_xoai", "chan": "trung"}
 # màu chip theo tính nết + màu theo tab: [gradient trên, giữa, dưới, viền]
 const VLC := {
@@ -553,9 +554,9 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" or st == "hint" else String(o.get("k", "fut"))))
 		var ks := []
 		var tx := x + 8.0
-		if String(o.get("ic", "")) != "":
-			ks.append(_icn(x + 18.0, yy + bh * 0.5, 24.0, String(o.ic)))
-			tx = x + 34.0
+		if String(o.get("ic", "")) != "":   # (bản 447) hình cách đều 2 bên 8: tâm 21, cỡ 26 (phóng theo độ đầy hình), chữ từ 42
+			ks.append(_icn(x + 21.0, yy + bh * 0.5, 26.0 * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
+			tx = x + 42.0
 		var tw := x + bw - 6.0 - tx
 		var dim := st == "dis" or st == "hint"
 		ks.append(_dt(tx, yy + 6.0, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
@@ -583,7 +584,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var bt := []
 	bt.append({"b": "Nghỉ ở nhà", "s": "Không tốn công", "ic": JOBIC[""], "st": "on" if not W._tr(e.get("job")) else "off", "act": _job0.bind("")})
 	var cr := String(e.get("crop", ""))
-	var rs: String = (("Gieo " + String(G.D.crops[cr].name).to_lower() if cr != "" and G.D.crops.has(cr) else "Giữ giống cũ") + " · " + str(W.om(e, "ruong")) + " xu/phút") if e.get("job") == "ruong" else (str(W.om(e, "ruong")) + " xu/phút · chọn giống" if p else "Đủ người rồi")
+	var rs: String = (("Gieo " + String(G.D.crops[cr].name).to_lower() if cr != "" and G.D.crops.has(cr) else "Giữ giống cũ") + " · " + str(W.om(e, "ruong")) + " xu/phút") if e.get("job") == "ruong" else ("Chọn giống · " + str(W.om(e, "ruong")) + " xu" if p else "Đủ người rồi")
 	bt.append({"b": "Làm ruộng", "s": rs, "ic": JOBIC.ruong, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" else ("off" if p else "dis"), "act": _pk.bind("ruong")})
 	for M in ["vuon", "chan"]:
 		var t: String = W.vg(M)
