@@ -170,23 +170,30 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var hs := 130.0 / 230.0
 		var hp: Vector2
 		var short_banana := Rect2()
-		if bandH >= 70:            # điện thoại: dải dưới cùng rộng cả ngang
-			var k := clampf(bandH / 170.0, 0.45, 1.0)
-			add.call("nong", sd.position.x + sd.size.x * 0.3, band0 + bandH * 0.55, 66.0 / 140.0 * k, [6, 8, 5, 0.42])
-			hs *= k
-			hp = Vector2(sd.position.x + sd.size.x * 0.66, band0 + bandH * 0.5)
-			add.call("lu", sd.end.x - 40 * k, band0 + bandH * 0.6, 50.0 / 92.0 * k, [8, 10, 6, 0.45])
+		# góc dưới phải cạnh thẻ "Bạn": chỗ bụi chuối (mọi màn dọc), lá trên chạm đáy khung phản
+		var R := Rect2(Vector2(cardR + 6, bd.end.y + 4), Vector2(sd.end.x - cardR - 6, bot - bd.end.y - 4))
+		if bandH >= 70:
+			# điện thoại dài: dải đất dưới cùng. Mọi món ĐÚNG CỠ THẬT như màn ngang (cỡ 1 = cùng tỉ lệ với phản),
+			# không thu nhỏ; chật thì cho lấn ra mép màn. Nong lúa bên trái, gà mẹ mổ lúa sát mép nong, lu giữa, chuối góc phải.
+			var gy: float = band0 + bandH * 0.5
+			var nr := 74.0 * 66.0 / 140.0
+			var nx: float = sd.position.x + nr * 1.3
+			var ny: float = clampf(gy, band0 + nr * 0.75, bot - nr * 0.55)
+			add.call("nong", nx, ny, 66.0 / 140.0, [6, 8, 5, 0.42])     # cùng cỡ thật như màn ngang
+			hs = 130.0 / 230.0
+			hp = Vector2(nx + nr + 40, clampf(ny - 8, band0 + 30, bot - 30))
+			if sd.size.x > 720:
+				add.call("lu", nx + nr + 150, clampf(gy + 10, band0 + 30, bot - 26), 50.0 / 92.0, [8, 10, 6, 0.45])
+			var bw: float = R.size.x * 2.1; var bz_: float = bw / 437.0
+			short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
 		else:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
 			hs = clampf(mL / 200.0, 0.25, 0.5)
 			if rgap >= 70 and mL < 60:
-				# điện thoại ngắn (Link 11-21 "bỏ lu, chuối xuống góc dưới phải, xếp cân đối"): góc dưới phải cạnh thẻ "Bạn":
-				# gà mẹ trên trái, ca trà đá trên phải, bụi chuối ôm góc dưới phải (thò ra mép màn); cân với tán xoài góc trên trái
-				var R := Rect2(Vector2(cardR + 6, bd.end.y + 4), Vector2(sd.end.x - cardR - 6, bot - bd.end.y - 4))
+				# điện thoại ngắn (Link 11-21 "bỏ lu, chuối xuống góc dưới phải, xếp cân đối"): gà mẹ cạnh thẻ "Bạn", chuối ôm góc
 				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
 				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.42)
-				hs = 0.8 * kk                       # Link: gà to lên (ca trà bỏ ở màn nhỏ)
-				# bụi chuối to, mép lá trên chạm đáy khung phản; lá chồm qua góc màn
+				hs = 0.8 * kk
 				var bw: float = R.size.x * 1.7; var bz_: float = bw / 437.0
 				short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
 			elif rgap >= 70:

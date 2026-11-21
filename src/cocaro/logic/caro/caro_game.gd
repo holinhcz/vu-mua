@@ -369,9 +369,10 @@ func _layout() -> void:
 		face = minf(W - 18, bot - top)
 		face = maxf(200, face)
 		fx = (W - face) / 2
-		fy = top + maxf(0, (bot - top - face) * 0.22)
+		# cả khối [thẻ đối thủ + phản + thẻ Bạn + luật] nằm GIỮA màn theo chiều dọc (Link: xếp hợp lý mọi màn)
+		fy = top + maxf(0, (bot - top - face) * 0.5)
 		var cw := minf(240, W - 16)
-		L.opp = Rect2(W - 8 - cw, 54 + safe, cw, 58)
+		L.opp = Rect2(W - 8 - cw, maxf(54 + safe, fy - 66), cw, 58)
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 	else:
