@@ -130,27 +130,43 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			gl.append([v.x, v.y, q[2], q[3]])
 		fall_scale = u
 	else:
-		var W0 := 412.0; var H0 := 891.0
+		# màn dọc / gần vuông: món neo vào MÉP MÀN THẬT (đổi ra đơn vị thiết kế), co cùng tỉ lệ bàn cờ
+		var sd := Rect2(dB - f.position / u, Vector2(W, H) / u)      # màn thấy được, đơn vị thiết kế
+		var bd := Rect2(dB, Vector2(dF, dF)).grow(dF * 0.046 + 6)   # mép ngoài tấm phản
+		var mL := bd.position.x - sd.position.x; var mR := sd.end.x - bd.end.x; var mB := sd.end.y - bd.end.y
 		var add := func(nm: String, x: float, y: float, sc: float, sh: Array):
 			var q: Vector2 = P.call(x, y); items.append([nm, q.x, q.y, sc * u, sh])
-		add.call("nong", W0 * 0.53, H0 - 42, 66.0 / 140.0, [6, 8, 5, 0.42])
-		add.call("lu", W0 - 46, H0 - 64, 50.0 / 92.0, [8, 10, 6, 0.45])
-		add.call("mam", W0 - 52, 171 + 394 + 72, 32.0 / 74.0, [5, 6, 3, 0.42])
+		var bot := sd.end.y
+		add.call("nong", sd.position.x + sd.size.x * 0.53, bot - 42, 66.0 / 140.0, [6, 8, 5, 0.42])
+		add.call("lu", sd.end.x - 46, bot - 64, 50.0 / 92.0, [8, 10, 6, 0.45])
 		var hs := 130.0 / 230.0
-		var hp := Vector2(W0 * 0.68, H0 - 178)
+		var hp := Vector2(sd.position.x + sd.size.x * 0.68, maxf(bot - 178, bd.end.y + 40))
+		if mB < 150 and maxf(mL, mR) >= 60:       # dưới phản hết chỗ → gà ra lề trái
+			hs = clampf(mL / 150.0, 0.3, 130.0 / 230.0)
+			hp = Vector2(sd.position.x + mL * 0.5, bd.position.y + dF * 0.45)
+		if mR >= 60:
+			var rs := clampf(mR / 110.0, 0.35, 1.0)
+			add.call("ro", sd.end.x - mR * 0.5, bd.position.y + dF * 0.15, rs * 0.7, [5, 6, 3, 0.42])
+			add.call("mam", sd.end.x - mR * 0.5, bd.position.y + dF * 0.45, rs * 0.6, [5, 6, 3, 0.42])
+			add.call("bong", sd.end.x - mR * 0.5, bd.position.y + dF * 0.75, rs * 0.65, [6, 7, 4, 0.42])
+		else:
+			add.call("mam", sd.end.x - 52, minf(bd.end.y + 50, bot - 140), 32.0 / 74.0, [5, 6, 3, 0.42])
+		if mL >= 60:
+			add.call("non", sd.position.x + mL * 0.5, bd.position.y + dF * 0.8, clampf(mL / 160.0, 0.3, 0.5), [5, 6, 4, 0.42])
 		add.call("ga", hp.x, hp.y, hs, [4, 6, 3, 0.42])
 		for c in LJ.chicks:
 			var q: Vector2 = P.call(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs)
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		cs_ = hs * u
-		var bq: Vector2 = P.call(52, H0 - 70)
+		var bq: Vector2 = P.call(sd.position.x + 52, bot - 70)
 		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u)
-		canopy = {"pos": P.call(W0 + 60, -200), "sc": 0.5 * u, "flip": true}
+		canopy = {"pos": P.call(sd.end.x + 60, sd.position.y - 200), "sc": 0.5 * u, "flip": true}
 		var rg := RandomNumberGenerator.new(); rg.seed = 5
-		var bo := Rect2(dB, Vector2(dF, dF)).grow(24)
-		while gl.size() < 9:
-			var x := rg.randf_range(10, W0 - 10); var y := rg.randf_range(70, H0 - 10)
-			if bo.has_point(Vector2(x, y)): continue
+		var tries := 0
+		while gl.size() < 10 and tries < 300:
+			tries += 1
+			var x := rg.randf_range(sd.position.x + 10, sd.end.x - 10); var y := rg.randf_range(sd.position.y + 70, sd.end.y - 10)
+			if bd.grow(8).has_point(Vector2(x, y)): continue
 			var v: Vector2 = P.call(x, y)
 			gl.append([v.x, v.y, rg.randf_range(0, 360), rg.randi_range(0, 5)])
 		fall_scale = 0.55 * u
