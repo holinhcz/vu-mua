@@ -295,15 +295,15 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	# tim + thân
 	var tim: int = W._i(f.get("tim"))
 	# (bản 444) bỏ thanh thân: tim đang lên đầy dần từ trái sang theo thân (như thanh cũ), giữ chữ "Thân N/5"
-	var hy := y0 + 22.0
+	var hy := y0 + 21.0   # (bản 449) tim to 20 cho thấy rõ tim đang đầy dở
 	var p := 1.0 if tim >= 5 else fmod(W._n(f.get("dp")), 100.0) / 100.0
 	for i in 5:
-		out.append(_dic(x + i * 17.0, hy, 15.0, HEART if i < tim else (_heartp(p) if i == tim and p > 0.0 else HEART0)))
-	out.append(_dt(x + 5 * 17.0 + 6.0, hy, 70.0, 15.0, "Thân " + str(tim) + "/5", 10.5, 700, "rgb(190, 60, 70)", "left"))
+		out.append(_dic(x + i * 22.0, hy, 20.0, HEART if i < tim else (_heartp(p) if i == tim and p > 0.0 else HEART0)))
+	out.append(_dt(x + 5 * 22.0 + 6.0, hy + 1.0, 70.0, 18.0, "Thân " + str(tim) + "/5", 11.0, 700, "rgb(190, 60, 70)", "left"))
 	# nhà · đang làm: chữ trơn (không chip)
 	var r = W.r1(u)
 	var rid := String(r.r.id)
-	var cy := y0 + 40.0
+	var cy := y0 + 44.0
 	var hs := String(_yd().get(rid.trim_suffix("2"), "Nhà")) + " · " + str(int(W.CX.get(rid, 0))) + " người"
 	var jb := _vs(f)
 	var hsw: float = minf(Box.text_w(hs, 10.0, 700) + 2.0, xr - x)
