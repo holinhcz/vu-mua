@@ -399,6 +399,8 @@ func _fillh(y: float, n: int, cols := 2) -> float:   # (bản 454) cao chip đ�
 		return 0.0
 	var h := (_hb - y - GG - (rows - 1) * 6.0) / rows
 	return clampf(floorf(h), 44.0, 84.0) if h > 44.0 else 0.0
+const CHD := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M2 3.5 L5 6.5 L8 3.5\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # (bản 464) mũi tên mở (khung chung)
+const CHU := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M2 6.5 L5 3.5 L8 6.5\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # mũi tên đóng
 const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
 	var out := [_dbx(x, y, w, h, trk, h * 0.5)]

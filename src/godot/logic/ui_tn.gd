@@ -8,6 +8,7 @@ var W          # w_lang.gd
 var WD         # w_duong.gd
 var SK := {}   # sky.json: hình thời tiết
 var tab := "phong"          # TNV.tab
+var ctx := false            # (bản 464) lúc có tin báo: lưới công trình đang mở
 const TABC := {"phong": "rgb(70, 120, 180)", "nan": "rgb(200, 70, 60)", "so": "rgb(150, 112, 60)"}
 const TNC := {   # màu chip theo loại thiên tai (nhạt như dòng việc Sổ nhiệm vụ): [gradient trên, giữa, dưới, viền]
 	"tn_bao": ["rgb(222, 228, 236)", "rgb(230, 235, 242)", "rgb(240, 243, 247)", "rgb(130, 146, 170)"],
@@ -50,7 +51,7 @@ func step(dt: float) -> void:   # tnRender mỗi giây
 		_build()
 
 func _sig() -> String:
-	return JSON.stringify([tab, W.tn_s(), G.g.coins, G.g.barn, W._r0().get("gach"), W._vr(), W.tn_ok()])
+	return JSON.stringify([tab, ctx, W.tn_s(), G.g.coins, G.g.barn, W._r0().get("gach"), W._vr(), W.tn_ok()])
 
 func _build() -> void:
 	sig = _sig()
@@ -130,9 +131,9 @@ func _ct() -> Array:
 	var wa: bool = WR.tn_waters().size() > 0
 	return [["Giếng, lu, ao", "pic:res://ui/img/xt/g_gieng1.webp", wa, "Hạn: ruộng trong vòng 4 ô quanh giếng, lu, ao không khô chết. Có giếng làng thì bớt thêm 1 nhà mất mùa." + ("" if WR.tn_has("well") else " (Chưa có giếng làng.)")],
 		["Trạm y tế", "svg:res://ui/svg/mat/yte.svg", WR.tn_has("tramyt"), "Dịch: bớt 1 nhà đau ốm, tiền thuốc còn nửa."],
-		["Cầu ván qua sông", "pic:res://ui/img/xt/g_cau1.webp", WR.tn_has("causong"), "Lũ: ruộng ngập hư còn nửa."],
+		["Cầu ván", "pic:res://ui/img/xt/g_cau1.webp", WR.tn_has("causong"), "Lũ: ruộng ngập hư còn nửa."],
 		["Bến ghe", "pic:res://ui/img/xt/g_ben1.webp", WR.tn_has("ben"), "Lũ: ghe chở đồ cứu trợ, nhà ngập cần nửa đồ."],
-		["Đình hay trường làng", "pic:res://ui/img/xt/g_nha11.webp", WD.tn_shelter(), "Bão, lũ, cháy: nhà gặp nạn ở tạm, vẫn đi làm thuê được."],
+		["Đình, trường", "pic:res://ui/img/xt/g_nha11.webp", WD.tn_shelter(), "Bão, lũ, cháy: nhà gặp nạn ở tạm, vẫn đi làm thuê được."],
 		["Chùa làng", "pic:res://ui/img/xt/g_mieu1.webp", WR.tn_has("chua"), "Phát cơm cứu đói: đồ giúp bớt 30%, nhà gặp nạn gượng dậy sớm 2 ngày."]]
 
 # ------------------------------------------------------------------ tab Phòng chống (tnTabPhong)
@@ -194,10 +195,10 @@ func _phong() -> Array:
 				out.append(_dt(X0 + 50.0, y + 9.0, XW - 60.0, 17.0, "Ngày mốt: " + String(WD.TNK[k2].n), 12.0, 800, BROWN, "left"))
 				out.append(_dt(X0 + 50.0, y + 27.0, XW - 60.0, 14.0, "Ngày mai mới làm phòng trước được.", 10.5, 600, SUB, "left"))
 				y += 50.0 + GG
-			var c2 := _chip(X0, y, XW, 66.0, "fut")
+			var c2 := _chip(X0, y, XW, 66.0, "info")   # (bản 464) xanh dương nhạt như chip thông tin
 			out.append(c2)
-			out.append(_dt(X0 + 10.0, y + 9.0, XW - 20.0, 17.0, ("Trận tới còn " + str(nx) + " ngày") if nx > 0 else "Chưa có tin thiên tai", 12.0, 800, BROWN, "left"))
-			out.append(_dt(X0 + 10.0, y + 26.0, XW - 20.0, 14.0, "Mùa " + String(G.SEA_N[sea]).to_lower() + " hay có:", 10.5, 600, SUB, "left"))
+			out.append(_dt(X0 + 10.0, y + 9.0, XW - 20.0, 17.0, ("Trận tới còn " + str(nx) + " ngày") if nx > 0 else "Chưa có tin thiên tai", 12.0, 800, "rgb(40, 80, 130)", "left"))
+			out.append(_dt(X0 + 10.0, y + 26.0, XW - 20.0, 14.0, "Mùa " + String(G.SEA_N[sea]).to_lower() + " hay có (chạm để xem):", 10.5, 600, "rgb(70, 110, 160)", "left"))
 			var cx := X0 + 10.0
 			for wk in W0:
 				var kk := String(wk[0])
@@ -205,14 +206,29 @@ func _phong() -> Array:
 				var cw: float = Box.text_w(nm, 10.0, 700) + 30.0
 				var tc := _chip(cx, y + 42.0, cw, 18.0, _kk(kk))
 				tc.kids = [_kic(cx + 10.0, y + 51.0, 13.0, kk), _dt(cx + 19.0, y + 42.0, cw - 22.0, 18.0, nm, 10.0, 700, BROWN, "left")]
+				tc.act = _dsay.bind(nm + ": " + String(WD.TNK[kk].d))
 				out.append(tc)
 				cx += cw + 5.0
 			y += 66.0 + GG
 	# công trình đỡ thiên tai: lưới 2 cột có hình, có rồi xanh + tick, chưa có kem "Chưa xây"; chạm ô hiện tác dụng
 	out.append_array(_sq(y, "Công trình đỡ thiên tai", "Làng có công trình nào thì trận nào cũng được đỡ. Chạm vào ô để xem công trình đỡ được gì."))
 	y += 16.0 + GG
+	var CT := _ct()
+	var ev0 = W.tn_on(W._vr() + 1) if W.tn_ok() else null
+	if ev0 != null:   # (bản 464) đang có tin báo: thu lưới thành 1 chip, chạm mở
+		var nh := 0
+		for c5 in CT:
+			nh += 1 if c5[2] else 0
+		var cc := _chip(X0, y, XW, 30.0, "fut")
+		cc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, "Đã có " + str(nh) + "/" + str(CT.size()) + " công trình", 11.5, 800, BROWN, "left"),
+			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if ctx else CHD)]
+		cc.act = func(): ctx = not ctx
+		out.append(cc)
+		y += 30.0 + GG
+		if not ctx:
+			return [out, y]
 	var bt := []
-	for c3 in _ct():
+	for c3 in CT:
 		var tip := String(c3[0]) + ": " + String(c3[3])
 		var ac: Callable = _dsay.bind(tip) if c3[2] else _goct.bind(tip)   # (bản 463) chưa xây: hiện tác dụng rồi qua Uy tín làng › Công trình
 		bt.append({"b": String(c3[0]), "s": "Đã có" if c3[2] else "Chưa xây", "ic": String(c3[1]), "st": "on" if c3[2] else "", "k": "fut", "act": ac})
@@ -321,7 +337,7 @@ func _nblock(y: float, uu, nn: Dictionary, ff: Dictionary, day: int) -> Array:  
 		var nd := _nchips(x, yy, w, _need(nn.need, true))
 		out.append_array(nd[0])
 		yy += float(nd[1]) + GG
-		var Rw := ["+60", "h", " thân · +8 uy tín"]
+		var Rw := ["+60", "h", " · +8 uy tín"]
 		out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 11.5, 800, "rgb(40, 130, 50)")[0])
 		out.append(_btn(x + w - 66.0, yy, 66.0, 26.0, "Giúp", WD.tn_help.bind(uu), "go" if WD.tn_have(nn.need) else "off"))
 		yy += 26.0 + 10.0
@@ -356,7 +372,7 @@ func _so() -> Array:
 		var c := _chip(X0, y, XW, h, _kk(k))
 		out.append(c)
 		out.append(_kic(X0 + 22.0, y + 22.0, 26.0, k))
-		var dc := _tchip(X0, y + 8.0, "hôm nay" if ago <= 0 else str(ago) + " ngày trước", "fut", SUB)
+		var dc := _tchip(X0, y + 8.0, "Hôm nay" if ago <= 0 else str(ago) + " ngày trước", "fut", SUB)
 		Snap._move(dc[0], Vector2(XW - 10.0 - float(dc[1]), 0))
 		out.append(dc[0])
 		out.append(_dt(X0 + 42.0, y + 10.0, XW - 60.0 - float(dc[1]), 16.0, String(WD.TNK[k].n), 12.0, 800, BROWN, "left"))
