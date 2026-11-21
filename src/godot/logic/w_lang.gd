@@ -152,6 +152,7 @@ func _init(game) -> void:
 	V_ = _jd("du_lich/danh_gia")
 	A7 = _jd("du_lich/khach")
 	CO = _jd("che_bien/ten_cong_trinh_lam_an")
+	CO["x_ruong"] = CO.get("ruong", "Ruộng muối")   # (bản 440) thuê đứng Ruộng muối: mã việc riêng "x_ruong" (mã xưởng "ruong" trùng việc Làm ruộng)
 	Z7 = _jd("nhan_vat/ten_chuc_nang")
 
 # ------------------------------------------------------------------ tiện ích chung
@@ -2661,6 +2662,13 @@ func nq() -> bool:   # Nq: có ai đang làm thuê
 			return true
 	return false
 
+const XRUONG := "x_ruong"
+static func xj(j) -> String:   # (bản 440) mã việc thuê -> mã xưởng ("x_ruong" -> xưởng "ruong" Ruộng muối)
+	return "ruong" if j == XRUONG else String(j)
+
+static func jx(k: String) -> String:   # mã xưởng -> mã việc thuê
+	return XRUONG if k == "ruong" else k
+
 func wage(t: Dictionary) -> int:   # $5: công mỗi phút
 	var j = t.get("job")
 	var a := 10 if j == "ruong" else (12 if j == "vuon" or j == "chan" else 14)
@@ -3219,7 +3227,7 @@ func n4(t, a: String) -> void:   # n4: thuê nhà t làm việc a ("" = nghỉ)
 	var e = _fam_of(t)
 	if e == null:
 		return
-	if a != "" and a != "ruong" and not E4.has(a) and not (G.xw.sr.has(a) and G.xw.built(a)):
+	if a != "" and a != "ruong" and not E4.has(a) and not (G.xw.sr.has(xj(a)) and G.xw.built(xj(a))):
 		return
 	if E4.has(a) and not yx(a):
 		_ta("Chưa có cây ăn trái nào để chăm." if a == "vuon" else "Chuồng trại chưa có con nào.")
@@ -3234,9 +3242,9 @@ func n4(t, a: String) -> void:   # n4: thuê nhà t làm việc a ("" = nghỉ)
 			return
 	e.job = a if a != "" else null
 	e.wt = 0
-	if a != "" and a != "ruong" and G.xw.sr.has(a):
-		var o: Dictionary = G.xw.sr[a]
-		var q: Array = G.g.work[a].get("q", [])
+	if a != "" and a != "ruong" and G.xw.sr.has(xj(a)):
+		var o: Dictionary = G.xw.sr[xj(a)]
+		var q: Array = G.g.work[xj(a)].get("q", [])
 		var ok: Array = o.rec.filter(func(x): return G.xw.has_in(String(x)))
 		e.jr = q[0] if q.size() else (ok[0] if ok.size() else o.rec[0])
 	_ta(String(e.n) + " ra ruộng phụ bạn: tự gieo lại giống cũ, tưới và gặt." if a == "ruong" else (String(e.n) + " ra vườn phụ bạn: tưới cây, hái trái chín cất vào kho." if a == "vuon" else (String(e.n) + " ra chuồng phụ bạn: cho gà, cừu, bò, heo ăn (lấy thức ăn trong kho) và lượm sản phẩm." if a == "chan" else (String(e.n) + " tới " + String(CO.get(a, a)).to_lower() + " làm phụ." if a != "" else String(e.n) + " về nhà nghỉ."))))
@@ -3604,7 +3612,7 @@ func v_i(t: String, a: int) -> String:   # vI
 func k9(t: Dictionary) -> bool:   # k9: đang làm đúng nghề
 	if not _tr(t.get("job")) or not _tr(t.get("tal")):
 		return false
-	return G.xw.sr.has(t.job) if t.tal == "xuong" else t.tal == t.job
+	return (t.job != "ruong" and G.xw.sr.has(xj(t.job))) if t.tal == "xuong" else t.tal == t.job
 
 func b_i(t) -> void:   # bI: gửi đi học nghề
 	var a = _fam_of(t)
@@ -3912,8 +3920,8 @@ func q_d(t: float) -> void:   # qD: mỗi khung
 		elif E4.has(e.job):
 			i_t(n, e, r, t, o)
 		else:
-			var x = G.xw.sr.get(e.job)
-			if x == null or not G.xw.built(e.job):
+			var x = G.xw.sr.get(xj(e.job))
+			if x == null or not G.xw.built(xj(e.job)):
 				e.job = null
 				continue
 			r.tx = float(x.gx) + float(x.fw) * 0.3
@@ -3924,7 +3932,7 @@ func q_d(t: float) -> void:   # qD: mỗi khung
 				r.ph += t * 2.0
 				if r.t2 <= 0.0:
 					r.t2 = 1.6
-					if fb(e.job, e, o):
+					if fb(xj(e.job), e, o):
 						jb = 1
 			else:
 				r.st = 1
@@ -4025,7 +4033,7 @@ func a_d(t: float) -> void:   # AD: lúc tắt game / ẩn trang: làm thẳng k
 				if m < 12 and xx(k, false) != null:
 					m += 1
 		else:
-			fb(e.job, e, false)
+			fb(xj(e.job), e, false)
 		G.w_all.WCA.klw = null
 
 func dan_at(w: Vector2, le: float, en: Callable, nn: Callable) -> int:   # DD: người làm thuê bị chạm (0 = không)

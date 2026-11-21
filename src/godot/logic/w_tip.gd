@@ -214,7 +214,8 @@ func _vg(t: String) -> String:   # vg: người nhà đang làm ở xưởng t
 	if not (a is Dictionary) or not (a.get("fam") is Dictionary):
 		return ""
 	for n in a.fam:
-		if String(a.fam[n].get("job", "")) == t:
+		var j := String(a.fam[n].get("job", ""))   # (bản 440) "ruong" = Làm ruộng, "x_ruong" = đứng Ruộng muối
+		if ("ruong" if j == "x_ruong" else ("" if j == "ruong" else j)) == t:
 			return String(a.fam[n].get("n", ""))
 	return ""
 

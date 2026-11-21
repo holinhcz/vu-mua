@@ -123,7 +123,7 @@ func _job_opts(u, s: Dictionary, job: String) -> Array:   # [[mã, chữ, tắt]
 	var d := maxi(1, int(ceil(W._gg().size() / 12.0)))
 	var full := job != "ruong" and p.size() >= d
 	h.append(["ruong", "Làm ruộng" + (" (đủ người)" if full else ""), full])
-	var l: Array = G.xw.N0.filter(func(k): return G.xw.built(k) and k != "ruong")
+	var l: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # (bản 440) Ruộng muối thuê được: mã "x_ruong"
 	for v in ["vuon", "chan"] + l:
 		var xn: String = W.vg(v)
 		var k: bool = xn != "" and job != v

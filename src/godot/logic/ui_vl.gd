@@ -555,11 +555,11 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		var C: bool = W.yx(M)
 		bt.append({"b": "Làm vườn" if M == "vuon" else "Chăm chuồng", "k": "j_" + M, "s": t + " đang làm" if E else (str(W.om(e, M)) + " xu/phút" if C else ("Chưa có cây" if M == "vuon" else "Chưa có con")),
 			"ic": JOBIC[M], "st": "on" if w else ("dis" if E or (not C and not w) else "off"), "act": func(): W.n4(u, M)})
-	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k))
+	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # mã việc thuê (Ruộng muối = "x_ruong")
 	var xj: bool = o.has(e.get("job"))   # (bản 439) các xưởng gom 1 chip "Làm xưởng", chạm mở lưới chọn xưởng
 	if o.size():
 		var xs: String = (String(W.CO.get(e.job, e.job)) + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chạm để chọn")
-		var xr: Array = G.xw.sr[e.job].rec if xj else []
+		var xr: Array = G.xw.sr[W.xj(e.job)].rec if xj else []
 		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _xw_tog})
 	var gr := _grid(y, bt, 2, "thue")
 	out.append_array(gr[0])
@@ -572,7 +572,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 			var t: String = W.vg(M)
 			var w: bool = e.get("job") == M
 			var E := t != "" and not w
-			var rec: Array = G.xw.sr[M].rec
+			var rec: Array = G.xw.sr[W.xj(M)].rec
 			var mm: String = M
 			xk.append({"b": String(W.CO.get(M, M)), "s": t + " đang làm" if E else str(W.om(e, M)) + " xu/phút", "ic": String(rec[0]) if rec.size() else "gao", "k": "j_xuong",
 				"st": "on" if w else ("dis" if E else "off"), "act": _xw_pick.bind(mm)})
@@ -594,8 +594,8 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		var g2 := _grid(y, pk, 2, "thue")
 		out.append_array(g2[0])
 		y += float(g2[1]) + 10.0
-	if W._tr(e.get("job")) and e.job != "ruong" and G.xw.sr.has(e.job):
-		var d: Dictionary = G.xw.sr[e.job]
+	if W._tr(e.get("job")) and e.job != "ruong" and G.xw.sr.has(W.xj(e.job)):
+		var d: Dictionary = G.xw.sr[W.xj(e.job)]
 		out.append_array(_sect(y, "Làm món gì?", col))
 		y += 22.0
 		var rk := []
