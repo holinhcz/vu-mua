@@ -254,32 +254,45 @@ func _pjob(y: float, tg: String, t: String, s: String, q: Dictionary, done: bool
 	var x := X0 + 10.0
 	var w := XW - 20.0
 	var yy := y + 10.0
+	var it := _need(q)
+	var side := not done and it.is_empty()   # (bản 466) chỉ tốn xu: giá + nút Làm nằm bên phải, cạnh tên và dòng tả, khối gọn 2 dòng
+	var xw := 0.0
+	if side:
+		var xc0 := _xcost(0.0, 0.0, q)
+		xw = 66.0 + 8.0 + (float(xc0[1]) + 6.0 if float(xc0[1]) > 0.0 else 0.0)
+	var lw := w - xw
 	var tc := _tchip(x, yy - 1.0, tg, "got" if tg == "Ruộng" else "now", "rgb(46, 120, 50)" if tg == "Ruộng" else "rgb(150, 100, 20)")   # (bản 465) nhãn Ruộng / Làng thay chữ "Giữ ruộng:"
 	out.append(tc[0])
 	var tx := x + float(tc[1]) + 6.0
-	out.append(_dt(tx, yy, x + w - 20.0 - tx, 16.0, _fitw(t, 12.0, 800, x + w - 20.0 - tx), 12.0, 800, BROWN, "left"))
+	var tw := x + lw - (20.0 if done else 0.0) - tx
+	var tfs := clampf(12.0 * tw / maxf(1.0, Box.text_w(t, 12.0, 800)), 10.0, 12.0)   # tên dài: bóp chữ trước khi cắt
+	out.append(_dt(tx, yy, tw, 16.0, _fitw(t, tfs, 800, tw), tfs, 800, BROWN, "left"))
 	if done:
 		out.append(_dtick(x + w - 14.0, yy + 2.0, 13.0))
 	yy += 17.0
 	var rt := (" · +" + str(ut) + " uy tín") if ut > 0 else ""
-	var sw: float = minf(Box.text_w(s, 10.5, 600) + 2.0, w - Box.text_w(rt, 10.5, 800) - 4.0)
+	var sw: float = minf(Box.text_w(s, 10.5, 600) + 2.0, lw - Box.text_w(rt, 10.5, 800) - 4.0)
 	out.append(_dt(x, yy, sw, 14.0, _fitw(s, 10.5, 600, sw), 10.5, 600, SUB, "left"))
 	if rt != "":
-		out.append(_dt(x + sw, yy, w - sw, 14.0, rt, 10.5, 800, "rgb(40, 130, 50)", "left"))
-	yy += 14.0 + GG
+		out.append(_dt(x + sw, yy, lw - sw, 14.0, rt, 10.5, 800, "rgb(40, 130, 50)", "left"))
+	if side:
+		var by0 := y + 10.0 + (31.0 - 26.0) * 0.5
+		out.append_array(_xcost(x + w - 72.0, by0, q)[0])
+		out.append(_btn(x + w - 66.0, by0, 66.0, 26.0, "Làm", act, "go" if WD.tn_have(q) else "off"))
+		yy += 14.0 + 10.0
+	else:
+		yy += 14.0 + GG
 	if done:
 		out.append(_dt(x, yy - 4.0, w, 14.0, "Đã làm xong hôm nay.", 10.5, 700, "rgb(46, 120, 50)", "left"))
 		yy += 14.0 + 6.0
-	else:
-		var it := _need(q)
-		var by := yy + (4.0 if it.size() else 0.0)   # chỉ tốn xu: nút lên sát dòng tả, không chừa hàng chip trống
-		var xc := _xcost(x + w - 72.0, by, q)
+	elif not side:
+		var xc := _xcost(x + w - 72.0, yy + 4.0, q)
 		out.append_array(xc[0])
 		var cw := w - 74.0 - (float(xc[1]) + 8.0 if float(xc[1]) > 0.0 else 0.0)
 		var nd := _nchips(x, yy, cw, it)
 		out.append_array(nd[0])
-		out.append(_btn(x + w - 66.0, by, 66.0, 26.0, "Làm", act, "go" if WD.tn_have(q) else "off"))
-		yy += (maxf(34.0, float(nd[1])) if it.size() else 26.0) + 10.0
+		out.append(_btn(x + w - 66.0, yy + 4.0, 66.0, 26.0, "Làm", act, "go" if WD.tn_have(q) else "off"))
+		yy += maxf(34.0, float(nd[1])) + 10.0
 	c.r[3] = yy - y
 	return [out, yy - y]
 
