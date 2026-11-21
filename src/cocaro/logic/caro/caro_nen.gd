@@ -23,6 +23,9 @@ var hen_chicks: Array = []
 var _hrng := RandomNumberGenerator.new()
 
 static var _ur := {}
+static var night := false      # cảnh đêm: có đèn dầu thắp
+var lamp_pos := Vector2(-1, -1)
+var flame: Sprite2D = null
 static func _used(n: String) -> Rect2:
 	# vùng có lá thật của ảnh (css thiết kế)
 	if not _ur.has(n):
@@ -186,6 +189,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
 				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.42)
 				hs = 0.8 * kk                       # Link: gà to lên (ca trà bỏ ở màn nhỏ)
+				if night:
+					add.call("den", R.position.x + R.size.x * 0.14, R.position.y + R.size.y * 0.24, 2.0 * kk, [4, 5, 3, 0.42])
+					hp.x = R.position.x + R.size.x * 0.44
 				# bụi chuối to, mép lá trên chạm đáy khung phản; lá chồm qua góc màn
 				var bw: float = R.size.x * 1.7; var bz_: float = bw / 437.0
 				short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
@@ -234,7 +240,13 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
 	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
-	items = items.filter(func(it): return it[0] != "mam")   # Link 11-21: bỏ ca nước
+	# Link 11-21: bỏ ca nước. Ban đêm chỗ đó đặt cây đèn dầu hột vịt
+	var it2 := []
+	for it in items:
+		if it[0] == "mam":
+			if night: it2.append(["den", it[1], it[2], it[3] * (2.2 if it[3] > 0.9 else 3.4), [4, 5, 3, 0.42]])
+		else: it2.append(it)
+	items = it2
 	for it in items:
 		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
 		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
@@ -257,6 +269,13 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var t := tex(it[0]); var sh: Array = it[4]; var s: float = it[3]
 		var sdw := _shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
 		var spr := _spr(self, t, Vector2(it[1], it[2]), true, 0.0, s)
+		if it[0] == "den":
+			# ngọn lửa: lớp cộng sáng riêng, lập lòe trong _process
+			lamp_pos = Vector2(it[1], it[2])
+			flame = _spr(self, tex("den_lua"), lamp_pos + Vector2(0, -0.3) * s, true, 0.0, s)
+			var am := CanvasItemMaterial.new(); am.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD; flame.material = am
+			flame.z_index = 1
+			flame.set_meta("s0", flame.scale)
 		if it[0] == "ga":
 			# gà mẹ đi lại quanh chỗ của nó, dừng mổ thóc; không bao giờ bước lên khung phản / ra khỏi màn
 			var ur := _used("ga")
@@ -364,6 +383,10 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 func _process(dt: float) -> void:
 	t0 += dt
 	_hen_step(dt)
+	if flame:
+		var fk := 1.0 + 0.06 * sin(t0 * 9.7) + 0.04 * sin(t0 * 23.0 + 1.3)
+		flame.scale = flame.get_meta("s0") * fk
+		flame.modulate.a = 0.85 + 0.15 * sin(t0 * 13.0)
 	var k := fall_scale
 	for o in leaves:
 		var F: Dictionary = o.F
