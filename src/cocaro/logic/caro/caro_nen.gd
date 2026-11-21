@@ -19,6 +19,7 @@ var leaves: Array = []
 var t0 := 0.0
 var fall_scale := 1.0
 var hen := {}
+var ext := Rect2()        # cả cửa sổ (css thiết kế): nền đất / hiên / mái phủ ra hết, món đồ vẫn nằm trong khung
 var hen_chicks: Array = []
 var _hrng := RandomNumberGenerator.new()
 
@@ -119,9 +120,10 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var u: float = f.size.x / dF
 	var P := func(x: float, y: float) -> Vector2: return f.position + (Vector2(x, y) - dB) * u
 	# ---- sân đất (lặp)
-	var g := _spr(self, tex("dat"), Vector2.ZERO, false, 0.0, u)
+	var E: Rect2 = ext if ext.size.x > 0 else Rect2(0, 0, W, H)
+	var g := _spr(self, tex("dat"), E.position, false, 0.0, u)
 	g.region_enabled = true; g.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	g.region_rect = Rect2(0, 0, W / u * PXU, H / u * PXU)
+	g.region_rect = Rect2(E.position.x / u * PXU, E.position.y / u * PXU, E.size.x / u * PXU, E.size.y / u * PXU)
 	var lt: Array = []
 	for i in 6: lt.append(tex("la%d" % i))
 	var items := []      # [tên, x, y, cỡ, bóng]
@@ -284,20 +286,23 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	if roof_x >= 0:
 		var band := GradientTexture2D.new(); var gr := Gradient.new()
 		gr.set_color(0, Color(0.09, 0.11, 0.18, 0.0)); gr.set_color(1, Color(0.09, 0.11, 0.18, 0.47)); band.gradient = gr; band.width = 64; band.height = 4
-		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72 * u, 0); bd.scale = Vector2(80.0 * u / 64.0, H / 4.0); add_child(bd)
-		var m := _spr(self, tex("mai"), Vector2(roof_x, -10 * u), false, 0.0, u)
-		# mái phủ hết chiều cao màn: lặp soi gương theo chiều dọc (liền mạch, không cắt đáy)
+		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72 * u, E.position.y); bd.scale = Vector2(80.0 * u / 64.0, E.size.y / 4.0); add_child(bd)
+		var m := _spr(self, tex("mai"), Vector2(roof_x, E.position.y - 10 * u), false, 0.0, u)
+		# mái phủ hết chiều cao màn: lặp soi gương theo chiều dọc (liền mạch, không cắt đáy); cửa sổ rộng hơn khung -> mái lặp ngang ra tới mép
 		m.texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
-		m.region_enabled = true; m.region_rect = Rect2(0, 0, m.texture.get_width(), (H / u + 20) * PXU)
+		m.region_enabled = true; m.region_rect = Rect2(0, 0, maxf(m.texture.get_width(), (E.end.x - roof_x) / u * PXU), (E.size.y / u + 20) * PXU)
 	# ---- hiên gạch tàu
 	var gt := tex("gach"); var ph := 54.0 if port else 30.0      # (css thiết kế, co theo u)
 	var th := gt.get_height() / PXU
-	var gs := _spr(self, gt, Vector2.ZERO, false, 0.0, u)
+	# hiên gạch: phủ từ mép trên cửa sổ xuống tới bậc hiên (cửa sổ cao hơn khung thì hiên dài thêm lên trên)
+	var gy0: float = minf(0.0, E.position.y)
+	var gs := _spr(self, gt, Vector2(E.position.x, gy0), false, 0.0, u)
 	gs.region_enabled = true; gs.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	var rw_ := (roof_x if roof_x >= 0 else W)
-	gs.region_rect = Rect2(0, (th - fmod(ph, th)) * PXU, rw_ / u * PXU, ph * PXU)
-	var st := ColorRect.new(); st.color = Color8(168, 160, 146); st.position = Vector2(0, ph * u); st.size = Vector2(rw_, 7 * u); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(st)
-	var sd := ColorRect.new(); sd.position = Vector2(0, (ph + 7) * u); sd.size = Vector2(rw_, 10 * u); sd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rw_ := (roof_x if roof_x >= 0 else E.end.x) - E.position.x
+	var hh: float = ph - gy0 / u
+	gs.region_rect = Rect2(E.position.x / u * PXU, (th - fmod(hh, th)) * PXU, rw_ / u * PXU, hh * PXU)
+	var st := ColorRect.new(); st.color = Color8(168, 160, 146); st.position = Vector2(E.position.x, ph * u); st.size = Vector2(rw_, 7 * u); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(st)
+	var sd := ColorRect.new(); sd.position = Vector2(E.position.x, (ph + 7) * u); sd.size = Vector2(rw_, 10 * u); sd.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sd.color = Color(0.12, 0.06, 0.02, 0.25); add_child(sd)
 	_board(L, bimg, board_tex)
 	# ---- bóng tán xoài, bụi chuối, lá rơi, chuối, tán
@@ -323,7 +328,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y)
 		# nửa trên tán khuất trên mép màn (dưới thanh menu), chỉ phần dưới tán thò xuống, đáy tán + bóng vừa chạm trên khung phản
 		# Link 11-21 "cây xoài to ra chạm mép bàn": tán to, mép dưới lá chạm đúng mép trên khung phản (bóng được rơi lên khung)
-		csc = minf(tr.size.y * 3.6 / ty1, W * 1.8 / (tx1 - tx0))
+		csc = minf(maxf(tr.size.y, 120.0) * 3.6 / ty1, W * 1.8 / (tx1 - tx0))
 		cpos = Vector2(-tx0 * csc - 0.08 * (tx1 - tx0) * csc, tr.size.y + 4.0 - ty1 * csc)
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0

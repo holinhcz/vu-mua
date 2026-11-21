@@ -49,6 +49,7 @@ var _bg: Control
 var _pc: Control
 var _hud: Control
 var _vs := Vector2.ZERO
+var _off := Vector2.ZERO     # góc trái trên khung thiết kế trên màn (điểm ảnh)
 var _anim := 0.0            # còn hiệu ứng thì vẽ lại quân mỗi khung
 var _clock := 0.0
 var _thr: Thread = null
@@ -346,17 +347,36 @@ func _colw(w: float, h: float) -> float:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
-	# co đều theo khung màn: ngang cần tối thiểu 620 css cao (bảng chọn) + 900 rộng; dọc 360 rộng + 720 cao
-	var cw0 := vs.x / K0; var ch0 := vs.y / K0
-	# chọn kiểu bố cục cho bàn cờ TO NHẤT trên màn này (màn gần vuông → kiểu dọc: thẻ trên/dưới, bàn cờ rộng hết ngang)
-	var kp := K0 * minf(1.0, minf(cw0 / 360.0, ch0 / 720.0))
-	var kl := K0 * minf(1.0, minf(cw0 / 900.0, ch0 / 620.0))
-	var fp := _face_size(vs.x / kp, vs.y / kp, true) * kp
-	var fl := _face_size(vs.x / kl, vs.y / kl, false) * kl
-	var port := fp > fl * 1.04
-	K = kp if port else kl
-	W = vs.x / K
-	H = vs.y / K
+	# Link 11-21 "3 bố cục cố định": cửa sổ nào cũng lấy 1 trong 3 khung thiết kế (dọc / gần vuông / ngang) gần tỉ lệ nhất,
+	# xếp cảnh trong khung đó rồi co giãn NGUYÊN KHỐI cho vừa cửa sổ, đặt giữa; chỗ dư chỉ lộ thêm sân đất / hiên / mái.
+	var r := vs.x / maxf(vs.y, 1.0)
+	# khung thiết kế = đúng tỉ lệ máy thật (css): máy thật nào cũng khớp khung của nó, cửa sổ kéo tự do lấy khung gần nhất
+	var FR := [
+		[Vector2(360, 860), true],    # Fold gập (màn ngoài hẹp) 0.42
+		[Vector2(412, 915), true],    # Android dài / iPhone (390x844, 430x932) 0.45
+		[Vector2(412, 735), true],    # điện thoại có thanh trình duyệt, máy cũ 0.56
+		[Vector2(474, 696), true],    # iPhone Fold gập (màn ngoài 2088x1422) 0.68
+		[Vector2(640, 904), true],    # iPhone Fold mở dọc (2713x1920) 0.71, iPad Air dọc 0.69
+		[Vector2(768, 1024), true],   # iPad dọc 0.75
+		[Vector2(860, 1000), true],   # Fold mở dọc 0.86
+		[Vector2(1000, 860), false],  # Fold mở ngang 1.16
+		[Vector2(1024, 768), false],  # iPad ngang 1.33
+		[Vector2(904, 640), false],   # iPhone Fold mở ngang 1.41, iPad Air ngang 1.44
+		[Vector2(1440, 900), false],  # laptop 16:10
+		[Vector2(1600, 900), false],  # màn 16:9
+		[Vector2(1980, 900), false]]  # màn rộng 21:9
+	var best := 0; var bd_ := 1e9
+	for i in FR.size():
+		var d := absf(log(r / (FR[i][0].x / FR[i][0].y)))
+		if d < bd_: bd_ = d; best = i
+	var DS: Vector2 = FR[best][0]
+	var port: bool = FR[best][1]
+	K = minf(vs.x / DS.x, vs.y / DS.y)
+	W = DS.x
+	H = DS.y
+	_off = ((vs - DS * K) / 2.0).round()
+	for c in [_bg, _pc, _hud]:
+		c.position = _off
 	L = {"port": port}
 	var safe := 6.0
 	L.tools = Rect2(8, 8 + safe, minf(W - 16, 420), 36)
@@ -409,6 +429,7 @@ func _layout() -> void:
 			_fetch_art()
 	_nen.scale = Vector2(K, K)
 	_crisp.clear()
+	_nen.ext = Rect2(-_off / K, _vs / K)
 	_nen.build(L, W, H, crisp("board", Vector2i(roundi(L.bimg.size.x * K), roundi(L.bimg.size.y * K))))
 	_redraw_all()
 
@@ -665,9 +686,9 @@ func _panel(ci: CanvasItem, h: float, low := false) -> Rect2:
 			r.position.y = clampf(f.end.y + 18, 12, H - h - 12)
 		else:
 			r.position.x = maxf(12, f.position.x - w - 16)
-		ci.draw_rect(Rect2(0, 0, W, H), Color8(30, 18, 8, 50))
+		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 50))
 	else:
-		ci.draw_rect(Rect2(0, 0, W, H), Color8(30, 18, 8, 120))
+		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 120))
 	_box(ci, r, CARD, 18, Color8(196, 150, 96), 2.4)
 	# khăn rằn trên đầu hộp
 	var sr := Rect2(r.position.x + 18, r.position.y + 12, r.size.x - 36, 9)
@@ -828,7 +849,7 @@ func _gui_input(ev: InputEvent) -> void:
 	else:
 		return
 	accept_event()
-	var X := pos / K
+	var X := (pos - _off) / K
 	if down:
 		_press = _hit(X)
 		if _press != "":
