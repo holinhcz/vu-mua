@@ -10,7 +10,7 @@ var op := ""                # (bản 453) nghề đang mở danh sách điều k
 
 const TABC := {"nghe": "rgb(176, 136, 70)", "don": "rgb(214, 160, 30)", "cho": "rgb(60, 140, 40)"}
 const NGC := {   # màu chip riêng bảng Nghề: [gradient trên, giữa, dưới, viền]
-	"nghe": ["rgb(244, 230, 196)", "rgb(248, 238, 210)", "rgb(252, 246, 228)", "rgb(176, 136, 70)"],
+	"nghe": ["rgb(250, 243, 226)", "rgb(252, 247, 234)", "rgb(255, 251, 242)", "rgb(186, 148, 86)"],   # (bản 457) nhạt hơn cho chip món nổi
 	"don": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
 }
 const CHD := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M2 3.5 L5 6.5 L8 3.5\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # mũi tên mở
@@ -140,11 +140,16 @@ func _nghe() -> Array:
 			elif who.size():
 				s = (String(who[0]) + " dạy") if who.size() == 1 else (str(who.size()) + " nhà dạy")   # (bản 454) nhiều nhà: ghi số, chạm chip mới hiện đủ tên
 				k = "got"
-			else:
-				s = "Chưa ai giữ nghề"
+			else:   # (bản 457) chưa ai giữ: nói rõ chờ gì (cấp để có nguyên liệu, hay chờ dòng họ mới về làng)
+				var lv := _lvn(gx)
+				s = ("Mở ở cấp " + str(lv)) if lv > 0 else "Chờ dòng họ mới"
 			var pid := _pid(gx)
 			var tip := String(gx.n) + ": " + String(gx.d) + (" Học ở nhà " + ", ".join(PackedStringArray(who)) + "." if who.size() > 1 else "") + (" Làm thử hư " + str(hu) + " lần." if hu else "")
-			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip)})
+			if not (p is Dictionary) and who.is_empty():
+				tip += (" Lên cấp " + str(_lvn(gx)) + " mới có nhà giữ nghề này." if _lvn(gx) > 0 else " Làng có dòng họ mới về thì sẽ có nhà giữ nghề này.")
+			var od := 0 if k == "now" else (1 if k == "got" else (2 if _lvn(gx) == 0 else 3))
+			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip), "od": od})
+		bt.sort_custom(func(a, b2): return int(a.od) < int(b2.od))   # đang học -> có nhà dạy -> chờ họ mới -> chờ cấp
 		var g := _grid(y, bt, 2, "got", _fillh(y, bt.size()) if own.is_empty() else 0.0)   # (bản 454) chưa học nghề nào: lưới giãn kín thân
 		out.append_array(g[0])
 		y += float(g[1]) + GG
@@ -170,17 +175,22 @@ func _card(y: float, gx: Dictionary, S: Dictionary, Lk: int) -> Array:   # (bả
 	# hàng 1: hình, tên, sao tới mức nghề lên được; chip nghề chính (chạm để chọn / bỏ)
 	out.append(_icn(x + 15.0, yy + 15.0, 30.0, _pid(gx)))
 	var tx := x + 38.0
-	var ct: String = ("Bấm lần nữa: tụt về 3 sao" if arm == b else "Nghề chính") if ch else "Chọn làm chính"
-	var tg := _tchip(x, yy, ct, ("sen" if arm == b else "got") if ch else "fut", ("rgb(170, 50, 60)" if arm == b else "rgb(46, 120, 50)") if ch else SUB, _chinh.bind(b), 20.0)
-	Snap._move(tg[0], Vector2(w - float(tg[1]), 0))
+	var ct: String = ("Bấm lần nữa: tụt về 3 sao" if arm == b else "Nghề chính") if ch else "Chọn làm chính"   # (bản 457) chip có hình sao, chưa chọn: vàng nổi như nút
+	var CP := ["s", " " + ct] if arm != b else [ct]
+	var cw: float = float(_rowi(0.0, 0.0, 22.0, CP, 10.5, 700, "")[1]) + 14.0
+	var ckd := ("sen" if arm == b else "got") if ch else "now"
+	var cc0 := _chip(x + w - cw, yy - 1.0, cw, 22.0, ckd)
+	cc0.kids = _rowi(x + w - cw + 6.0, yy - 1.0, 22.0, CP, 10.5, 700, ("rgb(170, 50, 60)" if arm == b else "rgb(46, 120, 50)") if ch else BROWN)[0]
+	cc0.act = _chinh.bind(b)
+	var tg := [cc0, cw]
 	if ch or S.chinh.size() < W.NGCHINH:
-		out.append(tg[0])
+		out.append(cc0)
 	var nw := w - 38.0 - float(tg[1]) - 6.0
 	out.append(_dt(tx, yy, nw, 17.0, _fitw(String(gx.n), 12.0, 800, nw), 12.0, 800, BROWN, "left"))
 	out.append_array(_stars(tx, yy + 18.0, s, mx))
 	yy += 34.0
 	# hàng 2: điểm hôm nay, giá chợ
-	out.append_array(_rowi(x, yy, 15.0, ["Hôm nay +" + str(W.ng_diem_nay(b)) + "/" + str(W.ht_ngay()) + " điểm · Chợ trả " + W._sa(W.ng_kho(b)), "c"], 10.5, 600, SUB)[0])
+	out.append_array(_rowi(x, yy, 15.0, ["Tay nghề hôm nay " + str(W.ng_diem_nay(b)) + "/" + str(W.ht_ngay()) + " · Chợ trả " + W._sa(W.ng_kho(b)), "c"], 10.5, 600, SUB)[0])
 	yy += 15.0 + GG
 	# hàng 3: món cần (trái) + nút Làm (phải, canh giữa hàng chip)
 	var it := []
@@ -335,7 +345,7 @@ func _don_c(y: float, d: Dictionary, day: int) -> Array:   # (bản 455) khối 
 	if W._tr(d.get("ut")):
 		Rw.append(" · +" + W._sv(d.ut) + " uy tín")
 	if W._tr(d.get("th")) and f != null:
-		Rw.append_array([" · +", "h"])
+		Rw.append_array([" · +", "h", " thân"])
 	out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 11.5, 800, "rgb(40, 130, 50)")[0])
 	out.append(_btn(x + w - 84.0, yy, 84.0, 26.0, "Giao hàng", func(): W.ng_giao(id0), "go" if ok else "off"))
 	yy += 26.0 + 10.0
@@ -362,15 +372,16 @@ func _cho() -> Array:
 	for x0 in W.M6:
 		if W.ng_base(x0.id) != "":
 			ids.append(String(x0.id))
+	var nd := _oneed()   # (bản 457) món đơn làng đang thiếu (hàng thường): xếp lên đầu, gắn chip "Đơn cần N"
+	var base := ids.duplicate()
+	ids.sort_custom(func(a, b2): return int(nd.get(a, 0)) > int(nd.get(b2, 0)) if int(nd.get(a, 0)) != int(nd.get(b2, 0)) else base.find(a) < base.find(b2))
 	var bh := _fillh(y, ids.size())   # (bản 454) lưới giãn kín thân, thêm dòng "Kho có N"
 	var big := bh > 0.0
 	if not big:
 		bh = 44.0
 	var i := 0
-	for x0 in W.M6:
-		if W.ng_base(x0.id) == "":
-			continue
-		var id := String(x0.id)
+	var ord0 := ids.duplicate()
+	for id in ord0:
 		var p: int = W._ai(id) * 3
 		var n: int = 1 + int(W.htv("t_lai")) - W._i(L.n.get(id))
 		var cx := X0 + (i % 2) * (bw + g)
@@ -382,15 +393,51 @@ func _cho() -> Array:
 		var ks := [_icn(cx + (24.0 if big else 21.0), cy + bh * 0.5, 34.0 if big else 26.0, id), _dt(tx, ty, tw, 15.0, _fitw(_nm(id), 11.5, 800, tw), 11.5, 800, BROWN if n > 0 else "rgb(120, 112, 98)", "left")]
 		if n > 0:
 			var rich: bool = W._n(G.g.coins) >= p
-			ks.append_array(_rowi(tx, ty + 16.0, 14.0, [W._sa(p), "c", " · còn " + str(n)], 10.5, 700, SUB if rich else "rgb(190, 60, 50)")[0])
+			var pr := _rowi(tx, ty + 16.0, 14.0, [W._sa(p), "c"], 10.5, 700, SUB if rich else "rgb(190, 60, 50)")   # (bản 457) thiếu xu: chỉ số giá đỏ
+			ks.append_array(pr[0])
+			ks.append(_dt(tx + float(pr[1]), ty + 16.0, 60.0, 14.0, " · còn " + str(n), 10.5, 700, SUB, "left"))
 			c.act = (func(): W.ng_lai_mua(id)) if rich else _dsay.bind("Thiếu xu: " + _nm(id) + " giá " + W._sa(p) + " xu.")
 		else:
 			ks.append(_dt(tx, ty + 16.0, tw, 14.0, "Hết, mai ghé lại", 10.5, 600, "rgb(130, 124, 112)", "left"))
 		if big:
 			ks.append(_dt(tx, ty + 31.0, tw, 13.0, "Kho có " + str(W._barn(id)), 10.0, 600, "rgb(150, 128, 96)", "left"))
+		if int(nd.get(id, 0)) > 0:
+			var bt := "Đơn cần " + str(nd[id])
+			var bw2: float = Box.text_w(bt, 9.0, 800) + 10.0
+			var bx2: float = tx + Box.text_w("Kho có " + str(W._barn(id)), 10.0, 600) + 6.0 if big else cx + bw - 5.0 - bw2   # lưới giãn: nằm cuối dòng "Kho có"; lưới thường: góc phải trên
+			var by2: float = ty + 30.5 if big else cy + 5.0
+			var bc := _chip(bx2, by2, bw2, 14.0, "info")
+			bc.kids = [_dt(bx2, by2, bw2, 14.0, bt, 9.0, 800, "rgb(60, 110, 170)")]
+			ks.append(bc)
+			if not big:
+				ks[1].r[2] = maxf(20.0, float(ks[1].r[2]) - bw2 - 4.0)
+				ks[1].text = _fitw(_nm(id), 11.5, 800, float(ks[1].r[2]))
 		c.kids = ks
 		out.append(c)
 		i += 1
 	var rows := int(ceil(i / 2.0))
 	y += rows * bh + maxf(0, rows - 1) * g + GG
 	return [out, y]
+
+func _oneed() -> Dictionary:   # (bản 457) món nghề đơn làng còn thiếu, chỉ phần hàng thường (thương lái chỉ bán hàng thường): {món: số}
+	var r := {}
+	if not W.ng_on():
+		return r
+	for d in W.ng_d().l:
+		for z in d.it:
+			if int(z[2]) != 0:
+				continue
+			var b0 := String(z[0])
+			var m: int = maxi(0, int(z[1]) - W.ng_has(b0, 0))
+			if m > 0:
+				r[b0] = int(r.get(b0, 0)) + m
+	return r
+
+func _lvn(gx: Dictionary) -> int:   # (bản 457) cấp cần để nghề có người giữ (nguyên liệu mở ở cấp đó); 0 = đủ cấp, chờ dòng họ mới
+	if W.ng_ok_lv(gx.id):
+		return 0
+	var bf: Callable = W._x("Bf")
+	var m := 0
+	for z in gx.get("in", []):
+		m = maxi(m, int(bf.call(z[0])) if bf.is_valid() else 0)
+	return m
