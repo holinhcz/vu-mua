@@ -173,7 +173,7 @@ func _card(y: float, gx: Dictionary, S: Dictionary, Lk: int) -> Array:   # (bả
 	var rd: bool = W.ng_thi_ready(b)
 	var ch: bool = W.ng_chinh(b)
 	var out := []
-	var c := _chip(X0, y, XW, 10.0, "nghe")
+	var c := _chip(X0, y, XW, 10.0, "got" if W.ng_thi_ready(String(gx.id)) else ("fire_l" if W.ng_chinh(String(gx.id)) else "nghe"))   # (bản 460) đủ thi: xanh; nghề chính: cam lửa; thường: kem
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
