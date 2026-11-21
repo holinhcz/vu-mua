@@ -9,9 +9,10 @@ const WIND := preload("res://logic/caro/wind9.gdshader")
 const SHAD := preload("res://logic/caro/shadow9.gdshader")
 static var _tex := {}
 static var _noise: Texture2D = null
-# Q = số điểm ảnh/css nạp vào GPU. File gốc vẫn 9px; màn hình chỉ hiện ~dpr điểm/css nên nạp Q = ceil(dpr) (tối đa 9)
+# Q = số điểm ảnh/css nạp vào GPU. File gốc vẫn 9px; màn hình chỉ hiện ~dpr điểm/css nên nạp Q = ceil(điểm màn/css cảnh) (tối đa 9)
 # để không tràn bộ nhớ đồ hoạ (9px nguyên = ~756 MB). Kích thước báo về vẫn là 9px (size_override) nên toạ độ không đổi.
 static var Q := 9.0
+static var Q_fixed := false
 var LJ: Dictionary
 var leaves: Array = []
 var t0 := 0.0
@@ -74,7 +75,14 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	leaves.clear()
 	LJ = JSON.parse_string(FileAccess.get_file_as_string(D + "layout.json"))
 	var port: bool = L.port
-	var f: Rect2 = L.face
+	# co đều cả cảnh theo cỡ tấm phản (thiết kế: ngang phản 896 css, dọc 394 css) → không méo, không to lố trên màn nhỏ
+	var u: float = clampf(L.face.size.x / (394.0 if port else 896.0), 0.3, 3.0)
+	scale *= u
+	if _tex.is_empty() and not Q_fixed:
+		Q = clampf(ceilf(scale.x), 2.0, 9.0)   # = điểm ảnh màn / css cảnh
+	W /= u; H /= u
+	var f := Rect2(L.face.position / u, L.face.size / u)
+	var bimg := Rect2(L.bimg.position / u, L.bimg.size / u)
 	# ---- sân đất (lặp)
 	var g := _spr(self, tex("dat"), Vector2.ZERO, false)
 	g.region_enabled = true; g.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -165,7 +173,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	sd.color = Color(0.12, 0.06, 0.02, 0.25); add_child(sd)
 	# ---- tấm phản
 	var b := Sprite2D.new(); b.texture = board_tex; b.centered = false
-	var bi: Rect2 = L.bimg
+	var bi: Rect2 = bimg
 	b.position = bi.position; b.scale = bi.size / board_tex.get_size(); b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_child(b)
 	# ---- bóng tán xoài, bụi chuối, lá rơi, chuối, tán

@@ -57,8 +57,11 @@ var _ai_res := -1
 var _ready_ok := false
 var _press := ""            # nút đang nhấn (để nhún)
 
+var K0 := 1.0              # dpr của máy; K = K0 * co cho vừa màn (màn nhỏ / thấp thì co cả game lại)
+
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	K0 = maxf(1.0, k)
+	K = K0
 
 # ------------------------------------------------------------ ảnh
 func img(name: String) -> Texture2D:
@@ -301,6 +304,12 @@ func _maybe_ai() -> void:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
+	# co đều theo khung màn: ngang cần tối thiểu 620 css cao (bảng chọn) + 900 rộng; dọc 360 rộng + 720 cao
+	var cw0 := vs.x / K0; var ch0 := vs.y / K0
+	if ch0 >= cw0 * 1.15:
+		K = K0 * minf(1.0, minf(cw0 / 360.0, ch0 / 720.0))
+	else:
+		K = K0 * minf(1.0, minf(cw0 / 900.0, ch0 / 620.0))
 	W = vs.x / K
 	H = vs.y / K
 	var port := H >= W * 1.15
@@ -323,7 +332,8 @@ func _layout() -> void:
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 	else:
 		var colw := minf(250, W * 0.34)
-		face = minf(H - 24, W - colw - 40)
+		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
+		face = minf(H - 24, (W - colw - 30) / rw)
 		fx = colw + 20 + (W - colw - 20 - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
 		L.tools = Rect2(8, 8 + safe, colw, 36)
@@ -341,9 +351,8 @@ func _layout() -> void:
 	L.gy = fy + (float(BJ.gy0) - float(BJ.face[1])) * px
 	L.cs = float(BJ.cs) * px
 	if _nen == null:
-		NEN.Q = clampf(ceilf(K), 2.0, 9.0)
 		for a in OS.get_cmdline_user_args():
-			if a.begins_with("--q="): NEN.Q = float(a.substr(4))
+			if a.begins_with("--q="): NEN.Q = float(a.substr(4)); NEN.Q_fixed = true
 		_nen = NEN.new()
 		_bg.add_child(_nen)
 	_nen.scale = Vector2(K, K)
