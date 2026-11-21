@@ -62,6 +62,11 @@ const VLC := {
 	"j_chan": ["rgb(252, 230, 214)", "rgb(253, 236, 224)", "rgb(254, 243, 236)", "rgb(214, 156, 116)"],
 	"j_xuong": ["rgb(238, 230, 248)", "rgb(242, 236, 250)", "rgb(247, 243, 252)", "rgb(170, 146, 206)"],
 	"giong": ["rgb(226, 242, 206)", "rgb(232, 246, 216)", "rgb(240, 250, 230)", "rgb(120, 170, 80)"],
+	"s_ruong": ["rgb(222, 242, 204)", "rgb(230, 246, 216)", "rgb(240, 250, 230)", "rgb(110, 170, 70)"],   # (bản 442) màu khối sở trường theo nghề
+	"s_vuon": ["rgb(255, 232, 196)", "rgb(255, 238, 210)", "rgb(255, 246, 228)", "rgb(220, 150, 50)"],
+	"s_chan": ["rgb(250, 222, 200)", "rgb(252, 230, 212)", "rgb(254, 240, 228)", "rgb(200, 130, 80)"],
+	"s_xuong": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
+	"nghe": ["rgb(244, 230, 196)", "rgb(248, 238, 210)", "rgb(252, 246, 228)", "rgb(176, 136, 70)"],
 	"tal": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"nan": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 }
@@ -180,7 +185,7 @@ static func _cap(t: String) -> String:   # chữ đầu viết hoa ("đem ra ch�
 
 func _lockc(x: float, y: float, t: String) -> Dictionary:   # chip khóa: hình ổ khóa + "Thân N"
 	var lb := _chip(x, y, 84.0, 26.0, "miss")
-	lb.kids = [_dic(x + 6.0, y + 5.0, 16.0, LOCK), _dt(x + 24.0, y, 58.0, 26.0, t, 10.5, 700, "rgb(110, 104, 92)")]
+	lb.kids = [_dic(x + 7.0, y + 6.0, 14.0, HEART), _dt(x + 22.0, y, 60.0, 26.0, t, 10.5, 700, "rgb(150, 70, 70)")]   # (bản 442) khóa thân: hình tim + "Cần N tim"
 	return lb
 
 func _wrap(t: String, fs: float, fw: int, w: float) -> Array:
@@ -665,42 +670,47 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var out := []
 	var col: String = TABC.tal
 	var y := 6.0
-	# tính nết
-	out.append_array(_sect(y, "Tính nết", col))
-	y += 22.0
+	# tính nết: (bản 442) tiêu đề ghi tên tính, khối chỉ câu giải thích; thích / ghét / ngày riêng chưa biết gộp 1 dòng
 	var TT: Dictionary = W.tinh_of(f)
 	var tk := String(f.get("tp", ""))
 	var Li: Dictionary = W.fam_likes(u)
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
+	out.append_array(_sect(y, "Tính nết: " + String(TT.n), col))
+	y += 22.0
 	var c := _chip(X0, y, XW, 10.0, "t_" + tk if VLC.has("t_" + tk) else "t_khac")
 	out.append(c)
-	var tw: float = Box.text_w(String(TT.n), 12.0, 800) + 4.0
-	out.append(_dt(X0 + 10.0, y + 8.0, tw, 16.0, String(TT.n), 12.0, 800, BROWN, "left"))
-	var pp := _para(X0 + 10.0 + tw + 6.0, y + 9.0, XW - 26.0 - tw, String(TT.d), 10.0, 600, SUB, 13.0)
+	var pp := _para(X0 + 10.0, y + 8.0, XW - 20.0, String(TT.d), 10.5, 600, BROWN, 14.0)
 	out.append_array(pp[0])
-	var yy := y + 8.0 + maxf(16.0, float(pp[1])) + 6.0
+	var yy := y + 8.0 + float(pp[1]) + 6.0
 	var L := [["Thích", Li.th[0], k.get("a")], ["", Li.th[1], k.get("b")], ["Ghét", Li.gh, k.get("x")]]
-	var ix := X0 + 10.0
+	var any := false
 	for it in L:
-		if String(it[0]) != "":
-			var lw: float = Box.text_w(String(it[0]) + ":", 10.0, 700) + 4.0
-			out.append(_dt(ix, yy, lw, 24.0, String(it[0]) + ":", 10.0, 700, SUB, "left"))
-			ix += lw
-		var id := String(it[1])
-		var kn: bool = W._tr(it[2])
-		if kn:
-			out.append(_icn(ix + 11.0, yy + 12.0, 22.0, id))
-		else:
-			out.append(_dic(ix + 1.0, yy + 2.0, 20.0, QMARK))
-		var nm := String(W._ae(id).get("name", id)) if kn else ""   # chưa biết: chỉ hình dấu hỏi
-		var nw: float = minf(Box.text_w(nm, 10.0, 700) + 2.0, 62.0) if kn else 0.0
-		if kn:
-			out.append(_dt(ix + 24.0, yy, nw, 24.0, _fitw(nm, 10.0, 700, nw), 10.0, 700, BROWN, "left"))
-		ix += 24.0 + nw + 8.0
-	yy += 28.0
-	var nr := ("Ngày riêng: ngày " + str(Li.ngay) + " mỗi mùa (" + String(Li.ly) + ")") if W._tr(k.get("d")) else "Ngày riêng: chưa biết. Trò chuyện, tặng quà để biết thêm."
-	out.append(_dt(X0 + 10.0, yy, XW - 20.0, 14.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
-	yy += 20.0
+		any = any or W._tr(it[2])
+	var nd: bool = W._tr(k.get("d"))
+	if not any and not nd:
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết. Trò chuyện, tặng quà để biết.", 10.0, 600, SUB, "left"))
+		yy += 20.0
+	else:
+		if any:
+			var ix := X0 + 10.0
+			for it in L:
+				if not W._tr(it[2]):
+					continue
+				if String(it[0]) != "" or ix == X0 + 10.0:
+					var lb := (String(it[0]) if String(it[0]) != "" else "Thích") + ":"
+					var lw: float = Box.text_w(lb, 10.0, 700) + 4.0
+					out.append(_dt(ix, yy, lw, 24.0, lb, 10.0, 700, SUB, "left"))
+					ix += lw
+				var id := String(it[1])
+				out.append(_icn(ix + 11.0, yy + 12.0, 22.0, id))
+				var nm := String(W._ae(id).get("name", id))
+				var nw: float = minf(Box.text_w(nm, 10.0, 700) + 2.0, 62.0)
+				out.append(_dt(ix + 24.0, yy, nw, 24.0, _fitw(nm, 10.0, 700, nw), 10.0, 700, BROWN, "left"))
+				ix += 24.0 + nw + 10.0
+			yy += 28.0
+		var nr := ("Ngày riêng: ngày " + str(Li.ngay) + " mỗi mùa (" + String(Li.ly) + ")") if nd else "Ngày riêng: chưa biết"
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 14.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
+		yy += 20.0
 	c.r[3] = yy - y
 	y = yy + 12.0
 	# sở trường làm thuê
@@ -709,14 +719,28 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var l: Dictionary = W.W3[r]
 	out.append_array(_sect(y, "Sở trường: " + String(l.n), col))
 	y += 22.0
-	var c2 := _chip(X0, y, XW, 10.0, "tal")
+	var c2 := _chip(X0, y, XW, 10.0, "s_" + r if VLC.has("s_" + r) else "tal")   # màu theo nghề
 	out.append(c2)
-	out.append(_icn(X0 + 24.0, y + 22.0, 30.0, String(TALIC.get(r, "lua"))))
+	out.append(_icn(X0 + 24.0, y + 26.0, 30.0, String(TALIC.get(r, "lua"))))
 	for i in 5:
 		out.append(_pic(X0 + 46.0 + i * 16.0, y + 8.0, 14.0, 14.0, "res://ui/img/bong/" + ("sao.png" if i < o else "sao_xam.png")))
-	var d2 := _para(X0 + 46.0, y + 26.0, XW - 56.0, W.v_i(r, o) + (" · đang đúng nghề" if W.k9(f) else ""), 10.0, 600, SUB, 13.0)
-	out.append_array(d2[0])
-	yy = y + 26.0 + float(d2[1]) + 8.0
+	if W.k9(f):
+		out.append(_dt(X0 + 46.0 + 5 * 16.0 + 6.0, y + 7.0, 110.0, 16.0, "· đang đúng nghề", 10.0, 700, "rgb(46, 120, 50)", "left"))
+	# (bản 442) bảng so sánh: hiện tại -> sao kế (xanh)
+	var rows := [["Công rẻ", str(W.q_l(o)) + "%", str(W.q_l(o + 1)) + "%"]]
+	if r == "xuong":
+		rows.append(["Xưởng nhanh", str(4 * o) + "%", str(4 * (o + 1)) + "%"])
+	else:
+		rows.append([_cap(String(l.d).replace(" 1", "")), str(W.b_l(o)) + "%", str(W.b_l(o + 1)) + "%"])
+	yy = y + 28.0
+	for rw in rows:
+		out.append(_dt(X0 + 46.0, yy, 90.0, 16.0, String(rw[0]), 10.5, 600, SUB, "left"))
+		out.append(_dt(X0 + 138.0, yy, 40.0, 16.0, String(rw[1]), 11.0, 800, BROWN, "left"))
+		if o < 5:
+			out.append(_dt(X0 + 172.0, yy, 20.0, 16.0, "→", 11.0, 700, SUB))
+			out.append(_dt(X0 + 194.0, yy, 44.0, 16.0, String(rw[2]), 11.0, 800, "rgb(46, 130, 50)", "left"))
+		yy += 17.0
+	yy += 6.0
 	if W._tr(f.get("tt")):
 		var cs := maxf(0.0, (W._n(f.tt) - G._now_ms()) / 1000.0)
 		var p2 := _para(X0 + 10.0, yy + 3.0, XW - 100.0, "Đang đi học nghề lên " + str(o + 1) + " sao, còn " + G.ao(cs) + ".", 10.0, 700, BROWN, 13.0)
@@ -726,11 +750,9 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	elif o < 5:
 		var fz: int = W.m_i(o)
 		var lk: bool = W._i(f.get("tim")) < o
-		var lw := XW - 110.0   # (bản 434) 2 dòng gọn: hiệu lực sao kế, rồi điều kiện
-		out.append(_dt(X0 + 10.0, yy - 1.0, lw, 14.0, _fitw("Lên " + str(o + 1) + " sao: " + W.v_i(r, o + 1).split(": ", true, 1)[-1], 10.0, 700, lw), 10.0, 700, BROWN, "left"))
-		out.append(_dt(X0 + 10.0, yy + 13.0, lw, 13.0, _fitw("Thân " + str(o) + " · " + W._sa(fz) + " xu · học " + G.ao(W.n_l(o)), 9.5, 600, lw), 9.5, 600, SUB, "left"))
+		out.append(_dt(X0 + 10.0, yy + 5.0, XW - 110.0, 15.0, _fitw("Lên " + str(o + 1) + " sao: " + W._sa(fz) + " xu · học " + G.ao(W.n_l(o)), 10.0, 700, XW - 110.0), 10.0, 700, BROWN, "left"))
 		if lk:
-			out.append(_lockc(X0 + XW - 94.0, yy, "Thân " + str(o)))
+			out.append(_lockc(X0 + XW - 94.0, yy, "Cần " + str(o) + " tim"))
 		else:
 			out.append(_btn(X0 + XW - 94.0, yy, 84.0, 26.0, "Gửi đi học", func(): W.b_i(u), "go"))
 		yy += 26.0 + 10.0
@@ -757,33 +779,34 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 	y += 22.0
 	var r: Array
 	if W.t6().has(x.id):
-		r = _job(y, "tal", "Đã học nghề " + String(x.n).to_lower(), "Mở bảng Nghề (nhóm Làm ăn) để làm.", [], 0, "", null)
+		r = _job(y, "nghe", "Đã học nghề " + String(x.n).to_lower(), "Mở bảng Nghề (nhóm Làm ăn) để làm.", [], 0, "", null)
 	elif W._i(f.get("tim")) < 3:
-		var lc := _chip(X0, y, XW, 46.0, "tal")   # chưa đủ thân: chip khóa như Sở trường
-		var lw := XW - 110.0
-		r = [[lc, _dt(X0 + 10.0, y + 7.0, lw, 15.0, _fitw("Nghề " + String(x.n).to_lower() + " gia truyền", 11.5, 800, lw), 11.5, 800, BROWN, "left"),
-			_dt(X0 + 10.0, y + 24.0, lw, 13.0, "Thân 3 tim thì họ mới nhận dạy.", 9.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 10.0, "Thân 3")], 46.0]
+		var lc := _chip(X0, y, XW, 48.0, "nghe")   # (bản 442) chưa đủ thân: hình món làm ra + 1 câu + khóa tim
+		var pid: String = String(x.id) if not W._ae(x.id).is_empty() else String(x["in"][0][0])
+		var lw := XW - 150.0
+		r = [[lc, _icn(X0 + 24.0, y + 24.0, 30.0, pid), _dt(X0 + 46.0, y + 6.0, lw, 18.0, _fitw(String(W._ae(pid).get("name", x.n)), 11.5, 800, lw), 11.5, 800, BROWN, "left"),
+			_dt(X0 + 46.0, y + 25.0, lw, 14.0, "Thân 3 tim họ mới nhận dạy", 9.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 11.0, "Cần 3 tim")], 48.0]
 	elif not W._tr(p):
 		var nd: Array = W.hn_in1(u, f)
 		var ot = W.nghe_by_id(H.a) if W._tr(H.get("a")) and H.a != x.id else null
 		var hc: int = W.ng_hoc_cho()
-		r = _job(y, "tal", "Bước 1/4 · Xin theo học", String(x.d) + " Đem đồ qua xin " + String(f.n) + " nhận dạy. Học xong trả " + W._sa(W.hn_hp(x)) + " xu tiền học." +
+		r = _job(y, "nghe", "Bước 1/4 · Xin theo học", String(x.d) + " Đem đồ qua xin " + String(f.n) + " nhận dạy. Học xong trả " + W._sa(W.hn_hp(x)) + " xu tiền học." +
 			(" Đang theo học " + String(ot.n).to_lower() + ", học nghề này thì tạm gác nghề kia." if ot != null else "") +
 			(" Mới học xong nghề trước, " + str(hc) + " ngày nữa mới học nghề mới được." if hc else ""), nd, 0, "Xin học", go0 if not hc else null)
 	elif H.get("a") != x.id:
-		r = _job(y, "tal", "Đang gác lại ở bước " + str(p.st) + "/4", "Quay lại học thì tạm gác nghề đang theo, tiến độ vẫn giữ.", [], 0, "Học tiếp", go0)
+		r = _job(y, "nghe", "Đang gác lại ở bước " + str(p.st) + "/4", "Quay lại học thì tạm gác nghề đang theo, tiến độ vẫn giữ.", [], 0, "Học tiếp", go0)
 	elif int(p.st) == 2:
 		var need: int = W.hn_days(f)
-		r = _job(y, "tal", "Bước 2/4 · Ngồi coi làm", "Trò chuyện với " + String(f.n) + " mỗi ngày một buổi để coi thầy làm (" + str(W._i(p.get("n"))) + "/" + str(need) + " buổi)." +
+		r = _job(y, "nghe", "Bước 2/4 · Ngồi coi làm", "Trò chuyện với " + String(f.n) + " mỗi ngày một buổi để coi thầy làm (" + str(W._i(p.get("n"))) + "/" + str(need) + " buổi)." +
 			(" Bữa nay chỉ rồi, mai ghé tiếp." if W._i(p.get("dl", -1)) == W._vr() else ""), [], 0, "", null)
 	elif int(p.st) == 3 and not W._tr(p.get("te")):
 		var i3: Array = W.hn_in3(x)
-		r = _job(y, "tal", "Bước 3/4 · Làm thử", "Đưa nguyên liệu 2 mẻ, " + str(x.tt) + " phút sau coi kết quả. Tỉ lệ hư " + str(W._rnd(W.hn_miss() * 100.0)) + "%." +
+		r = _job(y, "nghe", "Bước 3/4 · Làm thử", "Đưa nguyên liệu 2 mẻ, " + str(x.tt) + " phút sau coi kết quả. Tỉ lệ hư " + str(W._rnd(W.hn_miss() * 100.0)) + "%." +
 			(" Đã hư " + str(p.fl) + " lần." if W._tr(p.get("fl")) else ""), i3, 0, "Làm thử", go0)
 	elif int(p.st) == 3 and W._n(p.te) > now:
-		r = _job(y, "tal", "Bước 3/4 · Đang làm thử", "Còn " + G.ao((W._n(p.te) - now) / 1000.0) + ".", [], 0, "Xong ngay", gosk)
+		r = _job(y, "nghe", "Bước 3/4 · Đang làm thử", "Còn " + G.ao((W._n(p.te) - now) / 1000.0) + ".", [], 0, "Xong ngay", gosk)
 	elif int(p.st) == 3:
-		r = _job(y, "tal", "Bước 3/4 · Làm thử xong rồi", "Coi coi được hông.", [], 0, "Coi", go0)
+		r = _job(y, "nghe", "Bước 3/4 · Làm thử xong rồi", "Coi coi được hông.", [], 0, "Coi", go0)
 	else:
 		var hp: int = W.hn_hp(x)
 		var le: Array = W.hn_le(u, f)
@@ -797,7 +820,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 				ch.append(le[j])
 		var s: String = "Đem món làm thử, " + W._sa(hp) + " xu tiền học và lễ là " + ("đủ 2 món" if f.get("tp") == "sd" else "1 món") + " " + String(f.n) + " thích." + \
 			("" if W._tr(kw.get("a")) and W._tr(kw.get("b")) else " Chưa biết nhà này thích gì thì trò chuyện, tặng quà để dò.")
-		r = _job(y, "tal", "Bước 4/4 · Ra mắt thầy", s, ch, 0, "Ra mắt", go0 if W._n(G.g.coins) >= hp and W.hn_le_ok(u, f) else null)
+		r = _job(y, "nghe", "Bước 4/4 · Ra mắt thầy", s, ch, 0, "Ra mắt", go0 if W._n(G.g.coins) >= hp and W.hn_le_ok(u, f) else null)
 	out.append_array(r[0])
 	return [out, 22.0 + float(r[1])]
 
