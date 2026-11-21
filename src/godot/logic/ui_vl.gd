@@ -191,10 +191,33 @@ func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -
 static func _cap(t: String) -> String:   # chữ đầu viết hoa ("đem ra chợ huyện" -> "Đem ra chợ huyện")
 	return t.substr(0, 1).to_upper() + t.substr(1)
 
-func _lockc(x: float, y: float, t: String) -> Dictionary:   # chip khóa: hình ổ khóa + "Thân N"
+func _lockc(x: float, y: float, n: int) -> Dictionary:   # chip khóa thân: (bản 452) "Cần N" + hình tim, canh giữa
 	var lb := _chip(x, y, 84.0, 26.0, "sen")   # (bản 444) nền hồng hợp hình tim
-	lb.kids = [_dic(x + 7.0, y + 6.0, 14.0, HEART), _dt(x + 22.0, y, 60.0, 26.0, t, 10.5, 700, "rgb(170, 50, 60)")]   # (bản 442) khóa thân: hình tim + "Cần N tim"
+	var P := ["Cần " + str(n), "h"]
+	var w0 := float(_rowi(0.0, 0.0, 26.0, P, 10.5, 700, "")[1])
+	lb.kids = _rowi(x + (84.0 - w0) * 0.5, y, 26.0, P, 10.5, 700, "rgb(170, 50, 60)")[0]
 	return lb
+
+func _rowi(x: float, y: float, h: float, parts: Array, fs: float, fw: int, col: String) -> Array:   # (bản 452) dòng chữ xen hình: "h" tim, "s" sao, "c" xu; trả [khối, rộng]
+	var out := []
+	var cx := x
+	var z := fs + 3.0
+	for pt in parts:
+		var t := String(pt)
+		if t == "h" or t == "s" or t == "c":
+			cx += 2.0
+			if t == "h":
+				out.append(_dic(cx, y + (h - z) * 0.5, z, HEART))
+			elif t == "s":
+				out.append(_pic(cx, y + (h - z) * 0.5, z, z, "res://ui/img/bong/sao.png"))
+			else:
+				out.append(_dick(cx + z * 0.5, y + h * 0.5, z, "coin"))
+			cx += z + 2.0
+		else:
+			var tw: float = Box.text_w(t, fs, fw) + 1.0
+			out.append(_dt(cx, y, tw, h, t, fs, fw, col, "left"))
+			cx += tw
+	return [out, cx - x]
 
 func _wrap(t: String, fs: float, fw: int, w: float) -> Array:
 	var L := []
@@ -711,9 +734,9 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	y += 22.0
 	var c := _chip(X0, y, XW, 10.0, "t_" + tk if VLC.has("t_" + tk) else "t_khac")
 	out.append(c)
-	var pp := _para(X0 + 10.0, y + 8.0, XW - 20.0, String(TT.d), 10.5, 600, BROWN, 14.0)
+	var pp := _para(X0 + 10.0, y + 6.0, XW - 20.0, String(TT.d), 10.5, 600, BROWN, 15.0)   # (bản 452) mọi dòng cách đều 15
 	out.append_array(pp[0])
-	var yy := y + 8.0 + float(pp[1]) + 6.0
+	var yy := y + 6.0 + float(pp[1])
 	var L := [["Thích", Li.th[0], k.get("a")], ["", Li.th[1], k.get("b")], ["Ghét", Li.gh, k.get("x")]]
 	var any := false
 	for it in L:
@@ -722,7 +745,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	if not any and not nd:
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết.", 10.0, 600, SUB, "left"))
 		out.append(_dt(X0 + 10.0, yy + 15.0, XW - 20.0, 15.0, _fitw("Trò chuyện, tặng quà để làm thân với " + String(f.n) + " nha.", 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
-		yy += 33.0
+		yy += 36.0   # 2 dòng 15 + lề dưới 6 (bằng lề trên)
 	else:
 		if any:
 			var ix := X0 + 10.0
@@ -783,9 +806,9 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	elif o < 5:
 		var fz: int = W.m_i(o)
 		var lk: bool = W._i(f.get("tim")) < o
-		out.append(_dt(X0 + 10.0, yy + 5.0, XW - 110.0, 15.0, _fitw("Lên " + str(o + 1) + " sao: " + W._sa(fz) + " xu · học " + G.ao(W.n_l(o)), 10.0, 700, XW - 110.0), 10.0, 700, BROWN, "left"))
+		out.append_array(_rowi(X0 + 10.0, yy + 5.0, 15.0, ["Lên " + str(o + 1), "s", ": " + W._sa(fz), "c", " · học " + G.ao(W.n_l(o))], 10.0, 700, BROWN)[0])   # (bản 452) sao, xu bằng hình
 		if lk:
-			out.append(_lockc(X0 + XW - 94.0, yy, "Cần " + str(o) + " tim"))
+			out.append(_lockc(X0 + XW - 94.0, yy, o))
 		else:
 			out.append(_btn(X0 + XW - 94.0, yy, 84.0, 26.0, "Gửi đi học", func(): W.b_i(u), "go"))
 		yy += 26.0 + 8.0
@@ -818,7 +841,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 		var pid: String = String(x.id) if not W._ae(x.id).is_empty() else String(x["in"][0][0])
 		var lw := XW - 150.0
 		r = [[lc, _icn(X0 + 24.0, y + 24.0, 30.0, pid), _dt(X0 + 46.0, y + 6.0, lw, 18.0, _fitw(String(W._ae(pid).get("name", x.n)), 11.5, 800, lw), 11.5, 800, BROWN, "left"),
-			_dt(X0 + 46.0, y + 25.0, lw, 14.0, "Thân 3 tim họ mới nhận dạy", 10.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 11.0, "Cần 3 tim")], 48.0]
+			_lockc(X0 + XW - 94.0, y + 11.0, 3)] + _rowi(X0 + 46.0, y + 25.0, 14.0, ["Thân 3", "h", " họ mới nhận dạy"], 10.5, 600, SUB)[0], 48.0]
 	elif not W._tr(p):
 		var nd: Array = W.hn_in1(u, f)
 		var ot = W.nghe_by_id(H.a) if W._tr(H.get("a")) and H.a != x.id else null
