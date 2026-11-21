@@ -688,8 +688,9 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 		any = any or W._tr(it[2])
 	var nd: bool = W._tr(k.get("d"))
 	if not any and not nd:
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết. Trò chuyện, tặng quà để biết.", 10.0, 600, SUB, "left"))
-		yy += 20.0
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết.", 10.0, 600, SUB, "left"))
+		out.append(_dt(X0 + 10.0, yy + 15.0, XW - 20.0, 15.0, _fitw("Trò chuyện, tặng quà để làm thân với " + String(f.n) + " nha.", 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
+		yy += 35.0
 	else:
 		if any:
 			var ix := X0 + 10.0
