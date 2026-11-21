@@ -64,6 +64,28 @@ func setup(k: float) -> void:
 	K = K0
 
 # ------------------------------------------------------------ ảnh
+# ảnh NÉT: thu ảnh gốc (9px) đúng bằng số điểm ảnh trên màn 1 lần (Lanczos), vẽ 1:1 không mipmap → đường phấn sắc
+var _raw := {}
+var _crisp := {}
+func crisp(name: String, n: Vector2i) -> Texture2D:
+	n = Vector2i(maxi(4, n.x), maxi(4, n.y))
+	var key := "%s@%dx%d" % [name, n.x, n.y]
+	if _crisp.has(key):
+		return _crisp[key]
+	if not _raw.has(name):
+		var r := Image.new()
+		r.load_webp_from_buffer(FileAccess.get_file_as_bytes(DIR + name + ".webp"))
+		r.convert(Image.FORMAT_RGBA8)
+		r.fix_alpha_edges()
+		_raw[name] = r
+	var im: Image = _raw[name].duplicate()
+	while im.get_width() >= n.x * 3 and im.get_height() >= n.y * 3:
+		im.shrink_x2()
+	im.resize(n.x, n.y, Image.INTERPOLATE_LANCZOS)
+	var t := ImageTexture.create_from_image(im)
+	_crisp[key] = t
+	return t
+
 func img(name: String) -> Texture2D:
 	if tex.has(name):
 		return tex[name]
@@ -333,8 +355,10 @@ func _layout() -> void:
 	else:
 		var colw := minf(250, W * 0.34)
 		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
-		face = minf(H - 24, (W - colw - 30) / rw)
-		fx = colw + 20 + (W - colw - 20 - face) / 2
+		# bàn cờ LUÔN chính giữa màn (Link): 2 bên chừa đều = cột thẻ người chơi bên trái, cột đồ bên phải
+		var side := colw + 20
+		face = minf(H - 24, (W - 2 * side) / rw)
+		fx = (W - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
 		L.tools = Rect2(8, 8 + safe, colw, 36)
 		L.opp = Rect2(8, 62, colw, 58)
@@ -356,7 +380,8 @@ func _layout() -> void:
 		_nen = NEN.new()
 		_bg.add_child(_nen)
 	_nen.scale = Vector2(K, K)
-	_nen.build(L, W, H, img("board"))
+	_crisp.clear()
+	_nen.build(L, W, H, crisp("board", Vector2i(roundi(L.bimg.size.x * K), roundi(L.bimg.size.y * K))))
 	_redraw_all()
 
 func _redraw_all() -> void:
@@ -405,7 +430,7 @@ func _piece(ci: CanvasItem, p: int, i: int, a: float, sc := 1.0) -> void:
 	var c := cell_center(i)
 	var s: float = L.cs * 1.6 * sc
 	var name := ("x" if p == 1 else "o") + str((i * 7 + 3) % 4)
-	ci.draw_texture_rect(img(name), Rect2(c.x - s / 2, c.y - s / 2, s, s), false, Color(1, 1, 1, a))
+	ci.draw_texture_rect(crisp(name, Vector2i(roundi(s * K), roundi(s * K))), Rect2(c.x - s / 2, c.y - s / 2, s, s), false, Color(1, 1, 1, a))
 
 func _draw_pieces() -> void:
 	if L.is_empty():

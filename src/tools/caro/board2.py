@@ -1,3 +1,4 @@
+import os
 # Cờ caro v2: phản gỗ tràm có khung viền mộng góc, đinh sắt, ván lòng, kẻ phấn 15x15. Nướng 1 lần.
 #   python3 board2.py K out.png
 import sys, math, json
@@ -182,7 +183,8 @@ def board(K):
     wob = (fbm(H, W, 34 * K, 2, rgc) - 0.5) * 1.1 * K
     g = np.zeros((H, W), np.float32)
     lwid = 0.6 * K
-    for i in range(N + 1):
+    # GRID=0: không vẽ lưới (Godot kẻ lưới nét theo điểm ảnh màn)
+    for i in range(N + 1 if os.environ.get("GRID", "1") != "0" else 0):
         lx = gx0 + i * cs
         g = np.maximum(g, np.exp(-((xx + wob - lx) / lwid) ** 2) * ((yy > gy0 - 1.5 * K) & (yy < gy0 + N * cs + 1.5 * K)))
         ly = gy0 + i * cs

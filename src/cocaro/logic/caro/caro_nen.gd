@@ -13,6 +13,7 @@ static var _noise: Texture2D = null
 # để không tràn bộ nhớ đồ hoạ (9px nguyên = ~756 MB). Kích thước báo về vẫn là 9px (size_override) nên toạ độ không đổi.
 static var Q := 9.0
 static var Q_fixed := false
+static var _qr := {}     # texture -> tỉ lệ ảnh thật / 9px (để mức mờ mipmap của bóng đúng)
 var LJ: Dictionary
 var leaves: Array = []
 var t0 := 0.0
@@ -27,11 +28,16 @@ static func tex(n: String) -> Texture2D:
 	var full := im.get_size()
 	var q := minf(Q / PXU, 8192.0 / maxf(full.x, full.y))
 	if q < 0.999:
-		im.resize(maxi(1, int(full.x * q)), maxi(1, int(full.y * q)), Image.INTERPOLATE_LANCZOS)
+		# thu nhỏ bằng gộp 2x2 (không gợn viền như Lanczos, viền trong suốt giữ sạch), rồi chỉnh đúng cỡ
+		var tw := maxi(1, int(full.x * q)); var th := maxi(1, int(full.y * q))
+		while im.get_width() >= tw * 2 and im.get_height() >= th * 2:
+			im.shrink_x2()
+		im.resize(tw, th, Image.INTERPOLATE_BILINEAR)
 	im.generate_mipmaps()
 	var t := ImageTexture.create_from_image(im)
 	if q < 0.999:
 		t.set_size_override(full)
+	_qr[t] = minf(q, 1.0)
 	_tex[n] = t
 	return t
 
@@ -49,6 +55,10 @@ static func noise_tex() -> Texture2D:
 	_noise = ImageTexture.create_from_image(im)
 	return _noise
 
+# lod tính cho ảnh 9px; ảnh nạp nhỏ hơn (q) thì bớt đi log2(1/q) mức
+static func _lod(t: Texture2D, lod: float) -> float:
+	return maxf(0.0, lod + log(float(_qr.get(t, 1.0))) / log(2.0)) if lod > 0.0 else 0.0
+
 func _spr(parent: Node, t: Texture2D, pos: Vector2, centered := true, rot := 0.0, sc := 1.0) -> Sprite2D:
 	var s := Sprite2D.new(); s.texture = t; s.centered = centered; s.position = pos
 	s.scale = Vector2.ONE * sc / PXU; s.rotation = rot
@@ -58,13 +68,13 @@ func _spr(parent: Node, t: Texture2D, pos: Vector2, centered := true, rot := 0.0
 func _shadow(parent: Node, t: Texture2D, pos: Vector2, off: Vector2, blur: float, a: float, rot := 0.0, sc := 1.0) -> Sprite2D:
 	var s := _spr(parent, t, pos + off * sc, true, rot, sc)
 	var m := ShaderMaterial.new(); m.shader = SHAD
-	m.set_shader_parameter("tex", t); m.set_shader_parameter("lod", log(maxf(1.0, blur * PXU)) / log(2.0)); m.set_shader_parameter("alpha", a)
+	m.set_shader_parameter("tex", t); m.set_shader_parameter("lod", _lod(t, log(maxf(1.0, blur * PXU)) / log(2.0))); m.set_shader_parameter("alpha", a)
 	s.material = m; return s
 
 func _wmat(t: Texture2D, pivot: Vector2, reach: float, amp: float, flutter: float, bend: float, phase: float, glint: float, fleck: float, shadow: float, lod: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new(); m.shader = WIND
 	var p := {"noise": noise_tex(), "tex": t, "tex_size": t.get_size(), "pivot": pivot, "reach": reach, "amp": amp, "flutter": flutter,
-		"bend": bend, "phase": phase, "glint": glint, "fleck": fleck, "shadow": shadow, "lod": lod, "px_scale": PXU}
+		"bend": bend, "phase": phase, "glint": glint, "fleck": fleck, "shadow": shadow, "lod": _lod(t, lod), "px_scale": PXU}
 	for k in p: m.set_shader_parameter(k, p[k])
 	return m
 
@@ -101,15 +111,20 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var sl := clampf(f.position.x / 647.0, 0.55, 1.4)
 		var sy := H / 920.0
 		var bx := f.end.x
-		roof_x = maxf(bx + 175, W - 202)
-		var sx := (bx + roof_x) / 2.0 + 2
+		var fm := f.size.x * 0.046                        # khung gỗ ngoài lòng phản
+		var sx: float
+		if W - bx >= 215:
+			roof_x = maxf(bx + 175, W - 202)
+			sx = (bx + roof_x) / 2.0 + 2
+		else:                                            # màn hẹp: bỏ mái, đồ đứng giữa khoảng phải
+			sx = (bx + fm + W) / 2.0
 		for p in LJ.props:
 			var nm: String = p[0]
 			var x: float; var y: float = float(p[2]) * sy
 			if nm in ["ro", "mam", "bong"]:
 				x = sx + (float(p[1]) - 1633.0)
 			elif nm == "lu":
-				x = roof_x - 10
+				x = roof_x - 10 if roof_x >= 0 else W - 40
 			else:
 				x = float(p[1]) * sl
 			items.append([nm, x, y, 1.0, p[4]])
@@ -174,8 +189,24 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	# ---- tấm phản
 	var b := Sprite2D.new(); b.texture = board_tex; b.centered = false
 	var bi: Rect2 = bimg
-	b.position = bi.position; b.scale = bi.size / board_tex.get_size(); b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	# ảnh phản đã thu đúng số điểm màn: đặt thẳng hàng điểm ảnh, lọc thường (không mipmap) cho nét
+	b.position = (bi.position * scale.x).round() / scale.x; b.scale = Vector2.ONE / scale.x; b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(b)
+	# ---- đường phấn NÉT: kẻ lại 16x16 đường bằng hình chữ nhật khớp điểm ảnh màn, đè lên vệt phấn vẽ sẵn
+	var sc := scale.x
+	var lw: float = maxf(2.0, roundf(1.6 * sc / u))      # độ dày (điểm màn)
+	var gx0: float = L.gx * sc / u; var gy0: float = L.gy * sc / u; var cpx: float = L.cs * sc / u
+	var span := cpx * 15
+	for k in 16:
+		for vert in [true, false]:
+			var r := ColorRect.new(); r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			r.color = Color(0.96, 0.94, 0.89, 0.9)
+			var p0 := roundf((gx0 if vert else gy0) + k * cpx - lw / 2)
+			if vert:
+				r.position = Vector2(p0, roundf(gy0 - lw / 2)) / sc; r.size = Vector2(lw, roundf(span + lw)) / sc
+			else:
+				r.position = Vector2(roundf(gx0 - lw / 2), p0) / sc; r.size = Vector2(roundf(span + lw), lw) / sc
+			add_child(r)
 	# ---- bóng tán xoài, bụi chuối, lá rơi, chuối, tán
 	var M: Dictionary = LJ.mango
 	var croot := Node2D.new(); croot.position = canopy.pos
