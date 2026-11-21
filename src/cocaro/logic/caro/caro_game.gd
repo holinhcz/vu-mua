@@ -323,18 +323,31 @@ func _maybe_ai() -> void:
 		play(mv)
 
 # ------------------------------------------------------------ bố cục
+func _face_size(w: float, h: float, port: bool) -> float:
+	if port:
+		return maxf(200, minf(w - 18, h - 165 - 126))
+	var colw := _colw(w, h)
+	return minf(h - 24, (w - 2 * (colw + 16)) / (float(BJ.w) / float(BJ.face[2])))
+
+# cột thẻ người chơi (màn ngang): hẹp lại tới 180 để nhường chỗ cho bàn cờ to hết chiều cao
+func _colw(w: float, h: float) -> float:
+	var rw: float = float(BJ.w) / float(BJ.face[2])
+	return clampf((w - (h - 24) * rw) / 2.0 - 16, 160, 250)
+
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
 	# co đều theo khung màn: ngang cần tối thiểu 620 css cao (bảng chọn) + 900 rộng; dọc 360 rộng + 720 cao
 	var cw0 := vs.x / K0; var ch0 := vs.y / K0
-	if ch0 >= cw0 * 1.15:
-		K = K0 * minf(1.0, minf(cw0 / 360.0, ch0 / 720.0))
-	else:
-		K = K0 * minf(1.0, minf(cw0 / 900.0, ch0 / 620.0))
+	# chọn kiểu bố cục cho bàn cờ TO NHẤT trên màn này (màn gần vuông → kiểu dọc: thẻ trên/dưới, bàn cờ rộng hết ngang)
+	var kp := K0 * minf(1.0, minf(cw0 / 360.0, ch0 / 720.0))
+	var kl := K0 * minf(1.0, minf(cw0 / 900.0, ch0 / 620.0))
+	var fp := _face_size(vs.x / kp, vs.y / kp, true) * kp
+	var fl := _face_size(vs.x / kl, vs.y / kl, false) * kl
+	var port := fp > fl * 1.04
+	K = kp if port else kl
 	W = vs.x / K
 	H = vs.y / K
-	var port := H >= W * 1.15
 	L = {"port": port}
 	var safe := 6.0
 	L.tools = Rect2(8, 8 + safe, minf(W - 16, 420), 36)
@@ -343,7 +356,7 @@ func _layout() -> void:
 	var fy: float
 	if port:
 		var top := 54.0 + safe + 66
-		var bot := H - 132
+		var bot := H - 165                     # chừa thẻ "Bạn" + dòng luật dưới phản
 		face = minf(W - 18, bot - top)
 		face = maxf(200, face)
 		fx = (W - face) / 2
@@ -353,17 +366,20 @@ func _layout() -> void:
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 	else:
-		var colw := minf(250, W * 0.34)
+		var colw := _colw(W, H)
 		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
 		# bàn cờ LUÔN chính giữa màn (Link): 2 bên chừa đều = cột thẻ người chơi bên trái, cột đồ bên phải
-		var side := colw + 20
+		var side := colw + 16
 		face = minf(H - 24, (W - 2 * side) / rw)
 		fx = (W - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
-		L.tools = Rect2(8, 8 + safe, colw, 36)
-		L.opp = Rect2(8, 62, colw, 58)
-		L.me = Rect2(8, 140, colw, 62)
-		L.tip = Rect2(8, 214, colw, 46)
+		# cột thẻ vẽ theo cỡ chuẩn 250 rồi co đều (hs) khi cột hẹp → chữ không bị chồng
+		var hs := colw / 250.0
+		L.hs = hs
+		L.tools = Rect2(8, 8 + safe, 250, 36)
+		L.opp = Rect2(8, 62, 250, 58)
+		L.me = Rect2(8, 140, 250, 62)
+		L.tip = Rect2(8, 214, 250, 46)
 	L.face = Rect2(fx, fy, face, face)
 	# ô lưới trên màn (css)
 	var kb: float = BJ.kb
@@ -572,9 +588,13 @@ func _draw_hud() -> void:
 		return
 	var ci := _hud
 	hits = []
-	_T(ci)
+	var hs: float = L.get("hs", 1.0)
 	if Gm.is_empty():
+		_T(ci)
 		return
+	var k_save := K
+	K = K * hs            # cột thẻ: vẽ theo cỡ chuẩn, co đều bằng cách tạm nhân K
+	_T(ci)
 	# thanh công cụ
 	var tr: Rect2 = L.tools
 	_box(ci, tr, CARD, 12, Color8(232, 214, 186), 1.2)
@@ -586,7 +606,7 @@ func _draw_hud() -> void:
 		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], 12.5, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if j > 0:
 			ci.draw_line(Vector2(r.position.x, r.position.y + 8), Vector2(r.position.x, r.end.y - 8), LINE, 1.0)
-		hits.append([r, items[j][0]])
+		hits.append([Rect2(r.position * hs, r.size * hs), items[j][0]])
 	_card(ci, L.opp, 2)
 	_card(ci, L.me, 1)
 	var tp: Rect2 = L.tip
@@ -600,8 +620,10 @@ func _draw_hud() -> void:
 		t2 = "Chạm Menu để chơi ván mới"
 	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 15), t1, 12.5, Color8(255, 214, 92), 800)
 	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 32), t2, 11, Color8(240, 228, 210), 600)
+	K = k_save
 	if ov != "":
 		hits = []
+		_T(ci)
 		_draw_ov(ci)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 

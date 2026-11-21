@@ -85,76 +85,87 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	leaves.clear()
 	LJ = JSON.parse_string(FileAccess.get_file_as_string(D + "layout.json"))
 	var port: bool = L.port
-	# co đều cả cảnh theo cỡ tấm phản (thiết kế: ngang phản 896 css, dọc 394 css) → không méo, không to lố trên màn nhỏ
-	var u: float = clampf(L.face.size.x / (394.0 if port else 896.0), 0.3, 3.0)
-	scale *= u
+	# BỐ CỤC CẢNH: tấm phản (to nhất có thể, chính giữa) do caro_game đặt. Cảnh chỉ lấp phần trống quanh phản:
+	# mỗi món co theo khoảng trống của nó, không bao giờ đè lên phản, không méo.
+	var u := 1.0
 	if _tex.is_empty() and not Q_fixed:
 		Q = clampf(ceilf(scale.x), 2.0, 9.0)   # = điểm ảnh màn / css cảnh
-	W /= u; H /= u
-	var f := Rect2(L.face.position / u, L.face.size / u)
-	var bimg := Rect2(L.bimg.position / u, L.bimg.size / u)
+	var f: Rect2 = L.face
+	var bimg: Rect2 = L.bimg
+	var fm := f.size.x * 0.046 + 4                 # khung gỗ + bóng ngoài lòng phản
+	var bo := f.grow(fm)                           # mép ngoài tấm phản
+	var wL := bo.position.x; var wR := W - bo.end.x; var hB := H - bo.end.y
 	# ---- sân đất (lặp)
 	var g := _spr(self, tex("dat"), Vector2.ZERO, false)
 	g.region_enabled = true; g.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	g.region_rect = Rect2(0, 0, W * PXU, H * PXU)
 	var lt: Array = []
 	for i in 6: lt.append(tex("la%d" % i))
-	# ---- vị trí đồ (màn ngang: như bản thiết kế 1920x920, co theo khổ; màn dọc: đặt riêng)
 	var items := []      # [tên, x, y, cỡ, bóng]
 	var chicks := []
-	var hen := Vector3.ZERO
 	var roof_x := -1.0
 	var bc := Vector3.ZERO
 	var canopy := {}
 	var gl := []
-	if not port:
-		var sl := clampf(f.position.x / 647.0, 0.55, 1.4)
-		var sy := H / 920.0
-		var bx := f.end.x
-		var fm := f.size.x * 0.046                        # khung gỗ ngoài lòng phản
-		var sx: float
-		if W - bx >= 215:
-			roof_x = maxf(bx + 175, W - 202)
-			sx = (bx + roof_x) / 2.0 + 2
-		else:                                            # màn hẹp: bỏ mái, đồ đứng giữa khoảng phải
-			sx = (bx + fm + W) / 2.0
-		for p in LJ.props:
-			var nm: String = p[0]
-			var x: float; var y: float = float(p[2]) * sy
-			if nm in ["ro", "mam", "bong"]:
-				x = sx + (float(p[1]) - 1633.0)
-			elif nm == "lu":
-				x = roof_x - 10 if roof_x >= 0 else W - 40
-			else:
-				x = float(p[1]) * sl
-			items.append([nm, x, y, 1.0, p[4]])
+	var cs_ := 1.0
+	var sh_of := {}
+	for p in LJ.props: sh_of[p[0]] = p[4]
+	var side := minf(wL, wR) >= 70.0 or not port
+	if side:
+		# ---- 2 dải trái / phải (màn ngang, màn gần vuông). Bản thiết kế 1920x920: dải trái 606, dải phải 336.
+		var hy := H / 920.0
+		var sL := clampf(minf(wL / 606.0, hy), 0.3, 1.6)
+		var sR := clampf(minf(wR / 336.0, hy), 0.3, 1.6)
+		var colx := (bo.end.x + W) / 2.0
+		if wR >= 300.0:
+			roof_x = W - 202.0
+			colx = (bo.end.x + roof_x) / 2.0
+			sR = clampf(minf((roof_x - bo.end.x) / 150.0, hy), 0.3, 1.6)
+		var put := func(nm: String, x: float, y: float, sc: float, half: float, lo: float, hi: float):
+			var sz := minf(sc, (hi - lo) / (2.0 * half))       # vẫn nhét vừa dải
+			x = clampf(x, lo + half * sz, hi - half * sz)
+			items.append([nm, x, y, sz, sh_of[nm]])
+			return sz
+		put.call("ro", colx, H * 0.15, sR, 34, bo.end.x + 4, roof_x if roof_x >= 0 else W)
+		put.call("mam", colx, H * 0.41, sR, 40, bo.end.x + 4, roof_x if roof_x >= 0 else W)
+		put.call("bong", colx, H * 0.65, sR, 42, bo.end.x + 4, roof_x if roof_x >= 0 else W)
+		put.call("lu", (roof_x - 10) if roof_x >= 0 else colx, H * 0.88, sR, 48, bo.end.x + 4, W)
+		# dải trái (dưới thẻ người chơi): gà + gà con, nong lúa, nón; chuối ở góc dưới trái
+		var gx := wL * 0.62
+		var hs: float = put.call("ga", gx, H * 0.40, sL, 70, 0, wL)
+		var hp: Vector2 = Vector2(items[-1][1], items[-1][2])
 		for c in LJ.chicks:
-			chicks.append(Vector3(float(c[0]) * sl, float(c[1]) * sy, c[2]))
-		bc = Vector3(float(LJ.chuoi[0]) * sl, float(LJ.chuoi[1]) * sy, 1.0)
-		canopy = {"pos": Vector2.ZERO, "sc": 1.0, "flip": false}
-		for q in LJ.ground_leaves:
-			var x := float(q[0]) * sl
-			if x > f.position.x - 14: continue
-			gl.append([x, float(q[1]) * sy, q[2], q[3]])
-		fall_scale = 1.0
+			chicks.append(Vector3(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs, c[2]))
+		cs_ = hs
+		put.call("nong", wL * 0.6, H * 0.65, sL, 72, 0, wL)
+		put.call("non", wL * 0.75, H * 0.91, sL, 42, 0, wL)
+		bc = Vector3(minf(120.0 * sL, wL * 0.25), H - 120.0 * sL, sL)
+		var cv := clampf(minf(wL / 606.0, hy), 0.4, 1.4)
+		canopy = {"pos": Vector2.ZERO, "sc": cv, "flip": false}
+		fall_scale = cv
 	else:
-		var y0 := f.end.y + 100
-		items.append(["nong", W * 0.53, H - 42, 66.0 / 140.0, [6, 8, 5, 0.42]])
-		items.append(["lu", W - 46, H - 64, 50.0 / 92.0, [8, 10, 6, 0.45]])
-		items.append(["mam", W - 52, minf(f.end.y + 72, H - 170), 32.0 / 74.0, [5, 6, 3, 0.42]])
-		var hs := 130.0 / 230.0
-		var hp := Vector2(W * 0.68, H - 178)
+		# ---- màn dọc hẹp: đồ ở dải dưới tấm phản, tán xoài góc trên phải
+		var ps := clampf(minf(W / 412.0, (hB - 140.0) / 120.0 + 0.2), 0.35, 1.4)
+		items.append(["nong", W * 0.53, H - 42 * ps, 66.0 / 140.0 * ps, [6, 8, 5, 0.42]])
+		items.append(["lu", W - 46 * ps, H - 64 * ps, 50.0 / 92.0 * ps, [8, 10, 6, 0.45]])
+		items.append(["mam", W - 52 * ps, clampf(bo.end.y + 40 * ps, bo.end.y, H - 120 * ps), 32.0 / 74.0 * ps, [5, 6, 3, 0.42]])
+		var hs := 130.0 / 230.0 * ps
+		var hp := Vector2(W * 0.68, maxf(H - 178 * ps, bo.end.y + 40 * ps))
 		items.append(["ga", hp.x, hp.y, hs, [4, 6, 3, 0.42]])
 		for c in LJ.chicks:
 			chicks.append(Vector3(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs, c[2]))
-		bc = Vector3(52, H - 70, 120.0 / 230.0)
-		canopy = {"pos": Vector2(W + 60, -200), "sc": 0.5, "flip": true}
-		var rg := RandomNumberGenerator.new(); rg.seed = 5
-		while gl.size() < 9:
-			var x := rg.randf_range(10, W - 10); var y := rg.randf_range(70, H - 10)
-			if Rect2(f.position - Vector2(14, 14), f.size + Vector2(28, 28)).has_point(Vector2(x, y)): continue
-			gl.append([x, y, rg.randf_range(0, 360), rg.randi_range(0, 5)])
-		fall_scale = 0.55
+		cs_ = hs
+		bc = Vector3(52 * ps, H - 70 * ps, 120.0 / 230.0 * ps)
+		canopy = {"pos": Vector2(W + 60 * ps, -200 * ps), "sc": 0.5 * ps, "flip": true}
+		fall_scale = 0.55 * ps
+	# lá rụng nằm sẵn: rải ngẫu nhiên ngoài tấm phản
+	var rg := RandomNumberGenerator.new(); rg.seed = 5
+	var want := int(clampf((W * H - bo.get_area()) / 30000.0, 6, 22)); var tries := 0
+	while gl.size() < want and tries < 400:
+		tries += 1
+		var x := rg.randf_range(10, W - 10); var y := rg.randf_range(70, H - 10)
+		if bo.grow(10).has_point(Vector2(x, y)) or (roof_x >= 0 and x > roof_x - 10): continue
+		gl.append([x, y, rg.randf_range(0, 360), rg.randi_range(0, 5)])
 	# ---- lá rụng nằm sẵn (dưới đồ vật)
 	for q in gl:
 		var s := fall_scale
@@ -166,7 +177,6 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		_shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
 		_spr(self, t, Vector2(it[1], it[2]), true, 0.0, s)
 	var ck := tex("gacon")
-	var cs_: float = 1.0 if not port else 130.0 / 230.0
 	for c in chicks:
 		_shadow(self, ck, Vector2(c.x, c.y), Vector2(2, 3), 1.5, 0.4, c.z, cs_)
 		_spr(self, ck, Vector2(c.x, c.y), true, c.z, cs_)
@@ -232,10 +242,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		s.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i], 0.1, 0.0, 0.0, 0.0)
 	for F in LJ.falling:
 		var o := {"F": F, "sd": _shadow(fall, lt[int(F.v)], Vector2.ZERO, Vector2.ZERO, 3.0, 0.3), "sp": _spr(self, lt[int(F.v)], Vector2.ZERO)}
-		if port:
-			o["ox"] = W - 30 - float(F.x0) * 0.55 - 40; o["oy"] = float(F.y0) * 0.4
-		else:
-			o["ox"] = float(F.x0); o["oy"] = float(F.y0)
+		# lá rơi từ dưới tán (theo vị trí + cỡ tán)
+		var cx: float = canopy.pos.x + (-1.0 if canopy.flip else 1.0) * float(F.x0) * canopy.sc
+		o["ox"] = cx - (float(F.vx) * 1.3 * canopy.sc if canopy.flip else 0.0); o["oy"] = canopy.pos.y + float(F.y0) * canopy.sc
 		leaves.append(o)
 
 func _process(dt: float) -> void:
