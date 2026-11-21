@@ -145,14 +145,14 @@ func _nghe() -> Array:
 				s = ("Đang học" if H.a == gx.id else "Đang gác") + " bước " + str(p.st) + "/4"
 				k = "now"
 			elif who.size():
-				s = ", ".join(PackedStringArray(who)) + " dạy"
+				s = (String(who[0]) + " dạy") if who.size() == 1 else (str(who.size()) + " nhà dạy")   # (bản 454) nhiều nhà: ghi số, chạm chip mới hiện đủ tên
 				k = "got"
 			else:
 				s = "Chưa ai giữ nghề"
 			var pid := _pid(gx)
-			var tip := String(gx.n) + ": " + String(gx.d) + (" Làm thử hư " + str(hu) + " lần." if hu else "")
-			bt.append({"b": String(gx.n), "s": s, "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip)})
-		var g := _grid(y, bt, 2, "got")
+			var tip := String(gx.n) + ": " + String(gx.d) + (" Học ở nhà " + ", ".join(PackedStringArray(who)) + "." if who.size() > 1 else "") + (" Làm thử hư " + str(hu) + " lần." if hu else "")
+			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip)})
+		var g := _grid(y, bt, 2, "got", _fillh(y, bt.size()) if own.is_empty() else 0.0)   # (bản 454) chưa học nghề nào: lưới giãn kín thân
 		out.append_array(g[0])
 		y += float(g[1]) + GG
 	return [out, y]
@@ -361,7 +361,14 @@ func _cho() -> Array:
 	var L: Dictionary = W.ng_lai()
 	var g := 6.0
 	var bw := (XW - g) * 0.5
-	var bh := 44.0
+	var ids := []
+	for x0 in W.M6:
+		if W.ng_base(x0.id) != "":
+			ids.append(String(x0.id))
+	var bh := _fillh(y, ids.size())   # (bản 454) lưới giãn kín thân, thêm dòng "Kho có N"
+	var big := bh > 0.0
+	if not big:
+		bh = 44.0
 	var i := 0
 	for x0 in W.M6:
 		if W.ng_base(x0.id) == "":
@@ -372,15 +379,18 @@ func _cho() -> Array:
 		var cx := X0 + (i % 2) * (bw + g)
 		var cy := y + floorf(i / 2.0) * (bh + g)
 		var c := _chip(cx, cy, bw, bh, "fut" if n > 0 else "miss")
-		var tx := cx + 42.0
+		var tx := cx + (48.0 if big else 42.0)
 		var tw := cx + bw - 6.0 - tx
-		var ks := [_icn(cx + 21.0, cy + bh * 0.5, 26.0, id), _dt(tx, cy + 6.0, tw, 15.0, _fitw(_nm(id), 11.5, 800, tw), 11.5, 800, BROWN if n > 0 else "rgb(120, 112, 98)", "left")]
+		var ty := cy + ((bh - 44.0) * 0.5 if big else 6.0)
+		var ks := [_icn(cx + (24.0 if big else 21.0), cy + bh * 0.5, 34.0 if big else 26.0, id), _dt(tx, ty, tw, 15.0, _fitw(_nm(id), 11.5, 800, tw), 11.5, 800, BROWN if n > 0 else "rgb(120, 112, 98)", "left")]
 		if n > 0:
 			var rich: bool = W._n(G.g.coins) >= p
-			ks.append_array(_rowi(tx, cy + 22.0, 14.0, [W._sa(p), "c", " · còn " + str(n)], 10.5, 700, SUB if rich else "rgb(190, 60, 50)")[0])
+			ks.append_array(_rowi(tx, ty + 16.0, 14.0, [W._sa(p), "c", " · còn " + str(n)], 10.5, 700, SUB if rich else "rgb(190, 60, 50)")[0])
 			c.act = (func(): W.ng_lai_mua(id)) if rich else _dsay.bind("Thiếu xu: " + _nm(id) + " giá " + W._sa(p) + " xu.")
 		else:
-			ks.append(_dt(tx, cy + 22.0, tw, 14.0, "Hết, mai ghé lại", 10.5, 600, "rgb(130, 124, 112)", "left"))
+			ks.append(_dt(tx, ty + 16.0, tw, 14.0, "Hết, mai ghé lại", 10.5, 600, "rgb(130, 124, 112)", "left"))
+		if big:
+			ks.append(_dt(tx, ty + 31.0, tw, 13.0, "Kho có " + str(W._barn(id)), 10.0, 600, "rgb(150, 128, 96)", "left"))
 		c.kids = ks
 		out.append(c)
 		i += 1

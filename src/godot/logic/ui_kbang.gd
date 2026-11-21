@@ -328,11 +328,12 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 
 const ICS := {"chieu": 1.2, "trung": 1.12, "gao": 1.08}   # hình thưa (dẹt / tròn nhỏ): phóng cho cùng cỡ nhìn
 # lưới chip: [{b tên, s dòng phụ, ic hình, st "on"|"dis"|"hint"|"", k loại chip, act}] cols cột
-func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
+func _grid(y: float, bt: Array, cols: int, kind_on: String, bh0 := 0.0) -> Array:   # bh0 > 0: (bản 454) chip cao bh0 (giãn kín thân), chữ canh giữa dọc, có dòng 3 "s2" (tối đa 2 dòng)
 	var out := []
 	var g := 6.0
 	var bw := (XW - (cols - 1) * g) / cols
-	var bh := 44.0 if cols == 2 else 40.0
+	var bh: float = bh0 if bh0 > 0.0 else (44.0 if cols == 2 else 40.0)
+	var big := bh >= 56.0
 	for i in bt.size():
 		var o: Dictionary = bt[i]
 		var x := X0 + (i % cols) * (bw + g)
@@ -342,13 +343,30 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 		var ks := []
 		var tx := x + 8.0
 		if String(o.get("ic", "")) != "":   # (bản 447) hình cách đều 2 bên 8: tâm 21, cỡ 26 (phóng theo độ đầy hình), chữ từ 42
-			ks.append(_icn(x + 21.0, yy + bh * 0.5, 26.0 * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
-			tx = x + 42.0
+			var z := 34.0 if big else 26.0
+			ks.append(_icn(x + (24.0 if big else 21.0), yy + bh * 0.5, z * float(ICS.get(String(o.ic), 1.0)), String(o.ic)))
+			tx = x + (48.0 if big else 42.0)
 		var tw := x + bw - 6.0 - tx
 		var dim := st == "dis" or st == "hint"
-		ks.append(_dt(tx, yy + 6.0, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
+		var L2: Array = _wrap(String(o.get("s2", "")), 10.0, 600, tw) if big and String(o.get("s2", "")) != "" else []
+		if L2.size() > 2:
+			L2 = [L2[0], _fitw(String(L2[1]) + " " + " ".join(PackedStringArray(L2.slice(2))), 10.0, 600, tw)]
+		var th0 := 15.0 + (16.0 if String(o.get("s", "")) != "" else 0.0)
+		while L2.size() and th0 + L2.size() * 13.0 + 3.0 > bh - 10.0:   # chip thấp: bớt dòng 3, dòng cuối cắt "…"
+			var last: String = String(L2[L2.size() - 1])
+			L2.pop_back()
+			if L2.size():
+				L2[L2.size() - 1] = _fitw(String(L2[L2.size() - 1]) + " " + last, 10.0, 600, tw)
+		var th := th0 + L2.size() * 13.0 + (3.0 if L2.size() else 0.0)
+		var ty := yy + 6.0 if not big else yy + (bh - th) * 0.5
+		ks.append(_dt(tx, ty, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
+		ty += 16.0
 		if String(o.get("s", "")) != "":
-			ks.append(_dt(tx, yy + 22.0, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
+			ks.append(_dt(tx, ty, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
+			ty += 16.0
+		for ln in L2:
+			ks.append(_dt(tx, ty, tw, 13.0, String(ln), 10.0, 600, "rgb(150, 128, 96)", "left"))
+			ty += 13.0
 		if st == "on":   # đang chọn: dấu tick góc phải
 			ks.append(_dtick(x + bw - 17.0, yy + 5.0, 12.0))
 		c.kids = ks
@@ -358,6 +376,12 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 	var rows := int(ceil(bt.size() / float(cols)))
 	return [out, rows * bh + maxf(0, rows - 1) * g]
 
+func _fillh(y: float, n: int, cols := 2) -> float:   # (bản 454) cao chip để n ô (cols cột) kín phần thân còn lại từ y, chừa GG đáy; 0 = không giãn
+	var rows := int(ceil(n / float(cols)))
+	if rows < 1:
+		return 0.0
+	var h := (_hb - y - GG - (rows - 1) * 6.0) / rows
+	return clampf(floorf(h), 44.0, 84.0) if h > 44.0 else 0.0
 const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
 	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
