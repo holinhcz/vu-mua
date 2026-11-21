@@ -256,6 +256,9 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			_pool[key] = [node, bid]
 		if inner != null and node.get_parent() == null:
 			inner.add(node)
+		elif inner != null and node.get_parent() == inner._kids:   # (bản 445) khối dùng lại giữ đúng thứ tự vẽ: khối dựng mới (vd chip nền đổi chữ) không đè lên nút cũ
+			inner._kids.move_child(node, -1)
+			inner._kids.move_child(inner._fg, -1)   # lớp chữ của khung luôn trên cùng (như Box.add)
 		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
 	for key in _pool.keys():   # khối không còn: bỏ
 		if not used.has(key):
