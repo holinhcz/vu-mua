@@ -154,7 +154,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	else:
 		# màn dọc / gần vuông: món neo vào MÉP MÀN THẬT (đổi ra đơn vị thiết kế), co cùng tỉ lệ bàn cờ
 		var sd := Rect2(dB - f.position / u, Vector2(W, H) / u)      # màn thấy được, đơn vị thiết kế
-		var bd := Rect2(dB, Vector2(dF, dF)).grow(dF * 0.046 + 6)   # mép ngoài tấm phản
+		var bd := Rect2(dB, Vector2(dF, dF * 1.037)).grow(4)   # mép ngoài tấm phản
 		var mL := bd.position.x - sd.position.x; var mR := sd.end.x - bd.end.x; var mB := sd.end.y - bd.end.y
 		var add := func(nm: String, x: float, y: float, sc: float, sh: Array):
 			var q: Vector2 = P.call(x, y); items.append([nm, q.x, q.y, sc * u, sh])
@@ -175,7 +175,15 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		else:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
 			hs = clampf(mL / 200.0, 0.25, 0.5)
-			if rgap >= 70:
+			if rgap >= 70 and mL < 60:
+				# điện thoại ngắn (Link 11-21): góc dưới phải cạnh thẻ "Bạn" = sân nhỏ: lu ở góc, gà mẹ + gà con, ca trà đá
+				var R := Rect2(Vector2(cardR + 6, bd.end.y + 4), Vector2(sd.end.x - cardR - 6, bot - bd.end.y - 4))
+				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
+				add.call("lu", R.end.x - 44 * kk, R.end.y - 44 * kk, 50.0 / 92.0 * kk * 1.4, [8, 10, 6, 0.45])
+				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.52)
+				hs = 0.42 * kk
+				add.call("mam", R.position.x + R.size.x * 0.7, R.position.y + R.size.y * 0.2, 0.6 * kk, [5, 6, 3, 0.42])
+			elif rgap >= 70:
 				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
 				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])
 		if mR >= 60:
@@ -183,7 +191,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			add.call("ro", sd.end.x - mR * 0.5, bd.position.y + dF * 0.15, rs * 0.7, [5, 6, 3, 0.42])
 			add.call("mam", sd.end.x - mR * 0.5, bd.position.y + dF * 0.45, rs * 0.6, [5, 6, 3, 0.42])
 			add.call("bong", sd.end.x - mR * 0.5, bd.position.y + dF * 0.75, rs * 0.65, [6, 7, 4, 0.42])
-		elif rgap >= 60 and bd.end.y < D.call(Vector2(0, L.me.position.y)).y:
+		elif rgap >= 60 and mL >= 60 and bd.end.y < D.call(Vector2(0, L.me.position.y)).y:
 			add.call("mam", sd.end.x - rgap * 0.5, (bd.end.y + band0) * 0.5, clampf(rgap / 150.0, 0.3, 32.0 / 74.0), [5, 6, 3, 0.42])
 		if mL >= 60:
 			var ns := clampf(mL / 160.0, 0.3, 0.5)
@@ -196,6 +204,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var bq: Vector2 = P.call(sd.end.x - 30, bd.position.y - 10) if bandH < 70 else P.call(sd.position.x + 30, bot - 20)
 		bc = Vector3(bq.x, bq.y, 120.0 / 230.0 * u * (0.8 if bandH < 70 else clampf(bandH / 170.0, 0.45, 1.0)))
 		canopy = {"pos": P.call(sd.end.x + 60, sd.position.y - 200), "sc": 0.5 * u, "flip": true}
+		if mL < 60 and mR < 60:
+			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối bỏ
+			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
+			canopy.flip = false
+			bc = Vector3(-99999, -99999, 0.01)
 		var rg := RandomNumberGenerator.new(); rg.seed = 5
 		var tries := 0
 		while gl.size() < 10 and tries < 300:
@@ -211,7 +224,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		_shadow(self, lt[int(q[3])], Vector2(q[0], q[1]), Vector2(1.2, 1.6), 0.8, 0.35, deg_to_rad(q[2]), s)
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
-	var frm: Rect2 = f.grow(f.size.x * 0.046 + 6 + 6)
+	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
 	for it in items:
 		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
 		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
@@ -267,12 +280,20 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	for i in 4:
 		var w3: Array = LJ.mango_wins[i]; var u3 := _used("xoai%d" % i)
 		tx0 = minf(tx0, float(w3[0]) + u3.position.x); tx1 = maxf(tx1, float(w3[0]) + u3.end.x + 46.0)
-	var fr: Rect2 = f.grow(f.size.x * 0.046 + 6)               # mép ngoài khung gỗ thật (không tính lề trong ảnh)
+	var fr: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037))               # mép ngoài khung gỗ thật (không tính lề trong ảnh)
 	var gap: float = (W - fr.end.x) if canopy.flip else fr.position.x
 	# khe bên phản hẹp: thu tán cho khoảng nửa cây lọt khe (gốc cây khuất ngoài mép màn), mép trên luôn khuất
 	csc = minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0))
-	canopy.sc = csc
 	cpos.y = minf(cpos.y, 20.0 * csc)
+	if canopy.has("top"):
+		var tr: Rect2 = canopy.top                              # vùng góc trên trái (màn), tán nằm gọn trong đó
+		var ty1 := 0.0
+		for i in 4:
+			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y + 62.0)
+		# nửa trên tán khuất trên mép màn (dưới thanh menu), chỉ phần dưới tán thò xuống, đáy tán + bóng vừa chạm trên khung phản
+		csc = minf(tr.size.y * 1.9 / ty1, tr.size.x * 1.3 / (tx1 - tx0))
+		cpos = Vector2(tr.end.x - tx1 * csc, tr.size.y - ty1 * csc)
+	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
 	var bz: Rect2 = fr.grow(4)
