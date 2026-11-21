@@ -98,9 +98,11 @@ func _kic(cx: float, cy: float, s: float, k: String) -> Dictionary:   # hình lo
 func _kk(k: String) -> String:   # loại chip theo loại thiên tai
 	return "tn_" + k if TNC.has("tn_" + k) else "fut"
 
-func _need(q: Dictionary, go := false) -> Array:   # đồ cần {mã: số} -> mục chip món chung [hình, tên, có, cần, việc khi thiếu]
+func _need(q: Dictionary, go := false) -> Array:   # đồ cần {mã: số} -> mục chip món chung [hình, tên, có, cần, việc khi thiếu]; xu tách riêng (_xcost)
 	var it := []
 	for k in q:
+		if k == "xu":
+			continue
 		var nm := String(WD.TNRES.get(k, k))
 		var ac = null
 		if go:   # (bản 463) chạm đồ thiếu: hàng nghề qua bảng Nghề › Chợ (thương lái), còn lại nói chỗ kiếm
@@ -110,6 +112,14 @@ func _need(q: Dictionary, go := false) -> Array:   # đồ cần {mã: số} -> 
 				ac = _dsay.bind(String(SRC[k]))
 		it.append([String(RIC.get(k, k)), nm.substr(0, 1).to_upper() + nm.substr(1), WD._tn_hv(String(k)), int(q[k]), ac])
 	return it
+
+func _xcost(rx: float, y: float, q: Dictionary) -> Array:   # (bản 465) tiền cần: "720 (xu)" canh phải tại rx, đỏ khi thiếu; trả [khối, rộng]
+	if not q.has("xu"):
+		return [[], 0.0]
+	var n := int(q.xu)
+	var P := [W._sa(n), "c"]
+	var pw := float(_rowi(0.0, 0.0, 26.0, P, 11.5, 800, "")[1])
+	return [_rowi(rx - pw, y, 26.0, P, 11.5, 800, BROWN if WD._tn_hv("xu") >= n else "rgb(190, 60, 50)")[0], pw]
 
 func _vl(uu) -> void:   # chạm mặt nhà gặp nạn: mở nhà đó
 	U.vl_open(int(uu))
@@ -178,7 +188,7 @@ func _phong() -> Array:
 				var wh := "a" if j == 0 else "b"
 				var q: Dictionary = WD.tn_scale(p[2])
 				var done: bool = W._tr(ok.get(wh))
-				var r := _pjob(y, ("Giữ làng: " if j else "Giữ ruộng: ") + String(p[0]), String(p[1]), q, done, WD.tn_prep.bind(wh), 3 if j else 0)
+				var r := _pjob(y, "Làng" if j else "Ruộng", String(p[0]), String(p[1]), q, done, WD.tn_prep.bind(wh), 3 if j else 0)
 				out.append_array(r[0])
 				y += float(r[1]) + GG
 		else:
@@ -237,14 +247,17 @@ func _phong() -> Array:
 	y += float(g[1]) + GG
 	return [out, y]
 
-func _pjob(y: float, t: String, s: String, q: Dictionary, done: bool, act, ut := 0) -> Array:   # khối việc phòng: tên, tác dụng (+ uy tín), đồ cần + nút Làm
+func _pjob(y: float, tg: String, t: String, s: String, q: Dictionary, done: bool, act, ut := 0) -> Array:   # khối việc phòng: chip Ruộng/Làng + tên, tác dụng (+ uy tín), đồ cần + tiền + nút Làm
 	var out := []
 	var c := _chip(X0, y, XW, 10.0, "got" if done else "fut")
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
 	var yy := y + 10.0
-	out.append(_dt(x, yy, w - 20.0, 16.0, _fitw(t, 12.0, 800, w - 20.0), 12.0, 800, BROWN, "left"))
+	var tc := _tchip(x, yy - 1.0, tg, "got" if tg == "Ruộng" else "now", "rgb(46, 120, 50)" if tg == "Ruộng" else "rgb(150, 100, 20)")   # (bản 465) nhãn Ruộng / Làng thay chữ "Giữ ruộng:"
+	out.append(tc[0])
+	var tx := x + float(tc[1]) + 6.0
+	out.append(_dt(tx, yy, x + w - 20.0 - tx, 16.0, _fitw(t, 12.0, 800, x + w - 20.0 - tx), 12.0, 800, BROWN, "left"))
 	if done:
 		out.append(_dtick(x + w - 14.0, yy + 2.0, 13.0))
 	yy += 17.0
@@ -258,10 +271,15 @@ func _pjob(y: float, t: String, s: String, q: Dictionary, done: bool, act, ut :=
 		out.append(_dt(x, yy - 4.0, w, 14.0, "Đã làm xong hôm nay.", 10.5, 700, "rgb(46, 120, 50)", "left"))
 		yy += 14.0 + 6.0
 	else:
-		var nd := _nchips(x, yy, w - 74.0, _need(q))
+		var it := _need(q)
+		var by := yy + (4.0 if it.size() else 0.0)   # chỉ tốn xu: nút lên sát dòng tả, không chừa hàng chip trống
+		var xc := _xcost(x + w - 72.0, by, q)
+		out.append_array(xc[0])
+		var cw := w - 74.0 - (float(xc[1]) + 8.0 if float(xc[1]) > 0.0 else 0.0)
+		var nd := _nchips(x, yy, cw, it)
 		out.append_array(nd[0])
-		out.append(_btn(x + w - 66.0, yy + 4.0, 66.0, 26.0, "Làm", act, "go" if WD.tn_have(q) else "off"))
-		yy += maxf(34.0, float(nd[1])) + 10.0
+		out.append(_btn(x + w - 66.0, by, 66.0, 26.0, "Làm", act, "go" if WD.tn_have(q) else "off"))
+		yy += (maxf(34.0, float(nd[1])) if it.size() else 26.0) + 10.0
 	c.r[3] = yy - y
 	return [out, yy - y]
 
@@ -336,9 +354,11 @@ func _nblock(y: float, uu, nn: Dictionary, ff: Dictionary, day: int) -> Array:  
 	else:
 		var nd := _nchips(x, yy, w, _need(nn.need, true))
 		out.append_array(nd[0])
-		yy += float(nd[1]) + GG
+		if float(nd[1]) > 0.0:
+			yy += float(nd[1]) + GG
 		var Rw := ["+60", "h", " · +8 uy tín"]
 		out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 11.5, 800, "rgb(40, 130, 50)")[0])
+		out.append_array(_xcost(x + w - 72.0, yy, nn.need)[0])   # (bản 465) tiền cần nằm cạnh nút Giúp
 		out.append(_btn(x + w - 66.0, yy, 66.0, 26.0, "Giúp", WD.tn_help.bind(uu), "go" if WD.tn_have(nn.need) else "off"))
 		yy += 26.0 + 10.0
 	c.r[3] = yy - y

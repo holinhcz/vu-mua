@@ -18,3 +18,4 @@ Dữ liệu đã đóng gói mà game tải lúc chạy (n/, d/, l/) nằm ở n
 - **Hái điên điển:** song_ve.gd gọi WC.wx() không có -> chưa hái được bụi ven sông; xong thì thêm lại việc ngày "dd".
 - **Thiên tai › chạm đồ thiếu (ui_tn.gd SRC):** câu chỉ chỗ kiếm củi ("chặt cây, dọn bụi trên ruộng") và gạch ("thư bạn bè gửi, hợp tác xã chia") là đoán từ code (farm.gd bong bóng củi, w_thu.gd / w_htx.gd cộng gạch). Rảnh lục lại logic thật rồi sửa câu cho đúng.
 - **Thiên tai › đồ giúp nhà gặp nạn (w_duong.gd tn_need_of, data/thien_tai/do_giup.json):** một nhà cần tới 4 món (vd sập nhà: 540 xu, 10 củi, 4 gạch, 1 chiếu), mới chơi gần như không giúp nổi. Rảnh coi lại mức đồ theo cấp / loại nạn, cân nhắc giảm.
+- **Thông báo nổi đè bảng (chung cả game):** lúc đang mở bảng, câu báo (toast) hiện ở đỉnh màn che hàng tab. Dời xuống đáy màn hoặc dưới hàng tab khi có bảng mở.
