@@ -115,6 +115,11 @@ func _ready() -> void:
 		c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		add_child(c)
 		set(n, c)
+	# lớp chỉnh màu nằm giữa quân cờ và thẻ: cảnh + quân tươi ấm hơn, chữ/thẻ giữ nguyên màu
+	var gr := ColorRect.new(); gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var gm := ShaderMaterial.new(); gm.shader = load("res://logic/caro/grade.gdshader"); gr.material = gm
+	add_child(gr); move_child(gr, _hud.get_index())
 	_bg.draw.connect(_draw_bg)
 	_pc.draw.connect(_draw_pieces)
 	_hud.draw.connect(_draw_hud)
