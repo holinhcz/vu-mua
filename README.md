@@ -8,3 +8,11 @@ Nhánh này chỉ chứa mã nguồn. Bản đang chạy (GitHub Pages) nằm �
 - `hinh/`: hình gốc 9px/đơn vị (cây, công trình, xưởng, icon...) do các thread vẽ xuất ra.
 
 Dữ liệu đã đóng gói mà game tải lúc chạy (n/, d/, l/) nằm ở nhánh `main`.
+
+## VIỆC CHỜ LÀM (ghi 21/11/2026)
+
+- **Đám đặt món:** nhà có đám giỗ / cưới / tiệc thì đặt món mình làm (món xưởng, món quán đã làm được), đặt trước 5 ngày, đơn lớn 2–4 món.
+  Cần chốt đám trước 5 ngày (hiện thiệp mời chỉ báo trước vài giờ, g.dam.nt). Nút Nhận đặt / Từ chối khéo (từ chối không trừ gì).
+  Giao đủ trước giờ đám: xu ~1,5–2 lần giá bán, uy tín +5..+10, thân +30..+60. Còn chốt: nhận mà không giao có trừ không, giao thiếu có thưởng phần không, 1 hay 2 đơn cùng lúc.
+- **Công trình (Sổ nhiệm vụ › Thành tựu):** Xưởng, Chuồng luôn 0 (step_f "zero"); Sạp kẹt bước nâng sạp (bản Godot chưa nâng sạp). Đề xuất thêm chuỗi Quán, Vườn, Làng.
+- **Hái điên điển:** song_ve.gd gọi WC.wx() không có -> chưa hái được bụi ven sông; xong thì thêm lại việc ngày "dd".
