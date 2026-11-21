@@ -44,6 +44,11 @@ func _mon(id: String) -> void:
 
 const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(226,64,72)\" stroke=\"rgb(170,36,44)\" stroke-width=\"1.2\"/></svg>"
 const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
+static func _heartp(p: float) -> String:   # tim đầy p phần (tô đỏ từ trái sang)
+	var w := snappedf(clampf(p, 0.0, 1.0) * 24.0, 0.1)
+	var path := "M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z"
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><defs><clipPath id=\"c\"><rect x=\"0\" y=\"0\" width=\"" + str(w) + "\" height=\"24\"/></clipPath></defs><path d=\"" + path + "\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/><path clip-path=\"url(#c)\" d=\"" + path + "\" fill=\"rgb(226,64,72)\"/><path d=\"" + path + "\" fill=\"none\" stroke=\"rgb(190,80,90)\" stroke-width=\"1.2\"/></svg>"
+
 const LOCK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M7 10V7.5a5 5 0 0 1 10 0V10\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\"/><rect x=\"4.5\" y=\"10\" width=\"15\" height=\"11\" rx=\"2.5\" fill=\"rgb(214,170,90)\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.4\"/></svg>"
 const QMARK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"rgb(232,222,200)\" stroke=\"rgb(190,170,130)\" stroke-width=\"1.4\"/><path d=\"M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.2\" fill=\"none\" stroke=\"rgb(150,120,70)\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"17.4\" r=\"1.3\" fill=\"rgb(150,120,70)\"/></svg>"
 const TAIL := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M0 0 L12 0 L4 10 Z\" fill=\"rgb(252,247,234)\" stroke=\"rgba(150,112,48,0.55)\" stroke-width=\"0.8\"/></svg>"
@@ -184,8 +189,8 @@ static func _cap(t: String) -> String:   # chữ đầu viết hoa ("đem ra ch�
 	return t.substr(0, 1).to_upper() + t.substr(1)
 
 func _lockc(x: float, y: float, t: String) -> Dictionary:   # chip khóa: hình ổ khóa + "Thân N"
-	var lb := _chip(x, y, 84.0, 26.0, "miss")
-	lb.kids = [_dic(x + 7.0, y + 6.0, 14.0, HEART), _dt(x + 22.0, y, 60.0, 26.0, t, 10.5, 700, "rgb(150, 70, 70)")]   # (bản 442) khóa thân: hình tim + "Cần N tim"
+	var lb := _chip(x, y, 84.0, 26.0, "sen")   # (bản 444) nền hồng hợp hình tim
+	lb.kids = [_dic(x + 7.0, y + 6.0, 14.0, HEART), _dt(x + 22.0, y, 60.0, 26.0, t, 10.5, 700, "rgb(170, 50, 60)")]   # (bản 442) khóa thân: hình tim + "Cần N tim"
 	return lb
 
 func _wrap(t: String, fs: float, fw: int, w: float) -> Array:
@@ -220,6 +225,11 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 	var cx := x
 	var cy := y
 	var ok := true
+	var cwm := 0.0   # (bản 444) chip món trong một khối dài bằng nhau (theo chip dài nhất)
+	for it in list:
+		var nm0 := String(W._ae(String(it[0])).get("name", it[0]))
+		var s0: String = G.fmt_n(mini(W._barn(String(it[0])), 99999)) + "/" + G.fmt_n(int(it[1]))
+		cwm = maxf(cwm, minf(30.0 + maxf(Box.text_w(nm0, 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w))
 	for it in list:
 		var id := String(it[0])
 		var q := int(it[1])
@@ -228,12 +238,12 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 		ok = ok and good
 		var s: String = G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
 		var nm := String(W._ae(id).get("name", id))   # (bản 435) chip 2 dòng: tên món trên, có/cần dưới
-		var cw: float = minf(30.0 + maxf(Box.text_w(nm, 9.5, 700), Box.text_w(s, 10.5, 800)) + 8.0, w)
+		var cw: float = cwm
 		if cx > x and cx + cw > x + w:
 			cx = x
 			cy += 40.0
 		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
-		c.kids = [_icn(cx + 15.0, cy + 17.0, 22.0, id), _dt(cx + 28.0, cy + 3.0, cw - 32.0, 14.0, _fitw(nm, 9.5, 700, cw - 32.0), 9.5, 700, BROWN, "left"),
+		c.kids = [_icn(cx + 15.0, cy + 17.0, 22.0, id), _dt(cx + 28.0, cy + 3.0, cw - 32.0, 14.0, _fitw(nm, 10.0, 700, cw - 32.0), 10.0, 700, BROWN, "left"),
 			_dt(cx + 28.0, cy + 17.0, cw - 32.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
 		c.act = _dsay.bind(String(W._ae(id).get("name", id)) + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
 		out.append(c)
@@ -283,16 +293,12 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 		out.append(_tchip(x + nw + 8.0 + float(tc[1]) + 5.0, y0 + 1.0, ho, "info", "rgb(52, 92, 140)", U.gp_open.bind(u))[0])
 	# tim + thân
 	var tim: int = W._i(f.get("tim"))
-	var hy := y0 + 23.0
-	for i in 5:
-		out.append(_dic(x + i * 15.0, hy, 13.0, HEART if i < tim else HEART0))
+	# (bản 444) bỏ thanh thân: tim đang lên đầy dần từ trái sang theo thân (như thanh cũ), giữ chữ "Thân N/5"
+	var hy := y0 + 22.0
 	var p := 1.0 if tim >= 5 else fmod(W._n(f.get("dp")), 100.0) / 100.0
-	var bx := x + 5 * 15.0 + 6.0
-	var bw := xr - bx - 56.0
-	out.append(_dbx(bx, hy + 4.0, bw, 5.0, "rgb(246, 222, 222)", 2.5))
-	if p > 0.0:
-		out.append(_dbx(bx, hy + 4.0, maxf(5.0, bw * p), 5.0, "rgb(226, 64, 72)", 2.5))
-	out.append(_dt(xr - 52.0, hy - 1.0, 52.0, 15.0, "Thân " + str(tim) + "/5", 10.0, 700, "rgb(190, 60, 70)", "right"))
+	for i in 5:
+		out.append(_dic(x + i * 17.0, hy, 15.0, HEART if i < tim else (_heartp(p) if i == tim and p > 0.0 else HEART0)))
+	out.append(_dt(x + 5 * 17.0 + 6.0, hy, 70.0, 15.0, "Thân " + str(tim) + "/5", 10.5, 700, "rgb(190, 60, 70)", "left"))
 	# nhà · đang làm: chữ trơn (không chip)
 	var r = W.r1(u)
 	var rid := String(r.r.id)
@@ -386,21 +392,24 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	var rw: float = (Box.text_w(rt, 11.5, 800) + 22.0) if rt != "" else 0.0
 	out.append(_dt(x, yy, w - rw, 16.0, _fitw(t, 12.0, 800, w - rw), 12.0, 800, BROWN, "left"))
 	if rt != "":
-		out.append(_dick(x + w - 8.0, yy + 8.0, 16.0, "coin"))
-		out.append(_dt(x + w - rw, yy, rw - 18.0, 16.0, rt, 11.5, 800, "rgb(176, 120, 10)", "right"))
+		out.append(_dick(x + w - 8.0, yy + 8.0, 17.0, "coin"))
+		var xt := _dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 900, "rgb(255, 214, 70)", "right")   # (bản 444) số xu nổi: vàng sáng, viền nâu, bóng đổ
+		xt.css["text-shadow"] = "rgb(122, 72, 8) 1px 0px 0px, rgb(122, 72, 8) -1px 0px 0px, rgb(122, 72, 8) 0px 1px 0px, rgb(122, 72, 8) 0px -1px 0px, rgba(80, 40, 0, 0.45) 0px 2px 2px"
+		out.append(xt)
 	yy += 18.0
 	if s != "":
-		var pp := _para(x, yy, w, s, 10.0, 600, SUB, 13.0)
+		var pp := _para(x, yy, w, s, 10.5, 600, SUB, 14.0)
 		out.append_array(pp[0])
 		yy += float(pp[1]) + 4.0
 	var ok := true
+	var ny := yy   # hàng chip món đầu: nút canh giữa hàng này
 	if list.size():
 		var nd := _needs(x, yy, w - 74.0 if lb != "" else w, list)
 		out.append_array(nd[0])
 		ok = nd[2]
 		yy += float(nd[1]) + 6.0
 	if lb != "":
-		var by: float = maxf(yy - 36.0, y + 8.0) if list.size() else yy
+		var by: float = ny + 4.0 if list.size() else yy
 		out.append(_btn(X0 + XW - 10.0 - 66.0, by, 66.0, 26.0, lb, act, "go" if (ok or force) and act != null else "off"))
 		if not list.size():
 			yy += 32.0
@@ -543,17 +552,17 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 		var x := X0 + (i % cols) * (bw + g)
 		var yy := y + floorf(i / float(cols)) * (bh + g)
 		var st := String(o.st)
-		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" else String(o.get("k", "fut"))))
+		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" or st == "hint" else String(o.get("k", "fut"))))
 		var ks := []
 		var tx := x + 8.0
 		if String(o.get("ic", "")) != "":
 			ks.append(_icn(x + 18.0, yy + bh * 0.5, 24.0, String(o.ic)))
 			tx = x + 34.0
 		var tw := x + bw - 6.0 - tx
-		var dim := st == "dis"
+		var dim := st == "dis" or st == "hint"
 		ks.append(_dt(tx, yy + 6.0, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
 		if String(o.get("s", "")) != "":
-			ks.append(_dt(tx, yy + 22.0, tw, 13.0, _fitw(String(o.s), 9.5, 600, tw), 9.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
+			ks.append(_dt(tx, yy + 22.0, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
 		if st == "on":   # đang chọn: dấu tick góc phải
 			ks.append(_dtick(x + bw - 17.0, yy + 5.0, 12.0))
 		c.kids = ks
@@ -591,6 +600,8 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		var xs: String = (String(W.CO.get(e.job, e.job)) + (" · " + String(W._ae(e.jr).get("name", "")).to_lower() if W._tr(e.get("jr")) else "") + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chọn xưởng")
 		var xr: Array = G.xw.sr[W.xj(e.job)].rec if xj else []
 		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _pk.bind("xuong")})
+	if o.is_empty():   # (bản 444) chưa có xưởng: chip mờ trong lưới, chạm hiện cách xây
+		bt.append({"b": "Xưởng", "s": "Chưa xây", "ic": "gao", "st": "hint", "act": _dsay.bind("Xây xưởng (Xây dựng › Xưởng) rồi thuê người làm: xưởng tự thu hàng và làm tiếp món bạn chọn.")})
 	var gr := _grid(y, bt, 2, "thue")
 	out.append_array(gr[0])
 	y += float(gr[1]) + 10.0
@@ -609,10 +620,6 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		var gx := _grid(y, xk, 2, "thue")
 		out.append_array(gx[0])
 		y += float(gx[1]) + 10.0
-	if o.is_empty():
-		var pp := _para(X0 + 2.0, y, XW - 4.0, "Xây xưởng (Xây dựng › Xưởng) rồi thuê người làm, xưởng sẽ tự thu hàng và làm tiếp món bạn chọn.", 10.0, 600, SUB, 13.0)
-		out.append_array(pp[0])
-		y += float(pp[1]) + 10.0
 	if pick == "ruong":   # lưới chọn giống: chọn xong mới giao Làm ruộng
 		out.append_array(_sect(y, "Gieo cây gì?", col))
 		y += 22.0
@@ -653,7 +660,7 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 		var ks := [_icn(X0 + 24.0, y + 24.0, 30.0, id)]
 		var tw := XW - 46.0 - 132.0
 		ks.append(_dt(X0 + 46.0, y + 7.0, tw, 16.0, _fitw("Giống " + String(G.crop(id).name).to_lower(), 12.0, 800, tw), 12.0, 800, BROWN, "left"))
-		ks.append(_dt(X0 + 46.0, y + 25.0, tw, 13.0, _fitw(W._sa(l) + " xu/hạt · còn " + str(o) + " · kho " + str(W._barn(id)), 9.5, 600, tw), 9.5, 600, SUB, "left"))
+		ks.append(_dt(X0 + 46.0, y + 25.0, tw, 13.0, _fitw(W._sa(l) + " xu/hạt · còn " + str(o) + " · kho " + str(W._barn(id)), 10.5, 600, tw), 10.5, 600, SUB, "left"))
 		c.kids = ks
 		out.append(c)
 		var ok1: bool = o > 0 and W._n(G.g.coins) >= l
@@ -786,7 +793,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 		var pid: String = String(x.id) if not W._ae(x.id).is_empty() else String(x["in"][0][0])
 		var lw := XW - 150.0
 		r = [[lc, _icn(X0 + 24.0, y + 24.0, 30.0, pid), _dt(X0 + 46.0, y + 6.0, lw, 18.0, _fitw(String(W._ae(pid).get("name", x.n)), 11.5, 800, lw), 11.5, 800, BROWN, "left"),
-			_dt(X0 + 46.0, y + 25.0, lw, 14.0, "Thân 3 tim họ mới nhận dạy", 9.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 11.0, "Cần 3 tim")], 48.0]
+			_dt(X0 + 46.0, y + 25.0, lw, 14.0, "Thân 3 tim họ mới nhận dạy", 10.5, 600, SUB, "left"), _lockc(X0 + XW - 94.0, y + 11.0, "Cần 3 tim")], 48.0]
 	elif not W._tr(p):
 		var nd: Array = W.hn_in1(u, f)
 		var ot = W.nghe_by_id(H.a) if W._tr(H.get("a")) and H.a != x.id else null
@@ -875,13 +882,13 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 		var k: String = ln[0]
 		var s: String = ln[1]
 		if k == "s":
-			var L := _wrap(s, 9.5, 600, w0)
+			var L := _wrap(s, 10.5, 600, w0)
 			var h := L.size() * 12.0
 			if y - h < top:
 				break
 			y -= h
 			for j in L.size():
-				bl.append(_dt(x0, y + j * 12.0, w0, 12.0, L[j], 9.5, 600, SUB))
+				bl.append(_dt(x0, y + j * 12.0, w0, 12.0, L[j], 10.5, 600, SUB))
 			y -= 6.0
 			continue
 		var mw := w0 - 40.0
@@ -957,7 +964,7 @@ func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp n�
 			c.act = _give.bind(id)
 			out.append(c)
 		if ids.size() > nmax:
-			out.append(_dt(x0, bb - 16.0, w0, 13.0, "Còn " + str(ids.size() - nmax) + " món khác trong kho", 9.5, 600, SUB))
+			out.append(_dt(x0, bb - 16.0, w0, 13.0, "Còn " + str(ids.size() - nmax) + " món khác trong kho", 10.5, 600, SUB))
 	out.append(_btn(X0 + (XW - 120.0) * 0.5, bb, 120.0, 28.0, "Thôi", _back, "red"))
 	return out
 
