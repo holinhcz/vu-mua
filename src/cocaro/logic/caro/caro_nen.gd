@@ -28,6 +28,9 @@ static func _used(n: String) -> Rect2:
 		_ur[n] = Rect2(Vector2(r.position) * k, Vector2(r.size) * k)
 	return _ur[n]
 
+static func has_art() -> bool:
+	return FileAccess.file_exists(D + "layout.json")
+
 static func tex(n: String) -> Texture2D:
 	if _tex.has(n):
 		return _tex[n]
@@ -92,6 +95,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	for c in get_children():
 		c.queue_free()
 	leaves.clear()
+	if not has_art():
+		# cảnh 9px chưa tải xong (bản web tải ngầm): nền đất trơn + tấm phản, vào đánh liền
+		var bg := ColorRect.new(); bg.color = Color8(158, 136, 108); bg.size = Vector2(W, H); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(bg)
+		_board(L, L.bimg, board_tex)
+		return
 	LJ = JSON.parse_string(FileAccess.get_file_as_string(D + "layout.json"))
 	var port: bool = L.port
 	# BỐ CỤC CẢNH = 1 KHỐI co giãn cùng tấm phản (Link): bản thiết kế (ngang 1920x920, dọc 412x891) đặt mọi món
@@ -248,27 +256,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var st := ColorRect.new(); st.color = Color8(168, 160, 146); st.position = Vector2(0, ph * u); st.size = Vector2(rw_, 7 * u); st.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(st)
 	var sd := ColorRect.new(); sd.position = Vector2(0, (ph + 7) * u); sd.size = Vector2(rw_, 10 * u); sd.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sd.color = Color(0.12, 0.06, 0.02, 0.25); add_child(sd)
-	# ---- tấm phản
-	var b := Sprite2D.new(); b.texture = board_tex; b.centered = false
-	var bi: Rect2 = bimg
-	# ảnh phản đã thu đúng số điểm màn: đặt thẳng hàng điểm ảnh, lọc thường (không mipmap) cho nét
-	b.position = (bi.position * scale.x).round() / scale.x; b.scale = Vector2.ONE / scale.x; b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	add_child(b)
-	# ---- đường phấn NÉT: kẻ lại 16x16 đường bằng hình chữ nhật khớp điểm ảnh màn, đè lên vệt phấn vẽ sẵn
-	var sc := scale.x
-	var lw: float = maxf(2.0, roundf(1.6 * sc))      # độ dày (điểm màn)
-	var gx0: float = L.gx * sc; var gy0: float = L.gy * sc; var cpx: float = L.cs * sc
-	var span := cpx * 15
-	for k in 16:
-		for vert in [true, false]:
-			var r := ColorRect.new(); r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			r.color = Color(0.96, 0.94, 0.89, 0.9)
-			var p0 := roundf((gx0 if vert else gy0) + k * cpx - lw / 2)
-			if vert:
-				r.position = Vector2(p0, roundf(gy0 - lw / 2)) / sc; r.size = Vector2(lw, roundf(span + lw)) / sc
-			else:
-				r.position = Vector2(roundf(gx0 - lw / 2), p0) / sc; r.size = Vector2(roundf(span + lw), lw) / sc
-			add_child(r)
+	_board(L, bimg, board_tex)
 	# ---- bóng tán xoài, bụi chuối, lá rơi, chuối, tán
 	var M: Dictionary = LJ.mango
 	# tán + bóng tán KHÔNG BAO GIỜ đè lên tấm phản (Link): đẩy tán ra xa mép phản, mép trên tán luôn khuất ngoài màn
@@ -346,3 +334,27 @@ func _process(dt: float) -> void:
 		o.sp.modulate.a = fade
 		o.sd.position = Vector2(x + 38 * hgt * k, y + 52 * hgt * k); o.sd.rotation = o.sp.rotation; o.sd.scale = o.sp.scale
 		o.sd.modulate.a = (1.0 - 0.5 * hgt) * fade
+
+# tấm phản + đường phấn nét (dùng cả khi cảnh chưa tải xong)
+func _board(L: Dictionary, bimg: Rect2, board_tex: Texture2D) -> void:
+	# ---- tấm phản
+	var b := Sprite2D.new(); b.texture = board_tex; b.centered = false
+	var bi: Rect2 = bimg
+	# ảnh phản đã thu đúng số điểm màn: đặt thẳng hàng điểm ảnh, lọc thường (không mipmap) cho nét
+	b.position = (bi.position * scale.x).round() / scale.x; b.scale = Vector2.ONE / scale.x; b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	add_child(b)
+	# ---- đường phấn NÉT: kẻ lại 16x16 đường bằng hình chữ nhật khớp điểm ảnh màn, đè lên vệt phấn vẽ sẵn
+	var sc := scale.x
+	var lw: float = maxf(2.0, roundf(1.6 * sc))      # độ dày (điểm màn)
+	var gx0: float = L.gx * sc; var gy0: float = L.gy * sc; var cpx: float = L.cs * sc
+	var span := cpx * 15
+	for k in 16:
+		for vert in [true, false]:
+			var r := ColorRect.new(); r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			r.color = Color(0.96, 0.94, 0.89, 0.9)
+			var p0 := roundf((gx0 if vert else gy0) + k * cpx - lw / 2)
+			if vert:
+				r.position = Vector2(p0, roundf(gy0 - lw / 2)) / sc; r.size = Vector2(lw, roundf(span + lw)) / sc
+			else:
+				r.position = Vector2(roundf(gx0 - lw / 2), p0) / sc; r.size = Vector2(roundf(span + lw), lw) / sc
+			add_child(r)

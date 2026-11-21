@@ -399,10 +399,27 @@ func _layout() -> void:
 			if a.begins_with("--q="): NEN.Q = float(a.substr(4)); NEN.Q_fixed = true
 		_nen = NEN.new()
 		_bg.add_child(_nen)
+		if not NEN.has_art():
+			_fetch_art()
 	_nen.scale = Vector2(K, K)
 	_crisp.clear()
 	_nen.build(L, W, H, crisp("board", Vector2i(roundi(L.bimg.size.x * K), roundi(L.bimg.size.y * K))))
 	_redraw_all()
+
+# bản web: cảnh 9px để riêng nen.pck, tải ngầm sau khi vào game (bàn cờ chơi được ngay), xong thì dựng cảnh
+func _fetch_art() -> void:
+	if not OS.has_feature("web"):
+		return
+	var url := str(JavaScriptBridge.eval("new URL('nen.pck?v=' + (window.NENV || ''), location.href).href"))
+	var rq := HTTPRequest.new(); add_child(rq)
+	rq.download_file = "user://nen.pck"
+	rq.download_chunk_size = 4 * 1024 * 1024        # mặc định 64 KB / khung hình: 35 MB mất cả phút
+	rq.request_completed.connect(func(res: int, code: int, _h, _b):
+		rq.queue_free()
+		var ok := res == HTTPRequest.RESULT_SUCCESS and code == 200 and ProjectSettings.load_resource_pack("user://nen.pck")
+		if ok:
+			_layout())
+	var e := rq.request(url)
 
 func _redraw_all() -> void:
 	if _bg == null:
