@@ -52,6 +52,8 @@ static func _heartp(p: float) -> String:   # tim đầy p phần (tô đỏ từ
 const LOCK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M7 10V7.5a5 5 0 0 1 10 0V10\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\"/><rect x=\"4.5\" y=\"10\" width=\"15\" height=\"11\" rx=\"2.5\" fill=\"rgb(214,170,90)\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.4\"/></svg>"
 const QMARK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"rgb(232,222,200)\" stroke=\"rgb(190,170,130)\" stroke-width=\"1.4\"/><path d=\"M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.2\" fill=\"none\" stroke=\"rgb(150,120,70)\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"17.4\" r=\"1.3\" fill=\"rgb(150,120,70)\"/></svg>"
 const TAIL := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M0 0 L12 0 L4 10 Z\" fill=\"rgb(252,247,234)\" stroke=\"rgba(150,112,48,0.55)\" stroke-width=\"0.8\"/></svg>"
+const TAILB := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M11 1 L1 10 L11 7 Z\" fill=\"rgb(224,238,250)\"/><path d=\"M10.4 1.4 L1 10 L10.4 7.2\" fill=\"none\" stroke=\"rgb(96,146,196)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng nhà dân, chỉ sang mặt
+const TAILG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M0 1 L10 10 L0 7 Z\" fill=\"rgb(208,238,198)\"/><path d=\"M0.6 1.4 L10 10 L0.6 7.2\" fill=\"none\" stroke=\"rgb(76,160,70)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng mình
 const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "gao"}   # hình sở trường (thay emoji)
 const ICS := {"chieu": 1.2, "trung": 1.12, "gao": 1.08}   # hình thưa (dẹt / tròn nhỏ): phóng cho cùng cỡ nhìn
 const JOBIC := {"": "chieu", "ruong": "lua", "vuon": "qua_xoai", "chan": "trung"}
@@ -848,80 +850,92 @@ func _pop(f: Dictionary, y0: float, y1: float, vt: Dictionary) -> Array:   # h�
 	out.append_array(r)
 	return out
 
-func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp nổi)
+func _phd(x: float, y: float, w: float, t: String, col: String) -> Array:   # (bản 450) tiêu đề hộp nổi: vạch màu + chữ đậm + gạch mảnh
+	var tw: float = minf(Box.text_w(t, 12.5, 800) + 4.0, w - 20.0)
+	return [_dbx(x, y + 2.0, 3.0, 14.0, col, 1.5), _dt(x + 8.0, y, tw, 18.0, _fitw(t, 12.5, 800, tw), 12.5, 800, BROWN, "left"),
+		_dbx(x + 8.0 + tw + 8.0, y + 9.0, maxf(0.0, w - tw - 16.0), 1.0, "rgb(222, 204, 164)", 0.0)]
+
+func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp nổi); (bản 450) mặt + bong bóng có đuôi, câu trả lời chip kem đánh số
 	if cv == null:
 		sub = ""
 		return []
 	var out := []
-	var x0 := X0 + 14.0
-	var w0 := XW - 28.0
-	out.append(_dt(x0, y0 + 8.0, w0, 18.0, "Trò chuyện với " + String(f.n), 12.5, 800, BROWN, "left"))
-	# nút trả lời ở đáy hộp
+	var x0 := X0 + 10.0
+	var w0 := XW - 20.0
+	out.append_array(_phd(x0, y0 + 10.0, w0, "Trò chuyện với " + String(f.n), "rgb(70, 130, 190)"))
+	# câu trả lời ở đáy hộp
 	var opts: Array = cv.opts
 	var oh := []
 	for o in opts:
-		oh.append(_wrap(String(o.t), 11.0, 700, w0 - 20.0).size() * 14.0 + 12.0)
-	var ob := y1 - 10.0
-	var oy := ob
+		oh.append(_wrap(String(o.t), 11.0, 700, w0 - 40.0).size() * 14.0 + 14.0)
+	var oy := y1 - 10.0
 	for h in oh:
-		oy -= float(h) + 5.0
+		oy -= float(h) + 6.0
+	oy += 6.0
 	var yy := oy
 	for i in opts.size():
 		var o: Dictionary = opts[i]
 		var h := float(oh[i])
 		var pr: bool = o.get("k") == "nhan"
-		var b := _chip(x0, yy, w0, h, "got" if pr else "viec")
-		var lines := _wrap(String(o.t), 11.0, 700, w0 - 20.0)
-		var ks := []
+		var b := _chip(x0, yy, w0, h, "got" if pr else "fut")
+		var lines := _wrap(String(o.t), 11.0, 700, w0 - 40.0)
+		var cc := _dbx(x0 + 8.0, yy + (h - 18.0) * 0.5, 18.0, 18.0, "rgb(196, 160, 100)", 9.0)
+		cc.kids = [_dt(x0 + 8.0, yy + (h - 18.0) * 0.5, 18.0, 18.0, str(i + 1), 10.0, 800, "rgb(255, 255, 255)")]   # số là con của tròn (pool dời nút cũ xuống cuối → số bị che)
+		var ks := [cc]
 		for j in lines.size():
-			ks.append(_dt(x0 + 10.0, yy + 6.0 + j * 14.0, w0 - 20.0, 14.0, lines[j], 11.0, 700, BROWN, "left"))
+			ks.append(_dt(x0 + 32.0, yy + 7.0 + j * 14.0, w0 - 40.0, 14.0, lines[j], 11.0, 700, BROWN, "left"))
 		b.kids = ks
 		b.act = _pick.bind(i)
 		out.append(b)
-		yy += h + 5.0
-	# các câu: đo từ cuối lên, câu cũ không vừa thì bỏ
-	var top := y0 + 32.0
-	var bot := oy - 8.0
+		yy += h + 6.0
+	# các câu: đo từ cuối lên, câu cũ không vừa thì bỏ; xếp từ trên xuống
+	var top := y0 + 10.0 + 18.0 + 10.0
+	var bot := oy - 10.0
 	var bl := []
 	var y := bot
+	var lk := clampi(W._i(f.get("lk")), 0, 7)
+	var face := "res://ui/img/vlface/" + str(lk) + ("n" if G.night else "") + ".webp"
 	for li in range(cv.lines.size() - 1, -1, -1):
 		var ln: Array = cv.lines[li]
 		var k: String = ln[0]
 		var s: String = ln[1]
 		if k == "s":
 			var L := _wrap(s, 10.5, 600, w0)
-			var h := L.size() * 12.0
+			var h := L.size() * 14.0
 			if y - h < top:
 				break
 			y -= h
 			for j in L.size():
-				bl.append(_dt(x0, y + j * 12.0, w0, 12.0, L[j], 10.5, 600, SUB))
-			y -= 6.0
+				var st := _dt(x0, y + j * 14.0, w0, 14.0, L[j], 10.5, 600, SUB)
+				st.css["font-style"] = "italic"
+				bl.append(st)
+			y -= 8.0
 			continue
-		var mw := w0 - 40.0
-		var L2 := _wrap(s, 10.5, 600, mw - 16.0)
+		var nb := k == "n"
+		var mw := w0 - 60.0
+		var L2 := _wrap(s, 10.5, 600, mw - 18.0)
 		var tw := 0.0
 		for t in L2:
 			tw = maxf(tw, Box.text_w(t, 10.5, 600))
-		var nh := 13.0 if k == "n" else 0.0
-		if k == "n":
-			tw = maxf(tw, Box.text_w(String(f.n), 9.0, 700))
 		var bw := minf(tw + 18.0, mw)
-		var bh := L2.size() * 14.0 + nh + 10.0
+		var bh := L2.size() * 14.0 + 10.0
 		if y - bh < top:
 			break
 		y -= bh
-		var bx := x0 if k == "n" else x0 + w0 - bw
-		var c := _chip(bx, y, bw, bh, "info" if k == "n" else "got")
+		var bx := x0 + 30.0 if nb else x0 + w0 - bw - 4.0
+		var c := _chip(bx, y, bw, bh, "info" if nb else "got")
 		var ks := []
-		if k == "n":
-			ks.append(_dt(bx + 9.0, y + 4.0, bw - 18.0, 12.0, String(f.n), 9.0, 700, SUB, "left"))
 		for j in L2.size():
-			ks.append(_dt(bx + 9.0, y + 5.0 + nh + j * 14.0, bw - 18.0, 14.0, L2[j], 10.5, 600, BROWN, "left"))
+			ks.append(_dt(bx + 9.0, y + 5.0 + j * 14.0, bw - 18.0, 14.0, L2[j], 10.5, 600, BROWN, "left"))
 		c.kids = ks
 		bl.append(c)
-		y -= 6.0
-	var dy := top - (y + 6.0)   # (bản 434) các câu xếp từ trên xuống (câu mới nhất vẫn vừa trên nút trả lời)
+		if nb:   # mặt nhỏ + đuôi chỉ vào mặt
+			bl.append(_pic(x0, y + bh - 24.0, 24.0, 24.0, face))
+			bl.append(_dic(bx - 9.0, y + bh - 18.0, 11.0, TAILB))
+		else:
+			bl.append(_dic(bx + bw - 2.0, y + bh - 18.0, 11.0, TAILG))
+		y -= 8.0
+	var dy := top - (y + 8.0)
 	for b in bl:
 		Snap._move(b, Vector2(0, dy))
 	out.append_array(bl)
@@ -936,49 +950,49 @@ func _pick(i: int) -> void:   # data-cv
 		sub = ""
 		tab = "viec"
 
-func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp nổi)
+func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp nổi); (bản 450) lưới 2 cột kiểu Thuê làm, thích trước ghét sau, bỏ nút Thôi
 	var out := []
-	var x0 := X0 + 14.0
-	var w0 := XW - 28.0
+	var x0 := X0 + 10.0
+	var w0 := XW - 20.0
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
 	var x2: bool = W.is_ngay_rieng(u) and W._tr(k.get("d"))
-	out.append(_dt(x0, y0 + 8.0, w0, 18.0, "Tặng " + String(f.n) + " 1 món", 12.5, 800, BROWN, "left"))
-	out.append(_dt(x0, y0 + 26.0, w0, 13.0, _fitw("Món thích được thân nhiều, món ghét bị trừ." + (" Hôm nay ngày riêng: quý gấp đôi." if x2 else ""), 10.0, 600, w0), 10.0, 600, SUB, "left"))
+	out.append_array(_phd(x0, y0 + 10.0, w0, "Tặng " + String(f.n) + " 1 món", "rgb(200, 70, 60)"))
+	out.append(_dt(x0, y0 + 32.0, w0, 14.0, _fitw(("Ngày riêng: quý gấp đôi · " if x2 else "") + "Món thích +thân nhiều · món ghét bị trừ", 10.5, 600, w0), 10.5, 600, SUB, "left"))
 	var ids: Array = W.gift_ids(u)
-	var y := y0 + 46.0
-	var bb := y1 - 10.0 - 30.0
+	var y := y0 + 56.0
 	if ids.is_empty():
 		out.append(_dt(x0, y, w0, 16.0, "Kho chưa có món gì để tặng.", 11.0, 700, BROWN, "left"))
-	else:
-		var g := 5.0
-		var bw := (w0 - g * 2.0) / 3.0
-		var bh := 58.0
-		var rows := int(floor((bb - 8.0 - y + g) / (bh + g)))
-		var nmax := mini(ids.size(), rows * 3)
-		for i in nmax:
-			var id: String = ids[i][0]
-			var tg: int = ids[i][1]
-			var cx := x0 + (i % 3) * (bw + g)
-			var cy := y + floorf(i / 3.0) * (bh + g)
-			var c := _chip(cx, cy, bw, bh, "got" if tg > 0 else ("sen" if tg < 0 else "fut"))
-			var ks := [_icn(cx + bw * 0.5, cy + 17.0, 24.0, id), _dt(cx + 2.0, cy + 31.0, bw - 4.0, 13.0, _fitw(String(W._ae(id).name), 10.0, 800, bw - 6.0), 10.0, 800, BROWN)]
-			if tg > 0:
-				ks.append(_dic(cx + bw * 0.5 - 18.0, cy + 45.0, 10.0, HEART))
-				ks.append(_dt(cx + bw * 0.5 - 6.0, cy + 43.0, 30.0, 13.0, "Thích", 9.0, 700, "rgb(46, 120, 50)", "left"))
-			else:
-				ks.append(_dt(cx + 2.0, cy + 43.0, bw - 4.0, 13.0, "Ghét" if tg < 0 else "Có " + str(W._barn(id)), 9.0, 700, "rgb(190, 60, 50)" if tg < 0 else SUB))
-			c.kids = ks
-			c.act = _give.bind(id)
-			out.append(c)
-		if ids.size() > nmax:
-			out.append(_dt(x0, bb - 16.0, w0, 13.0, "Còn " + str(ids.size() - nmax) + " món khác trong kho", 10.5, 600, SUB))
-	out.append(_btn(X0 + (XW - 120.0) * 0.5, bb, 120.0, 28.0, "Thôi", _back, "red"))
+		return out
+	var g := 6.0
+	var bw := (w0 - g) * 0.5
+	var bh := 44.0
+	var rows := int(floor((y1 - 10.0 - 18.0 - y + g) / (bh + g)))
+	var nmax := mini(ids.size(), rows * 2)
+	for i in nmax:
+		var id: String = ids[i][0]
+		var tg: int = ids[i][1]
+		var cx := x0 + (i % 2) * (bw + g)
+		var cy := y + floorf(i / 2.0) * (bh + g)
+		var c := _chip(cx, cy, bw, bh, "got" if tg > 0 else ("sen" if tg < 0 else "fut"))
+		var tx := cx + 42.0
+		var tw := cx + bw - 6.0 - tx
+		var ks := [_icn(cx + 21.0, cy + bh * 0.5, 26.0, id), _dt(tx, cy + 6.0, tw, 15.0, _fitw(String(W._ae(id).name), 11.5, 800, tw), 11.5, 800, BROWN, "left")]
+		var st: String = "Có " + str(W._barn(id))
+		if tg > 0:
+			ks.append(_dt(tx, cy + 23.0, 40.0, 14.0, st + " ·", 10.5, 600, SUB, "left"))
+			var sw: float = Box.text_w(st + " ·", 10.5, 600) + 4.0
+			ks.append(_dic(tx + sw, cy + 25.0, 11.0, HEART))
+			ks.append(_dt(tx + sw + 13.0, cy + 23.0, 40.0, 14.0, "Thích", 10.5, 700, "rgb(46, 120, 50)", "left"))
+		else:
+			ks.append(_dt(tx, cy + 23.0, tw, 14.0, st + (" · Ghét" if tg < 0 else ""), 10.5, 600 if tg == 0 else 700, "rgb(190, 60, 50)" if tg < 0 else SUB, "left"))
+		c.kids = ks
+		c.act = _give.bind(id)
+		out.append(c)
+	if ids.size() > nmax:
+		out.append(_dt(x0, y1 - 26.0, w0, 14.0, "Còn " + str(ids.size() - nmax) + " món khác trong kho", 10.5, 600, SUB))
 	return out
 
 func _give(id: String) -> void:   # data-gv
 	W.gift_give(u, id)
 	sub = ""
 
-func _back() -> void:   # data-back
-	sub = ""
-	cv = null
