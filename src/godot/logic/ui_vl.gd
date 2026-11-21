@@ -230,7 +230,7 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 	for it in list:
 		var nm0 := String(W._ae(String(it[0])).get("name", it[0]))
 		var s0: String = G.fmt_n(mini(W._barn(String(it[0])), 99999)) + "/" + G.fmt_n(int(it[1]))
-		cwm = maxf(cwm, minf(30.0 + maxf(Box.text_w(nm0, 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w))
+		cwm = maxf(cwm, minf(38.0 + maxf(Box.text_w(nm0, 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w))
 	for it in list:
 		var id := String(it[0])
 		var q := int(it[1])
@@ -244,8 +244,8 @@ func _needs(x: float, y: float, w: float, list: Array) -> Array:
 			cx = x
 			cy += 40.0
 		var c := _chip(cx, cy, cw, 34.0, "got" if good else "sen")
-		c.kids = [_icn(cx + 15.0, cy + 17.0, 22.0, id), _dt(cx + 28.0, cy + 3.0, cw - 32.0, 14.0, _fitw(nm, 10.0, 700, cw - 32.0), 10.0, 700, BROWN, "left"),
-			_dt(cx + 28.0, cy + 17.0, cw - 32.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
+		c.kids = [_icn(cx + 18.0, cy + 17.0, 28.0, id), _dt(cx + 36.0, cy + 3.0, cw - 40.0, 14.0, _fitw(nm, 10.0, 700, cw - 40.0), 10.0, 700, BROWN, "left"),
+			_dt(cx + 36.0, cy + 17.0, cw - 40.0, 14.0, s, 10.5, 800, "rgb(46, 120, 50)" if good else "rgb(190, 60, 50)", "left")]
 		c.act = _dsay.bind(String(W._ae(id).get("name", id)) + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
 		out.append(c)
 		cx += cw + 5.0
@@ -391,10 +391,13 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	if xu > 0:
 		rt = "+" + W._sa(xu)
 	var rw: float = (Box.text_w(rt, 11.5, 800) + 22.0) if rt != "" else 0.0
-	out.append(_dt(x, yy, w - rw, 16.0, _fitw(t, 12.0, 800, w - rw), 12.0, 800, BROWN, "left"))
-	if rt != "":
+	var by0 := X0 + XW - 10.0 - 66.0   # mép trái nút
+	var tw0: float = (w - 76.0) if lb != "" and list.size() else (w - rw)
+	out.append(_dt(x, yy, tw0, 16.0, _fitw(t, 12.0, 800, tw0), 12.0, 800, BROWN, "left"))
+	var xu_row := rt != "" and not (lb != "" and list.size())   # có nút + chip món: số xu nằm ngay trên nút, canh giữa nút (vẽ ở dưới)
+	if xu_row:
 		out.append(_dick(x + w - 8.0, yy + 8.0, 17.0, "coin"))
-		out.append(_dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))   # (bản 446) số xu thưởng: xanh lá đậm như các số "được thêm"
+		out.append(_dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))   # (bản 446) số xu thưởng: xanh lá đậm
 	yy += 16.0 + (10.0 if list.size() and s == "" else 4.0)
 	if s != "":
 		var pp := _para(x, yy, w, s, 10.5, 600, SUB, 14.0)
@@ -409,6 +412,11 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 		yy += float(nd[1]) + 10.0
 	if lb != "":
 		var by: float = ny + 4.0 if list.size() else yy
+		if rt != "" and not xu_row:   # (bản 448) số xu ngay trên nút, canh giữa nút
+			var xw0: float = Box.text_w(rt, 12.5, 800) + 4.0 + 16.0
+			var xx := by0 + (66.0 - xw0) * 0.5
+			out.append(_dt(xx, by - 20.0, xw0 - 18.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))
+			out.append(_dick(xx + xw0 - 8.0, by - 11.0, 15.0, "coin"))
 		out.append(_btn(X0 + XW - 10.0 - 66.0, by, 66.0, 26.0, lb, act, "go" if (ok or force) and act != null else "off"))
 		if not list.size():
 			yy += 32.0
