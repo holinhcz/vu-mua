@@ -102,11 +102,12 @@ func _nghe() -> Array:
 	var hc: int = W.ng_hoc_cho()
 	var out := []
 	var y := 6.0
-	if Lk:
-		var lc := _chip(X0, y, XW, 30.0, "sen")
-		lc.kids = [_dt(X0 + 10.0, y, XW - 20.0, 30.0, _fitw("Nghề thủ công mở ở cấp " + str(Lk) + ". Giờ xem trước, tới cấp mới học, mới làm.", 10.5, 700, XW - 20.0), 10.5, 700, "rgb(170, 50, 60)", "left")]
+	if Lk:   # (bản 459) chip khóa 2 dòng, không cắt chữ
+		var lc := _chip(X0, y, XW, 40.0, "sen")
+		lc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Nghề thủ công mở ở cấp " + str(Lk) + ".", 11.0, 800, "rgb(170, 50, 60)", "left"),
+			_dt(X0 + 10.0, y + 20.0, XW - 20.0, 15.0, "Giờ xem trước, tới cấp mới học, mới làm.", 10.5, 600, "rgb(170, 60, 60)", "left")]
 		out.append(lc)
-		y += 30.0 + GG
+		y += 40.0 + GG
 	var help := "Học ở nhà thầy (tab Sở trường bên nhà dân), cả dòng họ chung một nghề. Mỗi món làm ra +1 điểm tay nghề, tối đa " + str(W.ht_ngay()) + \
 		" điểm một ngày mỗi nghề. Đủ điểm, đủ hàng đã làm thì qua thầy thi lên sao. Chỉ " + str(W.NGCHINH) + " nghề chính lên được 4 sao, 5 sao. Tay nghề càng cao, món làm ra càng dễ thành hàng khéo, tinh xảo, bán được giá hơn."
 	out.append_array(_sq(y, "Nghề chính " + str(S.chinh.size()) + "/" + str(W.NGCHINH) + " · Đã học " + str(nl) + "/" + str(W.M6.size()), help))
@@ -120,6 +121,7 @@ func _nghe() -> Array:
 	y += GG
 	var own: Array = W.M6.filter(func(gx): return W._tr(n.get(gx.id)) and W.ng_base(gx.id) != "")
 	var rest: Array = W.M6.filter(func(gx): return not W._tr(n.get(gx.id)) and W.ng_base(gx.id) != "")
+	own.sort_custom(func(a, b2): return _rank(a) > _rank(b2))   # (bản 459) đủ điều kiện thi lên đầu, rồi nghề chính, sao cao trước
 	for gx in own:
 		var c := _card(y, gx, S, Lk)
 		out.append_array(c[0])
@@ -154,6 +156,10 @@ func _nghe() -> Array:
 		out.append_array(g[0])
 		y += float(g[1]) + GG
 	return [out, y]
+
+func _rank(gx: Dictionary) -> int:   # thứ tự khối nghề đã học
+	var b := String(gx.id)
+	return (100 if W.ng_thi_ready(b) else 0) + (10 if W.ng_chinh(b) else 0) + W.ng_sao(b)
 
 func _pid(gx: Dictionary) -> String:   # hình món làm ra của nghề
 	return String(gx.id) if not W._ae(gx.id).is_empty() else String(gx["in"][0][0])

@@ -207,6 +207,7 @@ func _test_hook() -> void:
 			"vlreq": var H2: Array = G.w_all.WL.bl(); if H2.size(): G.w_all.WL._fam_of(int(H2[0].u)).req = {"why": "đem ra chợ huyện", "xu": 998, "it": [["qua_dieu", 4], ["lua", 2]]}; G.w_all.WL._fam_of(int(H2[0].u)).dp = 145; G.w_all.WL._fam_of(int(H2[0].u)).tim = 1
 			"nvday": G.nv.xI = int(floor(G.nv.d4() / 14.0)) * 14 + int(a[1]); ui.nvp.sig = ""
 			"nvx": _nvx(int(a[1]))
+			"ngsim": _ngsim(a)
 			"hidev": ui.get_parent().visible = false
 			"gio": G.troi.hh = float(a[1])
 			"troi": G.troi.force = a[1]
@@ -270,6 +271,35 @@ func _test_hook() -> void:
 
 func R2(rid: String) -> Array:
 	return G.xw.R[rid].in
+
+func _ngsim(a: Array) -> void:   # thử bảng Nghề: ngsim:sao:nghề:số sao[:c] | ngsim:thi:nghề | ngsim:don4
+	var W = G.w_all.WL
+	var o: Dictionary = W.ng_s()
+	match String(a[1]):
+		"sao":
+			var b := String(a[2])
+			var sv := int(a[3])
+			W.t6()[b] = 1
+			o.sao[b] = sv
+			o.xp[b] = W.NGSAO[sv - 1]
+			if a.size() > 4 and not o.chinh.has(b):
+				o.chinh.append(b)
+		"thi":
+			var b := String(a[2])
+			W.t6()[b] = 1
+			o.xp[b] = 99999
+			o.mk[b] = 9999
+			o.hq[b] = [999, 999]
+			var u: int = W.ng_thay(b)
+			var f = W._fam_of(u) if u else null
+			if f != null:
+				f.tim = 5
+			for sf in ["", "_k", "_x"]:
+				G.g.barn[b + sf] = 99
+			G.g.coins = 999999
+		"don4":
+			W.ng_d().l.append({"id": "t4", "src": "cuoi", "t": "Nhà Chị Hai Bông sắp cưới con", "u": "", "it": [["banh_pt", 4, 1], ["chieu", 1, 1], ["khan_theu", 2, 0], ["ruou_nep", 2, 0]], "dl": W._vr() + 2, "xu": 5200, "ut": 2, "th": 0})
+	G.mark()
 
 func _nvx(k: int) -> void:
 	# trạng thái thử giống mấy ảnh chụp bản web (act_nv2.json)
