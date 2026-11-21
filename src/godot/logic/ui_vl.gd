@@ -12,6 +12,14 @@ var u := -1
 var tab := ""               # $r.tab
 var sub := ""               # $r.sub: "" | "chat" | "gift" (hộp nổi)
 var cv = null               # $r.cv (trò chuyện)
+var xopen := false          # (bản 439) tab Thuê làm: đang mở lưới chọn xưởng
+
+func _xw_tog() -> void:
+	xopen = not xopen
+
+func _xw_pick(m: String) -> void:
+	W.n4(u, m)
+	xopen = false
 
 const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(226,64,72)\" stroke=\"rgb(170,36,44)\" stroke-width=\"1.2\"/></svg>"
 const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
@@ -27,7 +35,11 @@ const VLC := {
 	"t_vui": ["rgb(255, 222, 170)", "rgb(255, 230, 190)", "rgb(255, 240, 214)", "rgb(214, 140, 40)"],
 	"t_khac": ["rgb(228, 214, 244)", "rgb(234, 222, 248)", "rgb(242, 234, 252)", "rgb(138, 104, 186)"],
 	"viec": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
-	"thue": ["rgb(214, 238, 194)", "rgb(222, 242, 206)", "rgb(232, 246, 222)", "rgb(96, 160, 60)"],
+	"thue": ["rgb(190, 228, 160)", "rgb(202, 234, 176)", "rgb(216, 240, 194)", "rgb(60, 140, 40)"],   # đang chọn: xanh đậm hơn nền nhóm
+	"j_ruong": ["rgb(232, 246, 220)", "rgb(238, 249, 228)", "rgb(244, 252, 238)", "rgb(150, 196, 120)"],   # (bản 439) nhóm việc thuê: nền nhạt
+	"j_vuon": ["rgb(255, 240, 214)", "rgb(255, 244, 224)", "rgb(255, 249, 236)", "rgb(222, 176, 110)"],
+	"j_chan": ["rgb(252, 230, 214)", "rgb(253, 236, 224)", "rgb(254, 243, 236)", "rgb(214, 156, 116)"],
+	"j_xuong": ["rgb(238, 230, 248)", "rgb(242, 236, 250)", "rgb(247, 243, 252)", "rgb(170, 146, 206)"],
 	"giong": ["rgb(226, 242, 206)", "rgb(232, 246, 216)", "rgb(240, 250, 230)", "rgb(120, 170, 80)"],
 	"tal": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"nan": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
@@ -77,7 +89,7 @@ func step(dt: float) -> void:
 func _sig() -> String:
 	var f = W._fam_of(u)
 	var t = f.get("tt")
-	return JSON.stringify([f, tab, sub, cv, G.g.coins, G.g.barn, W.tg().get("ev"), G.g.get("cuoi"), G.g.get("hn"), G.g.get("nghe"), G.night,
+	return JSON.stringify([f, tab, sub, cv, xopen, G.g.coins, G.g.barn, W.tg().get("ev"), G.g.get("cuoi"), G.g.get("hn"), G.g.get("nghe"), G.night,
 		int(G._now_ms() / 1000.0) if W._tr(t) else 0, W._vr()])
 
 func _tab_go(k: String) -> void:   # data-vt
@@ -503,7 +515,7 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 		var x := X0 + (i % cols) * (bw + g)
 		var yy := y + floorf(i / float(cols)) * (bh + g)
 		var st := String(o.st)
-		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" else "fut"))
+		var c := _chip(x, yy, bw, bh, kind_on if st == "on" else ("miss" if st == "dis" else String(o.get("k", "fut"))))
 		var ks := []
 		var tx := x + 8.0
 		if String(o.get("ic", "")) != "":
@@ -514,6 +526,8 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String) -> Array:
 		ks.append(_dt(tx, yy + 6.0, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
 		if String(o.get("s", "")) != "":
 			ks.append(_dt(tx, yy + 22.0, tw, 13.0, _fitw(String(o.s), 9.5, 600, tw), 9.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
+		if st == "on":   # đang chọn: dấu tick góc phải
+			ks.append(_dtick(x + bw - 17.0, yy + 5.0, 12.0))
 		c.kids = ks
 		if st != "dis" and o.has("act"):
 			c.act = o.act
@@ -533,25 +547,38 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var p: bool = e.get("job") == "ruong" or s.size() < hh
 	var bt := []
 	bt.append({"b": "Nghỉ ở nhà", "s": "Không tốn công", "ic": JOBIC[""], "st": "on" if not W._tr(e.get("job")) else "off", "act": func(): W.n4(u, "")})
-	bt.append({"b": "Làm ruộng", "s": str(W.om(e, "ruong")) + " xu/phút" if p else "Đủ người rồi", "ic": JOBIC.ruong, "st": "on" if e.get("job") == "ruong" else ("off" if p else "dis"), "act": func(): W.n4(u, "ruong")})
+	bt.append({"b": "Làm ruộng", "s": str(W.om(e, "ruong")) + " xu/phút" if p else "Đủ người rồi", "ic": JOBIC.ruong, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" else ("off" if p else "dis"), "act": func(): W.n4(u, "ruong")})
 	for M in ["vuon", "chan"]:
 		var t: String = W.vg(M)
 		var w: bool = e.get("job") == M
 		var E := t != "" and not w
 		var C: bool = W.yx(M)
-		bt.append({"b": "Làm vườn" if M == "vuon" else "Chăm chuồng", "s": t + " đang làm" if E else (str(W.om(e, M)) + " xu/phút" if C else ("Chưa có cây" if M == "vuon" else "Chưa có con")),
+		bt.append({"b": "Làm vườn" if M == "vuon" else "Chăm chuồng", "k": "j_" + M, "s": t + " đang làm" if E else (str(W.om(e, M)) + " xu/phút" if C else ("Chưa có cây" if M == "vuon" else "Chưa có con")),
 			"ic": JOBIC[M], "st": "on" if w else ("dis" if E or (not C and not w) else "off"), "act": func(): W.n4(u, M)})
 	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k))
-	for M in o:
-		var t: String = W.vg(M)
-		var w: bool = e.get("job") == M
-		var E := t != "" and not w
-		var rec: Array = G.xw.sr[M].rec
-		bt.append({"b": String(W.CO.get(M, M)), "s": t + " đang làm" if E else str(W.om(e, M)) + " xu/phút", "ic": String(rec[0]) if rec.size() else "gao",
-			"st": "on" if w else ("dis" if E else "off"), "act": func(): W.n4(u, M)})
+	var xj: bool = o.has(e.get("job"))   # (bản 439) các xưởng gom 1 chip "Làm xưởng", chạm mở lưới chọn xưởng
+	if o.size():
+		var xs: String = (String(W.CO.get(e.job, e.job)) + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chạm để chọn")
+		var xr: Array = G.xw.sr[e.job].rec if xj else []
+		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _xw_tog})
 	var gr := _grid(y, bt, 2, "thue")
 	out.append_array(gr[0])
 	y += float(gr[1]) + 10.0
+	if xopen and o.size():   # lưới chọn xưởng
+		out.append_array(_sect(y, "Làm xưởng nào?", col))
+		y += 22.0
+		var xk := []
+		for M in o:
+			var t: String = W.vg(M)
+			var w: bool = e.get("job") == M
+			var E := t != "" and not w
+			var rec: Array = G.xw.sr[M].rec
+			var mm: String = M
+			xk.append({"b": String(W.CO.get(M, M)), "s": t + " đang làm" if E else str(W.om(e, M)) + " xu/phút", "ic": String(rec[0]) if rec.size() else "gao", "k": "j_xuong",
+				"st": "on" if w else ("dis" if E else "off"), "act": _xw_pick.bind(mm)})
+		var gx := _grid(y, xk, 2, "thue")
+		out.append_array(gx[0])
+		y += float(gx[1]) + 10.0
 	if o.is_empty():
 		var pp := _para(X0 + 2.0, y, XW - 4.0, "Xây xưởng (Xây dựng › Xưởng) rồi thuê người làm, xưởng sẽ tự thu hàng và làm tiếp món bạn chọn.", 10.0, 600, SUB, 13.0)
 		out.append_array(pp[0])
@@ -563,7 +590,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		for M in W.xq(e):
 			var P: PackedStringArray = String(M.t).split(" · ")
 			var id: String = M.id
-			pk.append({"b": P[0], "s": " · ".join(P.slice(1)), "ic": id, "st": "on" if String(e.get("crop", "")) == id else "off", "act": func(): W.jq(u, id)})
+			pk.append({"b": P[0], "s": " · ".join(P.slice(1)), "ic": id, "k": "j_ruong", "st": "on" if String(e.get("crop", "")) == id else "off", "act": func(): W.jq(u, id)})
 		var g2 := _grid(y, pk, 2, "thue")
 		out.append_array(g2[0])
 		y += float(g2[1]) + 10.0
@@ -574,7 +601,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 		var rk := []
 		for M in d.rec:
 			var id := String(M)
-			rk.append({"b": String(W._ae(id).get("name", id)), "s": "" if G.xw.has_in(id) else "thiếu đồ", "ic": id, "st": "on" if e.get("jr") == id else "off", "act": func(): W.set_jr(u, id)})
+			rk.append({"b": String(W._ae(id).get("name", id)), "s": "" if G.xw.has_in(id) else "thiếu đồ", "ic": id, "k": "j_xuong", "st": "on" if e.get("jr") == id else "off", "act": func(): W.set_jr(u, id)})
 		var g3 := _grid(y, rk, 2, "thue")
 		out.append_array(g3[0])
 		y += float(g3[1]) + 10.0
