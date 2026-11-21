@@ -372,7 +372,7 @@ func _cho() -> Array:
 	for x0 in W.M6:
 		if W.ng_base(x0.id) != "":
 			ids.append(String(x0.id))
-	var nd := _oneed()   # (bản 457) món đơn làng đang thiếu (hàng thường): xếp lên đầu, gắn chip "Đơn cần N"
+	var nd := _oneed()   # (bản 457) món đơn làng đang thiếu (hàng thường): xếp lên đầu, gắn chấm xanh dương góc phải
 	var base := ids.duplicate()
 	ids.sort_custom(func(a, b2): return int(nd.get(a, 0)) > int(nd.get(b2, 0)) if int(nd.get(a, 0)) != int(nd.get(b2, 0)) else base.find(a) < base.find(b2))
 	var bh := _fillh(y, ids.size())   # (bản 454) lưới giãn kín thân, thêm dòng "Kho có N"
@@ -401,17 +401,8 @@ func _cho() -> Array:
 			ks.append(_dt(tx, ty + 16.0, tw, 14.0, "Hết, mai ghé lại", 10.5, 600, "rgb(130, 124, 112)", "left"))
 		if big:
 			ks.append(_dt(tx, ty + 31.0, tw, 13.0, "Kho có " + str(W._barn(id)), 10.0, 600, "rgb(150, 128, 96)", "left"))
-		if int(nd.get(id, 0)) > 0:
-			var bt := "Đơn cần " + str(nd[id])
-			var bw2: float = Box.text_w(bt, 9.0, 800) + 10.0
-			var bx2: float = tx + Box.text_w("Kho có " + str(W._barn(id)), 10.0, 600) + 6.0 if big else cx + bw - 5.0 - bw2   # lưới giãn: nằm cuối dòng "Kho có"; lưới thường: góc phải trên
-			var by2: float = ty + 30.5 if big else cy + 5.0
-			var bc := _chip(bx2, by2, bw2, 14.0, "info")
-			bc.kids = [_dt(bx2, by2, bw2, 14.0, bt, 9.0, 800, "rgb(60, 110, 170)")]
-			ks.append(bc)
-			if not big:
-				ks[1].r[2] = maxf(20.0, float(ks[1].r[2]) - bw2 - 4.0)
-				ks[1].text = _fitw(_nm(id), 11.5, 800, float(ks[1].r[2]))
+		if int(nd.get(id, 0)) > 0:   # (bản 458) món đơn làng đang cần: chấm xanh dương góc phải trên
+			ks.append(_dbx(cx + bw - 14.0, cy + 6.0, 8.0, 8.0, "rgb(70, 140, 220)", 4.0))
 		c.kids = ks
 		out.append(c)
 		i += 1
