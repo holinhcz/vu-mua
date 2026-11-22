@@ -7,7 +7,7 @@ var W          # w_lang.gd
 var op = null               # nhà đang mở lưới thuê
 var flt := ""               # (bản 473) lọc theo sở trường: "" | ruong | vuon | chan | xuong
 const FLT := [["", "Tất cả", ""], ["ruong", "Ruộng", "lua"], ["vuon", "Vườn", "qua_xoai"], ["chan", "Chuồng", "trung"], ["xuong", "Xưởng", "gao"]]
-const BTX := {"ruong": "thêm 1 bó lúa", "vuon": "thêm 1 trái", "chan": "thêm 1 trứng"}   # (bản 473) câu rõ cho "dư 1" theo nghề
+const BTX := {"ruong": ["lúa", "gặt", "bó lúa"], "vuon": ["trái", "hái", "trái"], "chan": ["trứng", "lượm", "trứng"]}   # (bản 474) [chữ gọn, việc, món] cho dòng thông số   # (bản 473) câu rõ cho "dư 1" theo nghề
 const STAR0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z\" fill=\"rgb(252,246,232)\" stroke=\"rgb(150,112,60)\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/></svg>"   # sao chưa có: viền nâu
 const HRC := {   # (bản 471) nền khối nhà nhạt theo sở trường: [gradient trên, giữa, dưới, viền]
 	"h_ruong": ["rgb(223, 236, 214)", "rgb(232, 241, 225)", "rgb(240, 246, 236)", "rgb(168, 204, 144)"],
@@ -201,13 +201,20 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 	Snap._move(th[0], Vector2(w - float(th[1]), 0))
 	out.append(th[0])
 	var rx := x + w - float(th[1]) - 6.0
-	if W._tr(s.get("req")):   # nhờ việc: chấm đỏ sau tim (chạm tên / Ghé nhà để xem)
-		out.append(_dbx(hx + 5 * 14.0 + 2.0, yy + 5.0, 8.0, 8.0, "rgb(226, 70, 60)", 4.0))
-	if W.W3.has(r):
-		var b2: String = ("xưởng nhanh " + str(4 * o) + "%") if r == "xuong" else (str(W.b_l(o)) + "% " + String(BTX.get(r, String(W.W3[r].d))))
-		var st := "Công rẻ " + str(W.q_l(o)) + "% · " + b2
-		var sf := clampf(10.0 * (rx - sx2) / maxf(1.0, Box.text_w(st, 10.0, 700)), 8.5, 10.0)
-		out.append(_dt(sx2, cy, rx - sx2, 20.0, _fitw(st, sf, 700, rx - sx2), sf, 700, "rgb(46, 120, 50)", "left"))
+	if W._tr(s.get("req")):   # (bản 474) nhờ việc: chấm đỏ sát trái chip Ghé nhà, chạm hiện việc nhờ
+		var rd := _dbx(x + w - float(gc[1]) - 12.0, yy + 5.0, 8.0, 8.0, "rgb(226, 70, 60)", 4.0)
+		var rh := _dbx(x + w - float(gc[1]) - 18.0, yy - 1.0, 18.0, 20.0, "rgba(0, 0, 0, 0)", 0.0)
+		rh.kids = [rd]
+		rh.act = _dsay.bind(nm + ": đang nhờ " + W._r_tx(s.req) + ". Ghé nhà để giúp.")
+		out.append(rh)
+	if W.W3.has(r):   # (bản 474) thông số viết gọn kiểu ký hiệu, chạm hiện câu đầy đủ
+		var B: Array = BTX.get(r, ["", "", ""])
+		var st := "−" + str(W.q_l(o)) + "% công · " + (("xưởng nhanh " + str(4 * o) + "%") if r == "xuong" else ("+" + str(W.b_l(o)) + "% " + String(B[0])))
+		var full := "Công rẻ hơn " + str(W.q_l(o)) + "%, " + (("xưởng chạy nhanh hơn " + str(4 * o) + "%.") if r == "xuong" else ("mỗi lần " + String(B[1]) + " có " + str(W.b_l(o)) + "% được thêm 1 " + String(B[2]) + "."))
+		var sc2 := _dbx(sx2, cy, rx - sx2, 20.0, "rgba(0, 0, 0, 0)", 0.0)
+		sc2.kids = [_dt(sx2, cy, rx - sx2, 20.0, _fitw(st, 10.0, 700, rx - sx2), 10.0, 700, "rgb(46, 120, 50)", "left")]
+		sc2.act = _dsay.bind(nm + ": " + full)
+		out.append(sc2)
 	cy += 20.0
 	yy = maxf(cy, yy + 40.0) + 9.0
 	c.act = _op.bind(u)
