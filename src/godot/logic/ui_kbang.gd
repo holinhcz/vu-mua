@@ -123,6 +123,14 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"j_vuon": ["rgb(255, 240, 214)", "rgb(255, 244, 224)", "rgb(255, 249, 236)", "rgb(222, 176, 110)"],
 	"j_chan": ["rgb(252, 230, 214)", "rgb(253, 236, 224)", "rgb(254, 243, 236)", "rgb(214, 156, 116)"],
 	"j_xuong": ["rgb(238, 230, 248)", "rgb(242, 236, 250)", "rgb(247, 243, 252)", "rgb(170, 146, 206)"],
+	"t_hien": ["rgb(250, 214, 226)", "rgb(252, 224, 234)", "rgb(254, 236, 242)", "rgb(206, 110, 140)"],
+	"t_kho": ["rgb(214, 222, 236)", "rgb(224, 230, 242)", "rgb(236, 240, 248)", "rgb(100, 120, 160)"],
+	"t_vui": ["rgb(255, 222, 170)", "rgb(255, 230, 190)", "rgb(255, 240, 214)", "rgb(214, 140, 40)"],
+	"t_khac": ["rgb(228, 214, 244)", "rgb(234, 222, 248)", "rgb(242, 234, 252)", "rgb(138, 104, 186)"],
+	"s_ruong": ["rgb(222, 242, 204)", "rgb(230, 246, 216)", "rgb(240, 250, 230)", "rgb(110, 170, 70)"],   # (bản 442) màu khối sở trường theo nghề
+	"s_vuon": ["rgb(255, 232, 196)", "rgb(255, 238, 210)", "rgb(255, 246, 228)", "rgb(220, 150, 50)"],
+	"s_chan": ["rgb(250, 222, 200)", "rgb(252, 230, 212)", "rgb(254, 240, 228)", "rgb(200, 130, 80)"],
+	"s_xuong": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"fut": ["rgb(250, 242, 222)", "rgb(252, 247, 234)", "rgb(255, 252, 245)", "rgba(150, 112, 48, 0.55)"],
 	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
 	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
@@ -216,6 +224,15 @@ func _icn(cx: float, cy: float, s: float, id: String) -> Dictionary:   # hình m
 	var b := _dbx(cx - s * 0.5, cy - s * 0.5, s, s, "rgba(0, 0, 0, 0)", 0.0)
 	b.ic = id
 	return b
+
+# (bản 470) tim tô dần, hình sở trường: dời từ Nhà dân sang (Nhà dân, Làm thuê dùng chung)
+const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
+static func _heartp(p: float) -> String:   # tim đầy p phần (tô đỏ từ trái sang)
+	var w := snappedf(clampf(p, 0.0, 1.0) * 24.0, 0.1)
+	var path := "M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z"
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><defs><clipPath id=\"c\"><rect x=\"0\" y=\"0\" width=\"" + str(w) + "\" height=\"24\"/></clipPath></defs><path d=\"" + path + "\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/><path clip-path=\"url(#c)\" d=\"" + path + "\" fill=\"rgb(226,64,72)\"/><path d=\"" + path + "\" fill=\"none\" stroke=\"rgb(190,80,90)\" stroke-width=\"1.2\"/></svg>"
+
+const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "gao"}   # hình sở trường (thay emoji)
 
 func _icx(cx: float, cy: float, s: float, id: String) -> Dictionary:   # (bản 462) hình theo mã: "xu" đồng xu, "svg:<đường dẫn>" hình svg, "pic:<đường dẫn>" ảnh, còn lại hình món Kho
 	if id == "xu":

@@ -13,30 +13,15 @@ var tab := ""               # $r.tab
 var sub := ""               # $r.sub: "" | "chat" | "gift" (hộp nổi)
 var cv = null               # $r.cv (trò chuyện)
 
-const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
-static func _heartp(p: float) -> String:   # tim đầy p phần (tô đỏ từ trái sang)
-	var w := snappedf(clampf(p, 0.0, 1.0) * 24.0, 0.1)
-	var path := "M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z"
-	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><defs><clipPath id=\"c\"><rect x=\"0\" y=\"0\" width=\"" + str(w) + "\" height=\"24\"/></clipPath></defs><path d=\"" + path + "\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/><path clip-path=\"url(#c)\" d=\"" + path + "\" fill=\"rgb(226,64,72)\"/><path d=\"" + path + "\" fill=\"none\" stroke=\"rgb(190,80,90)\" stroke-width=\"1.2\"/></svg>"
-
 const LOCK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M7 10V7.5a5 5 0 0 1 10 0V10\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"2.4\"/><rect x=\"4.5\" y=\"10\" width=\"15\" height=\"11\" rx=\"2.5\" fill=\"rgb(214,170,90)\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.4\"/></svg>"
 const QMARK := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"rgb(232,222,200)\" stroke=\"rgb(190,170,130)\" stroke-width=\"1.4\"/><path d=\"M9.2 9.3a2.9 2.9 0 1 1 4.3 2.5c-.9.5-1.5 1.1-1.5 2.2\" fill=\"none\" stroke=\"rgb(150,120,70)\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"17.4\" r=\"1.3\" fill=\"rgb(150,120,70)\"/></svg>"
 const TAIL := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><path d=\"M0 0 L12 0 L4 10 Z\" fill=\"rgb(252,247,234)\" stroke=\"rgba(150,112,48,0.55)\" stroke-width=\"0.8\"/></svg>"
 const TAILB := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M11 1 L1 10 L11 7 Z\" fill=\"rgb(224,238,250)\"/><path d=\"M10.4 1.4 L1 10 L10.4 7.2\" fill=\"none\" stroke=\"rgb(96,146,196)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng nhà dân, chỉ sang mặt
 const TAILG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M0 1 L10 10 L0 7 Z\" fill=\"rgb(208,238,198)\"/><path d=\"M0.6 1.4 L10 10 L0.6 7.2\" fill=\"none\" stroke=\"rgb(76,160,70)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng mình
-const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "gao"}   # hình sở trường (thay emoji)
 # màu chip theo tính nết + màu theo tab: [gradient trên, giữa, dưới, viền]
 const VLC := {
-	"t_hien": ["rgb(250, 214, 226)", "rgb(252, 224, 234)", "rgb(254, 236, 242)", "rgb(206, 110, 140)"],
-	"t_kho": ["rgb(214, 222, 236)", "rgb(224, 230, 242)", "rgb(236, 240, 248)", "rgb(100, 120, 160)"],
-	"t_vui": ["rgb(255, 222, 170)", "rgb(255, 230, 190)", "rgb(255, 240, 214)", "rgb(214, 140, 40)"],
-	"t_khac": ["rgb(228, 214, 244)", "rgb(234, 222, 248)", "rgb(242, 234, 252)", "rgb(138, 104, 186)"],
 	"viec": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
 	"giong": ["rgb(226, 242, 206)", "rgb(232, 246, 216)", "rgb(240, 250, 230)", "rgb(120, 170, 80)"],
-	"s_ruong": ["rgb(222, 242, 204)", "rgb(230, 246, 216)", "rgb(240, 250, 230)", "rgb(110, 170, 70)"],   # (bản 442) màu khối sở trường theo nghề
-	"s_vuon": ["rgb(255, 232, 196)", "rgb(255, 238, 210)", "rgb(255, 246, 228)", "rgb(220, 150, 50)"],
-	"s_chan": ["rgb(250, 222, 200)", "rgb(252, 230, 212)", "rgb(254, 240, 228)", "rgb(200, 130, 80)"],
-	"s_xuong": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"nghe": ["rgb(244, 230, 196)", "rgb(248, 238, 210)", "rgb(252, 246, 228)", "rgb(176, 136, 70)"],
 	"tal": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"nan": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
@@ -178,7 +163,7 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var hcw: float = (Box.text_w(ho, 10.0, 700) + 14.0) if ho != "" else 0.0
 	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 2.0, xr - x - tcw - hcw - 16.0)
 	out.append(_dt(x, y0, nw, 20.0, _fitw(nm, 14.0, 800, nw), 14.0, 800, BROWN, "left"))
-	var tc := _tchip(x + nw + 8.0, y0 + 1.0, String(TT.n), "t_" + tk if VLC.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)))
+	var tc := _tchip(x + nw + 8.0, y0 + 1.0, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)))
 	out.append(tc[0])
 	if ho != "":
 		out.append(_tchip(x + nw + 8.0 + float(tc[1]) + 5.0, y0 + 1.0, ho, "info", "rgb(52, 92, 140)", U.gp_open.bind(u))[0])
@@ -491,7 +476,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
 	out.append_array(_sect(y, "Tính nết: " + String(TT.n), col))
 	y += 22.0
-	var c := _chip(X0, y, XW, 10.0, "t_" + tk if VLC.has("t_" + tk) else "t_khac")
+	var c := _chip(X0, y, XW, 10.0, "t_" + tk if CHIPK.has("t_" + tk) else "t_khac")
 	out.append(c)
 	var pp := _para(X0 + 10.0, y + 6.0, XW - 20.0, String(TT.d), 10.5, 600, BROWN, 15.0)   # (bản 452) mọi dòng cách đều 15
 	out.append_array(pp[0])
@@ -534,7 +519,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var l: Dictionary = W.W3[r]
 	out.append_array(_sect(y, "Sở trường: " + String(l.n), col))
 	y += 22.0
-	var c2 := _chip(X0, y, XW, 10.0, "s_" + r if VLC.has("s_" + r) else "tal")   # màu theo nghề
+	var c2 := _chip(X0, y, XW, 10.0, "s_" + r if CHIPK.has("s_" + r) else "tal")   # màu theo nghề
 	out.append(c2)
 	out.append(_icn(X0 + 24.0, y + 26.0, 30.0, String(TALIC.get(r, "lua"))))
 	for i in 5:

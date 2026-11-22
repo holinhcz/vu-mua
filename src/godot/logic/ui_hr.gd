@@ -6,7 +6,6 @@ extends "res://logic/ui_kbang.gd"
 var W          # w_lang.gd
 var op = null               # nhà đang mở lưới thuê
 const JK := {"ruong": "j_ruong", "vuon": "j_vuon", "chan": "j_chan"}   # màu chip việc đang làm (xưởng: j_xuong)
-const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
 
 func _init(ui, wl) -> void:
 	super(ui)
@@ -67,16 +66,34 @@ func _body() -> Array:   # sm
 	else:
 		out.append(_dt(X0 + 12.0, y + 23.0, XW - 24.0, 15.0, "Chạm nhà nào để giao việc. Càng thân càng rẻ.", 10.5, 600, SUB, "left"))
 	y += 44.0 + GG
-	# nhà đang làm lên trước, nhà rảnh sau
-	var sk := ks.duplicate()
-	sk.sort_custom(func(a, b): return (1 if W._tr(F[a].get("job")) else 0) > (1 if W._tr(F[b].get("job")) else 0) if W._tr(F[a].get("job")) != W._tr(F[b].get("job")) else ks.find(a) < ks.find(b))
-	for u in sk:
-		var r := _house(y, u, F[u])
-		out.append_array(r[0])
-		y += float(r[1]) + GG
+	# (bản 470) 2 nhóm: Đang làm / Rảnh ở nhà; nhà rảnh thuê rẻ nhất có chip "Rẻ nhất"
+	var bz := []
+	var ra := []
+	var mn := 1 << 30
+	for u in ks:
+		if W._tr(F[u].get("job")):
+			bz.append(u)
+		else:
+			ra.append(u)
+			mn = mini(mn, _from(F[u]))
+	for g in [["Đang làm", bz], ["Rảnh ở nhà", ra]]:
+		if g[1].is_empty():
+			continue
+		out.append_array(_sect(y, String(g[0]) + " · " + str(g[1].size()), "rgb(76, 150, 48)" if g[0] == "Đang làm" else "rgb(150, 112, 60)"))
+		y += 16.0 + GG
+		for u in g[1]:
+			var r := _house(y, u, F[u], g[0] == "Rảnh ở nhà" and ra.size() > 1 and _from(F[u]) == mn)
+			out.append_array(r[0])
+			y += float(r[1]) + GG
 	return [out, y]
 
-func _house(y: float, u, s: Dictionary) -> Array:   # khối 1 nhà: mặt, tên, tim, chip việc + lương, Ghé nhà; đang mở thì lưới thuê bên dưới
+func _from(s: Dictionary) -> int:   # công rẻ nhất nếu thuê nhà này (ruộng / vườn / chuồng)
+	var m := 1 << 30
+	for j in ["ruong", "vuon", "chan"]:
+		m = mini(m, int(W.om(s, j)))
+	return m
+
+func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà, 2 hàng: mặt + tên + tim (Ghé nhà); chip sở trường, tính nết, việc / lương, nhờ việc
 	var job := String(s.get("job")) if W._tr(s.get("job")) else ""
 	var opn: bool = op != null and str(op) == str(u)
 	var out := []
@@ -84,36 +101,69 @@ func _house(y: float, u, s: Dictionary) -> Array:   # khối 1 nhà: mặt, tên
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
-	var yy := y + 10.0
-	# mặt (chạm: ghé nhà)
+	var yy := y + 9.0
 	var lk: int = clampi(W._i(s.get("lk")), 0, 7)
 	var fc := _chip(x, yy, 40.0, 40.0, "fut")
 	fc.kids = [_pic(x + 3.0, yy + 3.0, 34.0, 34.0, "res://ui/img/vlface/" + str(lk) + ("n" if G.night else "") + ".webp")]
 	fc.act = _go.bind(u)
 	out.append(fc)
 	var tx := x + 48.0
-	# Ghé nhà: chip nhỏ góc phải
-	var gc := _tchip(x, yy, "Ghé nhà ›", "fut", SUB, _go.bind(u), 20.0, 10.0)
+	# hàng 1: tên, tim tô dần + Thân N/5, Ghé nhà
+	var gc := _tchip(x, yy - 1.0, "Ghé nhà ›", "fut", SUB, _go.bind(u), 20.0, 10.0)
 	Snap._move(gc[0], Vector2(w - float(gc[1]), 0))
 	out.append(gc[0])
-	var nw := w - 48.0 - float(gc[1]) - 6.0
-	out.append(_dt(tx, yy, nw, 16.0, _fitw(String(s.n), 12.0, 800, nw), 12.0, 800, BROWN, "left"))
-	if W._tr(s.get("req")):   # đang nhờ việc: chấm đỏ cạnh tên
-		out.append(_dbx(tx + minf(Box.text_w(String(s.n), 12.0, 800), nw) + 4.0, yy + 3.0, 7.0, 7.0, "rgb(226, 70, 60)", 3.5))
-	# tim bằng hình
 	var tim: int = W._i(s.get("tim"))
+	var nm := String(s.n)
+	var nw: float = minf(Box.text_w(nm, 12.0, 800) + 2.0, w - 48.0 - float(gc[1]) - 96.0)
+	out.append(_dt(tx, yy, nw, 18.0, _fitw(nm, 12.0, 800, nw), 12.0, 800, BROWN, "left"))
+	var hx := tx + nw + 8.0
+	var pp := 1.0 if tim >= 5 else fmod(W._n(s.get("dp")), 100.0) / 100.0
 	for i in 5:
-		out.append(_dic(tx + i * 14.0, yy + 18.0, 12.0, HEART if i < tim else HEART0))
-	# chip việc + lương
-	var jt := ("Đang ở nhà" if job == "" else _co(job)) + ("" if job == "" else " · " + str(W.wage(s)) + " xu/phút")
-	var jc := _tchip(tx + 74.0, yy + 15.0, jt, "got" if job == "" else String(JK.get(job, "j_xuong")), "rgb(46, 120, 50)" if job == "" else BROWN, null, 18.0, 9.5)
-	out.append(jc[0])
-	yy += 40.0
+		out.append(_dic(hx + i * 15.0, yy + 3.0, 13.0, HEART if i < tim else (_heartp(pp) if i == tim and pp > 0.0 else HEART0)))
+	# hàng 2: chip sở trường (hình + tên, màu theo nghề), tính nết, việc đang làm / lương, nhờ việc
+	var cy := yy + 21.0
+	var cx := tx
+	var r := String(W.x9(u, s))
+	if W.W3.has(r):
+		var tn := String(W.W3[r].n)
+		var sw: float = Box.text_w(tn, 9.5, 700) + 30.0
+		var sc := _chip(cx, cy, sw, 19.0, "s_" + r if CHIPK.has("s_" + r) else "fut")
+		sc.kids = [_icn(cx + 10.0, cy + 9.5, 15.0, String(TALIC.get(r, "lua"))), _dt(cx + 19.0, cy, sw - 22.0, 19.0, tn, 9.5, 700, BROWN, "left")]
+		sc.act = _dsay.bind(nm + ": " + tn + " " + str(W._i(s.get("ts"))) + " sao, thuê đúng nghề thì làm nhanh, công rẻ hơn.")
+		out.append(sc)
+		cx += sw + 4.0
+	var TT: Dictionary = W.tinh_of(s)
+	var tk := String(s.get("tp", ""))
+	var tt := _tchip(cx, cy, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)), 19.0, 9.5)
+	out.append(tt[0])
+	cx += float(tt[1]) + 4.0
+	var P := ([_co(job) + " · " + str(W.wage(s)), "c", "/phút"]) if job != "" else (["Từ " + str(_from(s)), "c", "/phút"])
+	var pw := float(_rowi(0.0, 0.0, 19.0, P, 9.5, 700, "")[1]) + 12.0
+	if cx + pw > x + w - 18.0:
+		cx = tx
+		cy += 23.0
+	var wc := _chip(cx, cy, pw, 19.0, String(JK.get(job, "j_xuong")) if job != "" else ("got" if cheap else "fut"))
+	wc.kids = _rowi(cx + 6.0, cy, 19.0, P, 9.5, 700, BROWN)[0]
+	out.append(wc)
+	cx += pw + 4.0
+	var yb := cy + 19.0   # đáy hàng chip cuối
+	var ex := []   # chip dòng 3 (nếu có): Rẻ nhất, Nhờ việc
+	if cheap:
+		ex.append(["Rẻ nhất", "got", "rgb(46, 120, 50)", null])
 	if W._tr(s.get("req")):
-		out.append(_dt(x + 48.0, yy - 2.0, w - 48.0, 14.0, _fitw("Đang nhờ " + W._r_tx(s.req), 10.0, 600, w - 48.0), 10.0, 600, "rgb(170, 60, 50)", "left"))
-		yy += 14.0
+		ex.append(["Nhờ việc ›", "sen", "rgb(170, 50, 60)", _go.bind(u)])
+	for e in ex:
+		var ew: float = Box.text_w(String(e[0]), 9.5, 700) + 14.0
+		if cx + ew > x + w - 16.0:
+			cx = tx
+			cy += 23.0
+			yb = cy + 19.0
+		var ec := _tchip(cx, cy, String(e[0]), String(e[1]), String(e[2]), e[3], 19.0, 9.5)
+		out.append(ec[0])
+		cx += float(ec[1]) + 4.0
+	yy = maxf(yb, yy + 40.0) + 9.0
+	out.append(_dic(x + w - 12.0, yy - 21.0, 11.0, CHU if opn else CHD))   # mũi tên mở / đóng lưới: góc phải dưới
 	c.act = _op.bind(u)
-	yy += 10.0
 	c.r[3] = yy - y
 	if opn:   # lưới thuê nằm ngay dưới khối (không lồng trong khối)
 		yy += GG
