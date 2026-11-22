@@ -8,7 +8,6 @@ var op = null               # nhà đang mở lưới thuê
 var flt := ""               # (bản 473) lọc theo sở trường: "" | ruong | vuon | chan | xuong
 const FLT := [["", "Tất cả", ""], ["ruong", "Ruộng", "lua"], ["vuon", "Vườn", "qua_xoai"], ["chan", "Chuồng", "trung"], ["xuong", "Xưởng", "gao"]]
 const BTX := {"ruong": ["lúa", "gặt", "bó lúa"], "vuon": ["trái", "hái", "trái"], "chan": ["trứng", "lượm", "trứng"]}   # (bản 474) [chữ gọn, việc, món] cho dòng thông số   # (bản 473) câu rõ cho "dư 1" theo nghề
-const STAR0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z\" fill=\"rgb(252,246,232)\" stroke=\"rgb(150,112,60)\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/></svg>"   # sao chưa có: viền nâu
 const HRC := {   # (bản 471) nền khối nhà nhạt theo sở trường: [gradient trên, giữa, dưới, viền]
 	"h_ruong": ["rgb(223, 236, 214)", "rgb(232, 241, 225)", "rgb(240, 246, 236)", "rgb(168, 204, 144)"],
 	"h_vuon": ["rgb(247, 232, 210)", "rgb(249, 238, 222)", "rgb(252, 244, 234)", "rgb(234, 192, 132)"],
@@ -49,6 +48,7 @@ func _sig() -> String:
 
 func _build() -> void:
 	sig = _sig()
+	_fc.clear()
 	var sh := _kshell([], "", func(_k): pass)
 	var r := _body()
 	_kmount(sh[0], sh[1], float(sh[2]), r[0], float(r[1]))
@@ -131,10 +131,15 @@ func _flt(k: String) -> void:
 	hpick = ""
 	scroll = 0.0
 
+var _fc := {}   # (bản 475) nhớ công rẻ nhất mỗi nhà trong 1 lần dựng (tránh tính lại W.om nhiều lần khi xếp, so rẻ nhất)
 func _from(s: Dictionary) -> int:   # công rẻ nhất nếu thuê nhà này (ruộng / vườn / chuồng)
+	var key := str(s.get("n")) + "|" + str(s.get("lk")) + "|" + str(s.get("tim"))
+	if _fc.has(key):
+		return int(_fc[key])
 	var m := 1 << 30
 	for j in ["ruong", "vuon", "chan"]:
 		m = mini(m, int(W.om(s, j)))
+	_fc[key] = m
 	return m
 
 func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà, 2 hàng: mặt + tên + tim (Ghé nhà); chip sở trường, tính nết, việc / lương, nhờ việc
@@ -164,8 +169,8 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 	out.append(_dt(tx, yy, nw, 18.0, _fitw(nm, 12.0, 800, nw), 12.0, 800, BROWN, "left"))
 	var hx := tx + nw + 6.0
 	var pp := 1.0 if tim >= 5 else fmod(W._n(s.get("dp")), 100.0) / 100.0
-	for i in 5:
-		out.append(_dic(hx + i * 14.0, yy + 3.0, 12.0, HEART if i < tim else (_heartp(pp) if i == tim and pp > 0.0 else HEART0)))
+	out.append(_dic(hx, yy + 3.0, 0.0, _hrow(tim, pp)))   # (bản 475) 5 tim gộp 1 hình (bớt nút, dựng nhanh hơn)
+	out[out.size() - 1].r = [hx, yy + 3.0, 68.0, 12.0]
 	# hàng 2: sở trường (hình + sao 12), tính nết; Thuê › bên phải
 	var cy := yy + 22.0
 	var cx := tx
@@ -177,8 +182,9 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 		var sc := _chip(cx, cy, sw, 20.0, "s_" + r if CHIPK.has("s_" + r) else "fut")
 		var ks := [_icn(cx + 10.0, cy + 10.0, 15.0, String(TALIC.get(r, "lua"))), _dt(cx + 19.0, cy, sw - 22.0, 20.0, tn, 10.0, 700, BROWN, "left")]
 		var sx: float = cx + 21.0 + Box.text_w(tn, 10.0, 700) + 2.0
-		for i in 5:
-			ks.append(_pic(sx + i * 12.0, cy + 4.0, 12.0, 12.0, "res://ui/img/bong/sao.png") if i < o else _dic(sx + i * 12.0, cy + 4.0, 12.0, STAR0))
+		var sv := _dic(sx, cy + 4.0, 12.0, _srow(o))   # 5 sao gộp 1 hình
+		sv.r = [sx, cy + 4.0, 60.0, 12.0]
+		ks.append(sv)
 		sc.kids = ks
 		sc.act = _dsay.bind(nm + ": " + tn + " " + str(o) + " sao. Thuê đúng nghề thì công rẻ, làm được nhiều hơn.")
 		out.append(sc)
@@ -236,3 +242,23 @@ func _op(u) -> void:   # chạm khối nhà: mở / đóng lưới thuê, mỗi 
 func _go(u) -> void:   # Ghé nhà: đóng, về nhà đó
 	close()
 	U.vl_open(int(u))
+
+static func _hrow(tim: int, p: float) -> String:   # (bản 475) hàng 5 tim trong 1 svg: tim đầy, tim đang lên tô dần, tim trống
+	var path := "M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z"
+	var g := ""
+	for i in 5:
+		var tx := "translate(" + str(i * 28) + " 0)"
+		if i < tim:
+			g += "<path transform=\"" + tx + "\" d=\"" + path + "\" fill=\"rgb(226,64,72)\" stroke=\"rgb(190,80,90)\" stroke-width=\"1.2\"/>"
+		else:
+			g += "<path transform=\"" + tx + "\" d=\"" + path + "\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/>"
+			if i == tim and p > 0.0:
+				g += "<clipPath id=\"hc\"><rect x=\"0\" y=\"0\" width=\"" + str(snappedf(p * 24.0, 0.1)) + "\" height=\"24\"/></clipPath><path clip-path=\"url(#hc)\" transform=\"" + tx + "\" d=\"" + path + "\" fill=\"rgb(226,64,72)\"/><path transform=\"" + tx + "\" d=\"" + path + "\" fill=\"none\" stroke=\"rgb(190,80,90)\" stroke-width=\"1.2\"/>"
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 136 24\">" + g + "</svg>"
+
+static func _srow(o: int) -> String:   # (bản 475) hàng 5 sao trong 1 svg: sao vàng / sao viền nâu
+	var path := "M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"
+	var g := ""
+	for i in 5:
+		g += "<path transform=\"translate(" + str(i * 24) + " 0)\" d=\"" + path + "\" fill=\"" + ("rgb(250,196,40)" if i < o else "rgb(252,246,232)") + "\" stroke=\"" + ("rgb(200,140,20)" if i < o else "rgb(150,112,60)") + "\" stroke-width=\"1.6\" stroke-linejoin=\"round\"/>"
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 24\">" + g + "</svg>"

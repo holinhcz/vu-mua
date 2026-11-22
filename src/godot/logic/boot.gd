@@ -212,6 +212,8 @@ func _test_hook() -> void:
 			"tn": ui.tn_open(a[1] if a.size() > 1 else "")
 			"ut": ui.ut_open(a[1] if a.size() > 1 else "")
 			"hr": ui.hr_open()
+			"famx": var F0: Dictionary = G.w_all.WL._r0().fam; var k0 = F0.keys()[0]; for i in int(a[1]): F0[str(900 + i)] = F0[k0].duplicate(true); F0[str(900 + i)].n = "Nhà " + str(i); F0[str(900 + i)].tal = ["ruong", "vuon", "chan", "xuong"][i % 4]
+			"hrt": _hrt()
 			"utc": G.w_all.WL.ut_s().c = int(a[1]); G.w_all.WL.ut_s().p = int(a[2]) if a.size() > 2 else G.w_all.WL.ut_s().p; G.mark()
 			"hidev": ui.get_parent().visible = false
 			"gio": G.troi.hh = float(a[1])
@@ -288,6 +290,16 @@ func _tnsim(a: Array) -> void:   # thử Thiên tai: tnsim:next (dời ngày t�
 		"hit":
 			G.w_all.WD._tn_hit0({"k": String(a[2]), "d": G.day()}, false)
 	G.mark()
+
+func _hrt() -> void:   # thử: đo thời gian dựng bảng Làm thuê (ghi window.__ordt)
+	var t0 := Time.get_ticks_usec()
+	ui.hrp._build()
+	var b := (Time.get_ticks_usec() - t0) / 1000.0
+	var t1 := Time.get_ticks_usec()
+	var r: Dictionary = ui.hrp._body()[0].size() > 0 and {} or {}
+	var b2 := (Time.get_ticks_usec() - t1) / 1000.0
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"build": b, "body": b2}))
 
 func _ngsim(a: Array) -> void:   # thử bảng Nghề: ngsim:sao:nghề:số sao[:c] | ngsim:thi:nghề | ngsim:don4
 	var W = G.w_all.WL

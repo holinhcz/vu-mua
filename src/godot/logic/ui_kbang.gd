@@ -78,7 +78,7 @@ func _cpx(v: float) -> String:   # đơn vị số đo -> px css của mẫu (nh
 	return str(snappedf(v / _dz(), 0.01)) + "px"
 
 func _dt(x: float, y: float, w: float, h: float, s: String, fs := 11.0, fw := 700, col := BROWN, al := "center") -> Dictionary:
-	var n := _cl(D.cal.kids[0])
+	var n: Dictionary = D.cal.kids[0].duplicate(false)   # (bản 475) chép nông
 	n.erase("tr")
 	n.kids = []
 	n.r = [x, y, w, h]
@@ -103,7 +103,7 @@ func _dcard(x: float, y: float, w: float, h: float) -> Dictionary:   # thẻ kem
 	return n
 
 func _dbx(x: float, y: float, w: float, h: float, bg: String, rad := 8.0, bd := "", sh := "none") -> Dictionary:
-	var n := _cl(D.cell.fut)
+	var n: Dictionary = D.cell.fut.duplicate(false)   # (bản 475) chép nông, bỏ con: không chép sâu cả cây mẫu
 	n.kids = []
 	n.r = [x, y, w, h]
 	n.css = n.css.duplicate()
@@ -148,6 +148,10 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	var C: Array = _ck(kind)
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)")
 	n.cls = "ddchip"
+	var ck := ",".join(PackedStringArray(C)) + ("|now" if kind == "now" else "")
+	if _CKC.has(ck):   # (bản 475) nhớ kiểu chip theo màu: bớt xử lý chuỗi khi dựng bảng nhiều chip (Làm thuê 40 nhà)
+		n.css = (_CKC[ck] as Dictionary).duplicate()
+		return n
 	Snap.chip_look(n, "ddchip", true)
 	n.css["background-color"] = String(C[1])
 	n.css["background-image"] = "linear-gradient(" + String(C[0]) + " 0%, " + String(C[1]) + " 50%, " + String(C[2]) + " 100%)"
@@ -159,8 +163,10 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	if L.size() > 1:
 		sh = L[0].substr(0, L[0].rfind(", "))
 	n.css["box-shadow"] = sh
+	_CKC[ck] = n.css.duplicate()
 	return n
 
+static var _CKC := {}   # kiểu chip đã tính, theo bộ màu
 static var _ON := {}
 func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false) -> Dictionary:   # nút = chip "on" (xanh) của Kho; red: cùng dáng, tông đỏ
 	if _ON.is_empty():
@@ -188,7 +194,8 @@ func _dick(cx: float, cy: float, s: float, ic: String, op := 1.0) -> Dictionary:
 	return _dic(cx - z * 0.5, cy - z * 0.5, z, svg, op)
 
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
-	var n := _cl(D.cell.fut.kids[1])
+	var n: Dictionary = D.cell.fut.kids[1].duplicate(false)   # (bản 475) chép nông
+	n.kids = []
 	n.r = [x, y, s, s]
 	n.svg = svg
 	n.css = n.css.duplicate()
