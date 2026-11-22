@@ -9,8 +9,9 @@ var tab := "tu"             # KLS.tab
 var sel := ""               # KLS.sel
 var rk := ""                # KLS.rk
 var flt := ""               # (bản 478) lọc tủ: "" | lua | rau | trai | co
+var nox := false            # (bản 479) lưới loại chưa có đang mở
 const TABC := {"tu": "rgb(200, 150, 40)", "rk": "rgb(76, 150, 48)", "thi": "rgb(200, 70, 60)"}
-const FLT := [["", "Tất cả", ""], ["lua", "Lúa", "lua"], ["rau", "Rau", "carot"], ["trai", "Trái cây", "qua_xoai"], ["co", "Đã có", ""]]
+const FLT := [["", "Tất cả", ""], ["lua", "Lúa", "lua"], ["rau", "Rau", "cai"], ["trai", "Trái cây", "qua_xoai"], ["co", "Đã có", ""]]
 const KLC := {   # nền ô theo nhóm cây: [gradient trên, giữa, dưới, viền]
 	"g_lua": ["rgb(247, 236, 210)", "rgb(249, 242, 224)", "rgb(252, 247, 237)", "rgb(232, 203, 131)"],
 	"g_rau": ["rgb(219, 234, 214)", "rgb(230, 240, 226)", "rgb(241, 247, 238)", "rgb(157, 197, 141)"],
@@ -119,7 +120,7 @@ func _tu() -> Array:
 	var out := []
 	var y := 6.0
 	# chip tổng + thanh
-	var hc := _chip(X0, y, XW, 50.0, "now")
+	var hc := _chip(X0, y, XW, 50.0, "fut")   # (bản 479) kem, khác màu ô đang chọn
 	out.append(hc)
 	out.append_array(_rowi(X0 + 10.0, y + 7.0, 17.0, ["Đã có " + str(got) + "/" + str(ids.size()) + " loại"], 12.5, 800, BROWN)[0])
 	var nt := str(int(k.get("n", 0))) + " trái khủng" + ((" · " + String(k.tt[0])) if k.tt.size() else "")
@@ -147,9 +148,21 @@ func _tu() -> Array:
 	var L := ids.filter(func(id): return flt == "" or (flt == "co" and k.b.has(id)) or (flt != "co" and (_grp(id) == flt or (flt == "rau" and _grp(id) == "quy" and not String(id).begins_with("qua_")) or (flt == "trai" and _grp(id) == "quy" and String(id).begins_with("qua_")))))
 	var L1 := L.filter(func(id): return k.b.has(id))
 	var L2 := L.filter(func(id): return not k.b.has(id))
-	var g := _tiles(y, L1 + L2, k)
-	out.append_array(g[0])
-	y += float(g[1]) + GG
+	if L1.size():
+		var g := _tiles(y, L1, k)
+		out.append_array(g[0])
+		y += float(g[1]) + GG
+	if L2.size() and flt != "co":   # (bản 479) loại chưa có: thu 1 chip, chạm mở lưới mờ
+		var nc := _chip(X0, y, XW, 30.0, "fut")
+		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 11.0, 700, SUB, "left"),
+			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if nox else CHD)]
+		nc.act = func(): nox = not nox
+		out.append(nc)
+		y += 30.0 + GG
+		if nox:
+			var g2 := _tiles(y, L2, k)
+			out.append_array(g2[0])
+			y += float(g2[1]) + GG
 	# chi tiết ô đang chọn
 	var f = k.b.get(sel)
 	if f != null:
@@ -205,7 +218,7 @@ func _tiles(y: float, L: Array, k: Dictionary) -> Array:   # lưới 3 cột ô 
 		var x := X0 + (i % 3) * (bw + g)
 		var yy := y + floorf(i / 3.0) * (bh + g)
 		var gr := _grp(id)
-		var c := _chip(x, yy, bw, bh, "now" if sel == id else ("g_" + gr if f != null else "g_no"))
+		var c := _chip(x, yy, bw, bh, "now" if sel == id else ("g_" + gr if f != null else ("g_quy" if gr == "quy" else "g_no")))   # giống quý: nền tím cả ô
 		var ks := [_icn(x + bw * 0.5, yy + 15.0, 22.0, id)]
 		if f == null:
 			ks[0].css["opacity"] = "0.35"
@@ -216,10 +229,6 @@ func _tiles(y: float, L: Array, k: Dictionary) -> Array:   # lưới 3 cột ô 
 			var kc := _chip(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "now")
 			kc.kids = [_dt(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "Kỷ lục", 7.5, 800, "rgb(150, 100, 20)")]
 			ks.append(kc)
-		if gr == "quy":
-			var qc := _chip(x + 3.0, yy + 3.0, 24.0, 13.0, "g_quy")
-			qc.kids = [_dt(x + 3.0, yy + 3.0, 24.0, 13.0, "Quý", 7.5, 800, "rgb(110, 70, 170)")]
-			ks.append(qc)
 		c.kids = ks
 		c.act = _sel.bind(id)
 		out.append(c)
@@ -244,8 +253,14 @@ func _rk() -> Array:
 	# chip loại có hình: chỉ loại đã có (cuộn trong lưới 3 cột), đang chọn xanh
 	var have: Array = WC2.kld().keys().filter(func(id): return k.b.has(id))
 	if have.is_empty():
-		out.append(_dt(X0, y, XW, 16.0, "Chưa có trái khủng nào. Gặt nhiều, chăm kỹ là ra trái khủng.", 11.0, 700, SUB, "left"))
-		return [out, y + 16.0 + GG]
+		for i in 3:   # (bản 479) bảng trống: 3 ô huy chương mờ
+			var ec := _chip(X0, y, XW, 30.0, "g_no")
+			var md := _medal(X0 + 8.0, y + 4.0, i)
+			md.css["opacity"] = "0.4"
+			ec.kids = [md, _dt(X0 + 38.0, y, XW - 48.0, 30.0, "Gặt trái khủng đầu tiên để lên bảng" if i == 0 else "—", 11.0, 700 if i == 0 else 600, SUB if i == 0 else "rgb(190, 180, 160)", "left")]
+			out.append(ec)
+			y += 30.0 + 5.0
+		return [out, y + GG - 5.0]
 	var g := 5.0
 	var bw := (XW - 2.0 * g) / 3.0
 	for i in have.size():
@@ -315,16 +330,18 @@ func _thi() -> Array:
 		var yy := y + floorf(i / 2.0) * (bh + g)
 		var c := _chip(x, yy, bw, bh, "g_" + _grp(id))
 		var ks := [_icn(x + 20.0, yy + 22.0, 30.0, id), _dt(x + 40.0, yy + 7.0, bw - 46.0, 16.0, _fitw(WC2.kl_name(id), 11.5, 800, bw - 46.0), 11.5, 800, BROWN, "left"),
-			_dt(x + 40.0, yy + 23.0, bw - 46.0, 14.0, WC2.kl_kg(float(my), id) if my != null else "Chưa có", 11.0 if my != null else 10.0, 800 if my != null else 600, "rgb(46, 120, 50)" if my != null else SUB, "left")]
+			_dt(x + 40.0, yy + 23.0, bw - 46.0, 14.0, WC2.kl_kg(float(my), id) if my != null else "Chưa dự thi", 11.0 if my != null else 10.0, 800 if my != null else 600, "rgb(46, 120, 50)" if my != null else SUB, "left")]
 		var hk := 0
 		for j in R.size():
 			if R[j].get("me", false):
 				hk = j + 1
-		var ht := ("Hạng " + str(hk)) if hk else "Chưa dự thi"
-		var hc := _tchip(x + 8.0, yy + bh - 24.0, ht, "now" if hk == 1 else ("got" if hk else "fut"), "rgb(150, 100, 20)" if hk == 1 else ("rgb(46, 120, 50)" if hk else SUB), null, 18.0, 9.5)
-		ks.append(hc[0])
+		var hx := x + 8.0
+		if hk:   # (bản 479) chip hạng chỉ khi đã dự thi
+			var hc := _tchip(hx, yy + bh - 24.0, "Hạng " + str(hk), "now" if hk == 1 else "got", "rgb(150, 100, 20)" if hk == 1 else "rgb(46, 120, 50)", null, 18.0, 9.5)
+			ks.append(hc[0])
+			hx += float(hc[1]) + 4.0
 		if _grp(id) == "quy":
-			var qc := _tchip(x + 8.0 + float(hc[1]) + 4.0, yy + bh - 24.0, "Quý", "g_quy", "rgb(110, 70, 170)", null, 18.0, 9.5)
+			var qc := _tchip(hx, yy + bh - 24.0, "Giống quý", "g_quy", "rgb(110, 70, 170)", null, 18.0, 9.5)
 			ks.append(qc[0])
 		c.kids = ks
 		c.act = _dsay.bind(WC2.kl_name(id) + ": " + (("của bạn " + WC2.kl_kg(float(my), id) + ", đang hạng " + str(hk) + ".") if my != null else "gặt trong tuần này để dự thi."))
