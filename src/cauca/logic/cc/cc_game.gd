@@ -197,9 +197,10 @@ func world_init() -> void:
 	var sz := [15.0, 21.0, 27.0, 33.0]
 	for i in 4:
 		var z: float = sz[i] + rnd(-1.5, 1.5)
-		var sd := -1.0 if i % 2 == 0 else 1.0
-		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ
-		var fx: float = sd * rnd(.4, .6)
+		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ.
+		# Mỗi bụi 1 cột riêng, sen gần lệch vào trong, sen xa ra ngoài: không đứng thẳng hàng nhau
+		# (Link 11-22: sen đỏ trùng hàng sen tím). 0 đỏ (trái, gần), 1 trắng (phải), 2 tím (trái, xa), 3 vàng (phải, xa)
+		var fx: float = [-.12, .3, -.58, .6][i] + rnd(-.02, .02)
 		W.props.append({"z": z, "x": fx * half_x(z), "fx": fx, "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
 	W.spots = []
 	for i in 2:
