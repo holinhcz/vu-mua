@@ -23,9 +23,13 @@ class Box extends Control:
 	func _init(f: Callable = Callable()) -> void:
 		fn = f
 		mouse_filter = Control.MOUSE_FILTER_STOP
+	static var T := {}
 	func _draw() -> void:
 		if fn.is_valid():
+			var t0 := Time.get_ticks_usec()
 			fn.call(self)
+			var k := fn.get_method()
+			T[k] = T.get(k, 0) + Time.get_ticks_usec() - t0
 	func hit(p: Vector2):
 		for i in range(items.size() - 1, -1, -1):
 			var it: Dictionary = items[i]
@@ -116,6 +120,7 @@ var title: Box
 var L := {}
 var st := "idle"
 var _hud_dirty := true
+var _hud_key := ""
 var _toasts: Array = []
 var _cue := {"txt": "", "kind": "", "t": 9.0}
 var _hint := {"txt": "", "t": 9.0}
@@ -212,7 +217,20 @@ func step(dt: float) -> void:
 	if _badge_frame != _frame - 1 and _badge_frame != _frame:
 		_badge = null
 	hud.visible = game.started
-	hud.queue_redraw()
+	# thanh trên + nút chỉ vẽ lại khi có gì đổi (vẽ lại mỗi khung tốn ~0.7 ms trên máy bàn, gấp mấy lần trên web điện thoại)
+	if game.started:
+		var S: Dictionary = game.S
+		var hk := ""
+		if st == "fight" or (st == "wait" and _bite_hot) or _coinpop < .4:
+			hk = "anim%d" % _frame
+		else:
+			hk = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%d|%d" % [S.xu, S.lv, S.xp, fmt_h(S.hour), game.W.rain > .4,
+				st, S.bait, S.baits.get(S.bait, 0), S.basket.size(), S.cage, modal.visible,
+				hud.press.get("id") if hud.press != null else "", int(L.W), int(L.H)]
+		if hk != _hud_key or _hud_dirty:
+			_hud_key = hk
+			_hud_dirty = false
+			hud.queue_redraw()
 	fxl.queue_redraw()
 	tag.visible = _badge != null and not modal.visible and st != "card" and st != "fight"
 	tag.queue_redraw()

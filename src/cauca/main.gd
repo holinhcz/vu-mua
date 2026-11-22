@@ -67,6 +67,40 @@ func _apply_mode() -> void:
 		g.drw.pfx.visible = _mode != 3
 	s.visible = _mode != 4
 	_worst = 0.0; _sum = 0.0; _n = 0; _acc = 0.0
+# ms mỗi khung của từng phần: code logic (cc_game PT) + code vẽ từng lớp (cc_draw Lay.T). Phần còn lại của 'tb'
+# là Godot dựng hình + card màn hình.
+func _prof_text(n: int) -> String:
+	var LG = load("res://logic/cc/cc_game.gd")
+	var LD = load("res://logic/cc/cc_draw.gd")
+	var t := ""
+	var tot := 0.0
+	var a := []
+	for k in LG.PT:
+		var ms: float = LG.PT[k] / 1000.0 / maxf(n, 1)
+		tot += ms; a.append("%s %.1f" % [k, ms])
+	LG.PT.clear()
+	var b := []
+	var tot2 := 0.0
+	for k in LD.Lay.T:
+		var ms: float = LD.Lay.T[k] / 1000.0 / maxf(n, 1)
+		tot2 += ms; b.append("%s %.1f" % [k, ms])
+	LD.Lay.T.clear()
+	var LU = load("res://logic/cc/cc_ui.gd")
+	for k in LU.Box.T:
+		var ms: float = LU.Box.T[k] / 1000.0 / maxf(n, 1)
+		tot2 += ms; b.append("%s %.1f" % [str(k).trim_prefix("_draw_"), ms])
+	LU.Box.T.clear()
+	t += "\ncode %.1f ms:%s" % [tot, _rows(a)]
+	t += "\nvẽ %.1f ms:%s" % [tot2, _rows(b)]
+	return t
+
+# màn dọc hẹp: mỗi dòng 4 mục, khỏi tràn ra ngoài
+func _rows(a: Array) -> String:
+	var o := ""
+	for i in a.size():
+		o += ("\n   " if i % 4 == 0 else " · ") + str(a[i])
+	return o
+
 func _process(dt: float) -> void:
 	if _ml == null:
 		return
@@ -80,6 +114,9 @@ func _process(dt: float) -> void:
 	var t := "%.0f fps · tb %.1f ms · tệ %.0f ms\n%d lệnh vẽ · %.0f MB ảnh\nmàn %dx%d · dpr %.2f" % [fps, _sum / _n * 1000.0, _worst * 1000.0, dc, vm, vs.x, vs.y, _dpr()]
 	if g and g.scn and g.scn.vp:
 		t += "\nnước %dx%d (x%.2f)" % [g.scn.vp.size.x, g.scn.vp.size.y, g.scn.scale_s]
+	t += _prof_text(_n)
 	t += "\nchế độ: %s (chạm để đổi)" % MODES[_mode]
 	_ml.text = t
+	if OS.has_feature("pc") and not OS.has_feature("web"):
+		print(t.replace("\n", " | "))
 	_acc = 0.0; _n = 0; _sum = 0.0; _worst = 0.0

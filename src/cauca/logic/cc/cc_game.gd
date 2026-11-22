@@ -1051,10 +1051,17 @@ func hint_once(k: String, msg: String) -> void:
 	ui.hint(msg)
 
 # ============================================================ vòng chính
+static var PT := {}       # đo: µs mỗi phần logic (đồng hồ đo đọc rồi xoá)
+func _pt(k: String, t0: int) -> int:
+	var t := Time.get_ticks_usec()
+	PT[k] = PT.get(k, 0) + t - t0
+	return t
+
 func _process(dt: float) -> void:
 	if L.is_empty():
 		return
 	dt = minf(.05, dt)
+	var t0 := Time.get_ticks_usec()
 	clock += dt
 	_run_sched()
 	if started:
@@ -1069,17 +1076,26 @@ func _process(dt: float) -> void:
 		tod.cloud = tod.cloud.lerp(grey, r * .6)
 		tod.fog = tod.fog.lerp(grey, r * .5)
 		tod.water = tod.water.lerp(tod.water.lerp(grey, .3), r * .5)
+	t0 = _pt("giờ", t0)
 	world_update(dt * .3 if G.paused else dt)
+	t0 = _pt("cảnh", t0)
 	if not G.paused and started:
 		game_update(dt)
+	t0 = _pt("chơi", t0)
 	fx_update(dt)
+	t0 = _pt("hiệu ứng", t0)
 	if started:
 		snd.ambience(dt, tod, W.rain)
+	t0 = _pt("âm", t0)
 	scn.render(W.t, tod, W, rips, shs)
+	t0 = _pt("shader", t0)
 	drw.redraw()
 	drw.pfx.step(dt)
+	t0 = _pt("hạt", t0)
 	ui.step(dt)
+	t0 = _pt("giao diện", t0)
 	save()
+	_pt("lưu", t0)
 
 # ============================================================ chạm
 func act(down: bool) -> void:

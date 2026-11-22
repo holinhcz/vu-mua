@@ -199,35 +199,31 @@ static func stop_col(stops: Array, t: float) -> Color:
 			return (a[1] as Color).lerp(b[1], (t - a[0]) / maxf(0.0001, b[0] - a[0]))
 	return stops[stops.size() - 1][1]
 
-# vòng tròn mềm (dải tỏa tròn) bằng quạt tam giác
-static func radial(ci: CanvasItem, c: Vector2, r: float, stops: Array, n := 28) -> void:
-	# 1 mảng tam giác = 1 lệnh vẽ (trước: 6 vòng x n tứ giác = 6n lệnh vẽ)
-	var rings := 6
-	var pts := PackedVector2Array()
-	var cols := PackedColorArray()
-	var idx := PackedInt32Array()
-	var dirs := PackedVector2Array()
-	for i in n:
-		var a := TAU * i / n
-		dirs.append(Vector2(cos(a), sin(a)))
-	pts.append(c)
-	cols.append(stop_col(stops, 0.0))
-	for k in range(1, rings + 1):
-		var cc := stop_col(stops, float(k) / rings)
-		var rr := r * k / rings
-		for i in n:
-			pts.append(c + dirs[i] * rr)
-			cols.append(cc)
-	for i in n:
-		var j := (i + 1) % n
-		idx.append_array([0, 1 + i, 1 + j])
-	for k in range(1, rings):
-		var b0 := 1 + (k - 1) * n
-		var b1 := 1 + k * n
-		for i in n:
-			var j := (i + 1) % n
-			idx.append_array([b0 + i, b1 + i, b1 + j, b0 + i, b1 + j, b0 + j])
-	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols)
+# vòng tròn mềm (dải tỏa tròn). (Link 11-22 "fps"): trước dựng 121 đỉnh + 660 chỉ số bằng GDScript MỖI LẦN gọi, mỗi
+# khung (~0.6 ms máy, x3-5 trên web). Giờ = 1 ảnh tròn mềm trắng dựng sẵn theo dáng độ mờ của các nấc (alpha so với nấc
+# giữa), vẽ 1 lệnh draw_texture_rect nhân màu nấc giữa. Các ảnh cùng loại gộp chung 1 lệnh vẽ.
+static var _rt := {}
+static func radial(ci: CanvasItem, c: Vector2, r: float, stops: Array, _n := 28) -> void:
+	var c0: Color = stops[0][1]
+	var a0: float = maxf(c0.a, 0.0001)
+	var key := ""
+	for st in stops:
+		key += "%.2f:%.2f," % [st[0], clampf((st[1] as Color).a / a0, 0.0, 4.0)]
+	var tx: ImageTexture = _rt.get(key)
+	if tx == null:
+		var S := 64
+		var im := Image.create(S, S, false, Image.FORMAT_RGBA8)
+		for y in S:
+			for x in S:
+				var t := Vector2(x + .5 - S * .5, y + .5 - S * .5).length() / (S * .5)
+				var al := 0.0
+				if t < 1.0:
+					al = clampf(stop_col(stops, t).a / a0, 0.0, 1.0)
+				im.set_pixel(x, y, Color(1, 1, 1, al))
+		im.generate_mipmaps()
+		tx = ImageTexture.create_from_image(im)
+		_rt[key] = tx
+	ci.draw_texture_rect(tx, Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, Color(c0.r, c0.g, c0.b, c0.a))
 
 # chặng đường cong bậc hai / bậc ba thành điểm
 static func quad_pts(a: Vector2, c: Vector2, b: Vector2, n := 10) -> PackedVector2Array:
@@ -248,44 +244,67 @@ static func cubic_pts(a: Vector2, b: Vector2, c: Vector2, d: Vector2, n := 12) -
 # đường dày đầu tròn (lineCap round)
 # dải nét dày thay đổi + mép mềm 1px, mỗi đoạn 1 màu, đầu cuối tròn: 1 lệnh vẽ (thay cho draw_line + draw_circle từng đoạn)
 static func ribbon(ci: CanvasItem, P: PackedVector2Array, wid: PackedFloat32Array, seg_col: PackedColorArray, cap_end := true) -> void:
+	# dải băng có mép AA 1 px. Viết thẳng vào mảng đã cấp sẵn (không tạo mảng tạm mỗi đoạn) cho nhẹ code vẽ mỗi khung.
 	var n := P.size()
 	if n < 2:
 		return
-	var nr := PackedVector2Array()
-	for i in n:
-		var d := (P[mini(i + 1, n - 1)] - P[maxi(i - 1, 0)])
-		d = d.normalized() if d.length_squared() > 0 else Vector2.RIGHT
-		nr.append(Vector2(-d.y, d.x))
-	var pts := PackedVector2Array()
-	var cols := PackedColorArray()
-	var idx := PackedInt32Array()
 	const F := 1.0
+	const M := 10
+	var nv := (n - 1) * 8 + (1 + (M + 1) * 2 if cap_end else 0)
+	var ni := (n - 1) * 18 + (M * 9 if cap_end else 0)
+	var pts := PackedVector2Array()
+	pts.resize(nv)
+	var cols := PackedColorArray()
+	cols.resize(nv)
+	var idx := PackedInt32Array()
+	idx.resize(ni)
+	var nr := PackedVector2Array()
+	nr.resize(n)
+	for i in n:
+		var d := P[mini(i + 1, n - 1)] - P[maxi(i - 1, 0)]
+		d = d.normalized() if d.length_squared() > 0 else Vector2.RIGHT
+		nr[i] = Vector2(-d.y, d.x)
+	var v := 0
+	var k := 0
 	for i in n - 1:
 		var c: Color = seg_col[i]
 		var c0 := Color(c, 0)
-		var b := pts.size()
-		for j in [i, i + 1]:
-			var h: float = wid[j] * .5
-			pts.append_array([P[j] + nr[j] * (h + F), P[j] + nr[j] * h, P[j] - nr[j] * h, P[j] - nr[j] * (h + F)])
-			cols.append_array([c0, c, c, c0])
+		var b := v
+		for j in 2:
+			var jj := i + j
+			var h: float = wid[jj] * .5
+			var p: Vector2 = P[jj]
+			var q: Vector2 = nr[jj]
+			pts[v] = p + q * (h + F); cols[v] = c0
+			pts[v + 1] = p + q * h; cols[v + 1] = c
+			pts[v + 2] = p - q * h; cols[v + 2] = c
+			pts[v + 3] = p - q * (h + F); cols[v + 3] = c0
+			v += 4
 		for q in 3:
-			idx.append_array([b + q, b + q + 1, b + 4 + q + 1, b + q, b + 4 + q + 1, b + 4 + q])
+			idx[k] = b + q; idx[k + 1] = b + q + 1; idx[k + 2] = b + 5 + q
+			idx[k + 3] = b + q; idx[k + 4] = b + 5 + q; idx[k + 5] = b + 4 + q
+			k += 6
 	if cap_end:
 		var c: Color = seg_col[n - 2]
+		var c0 := Color(c, 0)
 		var e: Vector2 = P[n - 1]
 		var h: float = wid[n - 1] * .5
 		var a0 := nr[n - 1].angle()
-		var b := pts.size()
-		pts.append(e); cols.append(c)
-		var m := 10
-		for i in m + 1:
-			var a := a0 - PI * i / m
+		var b := v
+		pts[v] = e; cols[v] = c
+		v += 1
+		for i in M + 1:
+			var a := a0 - PI * i / M
 			var dv := Vector2(cos(a), sin(a))
-			pts.append_array([e + dv * h, e + dv * (h + F)])
-			cols.append_array([c, Color(c, 0)])
-		for i in m:
-			var k := b + 1 + i * 2
-			idx.append_array([b, k, k + 2, k, k + 1, k + 3, k, k + 3, k + 2])
+			pts[v] = e + dv * h; cols[v] = c
+			pts[v + 1] = e + dv * (h + F); cols[v + 1] = c0
+			v += 2
+		for i in M:
+			var kk := b + 1 + i * 2
+			idx[k] = b; idx[k + 1] = kk; idx[k + 2] = kk + 2
+			idx[k + 3] = kk; idx[k + 4] = kk + 1; idx[k + 5] = kk + 3
+			idx[k + 6] = kk; idx[k + 7] = kk + 3; idx[k + 8] = kk + 2
+			k += 9
 	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols)
 
 static func stroke(ci: CanvasItem, pts: PackedVector2Array, col: Color, w: float, caps := true) -> void:

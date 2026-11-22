@@ -22,11 +22,16 @@ const GHE_OY := 51.0
 
 class Lay extends Control:
 	var fn: Callable
-	func _init(f: Callable) -> void:
+	var nm := ""
+	static var T := {}        # đo: tổng µs vẽ mỗi lớp (đồng hồ đo đọc rồi xoá)
+	func _init(f: Callable, n := "") -> void:
 		fn = f
+		nm = n
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
+		var t0 := Time.get_ticks_usec()
 		fn.call(self)
+		T[nm] = T.get(nm, 0) + Time.get_ticks_usec() - t0
 
 var game
 var l_refl: Lay
@@ -44,30 +49,30 @@ func _init(gm) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _ready() -> void:
-	l_refl = Lay.new(_draw_refl)
+	l_refl = Lay.new(_draw_refl, "refl")
 	var sh := Shader.new()
 	sh.code = REFL_SH
 	refl_mat = ShaderMaterial.new()
 	refl_mat.shader = sh
 	l_refl.material = refl_mat
 	add_child(l_refl)
-	l_main = Lay.new(_draw_main)
+	l_main = Lay.new(_draw_main, "main")
 	add_child(l_main)
-	l_fg = Lay.new(draw_fg)
+	l_fg = Lay.new(draw_fg, "fg")
 	var pm := CanvasItemMaterial.new()
 	pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
 	l_fg.material = pm
 	add_child(l_fg)
-	l_top = Lay.new(_draw_top)
+	l_top = Lay.new(_draw_top, "top")
 	add_child(l_top)
-	l_add = Lay.new(_draw_add)
+	l_add = Lay.new(_draw_add, "add")
 	var am := CanvasItemMaterial.new()
 	am.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	l_add.material = am
 	add_child(l_add)
 	pfx = preload("res://logic/cc/cc_fx.gd").new(game)
 	add_child(pfx)
-	l_rain = Lay.new(_draw_rain)
+	l_rain = Lay.new(_draw_rain, "rain")
 	add_child(l_rain)
 	for l in [l_refl, l_main, l_fg, l_top, l_add, l_rain]:
 		l.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS

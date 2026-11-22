@@ -770,62 +770,74 @@ func sun_screen(tod: Dictionary) -> Vector2:
 	var L: Dictionary = game.L
 	return Vector2(tod.sunX * L.W, L.yw - (L.yw - L.H * .05) * tod.sunElev * (0.9 if L.portrait else 1.0) + L.H * .02)
 
+# đặt thông số shader chỉ khi giá trị đổi (đa số đứng yên: cỡ màn, bờ, màu trời đổi rất chậm) -> bớt việc mỗi khung
+var _uc := {}
+func _su(m: ShaderMaterial, k: String, v) -> void:
+	var d: Dictionary = _uc.get(m, {})
+	if d.is_empty():
+		_uc[m] = d
+	var o = d.get(k)
+	if o != null and typeof(o) == typeof(v) and o == v:
+		return
+	d[k] = v
+	m.set_shader_parameter(k, v)
+
 func _scene_u(m: ShaderMaterial, s: float, res: Vector2, t: float, tod: Dictionary, W: Dictionary) -> void:
 	var L: Dictionary = game.L
-	m.set_shader_parameter("uRes", res)
-	m.set_shader_parameter("uT", fmod(t, 1000.0))
-	m.set_shader_parameter("uHor", L.hor * s)
-	m.set_shader_parameter("uYw", L.yw * s)
-	m.set_shader_parameter("uF", L.F * s)
-	m.set_shader_parameter("uS", s)
+	_su(m, "uRes", res)
+	_su(m, "uT", fmod(t, 1000.0))
+	_su(m, "uHor", L.hor * s)
+	_su(m, "uYw", L.yw * s)
+	_su(m, "uF", L.F * s)
+	_su(m, "uS", s)
 	var btop: float = L.yw - L.bankH * 872.0 / 900.0
-	m.set_shader_parameter("uBank", Vector4(L.bankX * s, btop * s, L.bankW * s, L.bankH * s))
+	_su(m, "uBank", Vector4(L.bankX * s, btop * s, L.bankW * s, L.bankH * s))
 	for k in [["uTop", "top"], ["uHorC", "hor"], ["uSunC", "sun"], ["uTint", "tint"], ["uWater", "water"], ["uCloudC", "cloud"], ["uFog", "fog"]]:
 		var c: Color = tod[k[1]]
-		m.set_shader_parameter(k[0], Vector3(c.r, c.g, c.b))
+		_su(m, k[0], Vector3(c.r, c.g, c.b))
 	var sp := sun_screen(tod)
-	m.set_shader_parameter("uSun", Vector3(sp.x * s, sp.y * s, tod.si * (1 - W.rain * .97) if tod.sunUp else 0.0))
-	m.set_shader_parameter("uMoon", Vector3(tod.sunX * L.W * s, (L.yw - (L.yw - L.H * .08) * tod.sunElev) * s, tod.moon * (1 - W.rain)))
-	m.set_shader_parameter("uStar", tod.star * (1 - W.rain))
-	m.set_shader_parameter("uNight", tod.night)
-	m.set_shader_parameter("uRain", W.rain)
-	m.set_shader_parameter("uWind", W.wind)
-	m.set_shader_parameter("uCloud", W.cloud)
+	_su(m, "uSun", Vector3(sp.x * s, sp.y * s, tod.si * (1 - W.rain * .97) if tod.sunUp else 0.0))
+	_su(m, "uMoon", Vector3(tod.sunX * L.W * s, (L.yw - (L.yw - L.H * .08) * tod.sunElev) * s, tod.moon * (1 - W.rain)))
+	_su(m, "uStar", tod.star * (1 - W.rain))
+	_su(m, "uNight", tod.night)
+	_su(m, "uRain", W.rain)
+	_su(m, "uWind", W.wind)
+	_su(m, "uCloud", W.cloud)
 	var fg: Array = W.floatGlow
-	m.set_shader_parameter("uFlt", Vector4(fg[0], fg[1], 0, fg[2]))
-	m.set_shader_parameter("uOld", 1.0 if old_water else 0.0)
+	_su(m, "uFlt", Vector4(fg[0], fg[1], 0, fg[2]))
+	_su(m, "uOld", 1.0 if old_water else 0.0)
 
 func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, shs: PackedFloat32Array) -> void:
 	var L: Dictionary = game.L
 	_scene_u(mat, scale_s, Vector2(vp.size), t, tod, W)
 	_scene_u(tmat, game.K, Vector2(L.W, L.H) * game.K, t, tod, W)
-	tmat.set_shader_parameter("uExact", 1.0)
+	_su(tmat, "uExact", 1.0)
 	may_s.upd(t, tod, W)
 	sun.upd(tod, W)
 	may_v.upd(t, tod, W)
 	if bmat:
 		var tc: Color = tod.tint
-		bmat.set_shader_parameter("uTint", Vector3(tc.r, tc.g, tc.b))
-		bmat.set_shader_parameter("uNight", tod.night)
-		bmat.set_shader_parameter("uRain", W.rain)
+		_su(bmat, "uTint", Vector3(tc.r, tc.g, tc.b))
+		_su(bmat, "uNight", tod.night)
+		_su(bmat, "uRain", W.rain)
 	var ywc := floorf(L.yw * scale_s) / scale_s
-	tmat.set_shader_parameter("uUV", Vector2(1.0, ywc / L.H))
+	_su(tmat, "uUV", Vector2(1.0, ywc / L.H))
 	var m := mat
 	var s := scale_s
 	wrect.visible = not old_water
 	if not old_water:
 		var wm := wmat
 		var ywp := floorf(L.yw * s)
-		wm.set_shader_parameter("uRes", Vector2(vp.size))
-		wm.set_shader_parameter("uT", fmod(t, 1000.0))
-		wm.set_shader_parameter("uHor", L.hor * s)
-		wm.set_shader_parameter("uYw", ywp)
-		wm.set_shader_parameter("uF", L.F * s)
+		_su(wm, "uRes", Vector2(vp.size))
+		_su(wm, "uT", fmod(t, 1000.0))
+		_su(wm, "uHor", L.hor * s)
+		_su(wm, "uYw", ywp)
+		_su(wm, "uF", L.F * s)
 		for k in [["uSunC", "sun"], ["uTint", "tint"], ["uWater", "water"], ["uFog", "fog"]]:
 			var c: Color = tod[k[1]]
-			wm.set_shader_parameter(k[0], Vector3(c.r, c.g, c.b))
+			_su(wm, k[0], Vector3(c.r, c.g, c.b))
 		for k in ["uSun", "uMoon", "uNight", "uRain", "uWind", "uFlt"]:
-			wm.set_shader_parameter(k, m.get_shader_parameter(k))
+			_su(wm, k, m.get_shader_parameter(k))
 	for i in 16:
 		data_img.set_pixel(i, 0, Color(rips[i * 4], rips[i * 4 + 1], rips[i * 4 + 2], rips[i * 4 + 3]))
 	for i in 8:
