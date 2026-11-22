@@ -815,10 +815,7 @@ func _draw() -> void:
 		var ss: float = R * (2.3 + st.z * 0.9)
 		var al := maxf(0.25, 1 - st.z * 0.55) * 0.9
 		if st.z < 0.03:
-			var sz := R * 3.3
-			draw_set_transform_matrix(Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO) * Transform2D(st.id * 2.39, P + sh))
-			draw_texture_rect_region(A.atlas, Rect2(-sz / 2, -sz / 2, sz, sz), A.R_SAND, Color(1, 1, 1, 0.62))
-			_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
+			# Link 11-22: bỏ vòng cát sỏi nhỏ quanh chân quân, chỉ còn bóng
 			var cs := R * 2.16
 			draw_texture_rect_region(A.atlas, Rect2(P.x + R * 0.07 - cs / 2, P.y + R * 0.1 - cs / 2, cs, cs * 0.96), A.R_CONT, Color(1, 1, 1, 0.5))
 			var ks := R * 2.3
