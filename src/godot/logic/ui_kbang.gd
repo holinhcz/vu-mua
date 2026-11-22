@@ -247,13 +247,17 @@ func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -
 	b.kids[0].css["font-size"] = _cpx(11.0)
 	return b
 
-func _rowi(x: float, y: float, h: float, parts: Array, fs: float, fw: int, col: String) -> Array:   # (bản 452) dòng chữ xen hình: "h" tim, "s" sao, "c" xu; trả [khối, rộng]
+func _rowi(x: float, y: float, h: float, parts: Array, fs: float, fw: int, col: String) -> Array:   # (bản 452) dòng chữ xen hình: "h" tim, "s" sao, "c" xu, "i:<mã>" hình bất kỳ; trả [khối, rộng]
 	var out := []
 	var cx := x
 	var z := fs + 3.0
 	for pt in parts:
 		var t := String(pt)
-		if t == "h" or t == "s" or t == "c":
+		if t.begins_with("i:"):   # (bản 467) "i:<mã>": hình bất kỳ theo _icx (món Kho, svg:, pic:, xu)
+			cx += 2.0
+			out.append(_icx(cx + z * 0.5, y + h * 0.5, z, t.substr(2)))
+			cx += z + 2.0
+		elif t == "h" or t == "s" or t == "c":
 			cx += 2.0
 			if t == "h":
 				out.append(_dic(cx, y + (h - z) * 0.5, z, HEART))

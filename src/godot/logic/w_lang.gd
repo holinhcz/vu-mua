@@ -1521,22 +1521,25 @@ func ut_cond(c: int) -> Array:   # utCond: điều kiện lên chức c, mỗi d
 	var r := []
 	var than_qua_nua := func(ds: Array, n: int) -> Array:   # thanQuaNua
 		var th := ds.filter(func(u): return _i(F[u].get("tim")) >= n).size()
-		return [ds.size() > 0 and th * 2 > ds.size(), "Quá nửa " + ("số nhà" if ds.size() == hs.size() else "tổ") + " thân từ " + str(n) + " ♥ (" + str(th) + "/" + str(ds.size()) + ")"]
+		return [ds.size() > 0 and th * 2 > ds.size(), "Quá nửa " + ("số nhà" if ds.size() == hs.size() else "tổ") + " thân từ " + str(n) + " ♥ (" + str(th) + "/" + str(ds.size()) + ")", "",
+			{"l": "Nhà thân từ " + str(n) + " tim", "h": th, "n": int(floor(ds.size() / 2.0)) + 1}]
 	if c > 1:
 		var wk: int = G.nv.week() - _i(o.get("cw"))
-		r.append([_n(o.c) == c - 1 and wk >= int(UTTUAN[c]), "Làm " + String(UTCHUC[c - 1]) + " đủ " + _sv(UTTUAN[c]) + " tuần (" + str(wk if _n(o.c) == c - 1 else 0) + ")"])
-	r.append([_n(o.p) >= float(UTP[c]), "Uy tín " + _sv(UTP[c]) + " (" + _sv(o.p) + ")"])
-	r.append([lv >= int(UTLV[c]), "Cấp " + _sv(UTLV[c]) + " (" + str(lv) + ")"])
-	r.append([Lg.nha >= int(Lc[0]) and Lg.dan >= int(Lc[1]) and Lg.ngoi >= int(Lc[2]), "Làng có " + _sv(Lc[0]) + " nhà, " + _sv(Lc[1]) + " dân" + ((", " + _sv(Lc[2]) + " nhà ngói") if _tr(Lc[2]) else ""), "Đang có " + str(Lg.nha) + " nhà, " + str(Lg.dan) + " dân" + ((", " + str(Lg.ngoi) + " nhà ngói hoặc ba gian") if _tr(Lc[2]) else "")])
+		r.append([_n(o.c) == c - 1 and wk >= int(UTTUAN[c]), "Làm " + String(UTCHUC[c - 1]) + " đủ " + _sv(UTTUAN[c]) + " tuần (" + str(wk if _n(o.c) == c - 1 else 0) + ")", "",
+			{"l": "Tuần làm " + String(UTCHUC[c - 1]), "h": wk if _n(o.c) == c - 1 else 0, "n": int(UTTUAN[c])}])
+	r.append([_n(o.p) >= float(UTP[c]), "Uy tín " + _sv(UTP[c]) + " (" + _sv(o.p) + ")", "", {"l": "Uy tín", "h": int(_n(o.p)), "n": int(UTP[c])}])   # (bản 467) [3]: số cho thanh tiến độ {l nhãn, h có, n cần}
+	r.append([lv >= int(UTLV[c]), "Cấp " + _sv(UTLV[c]) + " (" + str(lv) + ")", "", {"l": "Cấp", "h": lv, "n": int(UTLV[c])}])
+	r.append([Lg.nha >= int(Lc[0]) and Lg.dan >= int(Lc[1]) and Lg.ngoi >= int(Lc[2]), "Làng có " + _sv(Lc[0]) + " nhà, " + _sv(Lc[1]) + " dân" + ((", " + _sv(Lc[2]) + " nhà ngói") if _tr(Lc[2]) else ""), "Đang có " + str(Lg.nha) + " nhà, " + str(Lg.dan) + " dân" + ((", " + str(Lg.ngoi) + " nhà ngói hoặc ba gian") if _tr(Lc[2]) else ""),
+		{"l": "Nhà trong làng", "h": int(Lg.nha), "n": int(Lc[0])}])
 	if c == 1:
-		r.append([int(cb[1]) >= 1, "1 công trình bậc xóm (" + str(cb[1]) + ")", ct_ten(1)])
+		r.append([int(cb[1]) >= 1, "1 công trình bậc xóm (" + str(cb[1]) + ")", ct_ten(1), {"l": "Công trình bậc xóm", "h": int(cb[1]), "n": 1}])
 		r.append(than_qua_nua.call(ut_to(), 2))
 	if c == 2:
-		r.append([int(cb[1]) >= 3, "3 công trình bậc xóm (" + str(cb[1]) + ")", ct_ten(1)])
-		r.append([_n(o.dam) >= 3, "Đã đi 3 đám (" + _sv(o.dam) + ")"])
+		r.append([int(cb[1]) >= 3, "3 công trình bậc xóm (" + str(cb[1]) + ")", ct_ten(1), {"l": "Công trình bậc xóm", "h": int(cb[1]), "n": 3}])
+		r.append([_n(o.dam) >= 3, "Đã đi 3 đám (" + _sv(o.dam) + ")", "", {"l": "Đám đã đi", "h": int(_n(o.dam)), "n": 3}])
 		r.append(than_qua_nua.call(hs, 2))
 	if c == 3:
-		r.append([int(cb[2]) >= 3, "3 công trình bậc ấp (" + str(cb[2]) + ")", ct_ten(2)])
+		r.append([int(cb[2]) >= 3, "3 công trình bậc ấp (" + str(cb[2]) + ")", ct_ten(2), {"l": "Công trình bậc ấp", "h": int(cb[2]), "n": 3}])
 		r.append(than_qua_nua.call(hs, 3))
 	if c == 4:
 		r.append([bool(cb.dinh) and int(cb[2]) >= 2, "Có Đình làng và 2 công trình bậc ấp", "Đình: " + ("có" if cb.dinh else "chưa") + " · bậc ấp: " + str(cb[2])])
