@@ -6,7 +6,10 @@ extends "res://logic/ui_kbang.gd"
 var WD         # w_dl.gd
 const TABC := "rgb(60, 140, 120)"
 const NOTE := "Khách Sài Gòn, khách Tây ba lô tới ở homestay nhà dân trong làng (ban ngày từ 7 tới 16 giờ). Khách đi quán ăn cơm, ra sạp mua đặc sản, lên đình, chụp hình chỗ cảnh đẹp, đi xuồng ở bến ghe. Ngủ lại một đêm rồi trả phòng, chấm sao. Danh tiếng càng cao khách tới càng thường. Tiền phòng mỗi người một đêm: "
-const KF := {"sg": 2, "tay": 5}   # mặt khách theo loại
+const KF := {"sg": "svg:res://ui/svg/mat/khach_sg.svg", "tay": "svg:res://ui/svg/mat/khach_tay.svg"}   # (bản 483) mặt khách riêng theo loại
+const VH := ["Xây Quán cơm (Xây dựng › Nhà) để khách ăn cơm, boa thêm.", "Xây sạp bán hàng và để trong kho mỗi món từ 2 cái trở lên, khách mua đặc sản.",
+	"Góp xây Đình làng (Uy tín làng › Công trình), khách lên đình chụp hình.", "Xây Bến ghe sát sông (Xây dựng › Nước), khách đi xuồng.",
+	"Trồng cây, đặt hoa, công trình đẹp cho độ đẹp làng trên 250.", "Trời mưa, mưa rào thì khách buồn; chờ trời tạnh."]   # chạm điều "Để khách vui": cách làm
 const XM := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 12\"><circle cx=\"6\" cy=\"6\" r=\"5.5\" fill=\"rgb(226,90,80)\"/><path d=\"M3.8 3.8 L8.2 8.2 M8.2 3.8 L3.8 8.2\" stroke=\"white\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg>"
 
 func _init(ui, wdl) -> void:
@@ -80,6 +83,8 @@ func _body() -> Array:   # e7
 		return String(f.n) if f != null else "?")
 	if hs.size():
 		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Nhà " + ", ".join(PackedStringArray(hs)), 9.5, 600, rw - 16.0), 9.5, 600, SUB, "left"))
+	else:   # (bản 483) chưa có khách: báo giờ khách tới
+		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Khách tới 7–16 giờ", 9.5, 600, rw - 16.0), 9.5, 600, SUB, "left"))
 	y += 62.0 + GG
 	# chưa đón được: khối đỏ điều kiện
 	if not WD.p_c():
@@ -100,10 +105,16 @@ func _body() -> Array:   # e7
 		nv += 1 if e[0] else 0
 	out.append_array(_sq(y, "Để khách vui", NOTE + str(WD.ROOM) + " xu. Khách vui thì chấm sao cao, danh tiếng lên, khách tới nhiều hơn."))
 	y += 16.0 + GG
-	var vc := _chip(X0, y, XW, 10.0, "got" if nv == V.size() else "fut")
-	out.append(vc)
-	out.append(_dt(X0 + 10.0, y + 8.0, XW - 100.0, 16.0, "Đạt " + str(nv) + "/" + str(V.size()) + " điều", 11.5, 800, BROWN, "left"))
-	out.append_array(_bar(X0 + 110.0, y + 14.0, XW - 120.0, float(nv) / maxf(1.0, V.size()), 5.0))
+	if not WD.p_c():   # (bản 483) chưa đón được khách: thu 1 dòng mờ
+		out.append(_dt(X0, y, XW, 15.0, "Đón được khách rồi mới tính chuyện khách vui (" + str(nv) + "/" + str(V.size()) + " điều).", 10.5, 600, "rgb(160, 150, 130)", "left"))
+		y += 15.0 + GG
+		V = []
+	var vc := _chip(X0, y, XW, 10.0, "got" if nv == V.size() else "fut") if V.size() else {}
+	if V.size():
+		out.append(vc)
+	if V.size():
+		out.append(_dt(X0 + 10.0, y + 8.0, XW - 100.0, 16.0, "Đạt " + str(nv) + "/" + str(V.size()) + " điều", 11.5, 800, BROWN, "left"))
+		out.append_array(_bar(X0 + 110.0, y + 14.0, XW - 120.0, float(nv) / maxf(1.0, V.size()), 5.0))
 	var yy2 := y + 30.0
 	var cw := (XW - 20.0 - 6.0) * 0.5
 	for i in V.size():
@@ -111,10 +122,14 @@ func _body() -> Array:   # e7
 		var cx := X0 + 10.0 + (i % 2) * (cw + 6.0)
 		var cy := yy2 + floorf(i / 2.0) * 18.0
 		out.append(_dtick(cx, cy + 2.0, 11.0) if e[0] else _dic(cx, cy + 2.0, 11.0, XM))
-		out.append(_dt(cx + 15.0, cy, cw - 15.0, 15.0, _fitw(String(e[1]).split(" (")[0], 10.0, 700, cw - 15.0), 10.0, 700, BROWN if e[0] else SUB, "left"))
-	yy2 += ceil(V.size() / 2.0) * 18.0 + 6.0
-	vc.r[3] = yy2 - y
-	y = yy2 + GG
+		var hit := _dbx(cx - 2.0, cy - 1.0, cw + 2.0, 17.0, "rgba(0, 0, 0, 0)", 0.0)   # chạm: cách làm
+		hit.kids = [_dt(cx + 15.0, cy, cw - 15.0, 15.0, _fitw(String(e[1]).split(" (")[0], 10.0, 700, cw - 15.0), 10.0, 700, BROWN if e[0] else SUB, "left")]
+		hit.act = _dsay.bind(String(e[1]) + ": " + String(VH[i]) if i < VH.size() else String(e[1]))
+		out.append(hit)
+	if V.size():
+		yy2 += ceil(V.size() / 2.0) * 18.0 + 6.0
+		vc.r[3] = yy2 - y
+		y = yy2 + GG
 	# khách đánh giá
 	if t.rv.size():
 		out.append_array(_sq(y, "Khách đánh giá", ""))
@@ -123,10 +138,10 @@ func _body() -> Array:   # e7
 			var s := int(e.s)
 			var L := _wrap("“" + String(e.t) + "”", 10.5, 600, XW - 56.0)
 			var h := 10.0 + 16.0 + L.size() * 14.0 + 8.0
-			var c := _chip(X0, y, XW, h, "got" if s >= 4 else ("sen" if s <= 2 else "fut"))
+			var c := _chip(X0, y, XW, h, "got" if s >= 5 else ("sen" if s <= 1 else "fut"))   # (bản 483) chỉ 5 sao xanh, 1 sao đỏ
 			out.append(c)
 			var fk := _chip(X0 + 8.0, y + 8.0, 30.0, 30.0, "fut")
-			fk.kids = [_pic(X0 + 10.0, y + 10.0, 26.0, 26.0, "res://ui/img/vlface/" + str(KF.get(String(e.k), 0)) + ".webp")]
+			fk.kids = [_icx(X0 + 23.0, y + 23.0, 26.0, String(KF.get(String(e.k), KF.sg)))]
 			out.append(fk)
 			out.append_array(_stars(X0 + 46.0, y + 9.0, float(s), 12.0))
 			var kn := (String(WD.A7[e.k].n) if WD.A7.has(e.k) else "").replace("Khách ", "")
