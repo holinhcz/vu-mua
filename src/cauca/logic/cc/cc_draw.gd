@@ -31,6 +31,8 @@ class Lay extends Control:
 var game
 var l_refl: Lay
 var l_main: Lay
+var l_fg: Lay        # bờ bên này (ảnh ghép sẵn từ ảnh nông trại, màu đã nhân alpha -> trộn PREMULT)
+var l_top: Lay       # cây bông giấy bờ này + cần câu + cá bay vô
 var l_add: Lay
 var l_rain: Lay
 var refl_mat: ShaderMaterial
@@ -51,6 +53,13 @@ func _ready() -> void:
 	add_child(l_refl)
 	l_main = Lay.new(_draw_main)
 	add_child(l_main)
+	l_fg = Lay.new(draw_fg)
+	var pm := CanvasItemMaterial.new()
+	pm.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+	l_fg.material = pm
+	add_child(l_fg)
+	l_top = Lay.new(_draw_top)
+	add_child(l_top)
 	l_add = Lay.new(_draw_add)
 	var am := CanvasItemMaterial.new()
 	am.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -60,14 +69,15 @@ func _ready() -> void:
 	add_child(pfx)
 	l_rain = Lay.new(_draw_rain)
 	add_child(l_rain)
-	for l in [l_refl, l_main, l_add, l_rain]:
+	for l in [l_refl, l_main, l_fg, l_top, l_add, l_rain]:
 		l.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 func resize() -> void:
 	var L: Dictionary = game.L
-	for l in [l_refl, l_main, l_add, l_rain]:
+	for l in [l_refl, l_main, l_fg, l_top, l_add, l_rain]:
 		l.position = Vector2.ZERO
 		l.size = Vector2(L.W, L.H)
+	_fg_build()
 
 func redraw() -> void:
 	var tod: Dictionary = game.tod
@@ -75,7 +85,7 @@ func redraw() -> void:
 	var wc: Color = (tod.water as Color).lerp(Color.BLACK, .2)
 	refl_mat.set_shader_parameter("tint", Vector3(tc.r, tc.g, tc.b))
 	refl_mat.set_shader_parameter("mixc", Vector3(wc.r, wc.g, wc.b))
-	for l in [l_refl, l_main, l_add, l_rain]:
+	for l in [l_refl, l_main, l_fg, l_top, l_add, l_rain]:
 		l.queue_redraw()
 
 static func lit_of(tod: Dictionary, k: float) -> Color:
@@ -147,7 +157,10 @@ func _draw_main(ci: CanvasItem) -> void:
 	if game.started and not dbg_skip.has("tackle"):
 		draw_tackle(ci, tod)
 	draw_dragonfly(ci, tod)
-	if not dbg_skip.has("fg"): draw_fg(ci, tod)
+
+func _draw_top(ci: CanvasItem) -> void:
+	var tod: Dictionary = game.tod
+	draw_near_trees(ci, tod)
 	if game.started and not dbg_skip.has("rod"):
 		draw_rod(ci, tod)
 	draw_landing(ci)
@@ -589,27 +602,145 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 	ci.draw_circle(t, 2.4 * k, Color(.9 * lit.r, .3 * lit.g, .2 * lit.b))
 
 # ------------------------------------------------------------ bờ bên này
-func draw_fg(ci: CanvasItem, tod: Dictionary) -> void:
+# Ghép 1 lần (mỗi lần đổi cỡ màn) từ ảnh 9px của nông trại theo gan.json (tools/cc/bank9/gan_pick.py): nền cỏ n2_co mép
+# trên cong, hàng bụi cỏ dọc mép, cụm hoa trên bãi cỏ. Mỗi món thu đúng cỡ trên màn (Lanczos) rồi vẽ 1:1 -> nét.
+const GAN := "res://ui/img/cc/gan/"
+var _gan := {}
+var _fg_tex: Texture2D = null
+var _fg_key := ""
+var _fg_rect := Rect2()
+
+func _gan_img(nm: String) -> Image:
+	var b := FileAccess.get_file_as_bytes(GAN + nm + ".webp")
+	var im := Image.new()
+	if b.is_empty() or im.load_webp_from_buffer(b) != OK:
+		return null
+	im.convert(Image.FORMAT_RGBA8)
+	return im
+
+func _fg_geom() -> Rect2:
 	var L: Dictionary = game.L
-	var t: Texture2D = A.img("fg")
-	if t == null:
-		return
-	var ar := t.get_size().x / t.get_size().y
+	var ar := 2800.0 / 420.0
 	var w := maxf(L.W * 1.04, L.fgH * ar)
 	var h := w / ar
+	return Rect2((L.W - w) / 2, L.H - h + 2, w, h)
+
+func _fg_build() -> void:
+	if _gan.is_empty():
+		var j = JSON.parse_string(FileAccess.get_file_as_string(GAN + "gan.json"))
+		if typeof(j) != TYPE_DICTIONARY:
+			return
+		_gan = j
+	var K: float = game.K
+	var r := _fg_geom()
+	var pw := int(round(r.size.x * K))
+	var ph := int(round(r.size.y * K)) + 4
+	var key := "%d_%d" % [pw, ph]
+	if key == _fg_key:
+		return
+	_fg_key = key
+	var s: float = float(pw) / float(_gan.W)        # điểm ảnh máy / đơn vị khung
+	var v := SubViewport.new()
+	v.size = Vector2i(pw, ph)
+	v.transparent_bg = true
+	v.disable_3d = true
+	v.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(v)
+	var root := Node2D.new()
+	root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	root.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	v.add_child(root)
+	var gi := _gan_img("n2_co")
+	var gt: Texture2D = null
+	if gi:
+		gi.generate_mipmaps()
+		gt = ImageTexture.create_from_image(gi)
+	var gnd := Node2D.new()
+	gnd.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	gnd.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	gnd.draw.connect(_draw_gan_ground.bind(gnd, s, float(ph), gt))
+	root.add_child(gnd)
+	var cache := {}
+	var items: Dictionary = _gan.items
+	for p in _gan.place:
+		var it: Dictionary = items[p[0]]
+		var sc: float = absf(float(p[3])) * s
+		var w := maxi(1, int(round(float(it.w) * sc)))
+		var h := maxi(1, int(round(float(it.h) * sc)))
+		var fl: bool = float(p[3]) < 0
+		var ck := "%s_%d_%d_%d" % [p[0], w, h, int(fl)]
+		if not cache.has(ck):
+			var im := _gan_img(p[0])
+			if im == null:
+				continue
+			im.resize(w, h, Image.INTERPOLATE_LANCZOS)
+			if fl:
+				im.flip_x()
+			cache[ck] = ImageTexture.create_from_image(im)
+		var ax: float = float(it.ax) * sc
+		if fl:
+			ax = w - ax
+		var sp := Sprite2D.new()
+		sp.texture = cache[ck]
+		sp.centered = false
+		sp.position = Vector2(round(float(p[1]) * s - ax), round(float(p[2]) * s - float(it.ay) * sc))
+		root.add_child(sp)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	if key != _fg_key:
+		v.queue_free()
+		return
+	var out: Image = v.get_texture().get_image()
+	v.queue_free()
+	out.generate_mipmaps()
+	_fg_tex = ImageTexture.create_from_image(out)
+	_fg_rect = Rect2(r.position, Vector2(r.size.x, float(ph) / K))
+	l_fg.queue_redraw()
+
+func _draw_gan_ground(n: Node2D, s: float, ph: float, gt: Texture2D) -> void:
+	var E: Array = _gan.edge
+	var dx: float = float(_gan.edx)
+	var tile := 260.0 * s                       # 1 ô ảnh cỏ = 260 đơn vị khung
+	var top := Color(1.56, 1.62, 1.7); var bot := Color(1.1, 1.18, 1.2)
+	var sh := Color(.62, .7, .55)                # vệt tối sát mép (bóng mép bờ trên nước)
+	for i in E.size() - 1:
+		var x0 := i * dx * s; var x1 := (i + 1) * dx * s
+		var y0: float = float(E[i]) * s; var y1: float = float(E[i + 1]) * s
+		var P := PackedVector2Array([Vector2(x0, y0), Vector2(x1, y1), Vector2(x1, ph), Vector2(x0, ph)])
+		var UV := PackedVector2Array([P[0] / tile, P[1] / tile, P[2] / tile, P[3] / tile])
+		n.draw_polygon(P, PackedColorArray([top, top, bot, bot]), UV, gt)
+		var e := 5.0 * s
+		var Q := PackedVector2Array([Vector2(x0, y0 - 1), Vector2(x1, y1 - 1), Vector2(x1, y1 + e), Vector2(x0, y0 + e)])
+		n.draw_polygon(Q, PackedColorArray([sh, sh, Color(sh, 0), Color(sh, 0)]), UV, gt)
+
+func draw_fg(ci: CanvasItem) -> void:
+	if _fg_tex == null or dbg_skip.has("fg"):
+		return
+	var tc: Color = (game.tod.tint as Color).lerp(Color.BLACK, .12)
+	ci.draw_texture_rect(_fg_tex, _fg_rect, false, Color(tc.r, tc.g, tc.b, 1))
+
+# cây bờ bên này: bông giấy tím trái; phải = bông giấy đỏ (màn ngang) / bụi vạn thọ thấp cạnh cột nút (màn dọc)
+func draw_near_trees(ci: CanvasItem, tod: Dictionary) -> void:
+	var L: Dictionary = game.L
 	var tc: Color = (tod.tint as Color).lerp(Color.BLACK, .12)
-	ci.draw_texture_rect(t, Rect2((L.W - w) / 2, L.H - h + 2, w, h), false, Color(tc.r, tc.g, tc.b, 1))
-	# 2 cây bông giấy trên bờ bên này (bộ vẽ bông giấy của nông trại, màu tím trái / đỏ phải), nghiêng nhẹ quanh gốc như nông trại
 	var T: float = game.W.t
-	for q in BG_NEAR:
+	var list: Array = BG_NEAR.duplicate()
+	if L.portrait:
+		list.pop_back()
+		for i in 3:
+			var nm := "gan/h_van_tho_dh_van_tho%d" % i
+			var it = _gan.get("items", {}).get("h_van_tho_dh_van_tho%d" % i)
+			if it != null:
+				list.append([nm, .69 + i * .055, float(it.ax) / float(it.w), float(it.ay) / float(it.h), i * 1.7, .78 - (i % 2) * .12, i == 1])
+	for q in list:
 		var bt: Texture2D = A.img(q[0])
 		if bt == null:
 			continue
-		var bh: float = L.fgH * 1.55
+		var bh: float = L.fgH * (float(q[5]) if q.size() > 5 else 1.55)
 		var bw: float = bh * bt.get_size().x / bt.get_size().y
 		var foot := Vector2(L.W * float(q[1]), L.H - L.fgH * .5)
 		var ang := sin(T * 1.1 + float(q[4])) * .017
-		ci.draw_set_transform(foot, ang, Vector2.ONE)
+		ci.draw_set_transform(foot, ang, Vector2(-1 if (q.size() > 6 and q[6]) else 1, 1))
 		ci.draw_texture_rect(bt, Rect2(-float(q[2]) * bw, -float(q[3]) * bh, bw, bh), false, Color(tc.r, tc.g, tc.b, 1))
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
