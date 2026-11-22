@@ -1,5 +1,5 @@
 extends Node2D
-# CỜ GÁNH: lớp nền tĩnh (buildBG của game.js): đất sân, hiên gạch tàu, cỏ, dép, chổi chà, tàu dừa, lá khô,
+# CỜ GÁNH: lớp nền tĩnh (buildBG của game.js): đất sân, hiên gạch tàu, cỏ, chổi chà, tàu dừa, lá khô,
 # hai cái rổ, bàn kẻ phấn. Vẽ một lần trong SubViewport rồi chụp thành ảnh (không vẽ lại mỗi khung).
 # Đơn vị: css px của bản web (nhân K ra điểm ảnh thật). Cùng hạt giống ngẫu nhiên (mulberry32 20261107) như web.
 
@@ -232,7 +232,6 @@ func _decor(L: Dictionary) -> void:
 			continue
 		_grass(x, y, 18 + rng() * 26)
 	var CM := s / 33.0
-	var sp = null
 	# chỗ con gà mái đi dạo: một dải sân trống (đồ khác né ra)
 	g.home_spot = null
 	var hint_band := Rect2(-9, -9, 1, 1)
@@ -299,20 +298,6 @@ func _decor(L: Dictionary) -> void:
 					t += ha * 0.5
 				done = true
 				break
-	# dép lào để trên bậc hiên (26 cm)
-	var dl := 26 * CM
-	var dD := dl / 0.82
-	for tries in 80:
-		if sp != null:
-			break
-		var x := dD * 0.5 + rng() * (W - dD)
-		var y := ph + dl * (0.02 + rng() * 0.22)
-		if free.call(x, y, dl * 0.52):
-			sp = Vector2(x, y)
-	if sp != null:
-		var a := (rng() - 0.5) * 0.5
-		on_ground("dep", Rect2i(), sp, dD, dD, a, dl * 0.035)
-		used.call(sp.x, sp.y, dl * 0.6)
 	# chổi chà nằm dọc bậc hiên hoặc mép dưới, cán ló ra ngoài màn
 	var bl := minf(110 * CM, W * 0.5)
 	var bh := bl / 3

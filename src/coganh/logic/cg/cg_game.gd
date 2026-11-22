@@ -95,6 +95,14 @@ func _ready() -> void:
 	_build_shade()
 	tan = TAN.new()
 	add_child(tan)
+	# chỉnh màu như caro (Link 11-22 "ánh sáng bằng bên caro"): nằm trên cảnh + quân + tán, dưới thẻ/chữ
+	var gr := ColorRect.new()
+	gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var gm := ShaderMaterial.new()
+	gm.shader = load("res://logic/cg/grade.gdshader")
+	gr.material = gm
+	add_child(gr)
 	hud = HUD.new()
 	hud.game = self
 	add_child(hud)
