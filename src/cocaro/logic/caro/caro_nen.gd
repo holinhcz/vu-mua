@@ -146,6 +146,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		for p in LJ.props:
 			var q: Vector2 = P.call(Lx.call(float(p[1])), float(p[2]))
 			if p[0] == "lu": q.x = minf(q.x + shift, roof_x - 58.0 * u)
+			if p[0] in ["ro", "bong"]: q.x = (f.end.x + roof_x) * 0.5          # Link 11-22: nia xoài + chậu bông cân giữa khe phản - mái
 			if p[0] == "ga": q = P.call(Lx.call(470.0), 520.0)     # Link 11-22 bỏ nia lúa + nón: gà mẹ ra giữa sân trái
 			items.append([p[0], q.x, q.y, u, p[4]])
 		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
@@ -249,6 +250,14 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var s := fall_scale
 		_shadow(self, lt[int(q[3])], Vector2(q[0], q[1]), Vector2(1.2, 1.6), 0.8, 0.35, deg_to_rad(q[2]), s)
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
+	# ---- lá tre khô nằm sẵn dưới bụi tre (chỉ màn ngang có tre)
+	if tc.x > -9999 and roof_x >= 0:
+		var rgt := RandomNumberGenerator.new(); rgt.seed = 77
+		for i in 9:
+			var v := Vector2(rgt.randf_range(roof_x - 150.0 * u, roof_x - 8.0 * u), rgt.randf_range(20.0 * u, f.position.y + 640.0 * u))
+			var lt2 := tex("latre%d" % rgt.randi_range(1, 3)); var rr := rgt.randf_range(0, TAU); var ss := rgt.randf_range(1.1, 1.4) * u
+			_shadow(self, lt2, v, Vector2(1.0, 1.4), 0.6, 0.35, rr, ss)
+			_spr(self, lt2, v, true, rr, ss)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
 	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
 	items = items.filter(func(it): return not (it[0] in ["mam", "non", "nong"]))   # Link 11-21 bỏ ca nước; 11-22 bỏ nón lá + nia lúa
@@ -339,8 +348,13 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var w4: Array = LJ.mango_wins[i]; ty1 = maxf(ty1, float(w4[1]) + _used("xoai%d" % i).end.y)
 		# nửa trên tán khuất trên mép màn (dưới thanh menu), chỉ phần dưới tán thò xuống, đáy tán + bóng vừa chạm trên khung phản
 		# Link 11-21 "cây xoài to ra chạm mép bàn": tán to, mép dưới lá chạm đúng mép trên khung phản (bóng được rơi lên khung)
-		csc = minf(maxf(tr.size.y, 120.0) * 3.6 / ty1, W * 1.8 / (tx1 - tx0))
-		cpos = Vector2(-tx0 * csc - 0.08 * (tx1 - tx0) * csc, tr.size.y + 4.0 - ty1 * csc)
+		# Link 11-22 "dời cây xoài ra gần chính giữa chút cho to": tán to hơn (theo cỡ cảnh u), tâm tán ~38% bề ngang màn
+		# Link 11-22 "dời cây xoài ra gần chính giữa chút cho to": tán (vốn là 1/4 tròn ở góc) xoay 45° cho vòm tán rủ xuống giữa dải trên,
+		# tâm tán ~45% bề ngang, mép dưới lá chạm mép trên khung phản. Số đo vòm sau khi xoay (css tán): đáy lá 682 dưới tâm.
+		csc = maxf(tr.size.y / 150.0, 0.5 * u)
+		var Rc := Vector2(40, -150).rotated(PI / 4.0)
+		cpos = Vector2(W * 0.45, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
+		canopy["rot"] = PI / 4.0
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
@@ -361,10 +375,12 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	canopy.pos = cpos
 	var croot := Node2D.new(); croot.position = canopy.pos
 	croot.scale = Vector2(-canopy.sc if canopy.flip else canopy.sc, canopy.sc)
+	croot.rotation = canopy.get("rot", 0.0)
 	add_child(croot)
 	var ph4 := [0.0, 1.7, 3.1, 4.6]; var amps := [5.0, 7.0, 6.0, 8.0]
 	var xt: Array = []
 	var shoff := Vector2(-46 if canopy.flip else 46, 62)
+	if canopy.has("rot"): shoff = shoff.rotated(-float(canopy.rot))     # bóng vẫn đổ đúng hướng nắng khi tán xoay
 	for i in 4:
 		var w: Array = LJ.mango_wins[i]
 		var t := tex("xoai%d" % i); xt.append(t)
@@ -398,18 +414,30 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
 		s.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i], 0.1, 0.0, 0.0, 0.0)
+	if tc.x > -9999 and roof_x >= 0:
+		# lá tre bay rơi từ bụi tre trên mái: chao lượn, gió đẩy về phía sân
+		var rgf := RandomNumberGenerator.new(); rgf.seed = 91
+		for i in 14:
+			var F := {"x0": 0.0, "y0": 0.0, "ph": rgf.randf(), "T": rgf.randf_range(6.5, 11.0), "vx": rgf.randf_range(-110.0, -20.0), "vy": rgf.randf_range(110.0, 190.0),
+				"fa": rgf.randf_range(10.0, 30.0), "ff": rgf.randf_range(5.0, 11.0), "spin": rgf.randf_range(-7.0, 7.0), "r0": rgf.randf_range(0, TAU), "v": 0}
+			var lt3 := tex("latre%d" % rgf.randi_range(0, 3))
+			var o2 := {"F": F, "sd": _shadow(fall, lt3, Vector2.ZERO, Vector2.ZERO, 3.0, 0.3), "sp": _spr(self, lt3, Vector2.ZERO), "k": 2.0 * u}
+			o2["ox"] = rgf.randf_range(roof_x - 60.0 * u, W - 10.0 * u); o2["oy"] = rgf.randf_range(-20.0 * u, f.position.y + 420.0 * u)
+			leaves.append(o2)
 	for F in LJ.falling:
 		var o := {"F": F, "sd": _shadow(fall, lt[int(F.v)], Vector2.ZERO, Vector2.ZERO, 3.0, 0.3), "sp": _spr(self, lt[int(F.v)], Vector2.ZERO)}
 		# lá rơi từ dưới tán (theo vị trí + cỡ tán)
 		var cx: float = canopy.pos.x + (-1.0 if canopy.flip else 1.0) * float(F.x0) * canopy.sc
 		o["ox"] = cx - (float(F.vx) * 1.3 * canopy.sc if canopy.flip else 0.0); o["oy"] = canopy.pos.y + float(F.y0) * canopy.sc
+		if canopy.has("rot"):
+			var wp: Vector2 = croot.transform * Vector2(float(F.x0), float(F.y0)); o["ox"] = wp.x; o["oy"] = wp.y
 		leaves.append(o)
 
 func _process(dt: float) -> void:
 	t0 += dt
 	_hen_step(dt)
-	var k := fall_scale
 	for o in leaves:
+		var k: float = o.get("k", fall_scale)
 		var F: Dictionary = o.F
 		var u: float = fmod(t0 / float(F.T) + float(F.ph), 1.0)
 		var hgt := 1.0 - u
