@@ -152,8 +152,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
 		bc = Vector3(bq.x, bq.y, u)
-		var tq: Vector2 = P.call(Lx.call(40.0), 440.0)       # bụi tre: mép trái giữa, giữa gà mẹ và nong
-		tc = Vector3(tq.x, tq.y, 1.2 * u)
+		# bụi tre (Link 11-22 "bên phải trên mái nhà"): mọc sau nhà, tán đè lên mái lá bên phải
+		tc = Vector3(maxf(W, roof_x + 202.0 * u) + 10.0 * u, f.position.y + 370.0 * u, 1.4 * u)   # gốc khuất sau mép màn
 		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
 		for q in LJ.ground_leaves:
 			var v: Vector2 = P.call(Lx.call(float(q[0])), float(q[1]))
