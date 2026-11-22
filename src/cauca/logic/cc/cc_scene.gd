@@ -17,6 +17,7 @@ uniform vec3 uTop; uniform vec3 uHorC; uniform vec3 uSunC; uniform vec3 uTint; u
 uniform vec3 uSun; uniform vec3 uMoon;
 uniform float uStar; uniform float uNight; uniform float uRain; uniform float uWind; uniform float uCloud;
 uniform vec4 uFlt;
+uniform float uOld = 0.;
 float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
  return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
@@ -87,6 +88,7 @@ vec2 dw(vec2 w,vec2 d,float k,float s,float a,float fp){
 void fragment(){
  vec2 p=UV*uRes;
  if(p.y<uYw){COLOR=vec4(scene(p,1.),1.);}
+ else if(uOld<.5){COLOR=vec4(uWater,1.);}
  else{
  float dy=max(p.y-uHor,1.);
  float z=uF/dy; float X=(p.x-uRes.x*.5)*z/uF;
@@ -154,11 +156,110 @@ void fragment(){
 }
 """
 
+# NƯỚC MỚI (Link 11-22 "vẽ nước lại bằng hiệu ứng godot"): mặt nước riêng vẽ sau trời + bờ, đọc lại khung đó bằng
+# hint_screen_texture để soi bóng trời, mây, mặt trời, bờ; sóng = 2 NoiseTexture2D (normal map, liền mép, có mipmap
+# nên xa tự mịn) trôi 2 hướng trong không gian thế giới; Fresnel: xa soi nhiều, gần thấy màu nước; lấp lánh theo pháp tuyến.
+const WSH := """
+shader_type canvas_item;
+uniform sampler2D SCR : hint_screen_texture, filter_linear;
+uniform sampler2D uN1 : filter_linear_mipmap, repeat_enable;
+uniform sampler2D uN2 : filter_linear_mipmap, repeat_enable;
+uniform sampler2D uData : filter_nearest, repeat_disable;
+uniform vec2 uRes; uniform float uT; uniform float uHor; uniform float uYw; uniform float uF;
+uniform vec3 uSunC; uniform vec3 uWater; uniform vec3 uFog; uniform vec3 uTint;
+uniform vec3 uSun; uniform vec3 uMoon;
+uniform float uNight; uniform float uRain; uniform float uWind;
+uniform vec4 uFlt;
+uniform float uFlipY = 0.;
+float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+vec3 scr(vec2 q){vec2 u=q/uRes; if(uFlipY>.5)u.y=1.-u.y; return texture(SCR,u).rgb;}
+void fragment(){
+ vec2 p=vec2(UV.x*uRes.x, uYw+UV.y*(uRes.y-uYw));
+ float dy=max(p.y-uHor,1.);
+ float z=uF/dy; float X=(p.x-uRes.x*.5)*z/uF;
+ vec2 w=vec2(X,z);
+ float fp=z*z/uF;
+ float fb=clamp((p.y-uYw)/(uRes.y-uYw),0.,1.);
+ float near=clamp(dy/(uRes.y*.6),0.,1.);
+ // sóng: 2 lớp noise normal map, lớp lớn trôi chéo, lớp nhỏ trôi ngược
+ vec2 u1=vec2(w.x*.22,w.y*.40)+vec2(.010,.034)*uT;
+ vec2 u2=vec2(w.x*.55+w.y*.10,w.y*1.25-w.x*.10)+vec2(-.030,.030)*uT;
+ vec2 u3=vec2(w.x*1.3,w.y*3.0)+vec2(.05,-.09)*uT;
+ vec3 a1=texture(uN1,u1).rgb*2.-1.; vec3 a2=texture(uN2,u2).rgb*2.-1.; vec3 a3=texture(uN2,u3+.37).rgb*2.-1.;
+ float gust=.75+.5*texture(uN1,w*.045+vec2(.004,.008)*uT).b;
+ float k=(.9+.8*uWind)*gust*(1.+uRain*.6)*mix(1.,.62,near);
+ vec2 g=(a1.xy*.55+a2.xy*.35+a3.xy*.25*(1.-smoothstep(.0,.5,1.-near)*.0))*k;
+ // vòng gợn (phao, cá, nước rơi) + mưa: như cũ, ảnh dữ liệu 24x1
+ float ringW=0.;
+ for(int i=0;i<16;i++){vec4 r=texelFetch(uData,ivec2(i,0),0); if(r.w<=0.)continue;
+  vec2 dv=w-r.xy; float d=length(dv)+1e-4; float age=r.z;
+  float Rr=.12+age*.85; float x=d-Rr;
+  if(x*x*(18./(1.+age))>12.)continue;
+  float kk=26.; float lam=6.2832/kk; float fade=clamp(lam/(4.*fp)-.5,0.,1.);
+  float e=exp(-x*x*(18./(1.+age)))*exp(-age*1.0)*r.w*fade;
+  float tail=x<0.?exp(x*2.5):1.;
+  g+=dv/d*cos(x*kk)*e*tail*.55; ringW+=smoothstep(.75,.95,cos(x*kk))*e*tail*1.2;}
+ if(uRain>0.){vec2 cw=w*2.2;
+  for(int j=0;j<2;j++){vec2 o=vec2(float(j)*.5);
+   vec2 cc=floor(cw+o), ff=fract(cw+o);
+   vec2 c0=.5+(vec2(h21(cc),h21(cc+7.1))-.5)*.5;
+   float ph=fract(uT*.85+h21(cc+3.3)); vec2 dv=ff-c0; float d=length(dv)+1e-4;
+   float x=d-ph*.42; float e=exp(-x*x*500.)*(1.-ph)*uRain*clamp(.3/(fp*30.),0.,1.);
+   g+=dv/d*cos(x*70.)*e*.3; ringW+=smoothstep(.8,.95,cos(x*70.))*e*1.;}}
+ vec3 n=normalize(vec3(-g.x,1.,-g.y));
+ vec3 v=normalize(vec3(X,-1.,z));
+ // soi bóng: lật quanh mép nước, lệch theo sóng (gần lệch nhiều, xa ít)
+ vec2 off=vec2(n.x*uRes.y*(.05+.18*near), -abs(n.z)*uRes.y*(.03+.16*near));
+ vec2 rp=vec2(p.x,2.*uYw-p.y)+off;
+ rp.y=clamp(rp.y,1.,uYw-1.);
+ vec3 rc=(scr(rp)*.6+scr(rp+vec2(0.,-uRes.y*.006))*.4);
+ rc=min(rc,vec3(.86))*(1.-.25*near);
+ // màu thân nước: trong, xanh, gần chân lên sáng hơn, dưới ngọn sóng sáng
+ vec3 body=uWater*(.86+.22*smoothstep(.05,1.,fb))+vec3(.01,.035,.03)*fb*(1.-uNight);
+ float facet=clamp(1.+(-n.z*1.1+n.x*.35)*1.3,.76,1.25);
+ body*=facet;
+ body+=uWater*max(g.y,0.)*.30*(1.-uNight*.6);
+ body=mix(body,vec3(dot(body,vec3(.3,.5,.2)))*vec3(.82,.92,.98),uRain*.6);
+ float shd=0.;
+ for(int i=0;i<4;i++){vec4 s=texelFetch(uData,ivec2(16+i,0),0); if(s.w<=0.)continue; vec4 sd=texelFetch(uData,ivec2(20+i,0),0);
+  vec2 dv=w-s.xy; vec2 l=vec2(dot(dv,sd.xy),dot(dv,vec2(-sd.y,sd.x)));
+  float e=smoothstep(1.,.8,length(l/vec2(s.z*.5,sd.z)));
+  body*=1.-e*s.w*.35; shd+=e*s.w;}
+ float ct=clamp(dot(-v,n),0.,1.);
+ float fr=.04+.96*pow(1.-ct,5.);
+ float rfade=1.-smoothstep(.0,.6,fb)*.55;
+ fr=clamp(fr*1.1,.08,.55)*rfade*(1.-clamp(shd,0.,1.)*.6);
+ vec3 col=mix(body,rc*mix(vec3(1.),uWater*1.7,.38),fr);
+ // lấp lánh mặt trời + vệt nắng
+ vec3 r=reflect(v,n);
+ vec3 sd=normalize(vec3((uSun.x-uRes.x*.5)/uF*7.,(uHor-uSun.y)/uF*7.,1.));
+ float sq=max(dot(normalize(r*vec3(2.,1.,1.)),sd),0.);
+ float sv=uSun.z*smoothstep(-.02,.06,sd.y);
+ col+=uSunC*(smoothstep(.9982,.9996,sq)*.9+pow(sq,60.)*.08)*sv;
+ // trăng
+ if(uMoon.z>0.){vec3 md=normalize(vec3((uMoon.x-uRes.x*.5)/uF*7.,(uHor-uMoon.y)/uF*7.,1.));
+  float mq=max(dot(normalize(r*vec3(2.5,1.,1.)),md),0.);
+  col+=vec3(.85,.9,1.)*(smoothstep(.994,.999,mq)*.9+pow(mq,40.)*.08)*uMoon.z*(1.-uRain);}
+ col=mix(col,vec3(1.),clamp(ringW,0.,1.)*.85);
+ if(uFlt.w>0.){float d=length((w-uFlt.xy)*vec2(1.,.6)); col+=vec3(1.,.75,.35)*exp(-d*9.)*uFlt.w*.5;}
+ // mép nước bờ xa: vệt sáng vỗ bờ + tối dưới chân bờ, sương xa
+ float e0=(p.y-uYw)/uRes.y;
+ float lap=smoothstep(.0035,.0,e0-.0012*(a1.x+1.))*smoothstep(0.,.0015,e0)*(1.-uNight*.6);
+ col*=1.-.20*smoothstep(uRes.y*.012,0.,p.y-uYw);
+ col=mix(col,mix(vec3(1.),uWater*1.6+.1,.35),lap*.55);
+ col=mix(col,uFog,.08*smoothstep(uYw+uRes.y*.05,uYw,p.y));
+ COLOR=vec4(col,1.);
+}
+"""
+
 var game
 var vp: SubViewport
 var rect: ColorRect
 var view: TextureRect
 var mat: ShaderMaterial
+var wrect: ColorRect
+var wmat: ShaderMaterial
+static var old_water := false   # true = nước cũ (chép 02_gl.js), để so
 var data_img: Image
 var data_tex: ImageTexture
 var scale_s := 1.0
@@ -184,6 +285,16 @@ func _ready() -> void:
 	mat.shader = sh
 	rect.material = mat
 	vp.add_child(rect)
+	wrect = ColorRect.new()
+	wrect.color = Color.WHITE
+	var wsh := Shader.new()
+	wsh.code = WSH
+	wmat = ShaderMaterial.new()
+	wmat.shader = wsh
+	wrect.material = wmat
+	vp.add_child(wrect)
+	wmat.set_shader_parameter("uN1", _noise(512, 7.0, 0.011, 4, 101))
+	wmat.set_shader_parameter("uN2", _noise(512, 5.0, 0.019, 3, 202))
 	view = TextureRect.new()
 	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	view.stretch_mode = TextureRect.STRETCH_SCALE
@@ -194,9 +305,27 @@ func _ready() -> void:
 	data_img = Image.create(24, 1, false, Image.FORMAT_RGBAF)
 	data_tex = ImageTexture.create_from_image(data_img)
 	mat.set_shader_parameter("uData", data_tex)
+	wmat.set_shader_parameter("uData", data_tex)
 	mat.set_shader_parameter("uBankTex", A.img("bank"))
 	mat.set_shader_parameter("uAuxTex", A.img("bank_aux"))
 	scale_s = fixed_scale if fixed_scale > 0 else minf(game.K, 1.25)
+
+func _noise(sz: int, bump: float, freq: float, oct: int, seed_: int) -> NoiseTexture2D:
+	var fn := FastNoiseLite.new()
+	fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	fn.frequency = freq
+	fn.fractal_type = FastNoiseLite.FRACTAL_FBM
+	fn.fractal_octaves = oct
+	fn.seed = seed_
+	var t := NoiseTexture2D.new()
+	t.width = sz
+	t.height = sz
+	t.seamless = true
+	t.as_normal_map = true
+	t.bump_strength = bump
+	t.generate_mipmaps = true
+	t.noise = fn
+	return t
 
 func resize() -> void:
 	var L: Dictionary = game.L
@@ -205,6 +334,9 @@ func resize() -> void:
 	vp.size = Vector2i(w, h)
 	rect.position = Vector2.ZERO
 	rect.size = Vector2(w, h)
+	var ywp := int(floor(game.L.yw * scale_s))
+	wrect.position = Vector2(0, ywp)
+	wrect.size = Vector2(w, h - ywp)
 	view.position = Vector2.ZERO
 	view.size = Vector2(L.W, L.H)
 
@@ -248,6 +380,21 @@ func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, 
 	m.set_shader_parameter("uCloud", W.cloud)
 	var fg: Array = W.floatGlow
 	m.set_shader_parameter("uFlt", Vector4(fg[0], fg[1], 0, fg[2]))
+	m.set_shader_parameter("uOld", 1.0 if old_water else 0.0)
+	wrect.visible = not old_water
+	if not old_water:
+		var wm := wmat
+		var ywp := floorf(L.yw * s)
+		wm.set_shader_parameter("uRes", Vector2(vp.size))
+		wm.set_shader_parameter("uT", fmod(t, 1000.0))
+		wm.set_shader_parameter("uHor", L.hor * s)
+		wm.set_shader_parameter("uYw", ywp)
+		wm.set_shader_parameter("uF", L.F * s)
+		for k in [["uSunC", "sun"], ["uTint", "tint"], ["uWater", "water"], ["uFog", "fog"]]:
+			var c: Color = tod[k[1]]
+			wm.set_shader_parameter(k[0], Vector3(c.r, c.g, c.b))
+		for k in ["uSun", "uMoon", "uNight", "uRain", "uWind", "uFlt"]:
+			wm.set_shader_parameter(k, m.get_shader_parameter(k))
 	for i in 16:
 		data_img.set_pixel(i, 0, Color(rips[i * 4], rips[i * 4 + 1], rips[i * 4 + 2], rips[i * 4 + 3]))
 	for i in 8:
