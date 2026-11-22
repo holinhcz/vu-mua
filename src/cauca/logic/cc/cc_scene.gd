@@ -53,13 +53,12 @@ vec4 bank(vec2 p, float sway){
  vec2 buv=clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.));
  if(uNoBank>.5)return vec4(0.);
  vec2 TS=vec2(textureSize(uBankTex,0));
- // bờ ghép trong SubViewport: màu đã nhân alpha -> chia lại. Ảnh đêm của nông trại = ảnh ngày x(.61,.68,.82) + đèn:
- // lấy phần đèn dư ra cộng vào ban đêm
+ // bờ ghép trong SubViewport: màu đã nhân alpha -> chia lại. uBankN = chỉ phần đèn (bank9/den.py), cộng vào ban đêm
  vec4 b; vec4 bn;
  if(uExact>.5){ivec2 ip=ivec2(min(buv*TS,TS-1.)); b=texelFetch(uBankTex,ip,0); bn=texelFetch(uBankN,ip,0);}
  else{b=texture(uBankTex,buv); bn=texture(uBankN,buv);}
  b.rgb/=max(b.a,1e-3); bn.rgb/=max(bn.a,1e-3);
- vec3 lit=max(bn.rgb-b.rgb*vec3(.61,.68,.82)-.04,vec3(0.));
+ vec3 lit=bn.rgb;
  // ban ngày giữ đúng màu ảnh nông trại (màu giờ chỉ tác dụng lúc chiều tối / đêm)
  float mx=max(uTint.r,max(uTint.g,uTint.b));
  vec3 tt=mix(uTint,vec3(1.),smoothstep(.85,.95,mx));
@@ -257,7 +256,7 @@ var sun = null      # mặt trời trên màn (shader Godot)
 var may_v = null    # mây trong SubViewport (để nước soi)
 const LIVE_SH := """
 shader_type canvas_item;
-// Bờ bên kia vẽ trực tiếp lên màn (không qua SubViewport). Ngày = TEXTURE, đêm = uN (cùng chỗ trong atlas).
+// Bờ bên kia vẽ trực tiếp lên màn (không qua SubViewport). Ngày = TEXTURE, đèn đêm = uN (atlas nửa cỡ, cùng UV).
 // Cây (alpha đánh dấu 254/255) nghiêng quanh gốc: sin(t*1.1 + pha)*.017 rad, pha theo chỗ đứng = y như nông trại.
 uniform sampler2D uN : filter_linear;
 uniform vec3 uTint = vec3(1.); uniform float uNight = 0.; uniform float uRain = 0.; uniform float uSway = 1.;
@@ -277,7 +276,7 @@ void fragment(){
  vec4 d=texture(TEXTURE,UV); vec4 n=texture(uN,UV);
  float mx=max(uTint.r,max(uTint.g,uTint.b));
  vec3 tt=mix(uTint,vec3(1.),smoothstep(.85,.95,mx));
- vec3 lit=max(n.rgb-d.rgb*vec3(.61,.68,.82)-.04,vec3(0.));
+ vec3 lit=n.rgb;          // atlas đèn (nửa độ phân giải, cùng UV)
  vec3 col=d.rgb*tt+lit*uNight*1.6;
  col=mix(col,vec3(dot(col,vec3(.3,.5,.2)))*vec3(.9,.95,1.02),uRain*.35);
  COLOR=vec4(col,d.a);
@@ -508,7 +507,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		var fl: bool = float(p[4]) < 0
 		var ck := "%s_%d_%d_%d" % [p[1], w, h, int(fl)]
 		for m in 2:
-			if tex[m].has(ck):
+			if imgs[m].has(ck):
 				continue
 			var src: Image = mid[m].get(p[1], mid[0][p[1]])
 			var im := src.duplicate() as Image
@@ -517,7 +516,6 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			if fl:
 				im.flip_x()
 			imgs[m][ck] = im
-			tex[m][ck] = ImageTexture.create_from_image(im)
 		p.resize(6)
 		p.append(ck)
 	var grass := _bo_img("n2_co")
@@ -528,8 +526,12 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		grass.generate_mipmaps(); tg = ImageTexture.create_from_image(grass)
 	if dirt:
 		dirt.generate_mipmaps(); td = ImageTexture.create_from_image(dirt)
-	# 0/1 = ảnh ghép ngày/đêm cho bóng dưới nước (độ phân giải thấp); 2/3 = hàng cây xa, 4/5 = bờ đất+cỏ (ngày/đêm) cho lớp vẽ trực tiếp
-	var vps := []
+	# 0/1 = ảnh ghép ngày/đêm cho bóng dưới nước; 2/3 = hàng cây xa, 4/5 = bờ đất+cỏ (ngày/đêm) cho lớp vẽ trực tiếp.
+	# (Link 11-22 "bung ra tới 170MB"): dựng TỪNG SubViewport một rồi bỏ ngay (trước: 6 cái cùng lúc ~40 MB ở máy 4K),
+	# và ảnh ghép 0/1 chỉ để nước soi -> thu về cỡ nước (scale_s px/css) thay vì giữ đủ điểm ảnh máy (~18 MB).
+	var out := []
+	var parts := [{}, {}]
+	var wr: float = minf(1.0, scale_s / maxf(K_of(), 0.01))
 	for mode in 6:
 		var v := SubViewport.new()
 		v.size = Vector2i(tw, th)
@@ -542,36 +544,40 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		root.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 		v.add_child(root)
 		if mode < 2:
+			# ảnh từng món lên GPU chỉ cho đúng lượt này (ngày rồi mới tới đêm), xong bỏ
+			for ck in imgs[mode]:
+				tex[mode][ck] = ImageTexture.create_from_image(imgs[mode][ck])
 			_fill(root, mode, vis, tex[mode], hzs, u0, u1, f, tg, td)
 		else:
 			_fill_part(root, mode % 2, "far" if mode < 4 else "bo", u0, u1, f, tg, td)
-		vps.append(v)
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
-	if key != _bank_key:
-		for v in vps: v.queue_free()
-		return
-	var out := []
-	var parts := [{}, {}]
-	for i in vps.size():
-		var im: Image = vps[i].get_texture().get_image()
-		vps[i].queue_free()
-		if i < 2:
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
+		if key != _bank_key:
+			v.queue_free()
+			return
+		var im: Image = v.get_texture().get_image()
+		v.queue_free()
+		if mode < 2:
+			tex[mode] = {}              # ảnh từng món trên GPU chỉ cần cho ảnh ghép này -> bỏ ngay
+			if wr < 0.95:
+				im.resize(maxi(8, int(round(tw * wr))), maxi(8, int(round(th * wr))), Image.INTERPOLATE_LANCZOS)
 			im.generate_mipmaps()
 			out.append(ImageTexture.create_from_image(im))
 		else:
 			# (đa giác không khử răng cưa: alpha chỉ 0/255, khỏi chia lại alpha)
-			var nm := "#far" if i < 4 else "#bo"
-			if i % 2 == 0:
+			var nm := "#far" if mode < 4 else "#bo"
+			if mode % 2 == 0:
 				parts[0][nm + "_r"] = im.get_used_rect()
 			var rr: Rect2i = parts[0][nm + "_r"]
-			var c := im.get_region(rr)
-			parts[i % 2][nm] = c
+			parts[mode % 2][nm] = im.get_region(rr)
 	for m in [mat, tmat]:
 		m.set_shader_parameter("uBankTex", out[0])
 		m.set_shader_parameter("uBankN", out[1])
 		m.set_shader_parameter("uSub", sub)
 	_live_build(vis, imgs, parts, u0, f)
+
+func K_of() -> float:
+	return float(game.K)
 
 static func _unpremul(im: Image) -> void:
 	var b := im.get_data()
@@ -614,6 +620,8 @@ func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> 
 			var im: Image = _li(imgs, parts, k, m)
 			atl[m].blit_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), pos[k])
 	var td := ImageTexture.create_from_image(atl[0])
+	# đèn đêm = quầng mềm -> giữ nửa độ phân giải (bớt ~13 MB ở máy 4K), cùng UV với atlas ngày
+	atl[1].resize(maxi(2, AW / 2), maxi(2, atl[1].get_height() / 2), Image.INTERPOLATE_BILINEAR)
 	var tn := ImageTexture.create_from_image(atl[1])
 	bmat.set_shader_parameter("uN", tn)
 	print("bank atlas ", AW, "x", AH, " items ", keys.size())
@@ -662,7 +670,7 @@ func _li(imgs: Array, parts: Array, k: String, m: int) -> Image:
 	return imgs[m].get(k, imgs[0][k])
 
 func _fill_part(root: Node2D, mode: int, what: String, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
-	var nc := NIGHT if mode == 1 else Color.WHITE
+	var nc := Color.BLACK if mode == 1 else Color.WHITE     # ảnh đêm = chỉ phần đèn: đất/cỏ/hàng cây xa không có đèn
 	if what == "far":
 		var far := Polygon2D.new()
 		var pts := PackedVector2Array(); var cols := PackedColorArray()
@@ -678,10 +686,9 @@ func _fill_part(root: Node2D, mode: int, what: String, u0: float, u1: float, f: 
 		bo.draw.connect(_draw_bo.bind(bo, mode, u0, u1, f, tg, td))
 		root.add_child(bo)
 
-const NIGHT := Color(.61, .68, .82)
 func _fill(root: Node2D, mode: int, vis: Array, tx: Dictionary, hzs: Array, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
 	var items: Dictionary = _bo.items
-	var nc := NIGHT if mode == 1 else Color.WHITE
+	var nc := Color.BLACK if mode == 1 else Color.WHITE     # ảnh đêm = chỉ phần đèn: đất/cỏ/hàng cây xa không có đèn
 	# hàng cây xa (lớp 0): đa giác tô dọc
 	var far := Polygon2D.new()
 	var pts := PackedVector2Array(); var cols := PackedColorArray()
@@ -726,7 +733,7 @@ func _fill(root: Node2D, mode: int, vis: Array, tx: Dictionary, hzs: Array, u0: 
 			root.add_child(s)
 
 func _draw_bo(n: Node2D, mode: int, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
-	var nc := NIGHT if mode == 1 else Color.WHITE
+	var nc := Color.BLACK if mode == 1 else Color.WHITE     # ảnh đêm = chỉ phần đèn: đất/cỏ/hàng cây xa không có đèn
 	var WL := 872.0
 	var x := floorf((u0 - 40.0) / 10.0) * 10.0
 	while x < u1 + 40.0:

@@ -173,3 +173,5 @@ lay = dict(W=BW, H=BH, WL=WL, far=[[round(x, 1), round(y, 1)] for x, y in rec9.F
            hz=[.30, .09, 0, 0, 0], items=used, place=place)
 json.dump(lay, open(os.path.join(OUT, 'bo.json'), 'w'), separators=(',', ':'))
 print('place', len(place), 'files', len(used))
+import den
+print(den.den_dir(OUT), 'ảnh đêm -> chỉ còn đèn (den.py)')
