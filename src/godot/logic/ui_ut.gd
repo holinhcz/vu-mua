@@ -8,9 +8,18 @@ var tab := "ut"             # UTV.tab
 const TABC := {"ut": "rgb(200, 150, 40)", "bau": "rgb(60, 140, 40)", "viec": "rgb(70, 120, 180)", "ct": "rgb(150, 112, 60)"}
 const TIER := ["fut", "got", "info", "u_tim", "fire_l", "u_vang"]   # màu chip bậc uy tín theo mốc UTM
 const UTC := {   # màu chip riêng: [gradient trên, giữa, dưới, viền]
+	# (bản 468) mỗi chức một màu, dùng xuyên bảng: c1 Tổ trưởng xanh lá, c2 Trưởng xóm xanh dương, c3 Trưởng ấp tím, c4 Hương cả vàng đồng; cNf = nhạt (chưa tới)
+	"c1": ["rgb(219, 236, 218)", "rgb(230, 242, 229)", "rgb(241, 247, 240)", "rgb(148, 198, 144)"], "c1f": ["rgb(241, 247, 240)", "rgb(246, 250, 246)", "rgb(251, 253, 250)", "rgb(192, 222, 190)"],
+	"c2": ["rgb(218, 230, 244)", "rgb(229, 238, 247)", "rgb(240, 245, 251)", "rgb(144, 180, 222)"], "c2f": ["rgb(240, 245, 251)", "rgb(246, 249, 252)", "rgb(250, 252, 254)", "rgb(190, 211, 236)"],
+	"c3": ["rgb(234, 226, 244)", "rgb(240, 235, 247)", "rgb(247, 243, 251)", "rgb(192, 168, 222)"], "c3f": ["rgb(247, 243, 251)", "rgb(250, 248, 252)", "rgb(252, 251, 254)", "rgb(218, 204, 236)"],
+	"c4": ["rgb(247, 236, 210)", "rgb(249, 242, 224)", "rgb(252, 247, 237)", "rgb(230, 198, 120)"], "c4f": ["rgb(252, 247, 237)", "rgb(253, 250, 244)", "rgb(254, 253, 249)", "rgb(241, 222, 176)"],
 	"u_tim": ["rgb(234, 224, 246)", "rgb(240, 232, 250)", "rgb(246, 241, 252)", "rgb(150, 116, 196)"],
 	"u_vang": ["rgb(255, 238, 186)", "rgb(255, 243, 204)", "rgb(255, 249, 226)", "rgb(214, 160, 30)"],
 }
+const CHC := ["rgb(150, 112, 60)", "rgb(60, 140, 55)", "rgb(60, 115, 185)", "rgb(130, 90, 185)", "rgb(190, 140, 20)"]   # màu đậm từng chức (chữ, số, nhãn)
+const CTP := {"causong": "pic:res://ui/img/xt/g_cau1.webp", "gate": "svg:res://ui/svg/mat/cong_lang.svg", "tramyt": "svg:res://ui/svg/mat/yte.svg",
+	"truong": "pic:res://ui/img/xt/g_nha11.webp", "dinh": "svg:res://ui/svg/mat/dinh_lang.svg", "chua": "pic:res://ui/img/xt/g_mieu1.webp"}   # hình công trình
+const VXI := {"hop": "pic:res://ui/img/vlface/0.webp", "gop": "nhang", "don": "cui", "xu": "svg:res://ui/svg/mat/can.svg"}   # hình việc xóm theo loại
 const RES := {"xu": "xu", "cui": "cui", "gach": "svg:res://ui/svg/mat/gach.svg", "cong": "svg:res://ui/svg/mat/cong.svg"}   # hình đồ góp công trình
 const XM := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 12\"><circle cx=\"6\" cy=\"6\" r=\"5.5\" fill=\"rgb(226,90,80)\"/><path d=\"M3.8 3.8 L8.2 8.2 M8.2 3.8 L3.8 8.2\" stroke=\"white\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg>"
 
@@ -122,13 +131,22 @@ func _ut() -> Array:
 			ti = i
 	var b0 := float(W.UTM[ti][0])
 	var nx = W.UTM[ti + 1] if ti + 1 < W.UTM.size() else null
-	var hc := _chip(X0, y, XW, 62.0, TIER[mini(ti, TIER.size() - 1)])
+	var hc := _chip(X0, y, XW, 66.0, TIER[mini(ti, TIER.size() - 1)])
+	hc.act = _dsay.bind("Mốc uy tín: " + ", ".join(PackedStringArray(W.UTM.map(func(m): return String(m[1]) + " " + str(m[0])))) + ".")
 	out.append(hc)
-	out.append(_dt(X0 + 12.0, y + 9.0, XW - 110.0, 18.0, W.ut_rank(), 13.0, 800, BROWN, "left"))
-	out.append(_dt(X0 + XW - 110.0, y + 9.0, 98.0, 18.0, W._sv(o.p) + " điểm", 12.0, 800, "rgb(46, 120, 50)", "right"))
-	out.append_array(_bar(X0 + 12.0, y + 31.0, XW - 24.0, (p - b0) / maxf(1.0, float(nx[0]) - b0) if nx != null else 1.0, 6.0))
-	out.append(_dt(X0 + 12.0, y + 41.0, XW - 24.0, 14.0, _fitw(("Còn " + str(int(float(nx[0]) - p)) + " điểm tới \"" + String(nx[1]) + "\"") if nx != null else "Cả làng kính rồi.", 10.5, 600, XW - 24.0), 10.5, 600, SUB, "left"))
-	y += 62.0 + GG
+	out.append(_dic(X0 + 8.0, y + 9.0, 34.0, _medal(ti)))   # (bản 468) huy hiệu màu theo bậc
+	out.append(_dt(X0 + 50.0, y + 9.0, XW - 150.0, 18.0, _fitw(W.ut_rank(), 13.0, 800, XW - 150.0), 13.0, 800, BROWN, "left"))
+	out.append(_dt(X0 + XW - 100.0, y + 9.0, 88.0, 18.0, W._sv(o.p) + " điểm", 12.0, 800, "rgb(46, 120, 50)", "right"))
+	var bx := X0 + 50.0
+	var bw := XW - 62.0
+	var mx := float(W.UTM[W.UTM.size() - 1][0])
+	out.append_array(_bar(bx, y + 32.0, bw, p / maxf(1.0, mx), 6.0))
+	for m in W.UTM:   # vạch mốc trên thanh
+		var tx := bx + bw * float(m[0]) / maxf(1.0, mx)
+		if float(m[0]) > 0.0:
+			out.append(_dbx(clampf(tx - 1.0, bx, bx + bw - 2.0), y + 30.0, 2.0, 10.0, "rgb(150, 112, 60)" if p < float(m[0]) else "rgb(46, 120, 50)", 1.0))
+	out.append(_dt(X0 + 50.0, y + 44.0, XW - 62.0, 14.0, _fitw(("Còn " + str(int(float(nx[0]) - p)) + " điểm tới \"" + String(nx[1]) + "\"") if nx != null else "Cả làng kính rồi.", 10.5, 600, XW - 62.0), 10.5, 600, SUB, "left"))
+	y += 66.0 + GG
 	if c and c < 4 and p < float(W.UTP[c]):   # đang dưới mốc chức
 		var wc := _chip(X0, y, XW, 40.0, "sen")
 		wc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Uy tín dưới mốc " + W._sv(W.UTP[c]) + " của " + String(W.UTCHUC[c]) + ".", 11.0, 800, "rgb(170, 50, 60)", "left"),
@@ -146,20 +164,20 @@ func _ut() -> Array:
 	for i in range(1, W.UTCHUC.size()):
 		var held := c >= i
 		var nxt := i == c + 1
-		var k := "got" if held else ("now" if nxt else "fut")
+		var k := "c" + str(i) + ("" if held or nxt else "f")   # (bản 468) màu riêng từng chức, chưa tới thì nhạt
 		var bc := _chip(X0, y, XW, 42.0, k)
 		out.append(bc)
-		var nc := _chip(X0 + 8.0, y + 10.0, 22.0, 22.0, "fut")
-		nc.kids = [_dt(X0 + 8.0, y + 10.0, 22.0, 22.0, str(i), 11.0, 800, BROWN)]
+		var nc := _dbx(X0 + 8.0, y + 10.0, 22.0, 22.0, String(CHC[i]) if held or nxt else "rgb(200, 190, 170)", 11.0)
+		nc.kids = [_dt(X0 + 8.0, y + 10.0, 22.0, 22.0, str(i), 11.0, 800, "rgb(255, 255, 255)")]
 		out.append(nc)
 		out.append(_dt(X0 + 38.0, y + 6.0, XW - 130.0, 16.0, String(W.UTCHUC[i]), 12.0, 800, BROWN, "left"))
 		out.append(_dt(X0 + 38.0, y + 23.0, XW - 48.0, 14.0, _fitw("Uy tín " + W._sv(W.UTP[i]) + " · cấp " + W._sv(W.UTLV[i]) + " · làng " + W._sv(W.UTLANG[i][0]) + " nhà", 10.5, 600, XW - 48.0), 10.5, 600, SUB, "left"))
 		if held:
-			var tc := _tchip(X0, y + 6.0, "Đang giữ" if c == i else "Đã qua", "got", "rgb(46, 120, 50)")
+			var tc := _tchip(X0, y + 6.0, "Đang giữ" if c == i else "Đã qua", k, String(CHC[i]))
 			Snap._move(tc[0], Vector2(XW - 10.0 - float(tc[1]), 0))
 			out.append(tc[0])
 		elif nxt:
-			var tc2 := _tchip(X0, y + 6.0, "Kế tiếp ›", "now", "rgb(150, 100, 20)")
+			var tc2 := _tchip(X0, y + 6.0, "Kế tiếp ›", "fut", String(CHC[i]))
 			Snap._move(tc2[0], Vector2(XW - 10.0 - float(tc2[1]), 0))
 			out.append(tc2[0])
 			bc.act = _tab_go.bind("bau")
@@ -198,7 +216,7 @@ func _bau() -> Array:
 		var nok := 0
 		for cc in C:
 			nok += 1 if W._tr(cc[0]) else 0
-		var bc := _chip(X0, y, XW, 10.0, "got" if ok else "fut")
+		var bc := _chip(X0, y, XW, 10.0, "c" + str(c) + ("" if ok else "f"))   # (bản 468) màu chức đang nhắm
 		out.append(bc)
 		var yy := y + 10.0
 		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đủ " + str(nok) + "/" + str(C.size()) + " điều kiện", 11.5, 800, "rgb(46, 120, 50)" if ok else BROWN, "left"))
@@ -272,6 +290,9 @@ func _viec() -> Array:
 		var w := XW - 20.0
 		var yy := y + 10.0
 		var rw := 0.0
+		out.append(_icx(x + 15.0, yy + 15.0, 30.0, String(VXI.get(String(t.k), "nhang"))))   # (bản 468) hình theo loại việc
+		x += 38.0
+		w -= 38.0
 		if done:
 			out.append(_dtick(x + w - 14.0, yy + 2.0, 13.0))
 			rw = 20.0
@@ -385,14 +406,17 @@ func _ctb(y: float, k: String, bac: int, P: Dictionary, o: Dictionary) -> Array:
 	var cr: int = int(W.CTCHUC[k]) if W.CTCHUC.has(k) else (2 if bac == 2 else 3)
 	var lock: bool = int(W.ut_s().c) < cr
 	var out := []
-	var c := _chip(X0, y, XW, 10.0, "fut")
+	var c := _chip(X0, y, XW, 10.0, "c2f" if bac == 2 else "c4f")   # (bản 468) bậc ấp xanh dương nhạt, bậc làng vàng nhạt
 	out.append(c)
 	var x := X0 + 10.0
 	var w := XW - 20.0
 	var yy := y + 10.0
+	out.append(_icx(x + 17.0, yy + 17.0, 34.0, String(CTP.get(k, "svg:res://ui/svg/mat/dinh_lang.svg"))))
+	x += 42.0
+	w -= 42.0
 	var rw := 0.0
 	if lock:
-		var lc := _tchip(x, yy - 1.0, "Cần " + String(W.UTCHUC[cr]), "sen", "rgb(170, 50, 60)")
+		var lc := _tchip(x, yy - 1.0, "Cần " + String(W.UTCHUC[cr]), "c" + str(cr), String(CHC[cr]))
 		Snap._move(lc[0], Vector2(w - float(lc[1]), 0))
 		out.append(lc[0])
 		rw = float(lc[1]) + 6.0
@@ -401,13 +425,17 @@ func _ctb(y: float, k: String, bac: int, P: Dictionary, o: Dictionary) -> Array:
 	var s: String = "Khánh thành +" + ("30" if bac == 2 else "60") + " uy tín" + ((" · Bia: " + ", ".join(PackedStringArray(o.bia[k].slice(0, 2)))) if o.bia.has(k) else "")
 	out.append(_dt(x, yy, w, 14.0, _fitw(s, 10.5, 600, w), 10.5, 600, "rgb(46, 120, 50)", "left"))
 	yy += 14.0 + GG
-	var Pt := []
+	# đồ cần: chip nhỏ có hình (như "Mùa hạ hay có" bên Thiên tai)
+	var cx := X0 + 10.0
 	for rk in ["xu", "cui", "gach", "cong"]:
-		if Pt.size():
-			Pt.append("  ")
-		Pt.append_array([W._sa(int(nd[rk])), "i:" + String(RES[rk])])
-	out.append_array(_rowi(x, yy + 5.0, 16.0, Pt, 11.0, 800, BROWN)[0])
-	var bt := _btn(x + w - 76.0, yy, 76.0, 26.0, "Kêu gọi", W.ct_start.bind(k), "go" if why == "" else "off")
+		var nt: String = W._sa(int(nd[rk]))
+		var cw: float = Box.text_w(nt, 10.5, 800) + 32.0
+		var rc := _chip(cx, yy + 2.0, cw, 22.0, "fut")
+		rc.kids = [_icx(cx + 11.0, yy + 13.0, 16.0, String(RES[rk])), _dt(cx + 22.0, yy + 2.0, cw - 25.0, 22.0, nt, 10.5, 800, BROWN, "left")]
+		rc.act = _dsay.bind(String(W.CTRES.filter(func(r): return r[0] == rk)[0][1]) + ": cần " + nt + ".")
+		out.append(rc)
+		cx += cw + 4.0
+	var bt := _btn(X0 + XW - 86.0, yy, 76.0, 26.0, "Kêu gọi", W.ct_start.bind(k), "go" if why == "" else "off")
 	if why != "":
 		bt.act = _dsay.bind(why)
 	out.append(bt)
@@ -469,3 +497,9 @@ func _gop(y: float, i: int, c: Dictionary, P: Dictionary, F: Dictionary) -> Arra
 		yy += 26.0 + 10.0
 	bc.r[3] = yy - y
 	return [out, yy - y]
+
+func _medal(ti: int) -> String:   # (bản 468) huy hiệu bậc uy tín: tròn có dải, màu theo bậc
+	var C := ["rgb(176, 136, 70)", "rgb(76, 160, 70)", "rgb(70, 130, 200)", "rgb(150, 110, 200)", "rgb(232, 112, 40)", "rgb(214, 160, 30)"]
+	var col: String = C[clampi(ti, 0, C.size() - 1)]
+	var cs := col.replace(" ", "")
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M7 2 L10 10 L12 9 L14 10 L17 2 Z\" fill=\"rgb(200,70,60)\"/><circle cx=\"12\" cy=\"15\" r=\"7\" fill=\"" + cs + "\" stroke=\"rgb(120,90,40)\" stroke-width=\"1\"/><circle cx=\"12\" cy=\"15\" r=\"4.6\" fill=\"none\" stroke=\"rgb(255,255,255)\" stroke-width=\"1\" opacity=\"0.7\"/><path d=\"M12 11.6 L13 14 L15.5 14.2 L13.6 15.8 L14.2 18.3 L12 17 L9.8 18.3 L10.4 15.8 L8.5 14.2 L11 14 Z\" fill=\"rgb(255,255,255)\"/></svg>"
