@@ -10,7 +10,7 @@ var q := ""                 # chữ tìm
 var tab := "Chung"
 const TABS := [["Chung", "Chung"], ["Ruộng vườn", "Ruộng vườn"], ["Sông nước", "Sông nước"], ["Làm ăn", "Làm ăn"], ["Làng xóm", "Làng xóm"]]   # (bản 485) mỗi tab một nhóm trong so_tay.json
 const SECC := {"Chung": "rgb(200, 150, 40)", "Ruộng vườn": "rgb(76, 150, 48)", "Sông nước": "rgb(60, 130, 180)", "Làm ăn": "rgb(222, 130, 40)", "Làng xóm": "rgb(200, 80, 90)"}
-const ICO := {"menuo": "pic:res://ui/img/xt/b_cuoc.webp", "lai": "lua_thom", "hoithi": "svg:res://ui/svg/mat/huychuong.svg", "ray": "svg:res://ui/svg/mat/ray.svg",
+const ICO := {"nhanvat": "svg:res://ui/svg/mat/suckhoe.svg", "thoitiet": "sky:nang", "giong": "sky:giong", "nuoc": "sky:mua", "thu": "svg:res://ui/svg/mat/thu.svg", "dieu": "svg:res://ui/svg/mat/dieu.svg", "hui": "xu", "menuo": "pic:res://ui/img/xt/b_cuoc.webp", "lai": "lua_thom", "hoithi": "svg:res://ui/svg/mat/huychuong.svg", "ray": "svg:res://ui/svg/mat/ray.svg",
 	"quan": "pic:res://ui/img/xt/g_quan1.webp", "ghe": "pic:res://ui/img/xt/g_ghe1.webp", "khaihoang": "pic:res://ui/img/xt/b_cuoc.webp", "yte": "svg:res://ui/svg/mat/yte.svg",
 	"xay": "svg:res://ui/svg/mat/gach.svg", "xephang": "svg:res://ui/svg/mat/huychuong.svg", "lang": "pic:res://ui/img/vlface/0.webp", "thue": "pic:res://ui/img/vlface/3.webp",
 	"dulich": "svg:res://ui/svg/mat/khach_tay.svg", "dulich2": "svg:res://ui/svg/mat/khach_sg.svg", "hoi": "svg:res://ui/svg/mat/dinh_lang.svg", "cuoi": "banh_pt", "capdo": "svg:res://ui/svg/mat/huychuong.svg"}   # hình riêng từng mục (còn lại: hình món trong data)
@@ -124,6 +124,11 @@ func _q_changed(t: String) -> void:   # ô tìm: lọc mục có chữ
 func _ico(it: Dictionary) -> String:
 	return String(ICO.get(String(it.id), String(it.ic)))
 
+func _icg(cx: float, cy: float, z: float, k: String) -> Dictionary:   # hình mục: "sky:<loại>" hình bảng Trời đất, còn lại _icx
+	if k.begins_with("sky:"):
+		return _dic(cx - z * 0.5, cy - z * 0.5, z, String(SK.ic.get(k.substr(4), SK.ic.nang)))
+	return _icx(cx, cy, z, k)
+
 func _body() -> Array:
 	var rd: Dictionary = kh(G).rd
 	var out := []
@@ -145,8 +150,12 @@ func _body() -> Array:
 		if its.is_empty():
 			continue
 		var nw := its.filter(func(it): return not rd.has(it.id)).size()
-		out.append_array(_sect(y, String(sec.sec) + ((" · " + str(nw) + " mới") if nw else ""), String(SECC.get(String(sec.sec), "rgb(150, 112, 60)"))))
-		y += 16.0 + GG
+		if q != "":   # đang tìm: tiêu đề nhóm (mục từ nhiều nhóm)
+			out.append_array(_sect(y, String(sec.sec), String(SECC.get(String(sec.sec), "rgb(150, 112, 60)"))))
+			y += 16.0 + GG
+		else:   # (bản 486) tab đã ghi tên nhóm: chỉ 1 dòng nhỏ đếm mục
+			out.append(_dt(X0 + 2.0, y - 2.0, XW, 14.0, str(its.size()) + " mục" + ((" · " + str(nw) + " chưa đọc") if nw else " · đã đọc hết"), 10.0, 600, SUB, "left"))
+			y += 14.0 + 6.0
 		var g := 6.0
 		var bw := (XW - g) * 0.5
 		var bh := 44.0
@@ -159,16 +168,15 @@ func _body() -> Array:
 				var x := X0 + c * (bw + g)
 				var on: bool = op == String(it.id) or (q != "" and its.size() == 1)
 				var ch := _chip(x, y, bw, bh, "now" if on else "fut")
-				var ks := [_icx(x + 20.0, y + bh * 0.5, 26.0, _ico(it))]
-				var tw := bw - 44.0 - (26.0 if not rd.has(it.id) else 0.0)
-				var nfs := clampf(11.0 * tw / maxf(1.0, Box.text_w(String(it.n), 11.0, 800)), 9.0, 11.0)   # tên dài: bóp chữ trước khi cắt
-				ks.append(_dt(x + 40.0, y + 6.0, tw, 15.0, _fitw(String(it.n), nfs, 800, tw), nfs, 800, BROWN, "left"))
-				var s0: String = String(it.b[0]) if it.b.size() else ""
+				var ks := [_icg(x + 20.0, y + bh * 0.5, 26.0, _ico(it))]
+				var tw := bw - 44.0 - (14.0 if on else 0.0)   # (bản 486) tên một cỡ 11, dài thì cắt
+				ks.append(_dt(x + 40.0, y + 6.0, tw, 15.0, _fitw(String(it.n), 11.0, 800, tw), 11.0, 800, BROWN, "left"))
+				var s0: String = String(it.get("s", it.b[0] if it.b.size() else ""))
 				ks.append(_dt(x + 40.0, y + 23.0, bw - 46.0, 14.0, _fitw(s0, 9.5, 600, bw - 46.0), 9.5, 600, SUB, "left"))
-				if not rd.has(it.id):
-					var mc := _chip(x + bw - 28.0, y + 6.0, 24.0, 13.0, "sen")
-					mc.kids = [_dt(x + bw - 28.0, y + 6.0, 24.0, 13.0, "Mới", 8.0, 800, "rgb(190, 50, 60)")]
-					ks.append(mc)
+				if not rd.has(it.id):   # chưa đọc: chấm đỏ góc hình
+					ks.append(_dbx(x + 28.0, y + 6.0, 9.0, 9.0, "rgb(226, 70, 60)", 4.5))
+				if on:
+					ks.append(_dic(x + bw - 16.0, y + 8.0, 10.0, CHU))
 				ch.kids = ks
 				ch.act = _tog.bind(String(it.id))
 				out.append(ch)
@@ -184,7 +192,10 @@ func _body() -> Array:
 					y += float(r[1]) + g
 			i += 2
 		y += GG - g
-	# cuối: Chuyện làng, nhắc lần đầu
+	# cuối: Chuyện làng, nhắc lần đầu (đường kẻ ngăn với lưới)
+	y += 4.0
+	out.append(_dbx(X0 + 20.0, y, XW - 40.0, 1.0, "rgb(222, 204, 164)", 0.0))
+	y += 1.0 + GG + 2.0
 	var bw2 := (XW - 6.0) * 0.5
 	out.append(_btn(X0, y, bw2, 30.0, "Chuyện làng ›", _clg, "go"))
 	var tc := _chip(X0 + bw2 + 6.0, y, bw2, 30.0, "fut")
