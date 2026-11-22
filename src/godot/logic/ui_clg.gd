@@ -14,6 +14,16 @@ var SK := {}                # sky.json: hình thời tiết
 const TABS := [["all", "Tất cả"], ["nha", "Nhà mình"], ["xom", "Xóm làng"], ["tt", "Thiên tai"], ["buon", "Buôn bán"]]
 const TABC := {"all": "rgb(150, 112, 60)", "nha": "rgb(214, 160, 30)", "xom": "rgb(76, 150, 48)", "tt": "rgb(70, 120, 180)", "buon": "rgb(222, 130, 40)"}
 
+const CLC := {   # (bản 477) nền dòng chuyện theo loại (nhạt như dòng việc Sổ nhiệm vụ): [gradient trên, giữa, dưới, viền]
+	"k_nha": ["rgb(247, 236, 210)", "rgb(249, 242, 224)", "rgb(252, 247, 237)", "rgb(232, 203, 131)"],
+	"k_xom": ["rgb(219, 234, 214)", "rgb(230, 240, 226)", "rgb(241, 247, 238)", "rgb(157, 197, 141)"],
+	"k_tt": ["rgb(218, 228, 240)", "rgb(229, 236, 244)", "rgb(240, 244, 249)", "rgb(153, 181, 214)"],
+	"k_buon": ["rgb(248, 230, 212)", "rgb(250, 238, 225)", "rgb(252, 245, 238)", "rgb(237, 186, 137)"],
+}
+
+func _ck(kind: String) -> Array:
+	return CLC[kind] if CLC.has(kind) else super(kind)
+
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
@@ -109,7 +119,7 @@ func _body() -> Array:   # clgTab
 		var ago: int = day - d
 		var sea := int(floor(posmod(d, 28) / 7.0))
 		var dn := ("Hôm nay" if ago <= 0 else ("Hôm qua" if ago == 1 else str(ago) + " ngày trước")) + " · " + String(G.SEA_N[sea]) + " " + str(posmod(d, 28) % 7 + 1)
-		out.append_array(_sect(y, dn, String(TABC.get(tab, TABC.all))))
+		out.append_array(_sect(y, dn, String(TABC.get(tab, TABC.all)) if ago > 0 else "rgb(200, 70, 60)"))   # hôm nay: vạch đỏ
 		y += 16.0 + GG
 		var R: Array = by[d]
 		# việc có nút lên đầu
@@ -179,7 +189,7 @@ func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: Str
 	var L := _wrap(t, 11.0, 600, w - 40.0 - rw)
 	var h := 8.0 + L.size() * 15.0 + (13.0 if sub != "" else 0.0) + 8.0
 	h = maxf(h, 32.0)
-	var c := _chip(x, y, w, h, "fut")
+	var c := _chip(x, y, w, h, "k_" + k if CLC.has("k_" + k) else "fut")   # (bản 477) nền theo loại
 	out.append(c)
 	out.append(_dbx(x + 3.0, y + 5.0, 3.0, h - 10.0, String(TABC.get(k, TABC.all)), 1.5))
 	out.append(_kic(x + 20.0, y + h * 0.5, 20.0, k))
