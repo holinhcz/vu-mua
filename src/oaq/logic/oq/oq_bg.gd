@@ -125,10 +125,10 @@ func _draw() -> void:
 	var H: float = L.H
 	_rng_seed(20261028)
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	# đất sân: ảnh lặp, cỡ theo màn
-	var ts := maxf(560.0, maxf(W, H) * 0.62) / 1024.0
+	# đất sân: ảnh đất 9px của sân caro (Link 11-22 "lấy nền đất bên caro qua"), 9 điểm ảnh / css, lặp
+	var ts := 1.0 / 9.0
 	_T(xf(Vector2.ZERO, 0.0, Vector2(ts, ts)))
-	draw_texture_rect_region(A.img("ground"), Rect2(0, 0, W / ts, H / ts), Rect2(0, 0, W / ts, H / ts))
+	draw_texture_rect_region(A.img("dat"), Rect2(0, 0, W / ts, H / ts), Rect2(0, 0, W / ts, H / ts))
 	_T()
 	radial(Vector2(W * 0.42, H * 0.5), maxf(W, H) * 0.75, [[0.0, Color8(255, 236, 200, 26)], [1.0, Color8(60, 35, 15, 41)]])
 	_porch(L)
@@ -301,33 +301,7 @@ func _decor(L: Dictionary) -> void:
 					t += ha * 0.5
 				done = true
 				break
-	# dép lào để trên bậc hiên (26 cm)
-	var dl := 26 * CM
-	var dD := dl / 0.82
-	for tries in 80:
-		if sp != null:
-			break
-		var x := dD * 0.5 + rng() * (W - dD)
-		var y := ph + dl * (0.02 + rng() * 0.22)
-		if free.call(x, y, dl * 0.52):
-			sp = Vector2(x, y)
-	if sp != null:
-		var a := (rng() - 0.5) * 0.5
-		on_ground("dep", Rect2i(), sp, dD, dD, a, dl * 0.035)
-		used.call(sp.x, sp.y, dl * 0.6)
-	# lu da lươn ở góc hiên
-	for f in [30, 27]:
-		var lr: float = f * CM
-		sp = _find_spot(L, lr, false, func(x: float, y: float) -> float:
-			var off := maxf(0, lr - x) + maxf(0, x + lr - W) + maxf(0, lr - y) + maxf(0, y + lr - H)
-			if off > lr * 0.8 or absf(x - cx) < W * 0.22:
-				return -1e9
-			return -absf(y - (ph + lr * 0.1)) * 0.6 + absf(x - cx) * 0.6 - off * 2)
-		if sp != null:
-			var D := lr * 2 / 0.92
-			on_ground("lu", Rect2i(), sp, D, D, 0.0, lr * 1.3)
-			used.call(sp.x, sp.y, lr * 1.02)
-			break
+	# Link 11-22: bỏ dép, lu nước, nón lá
 	# chổi chà nằm dọc bậc hiên hoặc mép dưới, cán ló ra ngoài màn
 	var bl := minf(110 * CM, W * 0.5)
 	var bh := bl / 3
@@ -387,14 +361,6 @@ func _decor(L: Dictionary) -> void:
 		while t <= 0.5:
 			used.call(fb[0] + cos(fb[2]) * fl * t, fb[1] + sin(fb[2]) * fl * t, fl * 0.13)
 			t += 0.125
-	# nón lá 42 cm, ló ra mép màn tối đa một phần ba
-	var nr := 21 * CM
-	sp = _find_spot(L, nr * 1.05, false, func(x: float, y: float) -> float:
-		var off := maxf(0, nr - x) + maxf(0, x + nr - W) + maxf(0, nr - y) + maxf(0, y + nr - H)
-		return -1e9 if off > nr * 0.65 else far.call(x, y) * 0.5 + (40.0 if y > cy else 0.0) - off * 2)
-	if sp != null:
-		_non(sp.x, sp.y, nr)
-		used.call(sp.x, sp.y, nr * 1.08)
 	# lá khô (lá bàng, lá xoài) rải rác
 	var placed := 0
 	var want := mini(10, roundi(W * H / (s * s * 3.2)))
@@ -446,16 +412,6 @@ func _grass(x: float, y: float, sz: float) -> void:
 	for b in blades:
 		_fill(b[0], b[1])
 	_T()
-
-func _non(x: float, y: float, r: float) -> void:
-	# quai nón nằm lòi ra dưới vành
-	var pts := cubic(Vector2(x - r * 0.5, y + r * 0.62), Vector2(x - r * 0.75, y + r * 1.1), Vector2(x - r * 0.2, y + r * 1.25), Vector2(x + r * 0.15, y + r * 0.9), 20)
-	var lw := maxf(2.0, r * 0.05)
-	_T(xf(Vector2(1.5, 2)))
-	draw_polyline(pts, Color8(40, 25, 10, 60), lw * 1.4, true)
-	_T()
-	draw_polyline(pts, Color("#e9e2d6"), lw, true)
-	on_ground("non", Rect2i(), Vector2(x, y), 2 * r, 2 * r, 0.0, r * 0.8)
 
 func _frond(x: float, y: float, ln: float, ang: float) -> void:
 	var bend := ln * 0.12

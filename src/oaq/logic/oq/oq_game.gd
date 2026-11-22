@@ -473,10 +473,10 @@ func step_animals(dt: float) -> void:
 			c.x = q3.x
 			c.y = q3.y
 
-func _draw_animal(name: String, cell: int, ln: float, span: float, x: float, y: float, a: float, pose: int, off: Vector2) -> void:
-	var k := ((roundi(a / TAU * 16) % 16) + 16) % 16
+func _draw_animal(name: String, ln: float, span: float, x: float, y: float, rot: float, off: Vector2) -> void:
+	# gà 9px của caro (Link 11-22 "lấy gà bên caro qua"): 1 ảnh nhìn từ trên, xoay theo hướng đi; chỉ bóng sát đất
 	var D := ln / span
-	A.on_ground(self, K, name, Rect2i(k * cell, pose * cell, cell, cell), Vector2(x, y) + off, D, D, 0.0, ln * 0.5)
+	A.on_ground(self, K, name, Rect2i(), Vector2(x, y) + off, D, D, rot, 0.0)
 
 # ============================================================ sỏi (hình + vật lý)
 func mk_stone(kind: String, home: String, p: Vector2, variant := -1) -> Dictionary:
@@ -942,10 +942,10 @@ func _draw() -> void:
 	if FARM.hen != null and not _baking:
 		for c in FARM.chicks:
 			var hop: float = absf(sin(c.hop)) * c.len * 0.06
-			_draw_animal("chick", 72, c.len, 0.57, c.x, c.y - hop, c.a, c.peck, sh)
+			_draw_animal("gacon", c.len, 0.91, c.x + cos(c.a) * c.len * 0.08 * c.peck, c.y - hop + sin(c.a) * c.len * 0.08 * c.peck, c.a, sh)
 		var h = FARM.hen
 		var bob: float = sin(h.bob) * h.len * 0.01
-		_draw_animal("hen", 200, h.len, 0.72, h.x, h.y + bob, h.a, h.peck, sh)
+		_draw_animal("ga", h.len, 0.6, h.x + cos(h.a) * h.len * 0.05 * h.peck, h.y + bob + sin(h.a) * h.len * 0.05 * h.peck, h.a - 2.6, sh)
 	# ô đi được: vệt nắng mờ trong ô + vòng phấn
 	var live := human_live()
 	_LG(sh)
@@ -993,8 +993,8 @@ func _draw() -> void:
 			continue
 		var a2 := (al * 0.45 if st.z > 0.25 else al) * 0.7
 		draw_texture_rect_region(A.atlas, Rect2(P.x + off * 0.55 - ss / 2, P.y + off * 0.75 - ss / 2 + R * 0.12, ss, ss * 0.92), A.R_SOFT, Color(1, 1, 1, a2))
-	var qt := A.img("quan")
-	var pb := A.img("pebbles")
+	var qt: Texture2D = null
+	var pb: Texture2D = null
 	var up := func(st: Dictionary) -> bool: return st.home == "h" or (st.fly != null and st.z > 0.05)
 	for st in lst:
 		if not up.call(st):
@@ -1054,10 +1054,9 @@ func _draw_st(st: Dictionary, qt: Texture2D, pb: Texture2D) -> void:
 	var D: float = st.r * L.s * 2 / 0.8 * (1 + st.z * 0.28)
 	var dst := Rect2(P.x - D / 2, Y - D / 2, D, D)
 	if st.kind == "q":
-		draw_texture_rect_region(qt, dst, Rect2(int(st.v) * 200, 0, 200, 200))
+		draw_texture_rect(A.img("peb/q%d" % (int(st.v) % 2)), dst, false)
 	else:
-		var v: int = st.v
-		draw_texture_rect_region(pb, dst, Rect2((v % 10) * A.PEB_SZ, (v / 10) * A.PEB_SZ, A.PEB_SZ, A.PEB_SZ))
+		draw_texture_rect(A.img("peb/p%d" % (int(st.v) % A.PEB_N)), dst, false)
 
 # bóng mềm của cẳng tay + nắm tay trên đất, thò vô từ mép màn phía người đang rải
 func _arm_shadow(fx: float, fy: float, p: int, vis: float, sh: Vector2) -> void:
