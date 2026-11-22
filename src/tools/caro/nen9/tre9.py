@@ -77,27 +77,29 @@ def leaf(dst, K, x, y, ang, ln, wd, gcol, light, rg):
 def twig(dst, K, x0, y0, x1, y1, w, rg):
     culm(dst, K, x0, y0, x1, y1, w, w * 0.6, (128, 128, 62), rg, node=6.0)
 
-def bamboo(K, R=170.0, seed=3, ncul=22):
+def bamboo(K, R=170.0, seed=3, ncul=22, dens=1.0, crop=None, base=1.0):
     """bụi tre gai nhìn từ trên: gốc ở giữa, thân ngả toả ra, ngọn rủ lá dày"""
     rg = np.random.default_rng(seed)
-    n = int(R * 2.3 * K); c = n / 2 / K
-    out = np.zeros((n, n, 4), np.float32)
+    n = int(R * (2.0 if crop is not None else 2.3) * K); c = n / 2 / K
+    nw = n if crop is None else int((c + crop * R) * K)          # crop: chỉ giữ nửa trái (nửa phải luôn khuất ngoài màn)
+    xmax = nw / K + 25
+    out = np.zeros((n, nw, 4), np.float32)
     # gốc bụi: đất sẫm + bẹ mo khô
-    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
-    d = np.hypot(xx / K - c, yy / K - c) / (R * 0.2)
-    nz = B.fbm(n, n, 1.5 * K, 2, rg)
+    yy, xx = np.mgrid[0:n, 0:nw].astype(np.float32)
+    d = np.hypot(xx / K - c, yy / K - c) / (R * 0.2 * base)
+    nz = B.fbm(n, nw, 1.5 * K, 2, rg)
     gm = np.clip((1.2 - d + 0.3 * (nz - 0.5)) * 9, 0, 1)
     P.over(out, P.rgba(np.array([70, 58, 36], np.float32) * (0.55 + 0.5 * nz)[..., None], gm * 0.9))
     del xx, yy, d
-    for i in range(70):                                         # lá tre khô rụng quanh gốc
-        a_ = rg.uniform(0, 6.283); r_ = R * 0.24 * math.sqrt(rg.uniform(0, 1))
+    for i in range(int(70 * (R * base / 170) ** 2)):                                         # lá tre khô rụng quanh gốc
+        a_ = rg.uniform(0, 6.283); r_ = R * 0.24 * base * math.sqrt(rg.uniform(0, 1))
         dc = (np.array([176, 148, 92], np.float32) * rg.uniform(0.7, 1.1)).tolist()
         leaf(out, K, c + math.cos(a_) * r_, c + math.sin(a_) * r_, rg.uniform(0, 6.283), rg.uniform(9, 14), rg.uniform(1.8, 2.4), dc, rg.uniform(0.75, 0.95), rg)
     cul = []
     a0 = rg.uniform(0, 6.283)
     for i in range(ncul):
         ang = a0 + i / ncul * 6.283 + rg.uniform(-0.12, 0.12)
-        r0 = R * rg.uniform(0.05, 0.17)
+        r0 = R * base * rg.uniform(0.05, 0.17)
         aa = ang + rg.uniform(-0.9, 0.9); bx = c + math.cos(aa) * r0; by = c + math.sin(aa) * r0
         L = R * rg.uniform(0.55, 0.85)
         bend = rg.uniform(-0.35, 0.35)
@@ -106,7 +108,7 @@ def bamboo(K, R=170.0, seed=3, ncul=22):
             a_ = ang + bend * k / 6
             px, py = pts[-1]; seg = L / 6 * (1.15 - 0.05 * k)
             pts.append((px + math.cos(a_) * seg, py + math.sin(a_) * seg))
-        cul.append((ang, bend, pts, rg.uniform(3.4, 4.4)))
+        cul.append((ang, bend, pts, rg.uniform(3.4, 4.4) * (R / 170) ** 0.3))
     for ang, bend, pts, w in cul:
         for k in range(5):
             (x0, y0), (x1, y1) = pts[k], pts[k + 1]
@@ -126,14 +128,14 @@ def bamboo(K, R=170.0, seed=3, ncul=22):
     # chùm lá dọc thân (từ 28% ra ngọn) + chùm lấp khe giữa các thân
     cl = []
     for ang, bend, pts, w in cul:
-        for j in range(rg.integers(22, 30)):
+        for j in range(int(rg.integers(22, 30) * dens * R / 170)):
             f = rg.uniform(0.2, 1.04) ** 0.8
             kk = min(int(f * 6), 5); ft = f * 6 - kk
             (x0, y0), (x1, y1) = pts[kk], pts[kk + 1]
             sx = x0 + (x1 - x0) * ft; sy = y0 + (y1 - y0) * ft
             ca = ang + bend * f + rg.choice([-1, 1]) * rg.uniform(0.35, 1.3)
             cl.append((sx, sy, ca, f))
-    for i in range(ncul * 8):
+    for i in range(int(ncul * 8 * dens * (R / 170) ** 2)):
         a_ = rg.uniform(0, 6.283); r_ = R * rg.uniform(0.17, 0.8) ** 0.9
         cl.append((c + math.cos(a_) * r_, c + math.sin(a_) * r_, a_ + rg.uniform(-0.8, 0.8), r_ / R))
     items = []
@@ -143,6 +145,7 @@ def bamboo(K, R=170.0, seed=3, ncul=22):
         items.append((h, sx, sy, ca, f))
     items.sort()
     for h, sx, sy, ca, f in items:
+        if sx > xmax: continue
         light = 0.48 + 0.64 * h
         tl = rg.uniform(4, 9)
         ex = sx + math.cos(ca) * tl; ey = sy + math.sin(ca) * tl
@@ -153,7 +156,7 @@ def bamboo(K, R=170.0, seed=3, ncul=22):
             leaf(out, K, ex + rg.normal(0, 1.4), ey + rg.normal(0, 1.4), la, rg.uniform(11, 17), rg.uniform(2.0, 2.8), gcol, light * rg.uniform(0.92, 1.08), rg)
     # măng non nhú gần gốc
     for i in range(3):
-        a_ = rg.uniform(0, 6.283); r_ = R * rg.uniform(0.12, 0.2)
+        a_ = rg.uniform(0, 6.283); r_ = R * base * rg.uniform(0.12, 0.2)
         mx = c + math.cos(a_) * r_; my = c + math.sin(a_) * r_
         culm(out, K, mx, my, mx + math.cos(a_) * 5, my + math.sin(a_) * 5, 4.2, 1.2, (150, 120, 64), rg, node=2.2)
     return out
