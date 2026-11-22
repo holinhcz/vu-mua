@@ -162,7 +162,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		bc = Vector3(bq.x, bq.y, u)
 		# bụi tre (Link 11-22 "bên phải trên mái nhà"): mọc sau nhà, tán đè lên mái lá bên phải
 		tc = Vector3(maxf(W, roof_x + 202.0 * u) + 15.0 * u, f.position.y + 280.0 * u, u)   # gốc khuất sau mép màn
-		canopy = {"pos": P.call(sdx * 0.6, 0) + Vector2(0, 120.0 * u), "sc": u, "flip": false, "mirv": true}   # Link 11-22: tán xuống dưới các thẻ (mép cắt trên đã soi gương)
+		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
 		for q in LJ.ground_leaves:
 			var v: Vector2 = P.call(Lx.call(float(q[0])), float(q[1]))
 			gl.append([v.x, v.y, q[2], q[3]])
@@ -346,7 +346,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	# khe bên phản hẹp: thu tán cho khoảng nửa cây lọt khe (gốc cây khuất ngoài mép màn), mép trên luôn khuất
 	# Link 11-21 "tán xoài chạm lên bàn cờ": cây giữ cỡ thật (không thu bé theo khe), mép lá chạm đúng mép khung phản
 	csc = maxf(minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0)), canopy.sc * 0.8)
-	if not canopy.has("mirv"): cpos.y = minf(cpos.y, 20.0 * csc)
+	cpos.y = minf(cpos.y, 20.0 * csc)
 	if canopy.has("top"):
 		var tr: Rect2 = canopy.top                              # vùng góc trên trái (màn), tán nằm gọn trong đó
 		var ty1 := 0.0
@@ -391,6 +391,10 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 				need = maxf(need, (cpos.x + x1 * csc) - bz.position.x)  # mép phải lớp phải ≤ mép trái phản
 	if not canopy.has("top"):
 		cpos.x -= fl * need
+	# mép cắt trái/trên của ảnh tán (x=-40, y=-40 css tán) luôn nằm ngoài cửa sổ thật (cả khi cửa sổ rộng hơn khung), cộng bóng 46/62
+	# cửa sổ rộng hơn khung thiết kế: khung đã che kín mép cắt, nên dời tán ra theo đúng phần cửa sổ dư (trái/trên) là mép cắt vẫn khuất
+	var EX: Rect2 = ext if ext.size.x > 0 else Rect2(0, 0, W, H)
+	cpos.x += minf(0.0, EX.position.x); cpos.y += minf(0.0, EX.position.y)
 	canopy.pos = cpos
 	var croot := Node2D.new(); croot.position = canopy.pos
 	croot.scale = Vector2(-canopy.sc if canopy.flip else canopy.sc, canopy.sc)
@@ -407,9 +411,6 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var top_ := canopy.has("top")      # màn dọc: bóng tán nhạt + mềm hơn (Link 11-22, bóng đặc như vết dầu)
 		s.material = _wmat(t, (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * 1.5 * PXU, 3.0 * PXU, 0.0, ph4[i], 0.0, 0.3, 0.3 if top_ else 0.5, log((14.0 if top_ else 7.0) * PXU) / log(2.0))
 		# tán soi gương qua mép cắt trái (x=-40) và (màn ngang) mép cắt trên (y=-40) của ảnh: thành vòm liền, không bao giờ lòi mép cắt (cả bóng)
-		for mv in _mirrors(canopy):
-			var sm := _spr(croot, t, _mpos(w, t, mv) + shoff, false); sm.flip_h = mv.x < 0; sm.flip_v = mv.y < 0
-			sm.material = s.material
 	var bt := tex("chuoi")
 	var bsh := _spr(self, bt, Vector2(bc.x, bc.y) + Vector2(34, 44) * bc.z, true, 0.0, bc.z)
 	bsh.material = _wmat(bt, bt.get_size() / 2, bt.get_size().x / 2, 0.0, 1.5 * PXU, 0.035, 0.9, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
@@ -438,9 +439,6 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
 		s.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i], 0.1, 0.0, 0.0, 0.0)
-		for mv in _mirrors(canopy):
-			var sm2 := _spr(croot, xt[i], _mpos(w, xt[i], mv), false); sm2.flip_h = mv.x < 0; sm2.flip_v = mv.y < 0
-			sm2.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i] + 0.8 * (mv.x + 2.0 * mv.y + 3.0), 0.1, 0.0, 0.0, 0.0)
 	if tc.x > -9999 and roof_x >= 0:
 		# lá tre bay rơi từ bụi tre trên mái: chao lượn, gió đẩy về phía sân
 		var rgf := RandomNumberGenerator.new(); rgf.seed = 91
@@ -478,16 +476,6 @@ func _process(dt: float) -> void:
 		o.sp.modulate.a = fade
 		o.sd.position = Vector2(x + 38 * hgt * k, y + 52 * hgt * k); o.sd.rotation = o.sp.rotation; o.sd.scale = o.sp.scale
 		o.sd.modulate.a = (1.0 - 0.5 * hgt) * fade
-
-func _mirrors(cn: Dictionary) -> Array:
-	var r := [Vector2(-1, 1)]
-	if cn.has("mirv"): r += [Vector2(1, -1), Vector2(-1, -1)]
-	return r
-
-func _mpos(w: Array, t: Texture2D, mv: Vector2) -> Vector2:
-	# vị trí ảnh lớp tán khi soi gương qua x=-40 / y=-40 (css tán)
-	var tw: Vector2 = t.get_size() / PXU
-	return Vector2(float(w[0]) if mv.x > 0 else -80.0 - float(w[0]) - tw.x, float(w[1]) if mv.y > 0 else -80.0 - float(w[1]) - tw.y)
 
 func _hen_ok(p: Vector2) -> bool:
 	var r: float = hen.r
