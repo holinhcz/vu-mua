@@ -197,8 +197,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			hp = Vector2(nx + nr * 0.6, clampf(ny - 8, band0 + 30, bot - 30))     # nia lúa đã bỏ: gà mẹ đứng chỗ nia
 			if sd.size.x > 720:
 				add.call("lu", nx + nr + 150, clampf(gy + 10, band0 + 30, bot - 26), 50.0 / 92.0, [8, 10, 6, 0.45])
-			var bw: float = R.size.x * 2.1; var bz_: float = bw / 437.0
-			short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
+			# Link 11-22 "cây chuối to ra dời vô trong": to hơn, tâm lùi vào trong màn
+			var bw: float = R.size.x * 2.9; var bz_: float = bw / 437.0
+			short_banana = Rect2(Vector2(sd.end.x - 45.0, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))     # gốc chuối thấy được trong màn
 		else:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
 			hs = clampf(mL / 200.0, 0.25, 0.5)
@@ -264,7 +265,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			_spr(self, lt2, v, true, rr, ss)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
 	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
-	items = items.filter(func(it): return not (it[0] in ["mam", "non", "nong"]))   # Link 11-21 bỏ ca nước; 11-22 bỏ nón lá + nia lúa
+	items = items.filter(func(it): return not (it[0] in ["mam", "non", "nong", "ro", "bong", "lu"]))   # Link 11-21 bỏ ca nước; 11-22 bỏ nón lá, nia lúa, nia xoài, chậu bông, lu
 	for it in items:
 		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
 		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
@@ -355,7 +356,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		# Link 11-22 "dời cây xoài ra gần chính giữa chút cho to": tán to hơn (theo cỡ cảnh u), tâm tán ~38% bề ngang màn
 		# Link 11-22 "dời cây xoài ra gần chính giữa chút cho to": tán (vốn là 1/4 tròn ở góc) xoay 45° cho vòm tán rủ xuống giữa dải trên,
 		# tâm tán ~45% bề ngang, mép dưới lá chạm mép trên khung phản. Số đo vòm sau khi xoay (css tán): đáy lá 682 dưới tâm.
-		csc = maxf(tr.size.y / 150.0, 0.5 * u)
+		csc = maxf(tr.size.y / (230.0 if W < 500.0 else 150.0), 0.5 * u)     # điện thoại: tán nhỏ lại cho thấy dáng vòm (Link 11-22)
 		var Rc := Vector2(40, -150).rotated(PI / 4.0)
 		cpos = Vector2(W * 0.45, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
 		canopy["rot"] = PI / 4.0
