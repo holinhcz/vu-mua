@@ -20,7 +20,7 @@ var _lk := ""               # khóa danh sách: đổi tab / họ / lọc thì c
 const LOCS := [["all", "Tất cả"], ["mo", "Muốn nói chuyện"], ["nho", "Đang nhờ"], ["than", "Thân nhất"], ["lau", "Lâu chưa ghé"], ["ngay", "Ngày riêng"]]
 const GPN := {"cha": "Cha mẹ", "con": "Con cháu", "ae": "Anh em", "sui": "Sui gia", "bc": "Bà con", "ban": "Bạn làm ăn", "xom": "Hàng xóm"}
 const QHG := [["Gia đình", ["cha", "con", "ae"], "rgb(214, 140, 40)"], ["Bà con", ["sui", "bc"], "rgb(76, 150, 48)"], ["Hàng xóm", ["ban", "xom"], "rgb(70, 120, 180)"]]
-const HOMAU := ["#b5653a", "#5f8a3c", "#c4932c", "#4f7896", "#7a5a8c", "#3f8a7a", "#a34d70", "#8a6a2e", "#4a7a4a", "#9a5040"]
+const HOMAU := ["#c0552e", "#3f8a3c", "#3f72b0", "#c4932c", "#8a55a8", "#2f9a90", "#c0457a", "#7a6a2e", "#5a6a8a", "#9a7040"]   # (bản 494) 10 màu cách xa nhau
 const TAGI := {"mo": "pic:res://ui/img/bong/chat.png", "nho": "pic:res://ui/img/bong/gap.png", "ng": "pic:res://ui/img/bong/sao.png", "lam": "pic:res://ui/img/xt/b_cuoc.webp"}
 const TAGS := {"mo": "Muốn nói chuyện", "nho": "Đang nhờ việc", "ng": "Hôm nay ngày riêng", "lam": "Đang làm thuê cho bạn"}
 const DOCK := 86.0          # cao đáy cố định
@@ -58,11 +58,16 @@ func step(dt: float) -> void:   # gpRender mỗi giây
 func _sig() -> String:
 	return JSON.stringify([tab, ho, sel, q, loc, ex, more, W.gp_fam(), W._vr()])
 
-static func gp_color(h: String) -> String:   # gpColor: màu họ
-	var k := 0
-	for i in h.length():
-		k = (k * 31 + h.unicode_at(i)) & 0xffffffff
-	return HOMAU[k % HOMAU.size()]
+var _hoc := {}   # (bản 494) họ -> màu: mỗi họ một màu riêng, không trùng (xếp họ theo tên, lấy lần lượt bảng màu)
+func gp_color(h: String) -> String:
+	return String(_hoc.get(h, HOMAU[0]))
+
+func _hoc_set(hl: Array) -> void:
+	var L := hl.duplicate()
+	L.sort()
+	_hoc = {}
+	for i in L.size():
+		_hoc[String(L[i])] = HOMAU[i % HOMAU.size()]
 
 func _ck(kind: String) -> Array:   # "ho:<#màu>": nền nhạt theo màu họ; "hoon:<#màu>": họ đang chọn (đậm hơn)
 	if kind.begins_with("ho:") or kind.begins_with("hoon:"):
@@ -183,6 +188,7 @@ func _build() -> void:
 	hl.sort_custom(func(a, b): return hos[a] > hos[b])
 	if not hos.has(ho):
 		ho = String(hl[0]) if hl.size() else ""
+	_hoc_set(hl)
 	var key := tab + "|" + ho + "|" + loc
 	if key != _lk:
 		_lk = key
