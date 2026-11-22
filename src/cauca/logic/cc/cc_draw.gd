@@ -279,9 +279,19 @@ func fx_draw(ci: CanvasItem, tod: Dictionary) -> void:
 				e.append(e[0])
 				ci.draw_polyline(e, Color(lit, .7 * (1 - t)), 1, true)
 				ci.draw_rect(Rect2(c.x - r * .3, c.y - r * .5, maxf(1, r * .4), maxf(1, r * .3)), Color(1, 1, 1, .5 * (1 - t)))
-			"foam":
+			"foam":   # bọt nét: vòng bọt đứt khúc + vài bong bóng nhỏ, không loang mờ
 				var r: float = (10 + t * 18) * k * p.s
-				A.ell(ci, s, r, r * .22, Color(lit, .14 * (1 - t)))
+				var fa := .75 * (1 - t)
+				var seed_: int = int(p.x * 97 + p.z * 31)
+				for j in 7:
+					var a0 := TAU * j / 7.0 + float(seed_ % 7) * .3
+					var arc := A.ell_pts(s, r, r * .24, 40).slice(int(a0 / TAU * 40) % 40, int(a0 / TAU * 40) % 40 + 3)
+					if arc.size() >= 2:
+						ci.draw_polyline(arc, Color(lit, fa), maxf(1.2, 1.6 * k), true)
+				for j in 5:
+					var a1 := TAU * (j + .5) / 5.0 + float(seed_ % 5)
+					var bp := s + Vector2(cos(a1) * r * .75, sin(a1) * r * .2)
+					ci.draw_circle(bp, maxf(1.0, 1.4 * k * (1 - t * .5)), Color(lit, fa * .9))
 
 # cá cong mình quẫy: cắt dọc 14 dải, đuôi lắc nhiều nhất (đầu bên phải). clip_y: chỉ vẽ phần trên đường đó (toạ độ khung)
 func draw_bent(ci: CanvasItem, t: Texture2D, w: float, hh: float, ph: float, amp: float, mod := Color.WHITE, clip_y := INF) -> void:

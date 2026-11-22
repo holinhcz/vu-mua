@@ -31,7 +31,7 @@ func _init(g) -> void:
 	game = g
 
 func _ready() -> void:
-	t_dot = _radial(16, 3.0)
+	t_dot = _drop(32)   # giọt nét: viền rõ, có chấm sáng (Link 11-22 "bọt làm rõ lên, mờ căm")
 	t_soft = _radial(48, 1.0)
 	t_streak = _streak()
 	clip_sh = Shader.new()
@@ -64,8 +64,8 @@ func _ready() -> void:
 		p.initial_velocity_min = 25 * b[2]
 		p.initial_velocity_max = 60 * b[2]
 		p.gravity = Vector2(0, 420 * b[2])
-		p.scale_amount_min = .24 * b[2]
-		p.scale_amount_max = .42 * b[2]
+		p.scale_amount_min = .10 * b[2]
+		p.scale_amount_max = .18 * b[2]
 		p.color_ramp = _ramp(.75)
 		p.local_coords = false
 		p.emitting = false
@@ -80,6 +80,25 @@ static func _radial(n: int, pw: float) -> ImageTexture:
 			var d := Vector2(x - c, y - c).length() / (n / 2.0)
 			var a := clampf(1.0 - d, 0, 1)
 			im.set_pixel(x, y, Color(1, 1, 1, pow(a, 1.0 / pw) if pw > 1.0 else a * a))
+	return ImageTexture.create_from_image(im)
+
+# giọt nước nét: tròn đặc trắng hơi xanh, viền xanh nhạt rõ 1 điểm ảnh, chấm sáng trắng lệch trên trái
+static func _drop(n: int) -> ImageTexture:
+	var im := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var c := (n - 1) / 2.0
+	var R := n * .44
+	for y in n:
+		for x in n:
+			var d := Vector2(x - c, y - c).length()
+			var a := clampf(R - d + .5, 0, 1)          # mép khử răng cưa 1 điểm ảnh, không nhòe
+			var col := Color(.93, .97, 1.0)
+			if d > R - n * .09:
+				col = Color(.70, .84, .92)              # viền
+			var hd := Vector2(x - c + R * .35, y - c + R * .35).length()
+			if hd < R * .28:
+				col = Color(1, 1, 1)                    # chấm sáng
+			im.set_pixel(x, y, Color(col, a))
+	im.generate_mipmaps()
 	return ImageTexture.create_from_image(im)
 
 static func _streak() -> ImageTexture:
@@ -114,11 +133,11 @@ func splash(x: float, z: float, sz := 1.0) -> void:
 	d.initial_velocity_min = .8 * rs * u * .4
 	d.initial_velocity_max = 2.2 * rs * u * .4
 	d.gravity = Vector2(0, 3.2 * u * .9)
-	d.scale_amount_min = .09 * k * 2.2 * rs
-	d.scale_amount_max = .17 * k * 2.2 * rs
+	d.scale_amount_min = .035 * k * 2.2 * rs
+	d.scale_amount_max = .075 * k * 2.2 * rs
 	d.emission_sphere_radius = .04 * u
 	d.color_ramp = _ramp(.92)
-	if sz >= .6:   # tia nhỏ (cá quẫy lúc kéo) không có hơi nước
+	if false:   # bỏ hơi nước mờ (Link 11-22: bọt mờ căm)
 		var m := _emitter(p, t_soft, 5, .9, 0)
 		m.direction = Vector2(0, -1)
 		m.spread = 40
