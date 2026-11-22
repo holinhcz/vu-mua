@@ -159,7 +159,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var q: Vector2 = P.call(float(c[0]) + hdx, float(c[1]) + 148.0)
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
-		bc = Vector3(bq.x, bq.y, u)
+		bc = Vector3(bq.x, bq.y, 1.35 * u)     # Link 11-22: chuối màn ngang to lên
 		# bụi tre (Link 11-22 "bên phải trên mái nhà"): mọc sau nhà, tán đè lên mái lá bên phải
 		tc = Vector3(maxf(W, roof_x + 202.0 * u) + 15.0 * u, f.position.y + 280.0 * u, u)   # gốc khuất sau mép màn
 		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
@@ -412,6 +412,13 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		s.material = _wmat(t, (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * 1.5 * PXU, 3.0 * PXU, 0.0, ph4[i], 0.0, 0.3, 0.3 if top_ else 0.5, log((14.0 if top_ else 7.0) * PXU) / log(2.0))
 		# tán soi gương qua mép cắt trái (x=-40) và (màn ngang) mép cắt trên (y=-40) của ảnh: thành vòm liền, không bao giờ lòi mép cắt (cả bóng)
 	var bt := tex("chuoi")
+	if not port:
+		# chuối màn ngang to lên: mép lá phải vừa chạm mép trái khung phản, không lấn lên phản
+		var bur := _used("chuoi"); var btw: Vector2 = bt.get_size() / PXU
+		var bx1: float = bc.x + (bur.end.x - btw.x / 2) * bc.z
+		var by0: float = bc.y + (bur.position.y - btw.y / 2) * bc.z
+		var lim: float = fr.position.x + fr.size.x * 0.03          # lá được chạm lên viền gỗ, không tới ô cờ
+		if bx1 > lim and by0 < fr.end.y: bc.x -= bx1 - lim
 	var bsh := _spr(self, bt, Vector2(bc.x, bc.y) + Vector2(34, 44) * bc.z, true, 0.0, bc.z)
 	bsh.material = _wmat(bt, bt.get_size() / 2, bt.get_size().x / 2, 0.0, 1.5 * PXU, 0.035, 0.9, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
 	var fall := Node2D.new(); add_child(fall)
