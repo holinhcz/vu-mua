@@ -148,7 +148,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			if p[0] == "lu": q.x = minf(q.x + shift, roof_x - 58.0 * u)
 			if p[0] in ["ro", "bong"]: q.x = (f.end.x + roof_x) * 0.5          # Link 11-22: nia xoài + chậu bông cân giữa khe phản - mái
 			if p[0] == "ga": q = P.call(Lx.call(470.0), 520.0)     # Link 11-22 bỏ nia lúa + nón: gà mẹ ra giữa sân trái
-			items.append([p[0], q.x, q.y, u, p[4]])
+			var sc_: float = u
+			if p[0] == "ro" and roof_x - f.end.x > 230.0 * u:
+				# Link 11-22 "màn lớn nhất nia xoài trống trải": khe rộng thì nia to hơn, dời sát bụi tre (lá tre phủ 1 góc nia)
+				sc_ = 1.3 * u; q = Vector2(roof_x - 60.0 * u, f.position.y + 200.0 * u)
+			items.append([p[0], q.x, q.y, sc_, p[4]])
 		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
 		var hdx: float = Lx.call(470.0) - hx0                 # gà con đi theo gà mẹ
 		for c in LJ.chicks:
