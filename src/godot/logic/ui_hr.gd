@@ -1,22 +1,21 @@
-extends "res://logic/ui_pop.gd"
-# NGƯỜI LÀM THUÊ (ZD / sm bản web, Sổ làng › Làm thuê): hộp .raceov.pcov > .rbox, mỗi nhà một thẻ .tt (.got khi đang làm):
-# tên + tim, việc đang làm, ô chọn việc (select.hrsel), ô chọn giống / món (label.hrlab), nút Ghé nhà; cuối là Cho nghỉ hết.
-# Ô chọn của trình duyệt: bấm vô thì xổ danh sách ngay dưới ô (mỗi dòng một lựa chọn), chọn xong thì gập lại.
-# Mẫu: ui/snap/hr.json (hộp), hr_tab.json (thẻ). Luật ở w_lang.gd (n4, jq, xd, lm, vg, yx, om, wage).
+extends "res://logic/ui_kbang.gd"
+# NGƯỜI LÀM THUÊ (ZD / sm bản web, Sổ làng › Làm thuê). (bản 469) làm lại trên khung Kho + chip chung (ui_kbang.gd):
+# chip tổng (đang thuê mấy người, tốn mấy xu/phút, Cho nghỉ hết), mỗi nhà một khối (mặt, tên, tim, chip việc + lương, Ghé nhà);
+# chạm khối mở lưới thuê làm chung (_hire, như tab Thuê làm bên Nhà dân), mỗi lúc một nhà. Luật ở w_lang.gd (n4, jq, set_jr, lm, vg, yx, om, wage).
 
 var W          # w_lang.gd
-var HT := {}                # thẻ mẫu
-var dd := ""                # ô chọn đang xổ: "<nhà>|job" / "<nhà>|crop" / "<nhà>|jr"
-const CHEV := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M5 9l7 7 7-7\" fill=\"none\" stroke=\"#5a3e14\" stroke-width=\"3.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+var op = null               # nhà đang mở lưới thuê
+const JK := {"ruong": "j_ruong", "vuon": "j_vuon", "chan": "j_chan"}   # màu chip việc đang làm (xưởng: j_xuong)
+const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
 
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
-	HT = Snap.load_snap("hr_tab")
 
 func open() -> void:   # ZD
 	on = true
-	dd = ""
+	op = null
+	hpick = ""
 	scroll = 0.0
 	sig = ""
 	_build()
@@ -33,179 +32,103 @@ func step(dt: float) -> void:   # sm khi đổi
 
 func _sig() -> String:
 	var L = G.g.get("lang")
-	return JSON.stringify([dd, L.get("fam") if L is Dictionary else null, G.g.coins, W.ut_s().c, W._vr()])
+	return JSON.stringify([op, hpick, L.get("fam") if L is Dictionary else null, G.g.coins, W.ut_s().c, W._vr(), G.night])
 
-# ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
-	_pop(_body())
+	var sh := _kshell([], "", func(_k): pass)
+	var r := _body()
+	_kmount(sh[0], sh[1], float(sh[2]), r[0], float(r[1]))
+
+func _co(f: String) -> String:   # c(f): tên chỗ làm
+	return "Làm ruộng" if f == "ruong" else String(W.CO.get(f, f))
 
 func _body() -> Array:   # sm
 	var out := []
+	var y := 6.0
 	var L = G.g.get("lang")
 	if not (L is Dictionary):
-		return out   # p.note: bản web giấu (.u2sub .note{display:none})
+		return [out, y]
 	var F: Dictionary = W._r0().fam
 	var ks: Array = W._okeys(F)
-	var r := 0
+	var n := 0
+	var xu := 0
 	for u in ks:
 		if W._tr(F[u].get("job")):
-			r += 1
-	for u in ks:
-		var c := _tt(u, F[u])
-		c.gap = 6.0 if out.size() else 7.5
-		out.append(c)
-	if r:
-		var j := _cl(HT.jobs)
-		var b: Dictionary = j.kids[0]
-		b.act = _off
-		j.gap = 7.5
-		out.append(j)
-	return out
+			n += 1
+			xu += int(W.wage(F[u]))
+	# chip tổng
+	var tc := _chip(X0, y, XW, 44.0, "got" if n else "fut")
+	out.append(tc)
+	out.append(_dt(X0 + 12.0, y + 6.0, XW - 120.0, 17.0, ("Đang thuê " + str(n) + "/" + str(ks.size()) + " người") if n else "Chưa thuê ai", 12.5, 800, BROWN, "left"))
+	if n:
+		out.append_array(_rowi(X0 + 12.0, y + 23.0, 15.0, ["Tốn " + str(xu), "c", " mỗi phút · hết tiền thì nghỉ"], 10.5, 600, SUB)[0])
+		out.append(_btn(X0 + XW - 104.0, y + 9.0, 94.0, 26.0, "Cho nghỉ hết", func(): W.hr_off(), "red"))
+	else:
+		out.append(_dt(X0 + 12.0, y + 23.0, XW - 24.0, 15.0, "Chạm nhà nào để giao việc. Càng thân càng rẻ.", 10.5, 600, SUB, "left"))
+	y += 44.0 + GG
+	# nhà đang làm lên trước, nhà rảnh sau
+	var sk := ks.duplicate()
+	sk.sort_custom(func(a, b): return (1 if W._tr(F[a].get("job")) else 0) > (1 if W._tr(F[b].get("job")) else 0) if W._tr(F[a].get("job")) != W._tr(F[b].get("job")) else ks.find(a) < ks.find(b))
+	for u in sk:
+		var r := _house(y, u, F[u])
+		out.append_array(r[0])
+		y += float(r[1]) + GG
+	return [out, y]
 
-func _off() -> void:   # data-hr="off"
-	W.hr_off()
-
-func _co(f: String) -> String:   # c(f): tên chỗ làm, chữ thường
-	return "ruộng lúa" if f == "ruong" else String(W.CO.get(f, f)).to_lower()
-
-# ------------------------------------------------------------------ thẻ một nhà (.tt)
-func _tt(u, s: Dictionary) -> Dictionary:
+func _house(y: float, u, s: Dictionary) -> Array:   # khối 1 nhà: mặt, tên, tim, chip việc + lương, Ghé nhà; đang mở thì lưới thuê bên dưới
 	var job := String(s.get("job")) if W._tr(s.get("job")) else ""
-	var c := _cl(HT.tt_got if job != "" else HT.tt)
-	var lf: Dictionary = c.kids[0]
-	var gb: Dictionary = c.kids[1]
-	var x := float(lf.r[0])
-	var y := float(lf.r[1])
-	var lw := float(lf.r[2])
-	var K: Array = lf.kids
-	var b: Dictionary = K[0]
-	var hs: Dictionary = b.kids[0]          # span.vl-heart
-	var bs := _cl(b)
-	bs.erase("kids")
-	var hb := _put(b, [_r(String(s.n) + " ", bs), _r(W.e_t(W._i(s.get("tim"))), hs)], "left", lw)
-	b.r = [x, y, lw, hb]
-	var kids := [b]
-	var yy := y + hb + 0.2
-	var sm: Dictionary = K[1]
-	var t := ("Đang làm: " + _co(job) + " · " + str(W.wage(s)) + " xu/phút") if job != "" else "Đang ở nhà"
+	var opn: bool = op != null and str(op) == str(u)
+	var out := []
+	var c := _chip(X0, y, XW, 10.0, "now" if opn else "fut")   # đang mở lưới: vàng
+	out.append(c)
+	var x := X0 + 10.0
+	var w := XW - 20.0
+	var yy := y + 10.0
+	# mặt (chạm: ghé nhà)
+	var lk: int = clampi(W._i(s.get("lk")), 0, 7)
+	var fc := _chip(x, yy, 40.0, 40.0, "fut")
+	fc.kids = [_pic(x + 3.0, yy + 3.0, 34.0, 34.0, "res://ui/img/vlface/" + str(lk) + ("n" if G.night else "") + ".webp")]
+	fc.act = _go.bind(u)
+	out.append(fc)
+	var tx := x + 48.0
+	# Ghé nhà: chip nhỏ góc phải
+	var gc := _tchip(x, yy, "Ghé nhà ›", "fut", SUB, _go.bind(u), 20.0, 10.0)
+	Snap._move(gc[0], Vector2(w - float(gc[1]), 0))
+	out.append(gc[0])
+	var nw := w - 48.0 - float(gc[1]) - 6.0
+	out.append(_dt(tx, yy, nw, 16.0, _fitw(String(s.n), 12.0, 800, nw), 12.0, 800, BROWN, "left"))
+	if W._tr(s.get("req")):   # đang nhờ việc: chấm đỏ cạnh tên
+		out.append(_dbx(tx + minf(Box.text_w(String(s.n), 12.0, 800), nw) + 4.0, yy + 3.0, 7.0, 7.0, "rgb(226, 70, 60)", 3.5))
+	# tim bằng hình
+	var tim: int = W._i(s.get("tim"))
+	for i in 5:
+		out.append(_dic(tx + i * 14.0, yy + 18.0, 12.0, HEART if i < tim else HEART0))
+	# chip việc + lương
+	var jt := ("Đang ở nhà" if job == "" else _co(job)) + ("" if job == "" else " · " + str(W.wage(s)) + " xu/phút")
+	var jc := _tchip(tx + 74.0, yy + 15.0, jt, "got" if job == "" else String(JK.get(job, "j_xuong")), "rgb(46, 120, 50)" if job == "" else BROWN, null, 18.0, 9.5)
+	out.append(jc[0])
+	yy += 40.0
 	if W._tr(s.get("req")):
-		t += " · đang nhờ " + W._r_tx(s.req)
-	sm.r = [x, yy, lw, 0.0]
-	var h := _put(sm, [_r(t, _cl(sm))], "left", lw)
-	sm.r[3] = h
-	kids.append(sm)
-	yy += h + 4.5
-	var sel: Dictionary = K[2]
-	yy = _select(kids, sel, _job_opts(u, s, job), job, String(u) + "|job", W.n4.bind(u), x, yy, lw)
-	if job == "ruong":
-		yy = _labeled(kids, K, "Gieo cây", _crop_opts(), String(s.get("crop", "")), String(u) + "|crop", W.jq.bind(u), x, yy + 4.5, lw)
-	elif job != "" and G.xw.sr.has(job):
-		var rec: Array = G.xw.sr[job].rec
-		var ro := rec.map(func(e): return [String(e), String(W._ae(e).get("name", e)) + ("" if G.xw.has_in(String(e)) else " (thiếu đồ)"), false])
-		yy = _labeled(kids, K, "Làm món", ro, String(s.get("jr", "")), String(u) + "|jr", W.xd.bind(u), x, yy + 4.5, lw)
-	lf.kids = kids
-	var ch := yy - y
-	lf.r[3] = ch
-	var H := ch + 18.0
-	c.r[3] = H
-	gb.act = _go.bind(u)
-	_mv(gb, float(gb.r[0]), float(c.r[1]) + (H - float(gb.r[3])) * 0.5)
-	return c
+		out.append(_dt(x + 48.0, yy - 2.0, w - 48.0, 14.0, _fitw("Đang nhờ " + W._r_tx(s.req), 10.0, 600, w - 48.0), 10.0, 600, "rgb(170, 60, 50)", "left"))
+		yy += 14.0
+	c.act = _op.bind(u)
+	yy += 10.0
+	c.r[3] = yy - y
+	if opn:   # lưới thuê nằm ngay dưới khối (không lồng trong khối)
+		yy += GG
+		var hr := _hire(yy, u, s, "rgb(76, 150, 48)", W)
+		out.append_array(hr[0])
+		yy += float(hr[1]) - 10.0
+	return [out, yy - y]
 
-func _go(u) -> void:   # data-go: đóng, về nhà đó
+func _op(u) -> void:   # chạm khối nhà: mở / đóng lưới thuê, mỗi lúc một nhà
+	if op != null and str(op) == str(u):
+		op = null
+	else:
+		op = u
+	hpick = ""
+
+func _go(u) -> void:   # Ghé nhà: đóng, về nhà đó
 	close()
 	U.vl_open(int(u))
-
-func _job_opts(u, s: Dictionary, job: String) -> Array:   # [[mã, chữ, tắt]]
-	var h := [["", "Nghỉ ở nhà", false]]
-	var p: Array = W.lm()
-	var d := maxi(1, int(ceil(W._gg().size() / 12.0)))
-	var full := job != "ruong" and p.size() >= d
-	h.append(["ruong", "Làm ruộng" + (" (đủ người)" if full else ""), full])
-	var l: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # (bản 440) Ruộng muối thuê được: mã "x_ruong"
-	for v in ["vuon", "chan"] + l:
-		var xn: String = W.vg(v)
-		var k: bool = xn != "" and job != v
-		var M: bool = W.yx(v) if W.E4.has(v) else true
-		h.append([v, String(W.CO.get(v, v)) + ((" (" + xn + ")") if k else ("" if M else " (chưa có gì)")), k or (not M and job != v)])
-	for o in h:
-		if o[0] != "" and job != o[0]:
-			o[1] = String(o[1]) + " · " + str(W.om(s, o[0])) + " xu/phút"
-	return h
-
-func _crop_opts() -> Array:   # Xq: theo thứ tự giống của web
-	var a: Array = W.xq({}).slice(1)
-	a.sort_custom(func(p, q): return int(p.i) < int(q.i))
-	return [["", "Giữ giống cũ", false]] + a.map(func(o): return [String(o.id), String(o.t), false])
-
-# label.hrlab: chữ nhỏ + ô chọn
-func _labeled(kids: Array, K: Array, txt: String, opts: Array, cur: String, key: String, cb: Callable, x: float, y: float, lw: float) -> float:
-	var lb: Dictionary = _cl(K[3]) if K.size() > 3 else _cl(HT.tt_got.kids[0].kids[3])
-	var ls: Dictionary = lb.kids[0]
-	_mv(lb, x, y)
-	lb.erase("kids")
-	lb.text = txt
-	var tw := _tw(lb, txt)
-	lb.tr = [x, y + 1.0, tw, 11.0]
-	lb.r = [x, y, lw, 15.0]
-	kids.append(lb)
-	return _select(kids, ls, opts, cur, key, cb, x, y + 15.0, lw)
-
-# select.hrsel: ô đang chọn (+ mũi tên); đang xổ thì thêm từng dòng lựa chọn bên dưới
-func _select(kids: Array, tpl: Dictionary, opts: Array, cur: String, key: String, cb: Callable, x: float, y: float, lw: float) -> float:
-	var s := _cl(tpl)
-	s.erase("kids")
-	_mv(s, x, y)
-	s.r[2] = lw
-	var lab := ""
-	for o in opts:
-		if String(o[0]) == cur:
-			lab = o[1]
-	var pl := _px(s, "padding-left")
-	var tw := lw - pl * 2.0 - 14.0
-	var t := _fit(s, lab, tw)
-	var th := _lh(s)
-	s.text = t
-	s.tr = [x + pl, y + (23.0 - th) * 0.5, _tw(s, t), th]
-	s.kids = [{"z": _z(s), "tag": "svg", "id": "", "cls": "", "r": [x + lw - pl - 10.5, y + 6.25, 10.5, 10.5], "css": {"display": "block", "position": "absolute"}, "svg": CHEV}]
-	s.act = _dd.bind(key)
-	kids.append(s)
-	var yy := y + 23.0
-	if dd == key:
-		for o in opts:
-			var r := _cl(tpl)
-			r.erase("kids")
-			var on: bool = String(o[0]) == cur
-			var st := _cl(r)
-			_mv(r, x, yy + 3.0)
-			r.r[2] = lw
-			var f := _flow([_r(("✓ " if on else "") + String(o[1]), st)], x + pl, yy + 3.0 + 4.0, lw - pl * 2.0, _lh(st))
-			r.erase("text")
-			r.erase("tr")
-			r.kids = f.kids
-			r.r[3] = f.h + 8.0
-			if on:
-				r.css["border-top"] = "1.33333px solid rgb(90, 160, 70)"
-				r.css["background-color"] = "rgb(236, 246, 228)"
-			if o[2]:
-				r.css.opacity = "0.55"
-			else:
-				r.act = _pick.bind(cb, String(o[0]))
-			kids.append(r)
-			yy += 3.0 + float(r.r[3])
-	return yy
-
-func _fit(n: Dictionary, s: String, w: float) -> String:   # cắt chữ cho vừa ô (…)
-	if _tw(n, s) <= w:
-		return s
-	while s.length() > 1 and _tw(n, s + "…") > w:
-		s = s.substr(0, s.length() - 1)
-	return s.strip_edges() + "…"
-
-func _dd(key: String) -> void:
-	dd = "" if dd == key else key
-
-func _pick(cb: Callable, v: String) -> void:   # change: n4 / Jq / XD
-	dd = ""
-	cb.call(v)

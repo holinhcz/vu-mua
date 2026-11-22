@@ -211,6 +211,7 @@ func _test_hook() -> void:
 			"tnsim": _tnsim(a)
 			"tn": ui.tn_open(a[1] if a.size() > 1 else "")
 			"ut": ui.ut_open(a[1] if a.size() > 1 else "")
+			"hr": ui.hr_open()
 			"utc": G.w_all.WL.ut_s().c = int(a[1]); G.w_all.WL.ut_s().p = int(a[2]) if a.size() > 2 else G.w_all.WL.ut_s().p; G.mark()
 			"hidev": ui.get_parent().visible = false
 			"gio": G.troi.hh = float(a[1])

@@ -12,35 +12,6 @@ var u := -1
 var tab := ""               # $r.tab
 var sub := ""               # $r.sub: "" | "chat" | "gift" (hộp nổi)
 var cv = null               # $r.cv (trò chuyện)
-var pick := ""              # (bản 441) tab Thuê làm: lưới đang mở ("" | "ruong" giống | "xuong" xưởng | "mon" món xưởng), mỗi lúc một lưới
-
-func _pk(k: String) -> void:   # chạm chip Làm ruộng / Làm xưởng: mở lưới của nó (chạm lại thì đóng)
-	pick = "" if pick == k else k
-
-func _job0(m: String) -> void:   # Nghỉ / vườn / chuồng: giao ngay, đóng lưới
-	pick = ""
-	W.n4(u, m)
-
-func _seed(id: String) -> void:   # chọn giống: lúc này mới giao Làm ruộng rồi gieo giống đó
-	var f = W._fam_of(u)
-	if f == null:
-		return
-	if f.get("job") != "ruong":
-		W.n4(u, "ruong")
-		if f.get("job") != "ruong":   # không giao được (thiếu tiền, đủ người): giữ lưới
-			return
-	W.jq(u, id)
-	pick = ""
-
-func _xw_pick(m: String) -> void:   # chọn xưởng: giao việc, rồi mở lưới món của xưởng đó
-	W.n4(u, m)
-	var f = W._fam_of(u)
-	if f != null and f.get("job") == m:
-		pick = "mon"
-
-func _mon(id: String) -> void:
-	W.set_jr(u, id)
-	pick = ""
 
 const HEART0 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(250,236,230)\" stroke=\"rgb(214,150,150)\" stroke-width=\"1.4\"/></svg>"
 static func _heartp(p: float) -> String:   # tim đầy p phần (tô đỏ từ trái sang)
@@ -54,7 +25,6 @@ const TAIL := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 10\"><
 const TAILB := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M11 1 L1 10 L11 7 Z\" fill=\"rgb(224,238,250)\"/><path d=\"M10.4 1.4 L1 10 L10.4 7.2\" fill=\"none\" stroke=\"rgb(96,146,196)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng nhà dân, chỉ sang mặt
 const TAILG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 11 11\"><path d=\"M0 1 L10 10 L0 7 Z\" fill=\"rgb(208,238,198)\"/><path d=\"M0.6 1.4 L10 10 L0.6 7.2\" fill=\"none\" stroke=\"rgb(76,160,70)\" stroke-width=\"1\" stroke-linejoin=\"round\"/></svg>"   # đuôi bong bóng mình
 const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "gao"}   # hình sở trường (thay emoji)
-const JOBIC := {"": "chieu", "ruong": "lua", "vuon": "qua_xoai", "chan": "trung"}
 # màu chip theo tính nết + màu theo tab: [gradient trên, giữa, dưới, viền]
 const VLC := {
 	"t_hien": ["rgb(250, 214, 226)", "rgb(252, 224, 234)", "rgb(254, 236, 242)", "rgb(206, 110, 140)"],
@@ -62,11 +32,6 @@ const VLC := {
 	"t_vui": ["rgb(255, 222, 170)", "rgb(255, 230, 190)", "rgb(255, 240, 214)", "rgb(214, 140, 40)"],
 	"t_khac": ["rgb(228, 214, 244)", "rgb(234, 222, 248)", "rgb(242, 234, 252)", "rgb(138, 104, 186)"],
 	"viec": ["rgb(255, 236, 176)", "rgb(255, 242, 198)", "rgb(255, 248, 220)", "rgb(214, 160, 30)"],
-	"thue": ["rgb(190, 228, 160)", "rgb(202, 234, 176)", "rgb(216, 240, 194)", "rgb(60, 140, 40)"],   # đang chọn: xanh đậm hơn nền nhóm
-	"j_ruong": ["rgb(232, 246, 220)", "rgb(238, 249, 228)", "rgb(244, 252, 238)", "rgb(150, 196, 120)"],   # (bản 439) nhóm việc thuê: nền nhạt
-	"j_vuon": ["rgb(255, 240, 214)", "rgb(255, 244, 224)", "rgb(255, 249, 236)", "rgb(222, 176, 110)"],
-	"j_chan": ["rgb(252, 230, 214)", "rgb(253, 236, 224)", "rgb(254, 243, 236)", "rgb(214, 156, 116)"],
-	"j_xuong": ["rgb(238, 230, 248)", "rgb(242, 236, 250)", "rgb(247, 243, 252)", "rgb(170, 146, 206)"],
 	"giong": ["rgb(226, 242, 206)", "rgb(232, 246, 216)", "rgb(240, 250, 230)", "rgb(120, 170, 80)"],
 	"s_ruong": ["rgb(222, 242, 204)", "rgb(230, 246, 216)", "rgb(240, 250, 230)", "rgb(110, 170, 70)"],   # (bản 442) màu khối sở trường theo nghề
 	"s_vuon": ["rgb(255, 232, 196)", "rgb(255, 238, 210)", "rgb(255, 246, 228)", "rgb(220, 150, 50)"],
@@ -94,7 +59,7 @@ func open(uu: int) -> void:   # gu("nha", u)
 	u = uu
 	tab = ""
 	sub = ""
-	pick = ""
+	hpick = ""
 	cv = null
 	scroll = 0.0
 	sig = ""
@@ -121,13 +86,13 @@ func step(dt: float) -> void:
 func _sig() -> String:
 	var f = W._fam_of(u)
 	var t = f.get("tt")
-	return JSON.stringify([f, tab, sub, cv, pick, G.g.coins, G.g.barn, W.tg().get("ev"), G.g.get("cuoi"), G.g.get("hn"), G.g.get("nghe"), G.night,
+	return JSON.stringify([f, tab, sub, cv, hpick, G.g.coins, G.g.barn, W.tg().get("ev"), G.g.get("cuoi"), G.g.get("hn"), G.g.get("nghe"), G.night,
 		int(G._now_ms() / 1000.0) if W._tr(t) else 0, W._vr()])
 
 func _tab_go(k: String) -> void:   # data-vt
 	if tab != k:
 		tab = k
-		pick = ""
+		hpick = ""
 		scroll = 0.0
 
 # ------------------------------------------------------------------ dựng
@@ -481,69 +446,9 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	out.append_array(_sect(y, "Thuê làm phụ", col))
 	out.append(_dt(X0 + 2.0, y + 18.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
 	y += 38.0
-	var s: Array = W.lm()
-	var hh := maxi(1, int(ceil(W._gg().size() / 12.0)))
-	var p: bool = e.get("job") == "ruong" or s.size() < hh
-	var bt := []
-	bt.append({"b": "Nghỉ ở nhà", "s": "Không tốn công", "ic": JOBIC[""], "st": "on" if not W._tr(e.get("job")) else "off", "act": _job0.bind("")})
-	var cr := String(e.get("crop", ""))
-	var rs: String = (("Gieo " + String(G.D.crops[cr].name).to_lower() if cr != "" and G.D.crops.has(cr) else "Giữ giống cũ") + " · " + str(W.om(e, "ruong")) + " xu/phút") if e.get("job") == "ruong" else ("Chọn giống · " + str(W.om(e, "ruong")) + " xu" if p else "Đủ người rồi")
-	bt.append({"b": "Làm ruộng", "s": rs, "ic": JOBIC.ruong, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" else ("off" if p else "dis"), "act": _pk.bind("ruong")})
-	for M in ["vuon", "chan"]:
-		var t: String = W.vg(M)
-		var w: bool = e.get("job") == M
-		var E := t != "" and not w
-		var C: bool = W.yx(M)
-		bt.append({"b": "Làm vườn" if M == "vuon" else "Chăm chuồng", "k": "j_" + M, "s": t + " đang làm" if E else (str(W.om(e, M)) + " xu/phút" if C else ("Chưa có cây" if M == "vuon" else "Chưa có con")),
-			"ic": JOBIC[M], "st": "on" if w else ("dis" if E or (not C and not w) else "off"), "act": _job0.bind(M)})
-	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # mã việc thuê (Ruộng muối = "x_ruong")
-	var xj: bool = o.has(e.get("job"))   # (bản 439) các xưởng gom 1 chip "Làm xưởng", chạm mở lưới chọn xưởng
-	if o.size():
-		var xs: String = (String(W.CO.get(e.job, e.job)) + (" · " + String(W._ae(e.jr).get("name", "")).to_lower() if W._tr(e.get("jr")) else "") + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chọn xưởng")
-		var xr: Array = G.xw.sr[W.xj(e.job)].rec if xj else []
-		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _pk.bind("xuong")})
-	if o.is_empty():   # (bản 444) chưa có xưởng: chip mờ trong lưới, chạm hiện cách xây
-		bt.append({"b": "Xưởng", "s": "Chưa xây", "ic": "gao", "st": "hint", "act": _dsay.bind("Xây xưởng (Xây dựng › Xưởng) rồi thuê người làm: xưởng tự thu hàng và làm tiếp món bạn chọn.")})
-	var gr := _grid(y, bt, 2, "thue")
-	out.append_array(gr[0])
-	y += float(gr[1]) + 10.0
-	if pick == "xuong" and o.size():   # lưới chọn xưởng
-		out.append_array(_sect(y, "Làm xưởng nào?", col))
-		y += 22.0
-		var xk := []
-		for M in o:
-			var t: String = W.vg(M)
-			var w: bool = e.get("job") == M
-			var E := t != "" and not w
-			var rec: Array = G.xw.sr[W.xj(M)].rec
-			var mm: String = M
-			xk.append({"b": String(W.CO.get(M, M)), "s": t + " đang làm" if E else str(W.om(e, M)) + " xu/phút", "ic": String(rec[0]) if rec.size() else "gao", "k": "j_xuong",
-				"st": "on" if w else ("dis" if E else "off"), "act": _xw_pick.bind(mm)})
-		var gx := _grid(y, xk, 2, "thue")
-		out.append_array(gx[0])
-		y += float(gx[1]) + 10.0
-	if pick == "ruong":   # lưới chọn giống: chọn xong mới giao Làm ruộng
-		out.append_array(_sect(y, "Gieo cây gì?", col))
-		y += 22.0
-		var pk := []
-		for M in W.xq(e):
-			var P: PackedStringArray = String(M.t).split(" · ")
-			var id: String = M.id
-			pk.append({"b": P[0], "s": " · ".join(P.slice(1)), "ic": id, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" and String(e.get("crop", "")) == id else "off", "act": _seed.bind(id)})
-		var g2 := _grid(y, pk, 2, "thue")
-		out.append_array(g2[0])
-		y += float(g2[1]) + 10.0
-	if pick == "mon" and W._tr(e.get("job")) and e.job != "ruong" and G.xw.sr.has(W.xj(e.job)):   # món của xưởng vừa chọn
-		var d: Dictionary = G.xw.sr[W.xj(e.job)]
-		out.append_array(_sect(y, "Làm món gì?", col))
-		y += 22.0
-		var rk := []
-		for M in d.rec:
-			var id := String(M)
-			rk.append({"b": String(W._ae(id).get("name", id)), "s": "" if G.xw.has_in(id) else "thiếu đồ", "ic": id, "k": "j_xuong", "st": "on" if e.get("jr") == id else "off", "act": _mon.bind(id)})
-		var g3 := _grid(y, rk, 2, "thue")
-		out.append_array(g3[0])
-		y += float(g3[1]) + 10.0
+	var hr := _hire(y, u, e, col, W)
+	out.append_array(hr[0])
+	y += float(hr[1])
 	return [out, y]
 
 # ------------------------------------------------------------------ tab Mua giống

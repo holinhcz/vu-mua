@@ -118,6 +118,11 @@ func _dbx(x: float, y: float, w: float, h: float, bg: String, rad := 8.0, bd := 
 
 # ô chip nổi như thẻ Sổ làng / chip Kho (viền trong 1px + vệt sáng + quầng trong + bóng): nền VÀ viền cùng tông theo trạng thái
 const CHIPK := {   # [gradient trên, giữa, dưới, viền]
+	"thue": ["rgb(190, 228, 160)", "rgb(202, 234, 176)", "rgb(216, 240, 194)", "rgb(60, 140, 40)"],   # đang chọn: xanh đậm hơn nền nhóm
+	"j_ruong": ["rgb(232, 246, 220)", "rgb(238, 249, 228)", "rgb(244, 252, 238)", "rgb(150, 196, 120)"],   # (bản 439) nhóm việc thuê: nền nhạt
+	"j_vuon": ["rgb(255, 240, 214)", "rgb(255, 244, 224)", "rgb(255, 249, 236)", "rgb(222, 176, 110)"],
+	"j_chan": ["rgb(252, 230, 214)", "rgb(253, 236, 224)", "rgb(254, 243, 236)", "rgb(214, 156, 116)"],
+	"j_xuong": ["rgb(238, 230, 248)", "rgb(242, 236, 250)", "rgb(247, 243, 252)", "rgb(170, 146, 206)"],
 	"fut": ["rgb(250, 242, 222)", "rgb(252, 247, 234)", "rgb(255, 252, 245)", "rgba(150, 112, 48, 0.55)"],
 	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
 	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
@@ -420,3 +425,109 @@ static func _fcol(f: float) -> String:
 	var k := a.lerp(b, f * 2.0) if f < 0.5 else b.lerp(c, (f - 0.5) * 2.0)
 	return "rgb(%d, %d, %d)" % [int(k.r8), int(k.g8), int(k.b8)]
 
+# ------------------------------------------------------------------ (bản 469) lưới thuê làm chung: tab Thuê làm (Nhà dân) và bảng Làm thuê dùng chung
+const JOBIC := {"": "chieu", "ruong": "lua", "vuon": "qua_xoai", "chan": "trung"}
+var hpick := ""             # lưới con đang mở ("" | "ruong" giống | "xuong" xưởng | "mon" món xưởng), mỗi lúc một lưới
+var hu = null               # nhà đang mở lưới
+var _hW                     # w_lang.gd (bảng gọi truyền vào)
+
+func _hire(y0: float, uu, e: Dictionary, col: String, W) -> Array:   # lưới việc thuê của 1 nhà + lưới con (giống / xưởng / món); trả [khối, cao]
+	_hW = W
+	if hu != uu:
+		hu = uu
+		hpick = ""
+	var out := []
+	var y := y0
+	var s: Array = W.lm()
+	var hh := maxi(1, int(ceil(W._gg().size() / 12.0)))
+	var p: bool = e.get("job") == "ruong" or s.size() < hh
+	var bt := []
+	bt.append({"b": "Nghỉ ở nhà", "s": "Không tốn công", "ic": JOBIC[""], "st": "on" if not W._tr(e.get("job")) else "off", "act": _hjob0.bind("")})
+	var cr := String(e.get("crop", ""))
+	var rs: String = (("Gieo " + String(G.D.crops[cr].name).to_lower() if cr != "" and G.D.crops.has(cr) else "Giữ giống cũ") + " · " + str(W.om(e, "ruong")) + " xu/phút") if e.get("job") == "ruong" else ("Chọn giống · " + str(W.om(e, "ruong")) + " xu" if p else "Đủ người rồi")
+	bt.append({"b": "Làm ruộng", "s": rs, "ic": JOBIC.ruong, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" else ("off" if p else "dis"), "act": _hpk.bind("ruong")})
+	for M in ["vuon", "chan"]:
+		var t: String = W.vg(M)
+		var w: bool = e.get("job") == M
+		var E := t != "" and not w
+		var C: bool = W.yx(M)
+		bt.append({"b": "Làm vườn" if M == "vuon" else "Chăm chuồng", "k": "j_" + M, "s": t + " đang làm" if E else (str(W.om(e, M)) + " xu/phút" if C else ("Chưa có cây" if M == "vuon" else "Chưa có con")),
+			"ic": JOBIC[M], "st": "on" if w else ("dis" if E or (not C and not w) else "off"), "act": _hjob0.bind(M)})
+	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # mã việc thuê (Ruộng muối = "x_ruong")
+	var xj: bool = o.has(e.get("job"))   # (bản 439) các xưởng gom 1 chip "Làm xưởng", chạm mở lưới chọn xưởng
+	if o.size():
+		var xs: String = (String(W.CO.get(e.job, e.job)) + (" · " + String(W._ae(e.jr).get("name", "")).to_lower() if W._tr(e.get("jr")) else "") + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chọn xưởng")
+		var xr: Array = G.xw.sr[W.xj(e.job)].rec if xj else []
+		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _hpk.bind("xuong")})
+	if o.is_empty():   # (bản 444) chưa có xưởng: chip mờ trong lưới, chạm hiện cách xây
+		bt.append({"b": "Xưởng", "s": "Chưa xây", "ic": "gao", "st": "hint", "act": _dsay.bind("Xây xưởng (Xây dựng › Xưởng) rồi thuê người làm: xưởng tự thu hàng và làm tiếp món bạn chọn.")})
+	var gr := _grid(y, bt, 2, "thue")
+	out.append_array(gr[0])
+	y += float(gr[1]) + 10.0
+	if hpick == "xuong" and o.size():   # lưới chọn xưởng
+		out.append_array(_sect(y, "Làm xưởng nào?", col))
+		y += 22.0
+		var xk := []
+		for M in o:
+			var t: String = W.vg(M)
+			var w: bool = e.get("job") == M
+			var E := t != "" and not w
+			var rec: Array = G.xw.sr[W.xj(M)].rec
+			var mm: String = M
+			xk.append({"b": String(W.CO.get(M, M)), "s": t + " đang làm" if E else str(W.om(e, M)) + " xu/phút", "ic": String(rec[0]) if rec.size() else "gao", "k": "j_xuong",
+				"st": "on" if w else ("dis" if E else "off"), "act": _hxw.bind(mm)})
+		var gx := _grid(y, xk, 2, "thue")
+		out.append_array(gx[0])
+		y += float(gx[1]) + 10.0
+	if hpick == "ruong":   # lưới chọn giống: chọn xong mới giao Làm ruộng
+		out.append_array(_sect(y, "Gieo cây gì?", col))
+		y += 22.0
+		var pk := []
+		for M in W.xq(e):
+			var P: PackedStringArray = String(M.t).split(" · ")
+			var id: String = M.id
+			pk.append({"b": P[0], "s": " · ".join(P.slice(1)), "ic": id, "k": "j_ruong", "st": "on" if e.get("job") == "ruong" and String(e.get("crop", "")) == id else "off", "act": _hseed.bind(id)})
+		var g2 := _grid(y, pk, 2, "thue")
+		out.append_array(g2[0])
+		y += float(g2[1]) + 10.0
+	if hpick == "mon" and W._tr(e.get("job")) and e.job != "ruong" and G.xw.sr.has(W.xj(e.job)):   # món của xưởng vừa chọn
+		var d: Dictionary = G.xw.sr[W.xj(e.job)]
+		out.append_array(_sect(y, "Làm món gì?", col))
+		y += 22.0
+		var rk := []
+		for M in d.rec:
+			var id := String(M)
+			rk.append({"b": String(W._ae(id).get("name", id)), "s": "" if G.xw.has_in(id) else "thiếu đồ", "ic": id, "k": "j_xuong", "st": "on" if e.get("jr") == id else "off", "act": _hmon.bind(id)})
+		var g3 := _grid(y, rk, 2, "thue")
+		out.append_array(g3[0])
+		y += float(g3[1]) + 10.0
+	return [out, y - y0]
+
+
+func _hpk(k: String) -> void:   # chạm chip Làm ruộng / Làm xưởng: mở lưới của nó (chạm lại thì đóng)
+	hpick = "" if hpick == k else k
+
+func _hjob0(m: String) -> void:   # Nghỉ / vườn / chuồng: giao ngay, đóng lưới
+	hpick = ""
+	_hW.n4(hu, m)
+
+func _hseed(id: String) -> void:   # chọn giống: lúc này mới giao Làm ruộng rồi gieo giống đó
+	var f = _hW._fam_of(hu)
+	if f == null:
+		return
+	if f.get("job") != "ruong":
+		_hW.n4(hu, "ruong")
+		if f.get("job") != "ruong":   # không giao được (thiếu tiền, đủ người): giữ lưới
+			return
+	_hW.jq(hu, id)
+	hpick = ""
+
+func _hxw(m: String) -> void:   # chọn xưởng: giao việc, rồi mở lưới món của xưởng đó
+	_hW.n4(hu, m)
+	var f = _hW._fam_of(hu)
+	if f != null and f.get("job") == m:
+		hpick = "mon"
+
+func _hmon(id: String) -> void:
+	_hW.set_jr(hu, id)
+	hpick = ""
