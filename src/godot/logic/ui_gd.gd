@@ -7,11 +7,9 @@ extends "res://logic/ui_kbang.gd"
 var Y6 := []                # [{sec, items: [{id, ic, n, b: [dòng]}]}]
 var op := ""                # mục đang mở
 var q := ""                 # chữ tìm
-var tab := "all"
-const TABS := [["all", "Tất cả"], ["ruong", "Ruộng vườn"], ["lam", "Làm ăn"], ["lang", "Làng xóm"], ["khac", "Khác"]]
-const SECT := {"Ruộng vườn": "ruong", "Làm ăn": "lam", "Làng xóm": "lang"}   # nhóm khác vào tab "Khác"
-const SECC := {"Lộ trình 100 cấp": "rgb(200, 150, 40)", "Ruộng vườn": "rgb(76, 150, 48)", "Làm ăn": "rgb(222, 130, 40)", "Nhân vật": "rgb(200, 80, 90)",
-	"Trời đất": "rgb(70, 120, 180)", "Sông nước, hội hè": "rgb(60, 140, 160)", "Làng xóm": "rgb(214, 160, 30)", "Mở mang đất đai": "rgb(150, 112, 60)", "Du hành": "rgb(130, 90, 185)"}
+var tab := "Chung"
+const TABS := [["Chung", "Chung"], ["Ruộng vườn", "Ruộng vườn"], ["Sông nước", "Sông nước"], ["Làm ăn", "Làm ăn"], ["Làng xóm", "Làng xóm"]]   # (bản 485) mỗi tab một nhóm trong so_tay.json
+const SECC := {"Chung": "rgb(200, 150, 40)", "Ruộng vườn": "rgb(76, 150, 48)", "Sông nước": "rgb(60, 130, 180)", "Làm ăn": "rgb(222, 130, 40)", "Làng xóm": "rgb(200, 80, 90)"}
 const ICO := {"menuo": "pic:res://ui/img/xt/b_cuoc.webp", "lai": "lua_thom", "hoithi": "svg:res://ui/svg/mat/huychuong.svg", "ray": "svg:res://ui/svg/mat/ray.svg",
 	"quan": "pic:res://ui/img/xt/g_quan1.webp", "ghe": "pic:res://ui/img/xt/g_ghe1.webp", "khaihoang": "pic:res://ui/img/xt/b_cuoc.webp", "yte": "svg:res://ui/svg/mat/yte.svg",
 	"xay": "svg:res://ui/svg/mat/gach.svg", "xephang": "svg:res://ui/svg/mat/huychuong.svg", "lang": "pic:res://ui/img/vlface/0.webp", "thue": "pic:res://ui/img/vlface/3.webp",
@@ -84,11 +82,15 @@ func open(t := "") -> void:   # ZC(t)
 	on = true
 	op = ""
 	q = ""
-	tab = "all"
+	tab = "Chung"
 	scroll = 0.0
 	if t != "":
 		op = t
 		kh(G).rd[t] = 1
+		for sec in Y6:   # mở thẳng mục t: nhảy tới tab của nó
+			for it in sec.items:
+				if String(it.id) == t:
+					tab = String(sec.sec)
 	sig = ""
 	_build()
 
@@ -102,8 +104,7 @@ func _build() -> void:
 	for sec in Y6:
 		for it in sec.items:
 			if not rd.has(it.id):
-				red[String(SECT.get(String(sec.sec), "khac"))] = true
-				red["all"] = true
+				red[String(sec.sec)] = true
 	var L := TABS.map(func(x): return [x[0], x[1], red.has(x[0])])
 	var sh := _kshell(L, tab, _tab_go)
 	var r := _body()
@@ -134,8 +135,7 @@ func _body() -> Array:
 	out.append(sb)
 	y += 30.0 + GG
 	for sec in Y6:
-		var sk := String(SECT.get(String(sec.sec), "khac"))
-		if tab != "all" and tab != sk and q == "":
+		if tab != String(sec.sec) and q == "":   # đang tìm: tìm trong mọi nhóm
 			continue
 		var its := []
 		for it in sec.items:
