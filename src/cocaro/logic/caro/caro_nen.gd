@@ -162,7 +162,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		bc = Vector3(bq.x, bq.y, u)
 		# bụi tre (Link 11-22 "bên phải trên mái nhà"): mọc sau nhà, tán đè lên mái lá bên phải
 		tc = Vector3(maxf(W, roof_x + 202.0 * u) + 15.0 * u, f.position.y + 280.0 * u, u)   # gốc khuất sau mép màn
-		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
+		canopy = {"pos": P.call(sdx * 0.6, 0) + Vector2(0, 120.0 * u), "sc": u, "flip": false, "mirv": true}   # Link 11-22: tán xuống dưới các thẻ (mép cắt trên đã soi gương)
 		for q in LJ.ground_leaves:
 			var v: Vector2 = P.call(Lx.call(float(q[0])), float(q[1]))
 			gl.append([v.x, v.y, q[2], q[3]])
@@ -346,7 +346,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	# khe bên phản hẹp: thu tán cho khoảng nửa cây lọt khe (gốc cây khuất ngoài mép màn), mép trên luôn khuất
 	# Link 11-21 "tán xoài chạm lên bàn cờ": cây giữ cỡ thật (không thu bé theo khe), mép lá chạm đúng mép khung phản
 	csc = maxf(minf(csc, maxf(gap, 50.0) * 2.0 / (tx1 - tx0)), canopy.sc * 0.8)
-	cpos.y = minf(cpos.y, 20.0 * csc)
+	if not canopy.has("mirv"): cpos.y = minf(cpos.y, 20.0 * csc)
 	if canopy.has("top"):
 		var tr: Rect2 = canopy.top                              # vùng góc trên trái (màn), tán nằm gọn trong đó
 		var ty1 := 0.0
@@ -404,10 +404,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var w: Array = LJ.mango_wins[i]
 		var t := tex("xoai%d" % i); xt.append(t)
 		var s := _spr(croot, t, Vector2(w[0], w[1]) + shoff, false)
-		s.material = _wmat(t, (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * 1.5 * PXU, 3.0 * PXU, 0.0, ph4[i], 0.0, 0.3, 0.5, log(7.0 * PXU) / log(2.0))
-		if canopy.has("top"):
-			# màn dọc: tán soi gương qua mép cắt trái của ảnh (x=-40) thành nửa vòm liền, không bao giờ lòi mép cắt (cả bóng)
-			var sm := _spr(croot, t, Vector2(-80.0 - float(w[0]) - t.get_width() / PXU, float(w[1])) + shoff, false); sm.flip_h = true
+		var top_ := canopy.has("top")      # màn dọc: bóng tán nhạt + mềm hơn (Link 11-22, bóng đặc như vết dầu)
+		s.material = _wmat(t, (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * 1.5 * PXU, 3.0 * PXU, 0.0, ph4[i], 0.0, 0.3, 0.3 if top_ else 0.5, log((14.0 if top_ else 7.0) * PXU) / log(2.0))
+		# tán soi gương qua mép cắt trái (x=-40) và (màn ngang) mép cắt trên (y=-40) của ảnh: thành vòm liền, không bao giờ lòi mép cắt (cả bóng)
+		for mv in _mirrors(canopy):
+			var sm := _spr(croot, t, _mpos(w, t, mv) + shoff, false); sm.flip_h = mv.x < 0; sm.flip_v = mv.y < 0
 			sm.material = s.material
 	var bt := tex("chuoi")
 	var bsh := _spr(self, bt, Vector2(bc.x, bc.y) + Vector2(34, 44) * bc.z, true, 0.0, bc.z)
@@ -437,9 +438,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
 		s.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i], 0.1, 0.0, 0.0, 0.0)
-		if canopy.has("top"):
-			var sm2 := _spr(croot, xt[i], Vector2(-80.0 - float(w[0]) - xt[i].get_width() / PXU, float(w[1])), false); sm2.flip_h = true
-			sm2.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i] + 0.8, 0.1, 0.0, 0.0, 0.0)
+		for mv in _mirrors(canopy):
+			var sm2 := _spr(croot, xt[i], _mpos(w, xt[i], mv), false); sm2.flip_h = mv.x < 0; sm2.flip_v = mv.y < 0
+			sm2.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i] + 0.8 * (mv.x + 2.0 * mv.y + 3.0), 0.1, 0.0, 0.0, 0.0)
 	if tc.x > -9999 and roof_x >= 0:
 		# lá tre bay rơi từ bụi tre trên mái: chao lượn, gió đẩy về phía sân
 		var rgf := RandomNumberGenerator.new(); rgf.seed = 91
@@ -477,6 +478,16 @@ func _process(dt: float) -> void:
 		o.sp.modulate.a = fade
 		o.sd.position = Vector2(x + 38 * hgt * k, y + 52 * hgt * k); o.sd.rotation = o.sp.rotation; o.sd.scale = o.sp.scale
 		o.sd.modulate.a = (1.0 - 0.5 * hgt) * fade
+
+func _mirrors(cn: Dictionary) -> Array:
+	var r := [Vector2(-1, 1)]
+	if cn.has("mirv"): r += [Vector2(1, -1), Vector2(-1, -1)]
+	return r
+
+func _mpos(w: Array, t: Texture2D, mv: Vector2) -> Vector2:
+	# vị trí ảnh lớp tán khi soi gương qua x=-40 / y=-40 (css tán)
+	var tw: Vector2 = t.get_size() / PXU
+	return Vector2(float(w[0]) if mv.x > 0 else -80.0 - float(w[0]) - tw.x, float(w[1]) if mv.y > 0 else -80.0 - float(w[1]) - tw.y)
 
 func _hen_ok(p: Vector2) -> bool:
 	var r: float = hen.r
@@ -521,15 +532,42 @@ func _hen_step(dt: float) -> void:
 	sp.position = pos + fwd * bob
 	sp.rotation = float(hen.head) - 2.6
 	sd.position = pos + hen.off; sd.rotation = sp.rotation
-	# gà con chạy lon ton theo mẹ, mỗi con một chỗ quanh mẹ
-	for c in hen_chicks:
-		var rel: Vector2 = c.rel
-		var tgt: Vector2 = pos + rel.rotated(float(hen.head) - 2.6) + Vector2(sin(t0 * 0.7 + c.ph), cos(t0 * 0.9 + c.ph)) * float(hen.r) * 0.15
-		var d: Vector2 = tgt - c.pos
+	# gà con (Link 11-22): lũ con đi RỜI NHAU, nối đuôi sau lưng mẹ thành 2 hàng so le; không con nào đè lên con khác hay lên mẹ.
+	# Mẹ đứng mổ thì con tản ra nửa vòng trước mặt mẹ mổ theo.
+	var n := hen_chicks.size()
+	var cr: float = float(hen.r) * 0.2                 # bán kính 1 gà con (ảnh gà con ~1/6 bề dài gà mẹ)
+	var side := Vector2(-fwd.y, fwd.x)
+	for k in n:
+		var c: Dictionary = hen_chicks[k]
+		var slot: Vector2
+		if hen.wait > 0.6:
+			var a := (float(k) - (n - 1) * 0.5) * 0.55
+			slot = pos + fwd.rotated(a) * float(hen.r) * 1.35
+		else:
+			var row := k / 2; var sgn := -1.0 if k % 2 == 0 else 1.0
+			slot = pos - fwd * float(hen.r) * (1.2 + 0.75 * row) + side * sgn * float(hen.r) * (0.42 + 0.08 * row)
+		slot += Vector2(sin(t0 * 0.7 + c.ph), cos(t0 * 0.9 + c.ph)) * cr * 0.5
+		var d: Vector2 = slot - c.pos
 		if d.length() > 1.0:
-			var step := minf(d.length(), spd * 1.6 * dt)
+			var step := minf(d.length(), spd * 1.8 * dt)
 			c.pos += d.normalized() * step
 			c.rot = rotate_toward(float(c.rot), d.angle(), dt * 6.0)
+	# tách: đẩy các con ra khỏi nhau và khỏi thân mẹ
+	for it in 2:
+		for a in n:
+			var A: Dictionary = hen_chicks[a]
+			var dm: Vector2 = A.pos - pos
+			var mind: float = float(hen.r) * 0.75 + cr
+			if dm.length() < mind:
+				A.pos = pos + (dm.normalized() if dm.length() > 0.01 else -fwd) * mind
+			for b in range(a + 1, n):
+				var Bc: Dictionary = hen_chicks[b]
+				var dv: Vector2 = Bc.pos - A.pos
+				var L: float = dv.length()
+				if L < cr * 2.1:
+					var push: Vector2 = (dv / L if L > 0.01 else side) * (cr * 2.1 - L) * 0.5
+					A.pos -= push; Bc.pos += push
+	for c in hen_chicks:
 		var cs: Sprite2D = c.sp; var cd: Sprite2D = c.sd
 		cs.position = c.pos; cs.rotation = c.rot
 		cd.position = c.pos + c.off; cd.rotation = c.rot
