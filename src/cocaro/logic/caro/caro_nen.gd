@@ -427,7 +427,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	if tc.x > -9999:
 		# bụi tre: không lá nào chạm khung phản (đẩy ra phía mép màn gần nhất)
 		# ảnh tre chỉ giữ nửa trái bụi: tâm gốc = (cao/2, cao/2) điểm ảnh
-		var tt := tex("tre"); var tur := _used("tre"); var tcp := Vector2(tt.get_height(), tt.get_height()) / 2.0
+		# ảnh tre đã cắt vừa đủ phần có thể hiện trên màn (9px): tâm gốc bụi nằm ở (2973, 2610) điểm ảnh của ảnh
+		var tt := tex("tre"); var tur := _used("tre"); var tcp := Vector2(2973, 2610)
 		var trr := Rect2(Vector2(tc.x, tc.y) + (tur.position - tcp / PXU) * tc.z, tur.size * tc.z)
 		var fz: Rect2 = fr.grow(-3)
 		if trr.intersects(fz):
@@ -439,9 +440,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			tc.x += best.x; tc.y += best.y
 		var t0p := Vector2(tc.x, tc.y) - tcp / PXU * tc.z
 		var tsh := _spr(self, tt, t0p + Vector2(30, 40) * tc.z, false, 0.0, tc.z)
-		tsh.material = _wmat(tt, tcp, tcp.x, 0.0, 2.0 * PXU, 0.05, 2.3, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
+		tsh.material = _wmat(tt, tcp, 3420.0, 0.0, 2.0 * PXU, 0.05, 2.3, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
 		var tn := _spr(self, tt, t0p, false, 0.0, tc.z)
-		tn.material = _wmat(tt, tcp, tcp.x, 0.0, 1.6 * PXU, 0.05, 2.3, 0.06, 0.0, 0.0, 0.0)
+		tn.material = _wmat(tt, tcp, 3420.0, 0.0, 1.6 * PXU, 0.05, 2.3, 0.06, 0.0, 0.0, 0.0)
 	for i in 4:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
