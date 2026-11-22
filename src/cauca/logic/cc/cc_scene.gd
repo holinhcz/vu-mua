@@ -10,6 +10,8 @@ const SH := """
 shader_type canvas_item;
 uniform vec2 uRes; uniform float uT; uniform float uHor; uniform float uYw; uniform float uF; uniform float uS;
 uniform vec4 uBank;
+uniform vec4 uSub = vec4(0.,0.,1.,1.);
+uniform vec2 uUV = vec2(1.,1.);
 uniform sampler2D uBankTex : filter_linear_mipmap, repeat_disable;
 uniform sampler2D uAuxTex : filter_linear, repeat_disable;
 uniform sampler2D uData : filter_nearest, repeat_disable;
@@ -71,7 +73,7 @@ vec4 bank(vec2 p, float sway){
  vec4 a=texture(uAuxTex,uv);
  if(sway>0.){float hf=clamp((uYw-p.y)/(uRes.y*.25),0.,1.);
   uv.x+=a.g*hf*(sin(uT*1.3+uv.x*70.+uv.y*9.)*1.1+sin(uT*2.1+uv.x*170.)*.5)*(0.6+uWind)*uS/uBank.z;}
- vec4 b=texture(uBankTex,uv);
+ vec4 b=texture(uBankTex,clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.)));
  vec3 col=b.rgb*uTint+vec3(1.,.72,.38)*a.r*uNight*1.7;
  col=mix(col,uFog,.03);
  col=mix(col,vec3(dot(col,vec3(.3,.5,.2)))*vec3(.9,.95,1.02),uRain*.35);
@@ -86,7 +88,7 @@ vec2 dw(vec2 w,vec2 d,float k,float s,float a,float fp){
  return d*(a*k*cos(dot(w,d)*k-uT*s))*fade;
 }
 void fragment(){
- vec2 p=UV*uRes;
+ vec2 p=UV*uRes*uUV;
  if(p.y<uYw){COLOR=vec4(scene(p,1.),1.);}
  else if(uOld<.5){COLOR=vec4(uWater,1.);}
  else{
@@ -257,6 +259,10 @@ var vp: SubViewport
 var rect: ColorRect
 var view: TextureRect
 var mat: ShaderMaterial
+var trect: ColorRect      # trời + bờ vẽ đúng độ phân giải màn hình (nét), đè lên phần trên mặt nước
+var tmat: ShaderMaterial
+var _bank_key := ""
+var _bank_sub := Vector4(0, 0, 1, 1)
 var wrect: ColorRect
 var wmat: ShaderMaterial
 static var old_water := false   # true = nước cũ (chép 02_gl.js), để so
@@ -302,12 +308,20 @@ func _ready() -> void:
 	view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(view)
+	trect = ColorRect.new()
+	trect.color = Color.WHITE
+	tmat = ShaderMaterial.new()
+	tmat.shader = sh
+	trect.material = tmat
+	trect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(trect)
 	data_img = Image.create(24, 1, false, Image.FORMAT_RGBAF)
 	data_tex = ImageTexture.create_from_image(data_img)
 	mat.set_shader_parameter("uData", data_tex)
 	wmat.set_shader_parameter("uData", data_tex)
-	mat.set_shader_parameter("uBankTex", A.img("bank"))
-	mat.set_shader_parameter("uAuxTex", A.img("bank_aux"))
+	for m in [mat, tmat]:
+		m.set_shader_parameter("uAuxTex", A.img("bank_aux"))
+		m.set_shader_parameter("uData", data_tex)
 	scale_s = fixed_scale if fixed_scale > 0 else minf(game.K, 1.25)
 
 func _noise(sz: int, bump: float, freq: float, oct: int, seed_: int) -> NoiseTexture2D:
@@ -339,6 +353,62 @@ func resize() -> void:
 	wrect.size = Vector2(w, h - ywp)
 	view.position = Vector2.ZERO
 	view.size = Vector2(L.W, L.H)
+	trect.position = Vector2.ZERO
+	trect.size = Vector2(L.W, ywp / scale_s)
+	_bank_build()
+
+# bờ 9px: 6 mảnh 2700x2700 (+ lề 48) của ảnh 16200x2700; chỉ lấy đoạn thấy trên màn hình, thu về đúng số điểm ảnh máy
+const BT_N := 6
+const BT_W := 2700
+const BT_M := 48
+const BT_H := 2700
+func _bank_build() -> void:
+	var L: Dictionary = game.L
+	var K: float = game.K
+	var c0: float = clampf(-L.bankX - 8.0, 0.0, L.bankW)
+	var c1: float = clampf(L.W - L.bankX + 8.0, 0.0, L.bankW)
+	var f: float = minf(1.0, L.bankH * K / BT_H)
+	var th := maxi(8, int(round(BT_H * f)))
+	var sx0: float = c0 / L.bankW * BT_W * BT_N
+	var sx1: float = c1 / L.bankW * BT_W * BT_N
+	var key := "%d_%d_%d" % [int(sx0), int(sx1), th]
+	if key == _bank_key:
+		return
+	var tw := maxi(8, int(ceil((sx1 - sx0) * f)))
+	var out: Image = null
+	for i in BT_N:
+		var a := maxf(sx0, i * BT_W)
+		var b := minf(sx1, (i + 1) * BT_W)
+		if b <= a:
+			continue
+		var im := Image.new()
+		var bytes := FileAccess.get_file_as_bytes(A.DIR + "bank9_%d.webp" % i)
+		if bytes.is_empty() or im.load_webp_from_buffer(bytes) != OK:
+			out = null
+			break
+		if out == null:
+			out = Image.create(tw, th, false, Image.FORMAT_RGBA8)
+		im.convert(Image.FORMAT_RGBA8)
+		var fx0 := i * BT_W - BT_M
+		im.resize(maxi(1, int(round(im.get_width() * f))), th, Image.INTERPOLATE_LANCZOS)
+		var dx := int(round((a - sx0) * f))
+		var dw := mini(tw, int(round((b - sx0) * f))) - dx
+		var sx := int(round((a - fx0) * f))
+		if dw > 0:
+			out.blit_rect(im, Rect2i(sx, 0, mini(dw, im.get_width() - sx), th), Vector2i(dx, 0))
+	var tex: Texture2D
+	if out != null:
+		out.fix_alpha_edges()
+		out.generate_mipmaps()
+		tex = ImageTexture.create_from_image(out)
+		_bank_sub = Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1)
+	else:
+		tex = A.img("bank")      # không có ảnh 9px: dùng ảnh cũ
+		_bank_sub = Vector4(0, 0, 1, 1)
+	_bank_key = key
+	for m in [mat, tmat]:
+		m.set_shader_parameter("uBankTex", tex)
+		m.set_shader_parameter("uSub", _bank_sub)
 
 # đo khung hình: chậm quá thì hạ độ phân giải mặt nước (như web: sau 120 khung, trung bình > 26 ms)
 func perf(dt: float) -> void:
@@ -355,11 +425,9 @@ func sun_screen(tod: Dictionary) -> Vector2:
 	var L: Dictionary = game.L
 	return Vector2(tod.sunX * L.W, L.yw - (L.yw - L.H * .05) * tod.sunElev * (0.9 if L.portrait else 1.0) + L.H * .02)
 
-func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, shs: PackedFloat32Array) -> void:
+func _scene_u(m: ShaderMaterial, s: float, res: Vector2, t: float, tod: Dictionary, W: Dictionary) -> void:
 	var L: Dictionary = game.L
-	var s := scale_s
-	var m := mat
-	m.set_shader_parameter("uRes", Vector2(vp.size))
+	m.set_shader_parameter("uRes", res)
 	m.set_shader_parameter("uT", fmod(t, 1000.0))
 	m.set_shader_parameter("uHor", L.hor * s)
 	m.set_shader_parameter("uYw", L.yw * s)
@@ -381,6 +449,15 @@ func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, 
 	var fg: Array = W.floatGlow
 	m.set_shader_parameter("uFlt", Vector4(fg[0], fg[1], 0, fg[2]))
 	m.set_shader_parameter("uOld", 1.0 if old_water else 0.0)
+
+func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, shs: PackedFloat32Array) -> void:
+	var L: Dictionary = game.L
+	_scene_u(mat, scale_s, Vector2(vp.size), t, tod, W)
+	_scene_u(tmat, game.K, Vector2(L.W, L.H) * game.K, t, tod, W)
+	var ywc := floorf(L.yw * scale_s) / scale_s
+	tmat.set_shader_parameter("uUV", Vector2(1.0, ywc / L.H))
+	var m := mat
+	var s := scale_s
 	wrect.visible = not old_water
 	if not old_water:
 		var wm := wmat
