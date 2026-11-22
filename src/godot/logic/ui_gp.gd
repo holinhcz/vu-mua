@@ -21,7 +21,8 @@ const LOCS := [["all", "Tất cả"], ["mo", "Muốn nói chuyện"], ["nho", "�
 const GPN := {"cha": "Cha mẹ", "con": "Con cháu", "ae": "Anh em", "sui": "Sui gia", "bc": "Bà con", "ban": "Bạn làm ăn", "xom": "Hàng xóm"}
 const QHG := [["Gia đình", ["cha", "con", "ae"], "rgb(214, 140, 40)"], ["Bà con", ["sui", "bc"], "rgb(76, 150, 48)"], ["Hàng xóm", ["ban", "xom"], "rgb(70, 120, 180)"]]
 const HOMAU := ["#c0552e", "#3f8a3c", "#3f72b0", "#c4932c", "#8a55a8", "#2f9a90", "#c0457a", "#7a6a2e", "#5a6a8a", "#9a7040"]   # (bản 494) 10 màu cách xa nhau
-const TAGI := {"mo": "pic:res://ui/img/bong/chat.png", "nho": "pic:res://ui/img/bong/gap.png", "ng": "pic:res://ui/img/bong/sao.png", "lam": "pic:res://ui/img/xt/b_cuoc.webp"}
+const CHAT := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z\" fill=\"rgb(76,160,70)\" stroke=\"rgb(40,110,40)\" stroke-width=\"1.2\"/><circle cx=\"7.5\" cy=\"10.5\" r=\"1.6\" fill=\"#fff\"/><circle cx=\"12\" cy=\"10.5\" r=\"1.6\" fill=\"#fff\"/><circle cx=\"16.5\" cy=\"10.5\" r=\"1.6\" fill=\"#fff\"/></svg>"   # (bản 495) muốn nói chuyện: bong bóng chat xanh
+const TAGI := {"mo": "svg:CHAT", "nho": "pic:res://ui/img/bong/gap.png", "ng": "pic:res://ui/img/bong/sao.png", "lam": "pic:res://ui/img/xt/b_cuoc.webp"}
 const TAGS := {"mo": "Muốn nói chuyện", "nho": "Đang nhờ việc", "ng": "Hôm nay ngày riêng", "lam": "Đang làm thuê cho bạn"}
 const DOCK := 86.0          # cao đáy cố định
 
@@ -58,16 +59,33 @@ func step(dt: float) -> void:   # gpRender mỗi giây
 func _sig() -> String:
 	return JSON.stringify([tab, ho, sel, q, loc, ex, more, W.gp_fam(), W._vr()])
 
-var _hoc := {}   # (bản 494) họ -> màu: mỗi họ một màu riêng, không trùng (xếp họ theo tên, lấy lần lượt bảng màu)
+var _hoc := {}   # họ -> màu (bản 494: mỗi họ một màu riêng, không trùng)
 func gp_color(h: String) -> String:
 	return String(_hoc.get(h, HOMAU[0]))
 
-func _hoc_set(hl: Array) -> void:
-	var L := hl.duplicate()
-	L.sort()
+func _hoc_set(hl: Array) -> void:   # (bản 495) màu họ lưu trong bản lưu (g làng .hoc: họ -> số màu): họ cũ giữ màu, họ mới lấy màu còn trống
+	var L0: Dictionary = W._r0()
+	if not (L0.get("hoc") is Dictionary):
+		L0.hoc = {}
+	var M: Dictionary = L0.hoc
+	var used := {}
+	for h in M:
+		used[int(M[h])] = 1
+	var nl := hl.duplicate()
+	nl.sort()
+	for h in nl:
+		if not M.has(h):
+			var i := 0
+			while used.has(i) and i < HOMAU.size():
+				i += 1
+			if i >= HOMAU.size():   # hết màu: dùng lại theo vòng
+				i = M.size() % HOMAU.size()
+			M[h] = i
+			used[i] = 1
+			G.mark()
 	_hoc = {}
-	for i in L.size():
-		_hoc[String(L[i])] = HOMAU[i % HOMAU.size()]
+	for h in M:
+		_hoc[String(h)] = HOMAU[int(M[h]) % HOMAU.size()]
 
 func _ck(kind: String) -> Array:   # "ho:<#màu>": nền nhạt theo màu họ; "hoon:<#màu>": họ đang chọn (đậm hơn)
 	if kind.begins_with("ho:") or kind.begins_with("hoon:"):
@@ -114,22 +132,21 @@ func _rows() -> Array:
 				if not kids.has(c):
 					kids[c] = []
 				kids[c].append(int(k))
-		var walk := func(walk_f: Callable, k: int, d: int, last: bool) -> void:
+		var walk := func(walk_f: Callable, k: int, d: int, p: int) -> void:
 			var ch: Array = kids.get(k, [])
 			var opn: bool = bool(ex[k]) if ex.has(k) else d < 1
-			rows.append({"u": k, "d": d, "tg": ("-" if opn else "+") if ch.size() else "", "n": ch.size(), "last": last})
+			rows.append({"u": k, "d": d, "tg": ("-" if opn else "+") if ch.size() else "", "n": ch.size(), "p": p})
 			if not opn:
 				return
 			var lim: int = ch.size() if more.has(k) else 5
-			var L: Array = ch.slice(0, lim)
-			for i in L.size():
-				walk_f.call(walk_f, int(L[i]), d + 1, i == L.size() - 1 and ch.size() <= lim)
+			for c in ch.slice(0, lim):
+				walk_f.call(walk_f, int(c), d + 1, k)
 			if ch.size() > lim:
-				rows.append({"mo": k, "d": d + 1, "n": ch.size() - lim})
+				rows.append({"mo": k, "d": d + 1, "n": ch.size() - lim, "p": k})
 		for k in mem:
 			var c: int = W._i(F[str(k)].get("cha"))
 			if not (c and in_ho.has(c)):
-				walk.call(walk, int(k), 0, true)
+				walk.call(walk, int(k), 0, 0)
 	elif tab == "qh":
 		if not F.has(str(sel)):
 			return rows
@@ -207,9 +224,14 @@ func _build() -> void:
 		y = float(C2[1]) + GG
 	var R := _rows()
 	var nr := 0
+	var yb := {}   # nhà -> đáy hàng (đường nối cây)
 	for r in R:
 		var b := _row(y, r, F)
+		if r.has("p") and yb.has(int(r.p)):
+			out.append_array(_elbow(float(yb[int(r.p)]), y, int(r.d), float(b[1]) * 0.5))
 		out.append_array(b[0])
+		if r.has("u"):
+			yb[int(r.u)] = y + float(b[1])
 		y += float(b[1]) + 5.0
 		nr += 1
 	if nr == 0:
@@ -268,7 +290,7 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 		var m := _chip(X0 + ind, y, w0, 24.0, "fut")
 		m.kids = [_dt(X0 + ind, y, w0, 24.0, "+" + str(r.n) + " nhà nữa", 10.5, 700, SUB)]
 		m.act = func(): more[int(r.mo)] = 1
-		return [[m] + _elbow(y, d, 12.0, true), 24.0]
+		return [[m], 24.0]
 	var u := int(r.u)
 	if not F.has(str(u)):
 		return [[], -5.0]
@@ -281,8 +303,6 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	var c := _chip(x, y, w, h, "now" if u == sel and not r.has("me") else ("hoon:" + mc if r.has("me") else "ho:" + mc))
 	c.act = _pick.bind(u)
 	out.append(c)
-	if d > 0:
-		out.append_array(_elbow(y, d, h * 0.5, bool(r.get("last", false))))
 	var ax := x + 6.0
 	if String(r.get("tg", "")) != "":   # nút bung / thu
 		var g := _chip(ax, y + 11.0, 20.0, 20.0, "fut")
@@ -301,7 +321,7 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	rx -= tw + 22.0
 	for t in _tags(u, f):
 		rx -= 18.0
-		var ti := _icx(rx + 8.0, y + h * 0.5, 17.0, String(TAGI[t]))
+		var ti := _dic(rx, y + h * 0.5 - 8.5, 17.0, CHAT) if t == "mo" else _icx(rx + 8.0, y + h * 0.5, 17.0, String(TAGI[t]))
 		out.append(ti)
 		var hit := _dbx(rx - 1.0, y + 8.0, 18.0, h - 16.0, "rgba(0, 0, 0, 0)", 0.0)
 		hit.act = _dsay.bind(String(f.n) + ": " + String(TAGS[t]) + ".")
@@ -325,10 +345,10 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	out.append(_dt(sx, y + 23.0, nx + nw - sx, 15.0, _fitw(sub, 9.5, 600, nx + nw - sx), 9.5, 600, SUB, "left"))
 	return [out, h]
 
-func _elbow(y: float, d: int, my: float, last: bool) -> Array:   # đường nối cha con: vạch dọc từ hàng trên + gạch ngang vào hàng
+func _elbow(y0: float, y: float, d: int, my: float) -> Array:   # đường nối cha con: vạch dọc từ đáy hàng cha (y0) xuống giữa hàng con + gạch ngang vào hàng
 	var lx := X0 + (d - 1) * 16.0 + 8.0
 	var col := "rgba(150, 112, 48, 0.5)"
-	return [_dbx(lx, y - 5.0, 1.5, (my + 5.0) if last else 47.0, col, 0.0), _dbx(lx, y + my, 8.0, 1.5, col, 0.0)]
+	return [_dbx(lx, y0, 1.5, y + my - y0, col, 0.0), _dbx(lx, y + my, 8.0, 1.5, col, 0.0)]
 
 func _tog(u: int, opn: bool) -> void:   # data-gx
 	ex[u] = 1 if opn else 0
