@@ -204,6 +204,10 @@ func _layout() -> void:
 			best = Vector3(W - 40, H - 40, 30) if p == 0 else Vector3(40, 40 + tl.size.y, 30)
 		L.bx.append(best)
 		blocks.append(Rect2(best.x - best.z, best.y - best.z, best.z * 2, best.z * 2))
+	# Link 11-22: 2 nia phải đúng 1 cỡ: lấy cỡ nia nhỏ hơn cho cả hai (giữ tâm, nhỏ lại thì vẫn vừa chỗ)
+	var rz := minf(L.bx[0].z, L.bx[1].z)
+	for i in 2:
+		L.bx[i] = Vector3(L.bx[i].x, L.bx[i].y, rz)
 	L.bas = []
 	for b in L.bx:
 		var u := unmap(b.x, b.y)
