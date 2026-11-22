@@ -6,11 +6,12 @@ extends Control
 
 const A := preload("res://logic/cc/cc_art.gd")
 const MAY := preload("res://logic/cc/cc_may.gd")
+const SUN := preload("res://logic/cc/cc_sun.gd")
 
 const SH := """
 shader_type canvas_item;
 uniform vec2 uRes; uniform float uT; uniform float uHor; uniform float uYw; uniform float uF; uniform float uS;
-uniform vec4 uBank; uniform float uExact = 0.; uniform float uNoBank = 0.;
+uniform vec4 uBank; uniform float uExact = 0.; uniform float uNoBank = 0.; uniform float uNoSun = 0.;
 uniform vec4 uSub = vec4(0.,0.,1.,1.);
 uniform vec2 uUV = vec2(1.,1.);
 uniform sampler2D uBankTex : filter_linear_mipmap, repeat_disable;
@@ -30,9 +31,10 @@ vec3 sky(vec2 p, float disc){
  float d=length(p-uSun.xy), R=uRes.y;
  float sv=min(uSun.z,1.)*disc;
  c+=uSunC*exp(-d/(R*.3))*.18*uSun.z;
+ if(uNoSun<.5){   // trên màn: mặt trời = cc_sun.gd
  c=mix(c,mix(c,uSunC+.15,.35),smoothstep(R*.088,R*.084,d)*sv);
  c=mix(c,mix(c,uSunC+.2,.55),smoothstep(R*.06,R*.057,d)*sv);
- c=mix(c,uSunC*1.1+.2,smoothstep(R*.038,R*.035,d)*sv);
+ c=mix(c,uSunC*1.1+.2,smoothstep(R*.038,R*.035,d)*sv);}
  // mây = ảnh vẽ sẵn (cc_may.gd), không vẽ trong shader nữa
  float cl=0.;
 
@@ -251,6 +253,7 @@ var _bank_key := ""
 var bnode: Node2D = null          # bờ vẽ trực tiếp: mỗi món 1 Sprite2D, chung 1 atlas (ít lệnh vẽ), cây nghiêng quanh gốc như nông trại
 var bmat: ShaderMaterial = null
 var may_s = null    # mây trên màn (sau bờ)
+var sun = null      # mặt trời trên màn (shader Godot)
 var may_v = null    # mây trong SubViewport (để nước soi)
 const LIVE_SH := """
 shader_type canvas_item;
@@ -336,11 +339,15 @@ func _ready() -> void:
 	trect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(trect)
 	tmat.set_shader_parameter("uNoBank", 1.0)
+	tmat.set_shader_parameter("uNoSun", 1.0)
+	sun = SUN.new(game, self)
+	add_child(sun)
 	may_s = MAY.new(game)
 	add_child(may_s)
 	bnode = Node2D.new()
 	bnode.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(bnode)
+	add_child(sun.make_flare())
 	bmat = ShaderMaterial.new()
 	var bsh := Shader.new()
 	bsh.code = LIVE_SH
@@ -788,6 +795,7 @@ func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, 
 	_scene_u(tmat, game.K, Vector2(L.W, L.H) * game.K, t, tod, W)
 	tmat.set_shader_parameter("uExact", 1.0)
 	may_s.upd(t, tod, W)
+	sun.upd(tod, W)
 	may_v.upd(t, tod, W)
 	if bmat:
 		var tc: Color = tod.tint
