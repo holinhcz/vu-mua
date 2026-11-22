@@ -190,6 +190,63 @@ def ro(R=100.0, seed=3):
     return P.rgba(col, al)
 
 
+def nia(R=100.0, seed=3):
+    """nia tre cạn (như bản web cũ): đáy đan lóng mốt phủ gần tới mép, 1 vòng cạp tre tròn to, mây buộc thưa"""
+    rg = np.random.default_rng(seed)
+    n = int(R * 2.08 * K); c = n / 2
+    xx, yy = P.grid(n)
+    dx = (xx - c) / K; dy = (yy - c) / K
+    d = np.hypot(dx, dy); ang = np.arctan2(dy, dx)
+    r_rim = R * 0.88
+    # đáy: lóng mốt nan rộng 4.4 css, xéo 45, mỗi nan 1 tông, nổi lên ở đoạn nằm trên
+    u = (dx + dy) / math.sqrt(2); v = (dx - dy) / math.sqrt(2)
+    w = 4.4
+    iu = np.floor(u / w); iv = np.floor(v / w)
+    fu = u / w - iu; fv = v / w - iv
+    top = ((iu.astype(int) + iv.astype(int) // 2) % 2) == 0
+    f = np.where(top, fv, fu)
+    along = np.where(top, fu, fv)
+    seg = ((np.where(top, iu, iv).astype(int)) % 2 + along) / 2
+    lift = np.sin(seg * math.pi)
+    ndir = (f - 0.5) * 1.5
+    nz = np.sqrt(np.clip(1 - ndir ** 2, 0, 1))
+    # nghiêng theo chiều dọc nan ở chỗ luồn xuống (đầu nan chúi xuống) cho có khối
+    tilt = np.cos(seg * math.pi) * 0.35
+    nxb = np.where(top, ndir / math.sqrt(2) + tilt / math.sqrt(2), ndir / math.sqrt(2) + tilt / math.sqrt(2))
+    nyb = np.where(top, -ndir / math.sqrt(2) + tilt / math.sqrt(2), ndir / math.sqrt(2) - tilt / math.sqrt(2))
+    sb = P.lam(nxb, nyb, nz)
+    strip = rg.random((4000,)).astype(np.float32)
+    sid = (np.where(top, iv, iu).astype(int) + 2000) % strip.size
+    stv = strip[sid]
+    bam = np.array([196, 168, 118], np.float32) * (0.84 + 0.24 * stv)[..., None]
+    fib = B.fbm(n, n, 3.0, 2, rg)
+    stain = B.fbm(n, n, 160, 3, rg)                    # loang màu tre cũ
+    col = bam * (0.5 + 0.6 * sb)[..., None] * (0.9 + 0.14 * fib)[..., None] * (0.8 + 0.2 * lift)[..., None]
+    col *= (0.76 + 0.38 * stain)[..., None]
+    gap = np.minimum(np.minimum(fu, 1 - fu), np.minimum(fv, 1 - fv))
+    col *= (0.5 + 0.5 * np.clip(gap * 14, 0, 1))[..., None]
+    # cạn: chỉ hơi tối sát cạp phía bị che nắng
+    facing = np.clip((dx * P.L[0] + dy * P.L[1]) / np.maximum(d, 1e-3), -1, 1)
+    shin = np.clip((d - (r_rim - R * 0.12)) / (R * 0.12), 0, 1) * np.clip(facing + 0.3, 0, 1)
+    col *= (1 - 0.32 * shin * (d < r_rim))[..., None]
+    # cạp: 1 vòng tre tròn to
+    t = (d - r_rim) / (R - r_rim)
+    rimm = (t >= 0) & (t <= 1)
+    rn = (t - 0.5) * 1.9
+    nzr = np.sqrt(np.clip(1 - rn ** 2, 0, 1))
+    sr = P.lam(rn * dx / np.maximum(d, 1e-3), rn * dy / np.maximum(d, 1e-3), nzr)
+    rc = np.array([178, 142, 86], np.float32) * (0.42 + 0.7 * sr)[..., None] * (0.92 + 0.12 * fib)[..., None]
+    # mây buộc thưa (6 chỗ), mỗi chỗ vài vòng quấn
+    for k in range(6):
+        a0 = k / 6 * 2 * math.pi + rg.uniform(-0.2, 0.2)
+        da = np.angle(np.exp(1j * (ang - a0))) * R
+        band = (np.abs(da) < 4.0) & (np.sin(da * 2.3 + t * 2.0) > -0.2)
+        rc = np.where((band & rimm)[..., None], rc * 0.78 * np.array([0.92, 0.86, 0.8]), rc)
+    col = np.where(rimm[..., None], rc, col)
+    al = P.blur((d <= R).astype(np.float32), 0.4 * K)
+    return P.rgba(col, al)
+
+
 if __name__ == '__main__':
     out = sys.argv[1]; job = sys.argv[2]
     os.makedirs(out, exist_ok=True)
@@ -199,5 +256,5 @@ if __name__ == '__main__':
             P.to_img(gach(i)).save(os.path.join(out, 'g%d.webp' % i), lossless=True, method=4)
             print('quan', i, flush=True)
     elif job == 'ro':
-        P.to_img(ro()).save(os.path.join(out, 'ro.webp'), lossless=True, method=4)
+        P.to_img(nia()).save(os.path.join(out, 'ro.webp'), lossless=True, method=4)
         print('ro', flush=True)

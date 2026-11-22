@@ -67,8 +67,10 @@ var _thr: Thread = null
 var _baking := false
 
 # ============================================================ dựng
+var DPR := 1.0
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	DPR = maxf(1.0, k)
+	K = DPR
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -123,6 +125,12 @@ func board_rect(pad: float) -> Rect2:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
+	# Link 11-22 "menu UI kéo giãn theo tỉ lệ màn hình": cả sân + giao diện co giãn đều theo màn.
+	# Khổ chuẩn: dọc 412x915 css (S26 Ultra = 1), ngang 1280x720; màn khác nhân U = min(rộng, cao) so với khổ chuẩn.
+	var wc := vs.x / DPR
+	var hc := vs.y / DPR
+	var U := minf(wc / 412.0, hc / 915.0) if hc > wc * 1.05 else minf(wc / 1280.0, hc / 720.0)
+	K = DPR * clampf(U, 0.4, 3.0)
 	var W := vs.x / K
 	var H := vs.y / K
 	L.W = W
@@ -815,10 +823,7 @@ func _draw() -> void:
 		var ss: float = R * (2.3 + st.z * 0.9)
 		var al := maxf(0.25, 1 - st.z * 0.55) * 0.9
 		if st.z < 0.03:
-			var sz := R * 3.3
-			draw_set_transform_matrix(Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO) * Transform2D(st.id * 2.39, P + sh))
-			draw_texture_rect_region(A.atlas, Rect2(-sz / 2, -sz / 2, sz, sz), A.R_SAND, Color(1, 1, 1, 0.62))
-			_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
+			# Link 11-22: bỏ vòng cát sỏi nhỏ quanh chân quân, chỉ còn bóng
 			var cs := R * 2.16
 			draw_texture_rect_region(A.atlas, Rect2(P.x + R * 0.07 - cs / 2, P.y + R * 0.1 - cs / 2, cs, cs * 0.96), A.R_CONT, Color(1, 1, 1, 0.5))
 			var ks := R * 2.3
