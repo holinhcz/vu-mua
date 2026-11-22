@@ -43,6 +43,15 @@ func _init(ui, wca, wl, wh) -> void:
 	WH = wh
 	SK = Snap.load_snap("sky")
 
+var _vb := -1   # (bản 497) khúc cuộn đã dựng của tab Bộ sưu tập: chỉ dựng ô quanh màn hình, cuộn tới đâu dựng tới đó
+const VB := 200.0
+
+func step(dt: float) -> void:
+	if on and tab == "bst" and int(scroll / VB) != _vb:
+		_build()
+		return
+	super(dt)
+
 func open() -> void:   # Al("book"): luôn về tab Làng
 	tab = "lang"
 	on = true
@@ -101,6 +110,7 @@ func _cols() -> Array:   # c(): [khóa, tên, danh sách, là công trình, hìn
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
+	_vb = int(scroll / VB)
 	var rt := 0
 	for t in WCA.bs_list():
 		if WCA.tb(t):
@@ -333,6 +343,8 @@ func _bst() -> Array:
 		groups.append(["", K[2]])
 	var cw := (XW - 4.0 * 5.0) / 5.0
 	var ch := 62.0
+	var lo := scroll - 300.0   # chỉ dựng ô trong khoảng màn hình ± 300 (còn lại chỉ giữ chỗ)
+	var hi := scroll + _hb + 300.0
 	for gr in groups:
 		if String(gr[0]) != "":
 			var ng := 0
@@ -346,7 +358,8 @@ func _bst() -> Array:
 			var cx := X0 + (i % 5) * (cw + 5.0)
 			if i > 0 and i % 5 == 0:
 				y += ch + 5.0
-			out.append_array(_kb(cx, y, cw, ch, String(L[i]), K[3], M, "b_" + String(K[0])))
+			if y + ch >= lo and y <= hi:
+				out.append_array(_kb(cx, y, cw, ch, String(L[i]), K[3], M, "b_" + String(K[0])))
 		y += ch + GG
 	return [out, y]
 
@@ -382,8 +395,9 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 # hình công trình (canvas) và bóng đen mờ của món chưa gặp
 func _wire_extra(b: Control) -> void:
 	var n: Dictionary = b.get_meta("snap", {})
-	if n.has("th") and U.bdp != null:
+	if n.has("th") and U.bdp != null and not b.has_meta("thd"):   # hình công trình: vẽ một lần mỗi nút (nút dùng lại thì thôi)
 		U.bdp._icon(b, ["id", String(n.th)], false)
+		b.set_meta("thd", true)
 	if n.get("sil", false):
 		b.modulate = Color(0, 0, 0, 0.18)
 	for k in b.kids():

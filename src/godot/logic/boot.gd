@@ -218,6 +218,7 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"slt": _slt(a)
 			"sl": ui.sl_open(); if a.size() > 1: ui.slp.tab = a[1]; if a.size() > 2: ui.slp.bs = a[2]; ui.slp._build()   # sl[:tab[:loại bst]]
 			"gpt": var t0 := Time.get_ticks_usec(); ui.gpp._tab_go(a[1] if a.size() > 1 else "db"); ui.gpp._build(); if OS.has_feature("web"): JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"gp": (Time.get_ticks_usec() - t0) / 1000.0}))   # (bản 495) đo dựng Gia phả
 			"gp": ui.gp_open(int(a[2]) if a.size() > 2 else null); if a.size() > 1: ui.gpp._tab_go(a[1]); ui.gpp._build()   # gp[:tab[:nhà]]
@@ -292,6 +293,26 @@ func _test_hook() -> void:
 
 func R2(rid: String) -> Array:
 	return G.xw.R[rid].in
+
+func _slt(a: Array) -> void:   # (bản 497) đo Sổ làng: slt:tab[:loại] -> window.__ordt {open, sig, body, mount}
+	var t0 := Time.get_ticks_usec()
+	ui.sl_open()
+	var t_open := (Time.get_ticks_usec() - t0) / 1000.0
+	var P = ui.slp
+	P.tab = a[1] if a.size() > 1 else "lang"
+	if a.size() > 2:
+		P.bs = a[2]
+	t0 = Time.get_ticks_usec()
+	P._sig()
+	var t_sig := (Time.get_ticks_usec() - t0) / 1000.0
+	t0 = Time.get_ticks_usec()
+	var o: Array = P._bst() if P.tab == "bst" else (P._dh() if P.tab == "dh" else P._lang())
+	var t_body := (Time.get_ticks_usec() - t0) / 1000.0
+	t0 = Time.get_ticks_usec()
+	P._build()
+	var t_all := (Time.get_ticks_usec() - t0) / 1000.0
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"open": t_open, "sig": t_sig, "body": t_body, "n": o[0].size(), "build": t_all}))
 
 func _gptree() -> void:   # (bản 493) test Gia phả: nhân bản 12 nhà, chia 3 họ, nối cha con thành cây, tim / việc khác nhau
 	var F0: Dictionary = G.w_all.WL._r0().fam

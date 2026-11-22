@@ -3708,6 +3708,19 @@ func item_ic(id: String, px: float) -> Texture2D:
 	var key := "kh/" + id + "_" + str(n)
 	if _icons.has(key):
 		return _icons[key]
+	if n <= 128:   # (bản 497) ảnh nướng sẵn 64 / 128px (src/tools/bake_kh.py): giải nhanh hơn ảnh 512 bọc trong svg ~10 lần
+		var bz := 64 if n <= 64 else 128
+		var raw := FileAccess.get_file_as_bytes("res://ui/img/kh/" + id + ("_64" if bz == 64 else "") + ".webp")
+		if raw.size():
+			var im := Image.new()
+			if im.load_webp_from_buffer(raw) == OK:
+				if n < bz:
+					im.convert(Image.FORMAT_RGBA8)
+					im.premultiply_alpha()
+					im.resize(n, n, Image.INTERPOLATE_LANCZOS)
+					Css._unpremul(im)
+				_icons[key] = ImageTexture.create_from_image(im)
+				return _icons[key]
 	var svg := FileAccess.get_file_as_string("res://ui/svg/kh/" + id + ".svg")
 	var img := Image.new()
 	if svg == "" or Css.svg_load(img, svg, n / 64.0) != OK:
