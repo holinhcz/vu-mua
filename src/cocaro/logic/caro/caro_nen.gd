@@ -130,6 +130,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var chicks := []
 	var roof_x := -1.0
 	var bc := Vector3.ZERO
+	var tc := Vector3(-99999, -99999, 0.01)   # bụi tre (tâm màn, cỡ)
 	var canopy := {}
 	var gl := []
 	var cs_ := u
@@ -151,6 +152,8 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
 		bc = Vector3(bq.x, bq.y, u)
+		var tq: Vector2 = P.call(Lx.call(40.0), 440.0)       # bụi tre: mép trái giữa, giữa gà mẹ và nong
+		tc = Vector3(tq.x, tq.y, 1.2 * u)
 		canopy = {"pos": P.call(sdx * 0.6, 0), "sc": u, "flip": false}
 		for q in LJ.ground_leaves:
 			var v: Vector2 = P.call(Lx.call(float(q[0])), float(q[1]))
@@ -221,11 +224,14 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var bq: Vector2 = P.call(sd.position.x + 20, minf(meY - 10, bot - 20))
 		bc = Vector3(bq.x, bq.y, clampf(mL * 1.5 / 437.0, 0.3, 0.85) * u)     # lá chuối không lấn lên khung phản
 		canopy = {"pos": P.call(sd.position.x * 0.6, sd.position.y - 40), "sc": u, "flip": false}
+		var tq2: Vector2 = P.call(sd.end.x + 10, bot + 10)
+		tc = Vector3(tq2.x, tq2.y, clampf(mR * 1.6 / 391.0, 0.3, 0.8) * u)   # màn dọc rộng: bụi tre góc dưới phải
 		if mL < 60 and mR < 60:
 			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối xuống góc dưới phải
 			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
 			canopy.flip = false
 			bc = Vector3(-99999, -99999, 0.01)
+			tc = Vector3(W - 25.0 * u, f.position.y - 95.0 * u, 0.8 * u)     # bụi tre: góc trên phải, thò từ mép màn
 			if short_banana.size.x > 0:
 				var bp: Vector2 = P.call(short_banana.position.x, short_banana.position.y)
 				bc = Vector3(bp.x, bp.y, short_banana.size.x / (3934.0 / PXU) * u)   # 3934 = bề ngang lá chuối thật trong ảnh
@@ -365,6 +371,22 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var fall := Node2D.new(); add_child(fall)
 	var bn := _spr(self, bt, Vector2(bc.x, bc.y), true, 0.0, bc.z)
 	bn.material = _wmat(bt, bt.get_size() / 2, bt.get_size().x / 2, 0.0, 1.2 * PXU, 0.035, 0.9, 0.06, 0.0, 0.0, 0.0)
+	if tc.x > -9999:
+		# bụi tre: không lá nào chạm khung phản (đẩy ra phía mép màn gần nhất)
+		var tt := tex("tre"); var tur := _used("tre"); var tw2: Vector2 = tt.get_size() / PXU
+		var trr := Rect2(Vector2(tc.x, tc.y) + (tur.position - tw2 / 2) * tc.z, tur.size * tc.z)
+		var fz: Rect2 = fr.grow(-3)
+		if trr.intersects(fz):
+			# dời ít nhất theo 1 hướng (trái/phải/lên/xuống) cho lá vừa chạm mép khung
+			var mv := [Vector2(fz.position.x - trr.end.x, 0), Vector2(fz.end.x - trr.position.x, 0), Vector2(0, fz.position.y - trr.end.y), Vector2(0, fz.end.y - trr.position.y)]
+			var best: Vector2 = mv[0]
+			for m in mv:
+				if m.length() < best.length(): best = m
+			tc.x += best.x; tc.y += best.y
+		var tsh := _spr(self, tt, Vector2(tc.x, tc.y) + Vector2(30, 40) * tc.z, true, 0.0, tc.z)
+		tsh.material = _wmat(tt, tt.get_size() / 2, tt.get_size().x / 2, 0.0, 2.0 * PXU, 0.05, 2.3, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
+		var tn := _spr(self, tt, Vector2(tc.x, tc.y), true, 0.0, tc.z)
+		tn.material = _wmat(tt, tt.get_size() / 2, tt.get_size().x / 2, 0.0, 1.6 * PXU, 0.05, 2.3, 0.06, 0.0, 0.0, 0.0)
 	for i in 4:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
