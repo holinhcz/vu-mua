@@ -146,11 +146,12 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		for p in LJ.props:
 			var q: Vector2 = P.call(Lx.call(float(p[1])), float(p[2]))
 			if p[0] == "lu": q.x = minf(q.x + shift, roof_x - 58.0 * u)
+			if p[0] == "ga": q = P.call(Lx.call(470.0), 520.0)     # Link 11-22 bỏ nia lúa + nón: gà mẹ ra giữa sân trái
 			items.append([p[0], q.x, q.y, u, p[4]])
 		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
-		var hdx: float = Lx.call(hx0) - hx0                 # gà con đi theo gà mẹ
+		var hdx: float = Lx.call(470.0) - hx0                 # gà con đi theo gà mẹ
 		for c in LJ.chicks:
-			var q: Vector2 = P.call(float(c[0]) + hdx, float(c[1]))
+			var q: Vector2 = P.call(float(c[0]) + hdx, float(c[1]) + 148.0)
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
 		bc = Vector3(bq.x, bq.y, u)
@@ -188,7 +189,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var ny: float = clampf(gy, band0 + nr * 0.75, bot - nr * 0.55)
 			add.call("nong", nx, ny, 66.0 / 140.0, [6, 8, 5, 0.42])     # cùng cỡ thật như màn ngang
 			hs = 130.0 / 230.0
-			hp = Vector2(nx + nr + 40, clampf(ny - 8, band0 + 30, bot - 30))
+			hp = Vector2(nx + nr * 0.6, clampf(ny - 8, band0 + 30, bot - 30))     # nia lúa đã bỏ: gà mẹ đứng chỗ nia
 			if sd.size.x > 720:
 				add.call("lu", nx + nr + 150, clampf(gy + 10, band0 + 30, bot - 26), 50.0 / 92.0, [8, 10, 6, 0.45])
 			var bw: float = R.size.x * 2.1; var bz_: float = bw / 437.0
@@ -226,14 +227,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var bq: Vector2 = P.call(sd.position.x + 20, minf(meY - 10, bot - 20))
 		bc = Vector3(bq.x, bq.y, clampf(mL * 1.5 / 437.0, 0.3, 0.85) * u)     # lá chuối không lấn lên khung phản
 		canopy = {"pos": P.call(sd.position.x * 0.6, sd.position.y - 40), "sc": u, "flip": false}
-		var tq2: Vector2 = P.call(sd.end.x + 10, bot + 10)
-		tc = Vector3(tq2.x, tq2.y, clampf(mR * 1.6 / 874.0, 0.13, 0.36) * u)   # màn dọc rộng: bụi tre góc dưới phải
 		if mL < 60 and mR < 60:
 			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối xuống góc dưới phải
 			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
 			canopy.flip = false
 			bc = Vector3(-99999, -99999, 0.01)
-			tc = Vector3(W - 25.0 * u, f.position.y - 95.0 * u, 0.36 * u)     # bụi tre: góc trên phải, thò từ mép màn
 			if short_banana.size.x > 0:
 				var bp: Vector2 = P.call(short_banana.position.x, short_banana.position.y)
 				bc = Vector3(bp.x, bp.y, short_banana.size.x / (3934.0 / PXU) * u)   # 3934 = bề ngang lá chuối thật trong ảnh
@@ -253,7 +251,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		_spr(self, lt[int(q[3])], Vector2(q[0], q[1]), true, deg_to_rad(q[2]), s)
 	# ---- đồ vật + gà (không món nào chạm khung phản: món nào lấn thì đẩy ra ngoài)
 	var frm: Rect2 = Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)).grow(6)
-	items = items.filter(func(it): return it[0] != "mam")   # Link 11-21: bỏ ca nước
+	items = items.filter(func(it): return not (it[0] in ["mam", "non", "nong"]))   # Link 11-21 bỏ ca nước; 11-22 bỏ nón lá + nia lúa
 	for it in items:
 		var ur := _used(it[0]); var tw: Vector2 = tex(it[0]).get_size() / PXU; var s0: float = it[3]
 		var r := Rect2(Vector2(it[1], it[2]) + (ur.position - tw / 2) * s0, ur.size * s0)
