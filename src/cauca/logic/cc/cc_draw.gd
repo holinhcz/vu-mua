@@ -99,7 +99,7 @@ func _draw_refl(ci: CanvasItem) -> void:
 	var W: Dictionary = game.W
 	for p in W.props:
 		if p.has("sen"):
-			_refl(ci, "sen" + str(p.k), p.x, p.z, SEN_W * p.s, sin(W.t * .8 + p.ph) * .25, .9)
+			_refl(ci, "sen" + str(p.k), p.x, p.z, SEN_W * SEN_K[p.k] * p.s, sin(W.t * .8 + p.ph) * .25, .9)
 		else:
 			_refl(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, .9)
 	if W.boat != null:
@@ -136,6 +136,7 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 # ============================================================ lớp chính
 var dbg_skip := {}
 const BG_NEAR := [["bg_tim", .07, 332.0 / 645.0, 487.0 / 592.0, 0.0], ["bg_do", .93, 288.0 / 587.0, 448.0 / 563.0, 2.1]]   # tên, x/màn, neo x, neo y, pha
+const SEN_K := [1.0, .7, 1.0, .9]     # sen trắng (1) to quá so với chỗ đứng (Link 11-22) -> nhỏ lại
 const SEN_W := .85     # bụi sen rộng (đơn vị kênh), lục bình .6
 func _draw_main(ci: CanvasItem) -> void:
 	var tod: Dictionary = game.tod
@@ -147,7 +148,7 @@ func _draw_main(ci: CanvasItem) -> void:
 	if not dbg_skip.has("prop"):
 		for p in W.props:
 			if p.has("sen"):
-				draw_floating(ci, "sen" + str(p.k), p.x, p.z, SEN_W * p.s, sin(W.t * .8 + p.ph) * .25, tod, .97)
+				draw_floating(ci, "sen" + str(p.k), p.x, p.z, SEN_W * SEN_K[p.k] * p.s, sin(W.t * .8 + p.ph) * .25, tod, .97)
 			else:
 				draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
 	if W.boat != null and not dbg_skip.has("boat"):

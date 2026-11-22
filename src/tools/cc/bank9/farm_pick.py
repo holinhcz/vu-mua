@@ -60,7 +60,7 @@ def frame(dir_, key):
     print(nm, used[nm]['w'], used[nm]['h'], flush=True)
     return nm
 
-FOL = {'dua', 'xoai', 'chomchom', 'mit', 'chuoi2', 'dambut', 'bui_cay', 'dien_dien', 'duanuoc2', 'luc_binh', 'bui_co', 'c_xanh', 'c_lau', 'tre'}
+FOL = {'dieu', 'saurieng', 'mangcut', 'buoi', 'cau', 'bonggiay', 'h_mong_ga', 'h_van_tho', 'h_cuc_vang', 'h_tim', 'h_dua_can', 'h_ngu_sac', 'h_cuc_trang', 'dua', 'xoai', 'chomchom', 'mit', 'chuoi2', 'dambut', 'bui_cay', 'dien_dien', 'duanuoc2', 'luc_binh', 'bui_co', 'c_xanh', 'c_lau', 'tre'}
 place = []
 def put(L, dir_, key, x, y, k, flip=False):
     """k = số đơn vị bờ cho 1 đơn vị game nông trại"""
@@ -83,20 +83,41 @@ def put_nha(L, nm, x, y, k, flip=False):
 cnt = {}
 for L, key, a, kw in rec9.rec:
     n = cnt[key] = cnt.get(key, -1) + 1
+    # Link 11-22: cây trái phải CÓ TRÁI CHÍN (khung d<dáng>1), thêm vài cây cao (cau, sầu riêng), bụi xanh -> hoa sặc sỡ
+    FRUIT = [('caytrai/xoai', 'dx01', 79.0), ('caytrai/mit', 'd01', 91.0), ('caytrai/dieu', 'd01', 90.0), ('caytrai/chomchom', 'd11', 89.0),
+             ('caytrai/saurieng', 'd11', 114.0), ('caytrai/xoai', 'dx11', 81.0), ('caytrai/mangcut', 'd11', 98.0), ('caytrai/buoi', 'd01', 82.0)]
     if key == 'dua':
         x, y, h, ln = a[0], a[1], a[2], a[3]
-        put(L, 'caytrai/dua', ['d00', 'd10', 'd01', 'd11'][n % 4], x, y, 1.2 * h / 160.8, ln < 0)
+        if L == 0 and n % 4 == 1:                                  # hàng xa: vài cây cau cao
+            put(L, 'caylang/cau', 'd%d' % (n % 4), x, y, 1.25 * h / 160.0, ln < 0)
+        elif L == 1 and n % 3 == 1:                                # hàng giữa: xen cây trái chín
+            fd, fk, gh = FRUIT[(n // 3) % len(FRUIT)]
+            put(L, fd, fk, x, y, 0.95 * h / gh, ln < 0)
+        else:
+            put(L, 'caytrai/dua', ['d01', 'd11'][n % 2], x, y, 1.2 * h / 160.8, ln < 0)
     elif key == 'bui':
         x, y, rx = a[0], a[1], a[2]
-        put(L, 'caydai/bui_cay', 'd%d' % (n % 4), x, y + (12 if L == 0 else 14), 2.3 * rx / 67.3, n % 2 == 1)
+        yy = y + (12 if L == 0 else 14)
+        r = (n * 7919) % 10
+        if L == 2 and r < 4:                                       # bông giấy 4 màu của nông trại
+            put(L, 'kieng/bonggiay', 'd%d' % ((n // 3) % 4), x, yy, 2.5 * rx / 70.0, n % 2 == 1)
+        elif L == 2 and r < 7:                                     # cụm hoa sặc sỡ (hoa cỏ nông trại, phóng to)
+            HF = ['h_mong_ga', 'h_van_tho', 'h_cuc_vang', 'h_tim', 'h_dua_can', 'h_ngu_sac', 'h_cuc_trang']
+            f = HF[(n // 2) % len(HF)]
+            for j, dx in enumerate((-0.55, 0.0, 0.5)):
+                put(L, 'hoaco/' + f, 'd%s%d' % (f, (n + j) % 4), x + dx * rx, yy + (j % 2) * 3, 4.2 * rx / 67.3 * (0.85 + 0.15 * j), (n + j) % 2 == 1)
+        elif L == 0 and r < 3:
+            put(L, 'kieng/bonggiay', 'd%d' % (n % 4), x, yy, 2.4 * rx / 70.0, n % 2 == 1)
+        else:
+            put(L, 'caydai/bui_cay', 'd%d' % (n % 4), x, yy, 2.3 * rx / 67.3, n % 2 == 1)
     elif key == 'cay':
         x, y, h, fr = a[0], a[1], a[2], a[4]
-        if fr == 'xoai': put(L, 'caytrai/xoai', 'dx0%d' % (n % 2), x, y, 1.2 * h / 77.1, n % 2 == 1)
-        elif fr == 'chom': put(L, 'caytrai/chomchom', 'd00', x, y, 1.2 * h / 79.1, n % 2 == 1)
-        else: put(L, 'caytrai/mit', 'd01', x, y, 1.2 * h / 90.7)
+        fd, fk, gh = [('caytrai/xoai', 'dx01', 79.0), ('caytrai/chomchom', 'd01', 79.0), ('caytrai/mit', 'd01', 91.0),
+                      ('caytrai/dieu', 'd01', 90.0), ('caytrai/saurieng', 'd01', 104.0)][n % 5]
+        put(L, fd, fk, x, y, 1.2 * h / gh, n % 2 == 1)
     elif key == 'chuoi':
         x, y, s = a[0], a[1], a[2]
-        put(L, 'caytrai/chuoi2', ['d00', 'd10'][n % 2], x, y, 240 * s / 105.3, n % 3 == 1)
+        put(L, 'caytrai/chuoi2', ['d01', 'd11'][n % 2], x, y, 240 * s / 105.3, n % 3 == 1)
     elif key == 'dambut':
         x, y, w = a[0], a[1], a[2]
         put(L, 'caylang/dambut', 'd%d' % (n % 4), x, y, 1.25 * w / 74, n % 2 == 1)
