@@ -193,6 +193,12 @@ func world_init() -> void:
 	W.props = []
 	for i in 7:
 		W.props.append(new_prop(true))
+	# bụi sen (ảnh thủy sinh của nông trại): mọc tại chỗ ven 2 bên kênh, không trôi (Link 11-22)
+	var sz := [15.0, 21.0, 27.0, 33.0]
+	for i in 4:
+		var z: float = sz[i] + rnd(-1.5, 1.5)
+		var sd := -1.0 if i % 2 == 0 else 1.0
+		W.props.append({"z": z, "x": sd * half_x(z) * rnd(.62, .86), "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
 	W.spots = []
 	for i in 2:
 		W.spots.append(new_spot())
@@ -255,6 +261,8 @@ func world_update(dt: float) -> void:
 		rips[i * 4 + 3] = r.a
 	# lục bình trôi
 	for p in W.props:
+		if p.has("sen"):
+			continue
 		p.x += p.v * dt * (1 + W.wind * .5)
 		if p.x > half_x(p.z) + 3:
 			p.merge(new_prop(false), true)

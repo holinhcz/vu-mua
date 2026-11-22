@@ -15,6 +15,7 @@ G = '/mnt/project-files/nong-trai-chung/godot/'
 NT = '/mnt/project-files/nong-trai-chung/img/'
 OUT = sys.argv[1]
 NHA = sys.argv[2] if len(sys.argv) > 2 else None     # nha_ngang.py OUT: nhà tranh nhìn ngang
+CT = sys.argv[3] if len(sys.argv) > 3 else None      # ct_ngang.py OUT: bến ghe + miếu nhìn ngang
 os.makedirs(OUT, exist_ok=True)
 
 def night_key(k):
@@ -68,11 +69,14 @@ def put(L, dir_, key, x, y, k, flip=False):
     place.append([L, nm, round(x, 1), round(y, 1), round(-sc if flip else sc, 4), 1 if dir_.split('/')[-1] in FOL else 0])
 
 nm_meta = json.load(open(os.path.join(NHA, 'nha.json'))) if NHA else {}
+ct_meta = json.load(open(os.path.join(CT, 'ct.json'))) if CT else {}
 def put_nha(L, nm, x, y, k, flip=False):
     if nm not in used:
+        dd = NHA if nm in nm_meta else CT
+        mm = nm_meta.get(nm) or ct_meta[nm]
         for m in ('d', 'n'):
-            Image.open(os.path.join(NHA, '%s_%s.webp' % (nm, m))).save(os.path.join(OUT, '%s_%s.webp' % (nm, m)), lossless=True, quality=100, method=4)
-        mm = nm_meta[nm]; used[nm] = dict(w=mm['w'], h=mm['h'], ax=mm['ax'], ay=mm['ay'], ppu=mm['ppu'])
+            Image.open(os.path.join(dd, '%s_%s.webp' % (nm, m))).save(os.path.join(OUT, '%s_%s.webp' % (nm, m)), lossless=True, quality=100, method=4)
+        used[nm] = dict(w=mm['w'], h=mm['h'], ax=mm['ax'], ay=mm['ay'], ppu=mm['ppu'])
     sc = k / used[nm]['ppu']
     place.append([L, nm, round(x, 1), round(y, 1), round(-sc if flip else sc, 4), 0])
 
@@ -112,7 +116,10 @@ for L, key, a, kw in rec9.rec:
         else:
             put_nha(L, 'nha_nho', x, y + 2, 4.3 * s, n % 2 == 1)
     elif key == 'mieu':
-        put(L, 'congtrinh/shrine', 'bd', a[0], a[1] - 8, 2.2)
+        if 'mieu_ngang' in ct_meta:      # bệ đất của miếu nằm sau vách đất bờ (bờ vẽ sau)
+            put_nha(L, 'mieu_ngang', a[0], ground(a[0]) + 28, 3.3)
+        else:
+            put(L, 'congtrinh/shrine', 'bd', a[0], a[1] - 8, 2.2)
     elif key == 'bo':
         place.append([L, '#bo', 0, 0, 0, 0])            # bờ đất + mép cỏ do code vẽ, đúng thứ tự này
         R = random.Random(8)
@@ -124,7 +131,10 @@ for L, key, a, kw in rec9.rec:
                 elif r < .85: put(L, 'hoaco/c_xanh', 'dc_xanh%d' % R.randint(0, 3), x, ground(x) + 10, R.uniform(1.1, 1.5), R.random() < .5)
                 else: put(L, 'hoaco/c_lau', 'dc_lau%d' % R.randint(0, 3), x, ground(x) + 10, R.uniform(1.0, 1.3), R.random() < .5)
             x += R.uniform(28, 62)
-        put(L, 'congtrinh/ben', '0d', 2650 + 250, WL + 14, 2.3)
+        if 'ben_ngang' in ct_meta:       # neo = đầu bến phía bờ, ngang mặt nước
+            put_nha(L, 'ben_ngang', 2650 + 380, WL + 3, 3.3)
+        else:
+            put(L, 'congtrinh/ben', '0d', 2650 + 250, WL + 14, 2.3)
 
 # ảnh nền bờ đất / mép cỏ của nông trại (lặp)
 for nm in ('n2_co', 'dg2_dat'):
@@ -134,7 +144,7 @@ for nm in ('n2_co', 'dg2_dat'):
 def ord3(p):
     if p[0] != 3: return 0
     n = p[1]
-    return 0 if n.startswith(('nha_', 'shrine')) else 1 if n == '#bo' else 3 if n.startswith('ben') else 2
+    return 0 if n.startswith(('nha_', 'shrine', 'mieu_')) else 1 if n == '#bo' else 3 if n.startswith('ben') else 2
 place = sorted(place, key=lambda p: (p[0], ord3(p)))
 gx = list(range(-40, BW + 41, 10))
 lay = dict(W=BW, H=BH, WL=WL, far=[[round(x, 1), round(y, 1)] for x, y in rec9.FAR],

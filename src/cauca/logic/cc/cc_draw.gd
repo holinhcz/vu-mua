@@ -88,7 +88,10 @@ static func mulc(c: Color, l: Color, a := 1.0) -> Color:
 func _draw_refl(ci: CanvasItem) -> void:
 	var W: Dictionary = game.W
 	for p in W.props:
-		_refl(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, .9)
+		if p.has("sen"):
+			_refl(ci, "sen" + str(p.k), p.x, p.z, SEN_W * p.s, sin(W.t * .8 + p.ph) * .25, .9)
+		else:
+			_refl(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, .9)
 	if W.boat != null:
 		_refl(ci, "ghe", W.boat.x, W.boat.z, 5.2, sin(W.boat.ph * 1.4) * 1.2, .78)
 
@@ -122,6 +125,7 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 
 # ============================================================ lớp chính
 var dbg_skip := {}
+const SEN_W := .85     # bụi sen rộng (đơn vị kênh), lục bình .6
 func _draw_main(ci: CanvasItem) -> void:
 	var tod: Dictionary = game.tod
 	var W: Dictionary = game.W
@@ -131,7 +135,10 @@ func _draw_main(ci: CanvasItem) -> void:
 			draw_bird(ci, b, tod)
 	if not dbg_skip.has("prop"):
 		for p in W.props:
-			draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
+			if p.has("sen"):
+				draw_floating(ci, "sen" + str(p.k), p.x, p.z, SEN_W * p.s, sin(W.t * .8 + p.ph) * .25, tod, .97)
+			else:
+				draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
 	if W.boat != null and not dbg_skip.has("boat"):
 		draw_boat(ci, W.boat, tod)
 	if not dbg_skip.has("fx"): fx_draw(ci, tod)
