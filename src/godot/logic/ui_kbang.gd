@@ -44,7 +44,33 @@ func _kshell(L: Array, cur: String, go: Callable) -> Array:
 	_hb = float(vt.r[3])
 	return [n, vt, vy]
 
+var fit := false   # (bản 492) bảng ngắn (Thư nhà): khung co lại vừa nội dung, đứng giữa màn
+
+func _kfit(n: Dictionary, cut: float, d: float) -> void:   # co khung: khối nằm dưới vạch cut dời lên d, khối vắt qua vạch thì thấp bớt d
+	if n.has("r") and not String(n.get("cls", "")).begins_with("pbk") and String(n.get("cls", "")) != "pov":
+		var r: Array = n.r
+		if float(r[1]) >= cut:
+			r[1] = float(r[1]) - d
+			if n.has("tr"):
+				n.tr[1] = float(n.tr[1]) - d
+		elif float(r[1]) + float(r[3]) > cut:
+			r[3] = float(r[3]) - d
+	for k in n.get("kids", []):
+		if k is Dictionary:
+			_kfit(k, cut, d)
+
+func _kshift(n: Dictionary, dy: float) -> void:   # dời cả khung (trừ nền tối) xuống dy
+	for k in n.get("kids", []):
+		if k is Dictionary and not String(k.get("cls", "")).begins_with("pbk"):
+			Snap._move(k, Vector2(0, dy))
+
 func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -> void:
+	if fit and ch + 8.0 < _hb:
+		var d := _hb - ch
+		_kfit(n, vy + ch, d)
+		_kshift(n, d * 0.5)
+		vy += d * 0.5
+		_hb = ch
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
 	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn

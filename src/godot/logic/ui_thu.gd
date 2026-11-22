@@ -1,22 +1,27 @@
 extends "res://logic/ui_kbang.gd"
-# BẢNG THƯ NHÀ (kU bản web). (bản 491) làm lại trên khung Kho + chip chung (ui_kbang.gd), không tab:
-#  - lá thư: nền giấy thư (vạch kẻ mờ), đầu thư có mặt người gửi + "Thư của …", lời thư;
-#  - thư gửi tiền / gửi gạch: chip quà kèm (hình + số), nút Nhận;
-#  - thư nhờ gửi đồ quê: chip món (có / cần) + chip tiền cước, nút Gửi đi (thiếu: chip đỏ "Thiếu N") + Để dành; thư hẹn (để dành) chỉ còn Gửi;
-#  - dưới: Thư cũ (g.thu.lg, w_thu.gd ghi lúc nhận / gửi).
+# BẢNG THƯ NHÀ (kU bản web). (bản 491) khung Kho + chip chung (ui_kbang.gd), không tab; (bản 492) khung co vừa nội dung (fit):
+#  - lá thư: giấy vở (vạch kẻ, lề đỏ), đầu thư mặt người gửi (ảnh tròn vlface/m*.webp) + "Thư của …" + nơi gửi, ký tên cuối thư;
+#  - thư gửi tiền / gửi gạch: chip quà kèm (xanh), nút Nhận;
+#  - thư nhờ gửi đồ quê: chip món (có / cần) sát chip tiền cước (xanh), đủ hàng: Gửi đi + Để dành, thiếu: chỉ Để dành;
+#    thư hẹn (để dành): một dòng đầu thư, không giấy;
+#  - dưới: Thư cũ (g.thu.lg, w_thu.gd ghi lúc nhận / gửi): tên, ngày, kết quả có hình + màu theo loại.
 # Luật ở w_thu.gd (wU).
 
 var TH            # w_thu.gd
 
 const THC := {   # màu riêng: giấy thư
-	"paper": ["rgb(255, 253, 244)", "rgb(255, 251, 238)", "rgb(252, 247, 230)", "rgb(206, 186, 140)"],
+	"paper": ["rgb(255, 254, 248)", "rgb(255, 253, 244)", "rgb(253, 250, 238)", "rgb(196, 178, 136)"],
 }
+const NOI := ["Sài Gòn", "Cần Thơ", "Biên Hòa", "Bình Dương", "Sài Gòn", "Vũng Tàu"]   # nơi người nhà đi làm, theo tên (XN)
+const LGC := {"tien": "rgb(200, 120, 20)", "tin": "rgb(170, 80, 50)", "nho": "rgb(46, 130, 60)"}   # màu kết quả Thư cũ
+
 func _ck(kind: String) -> Array:
 	return THC[kind] if THC.has(kind) else super(kind)
 
 func _init(ui, wth) -> void:
 	super(ui)
 	TH = wth
+	fit = true
 
 func open() -> void:
 	on = true
@@ -30,8 +35,11 @@ func _sig() -> String:
 	var o = t.get("rq")
 	return JSON.stringify([t, _barn(a.id) if a is Dictionary and a.has("id") else 0, _barn(o.id) if o is Dictionary else 0])
 
-func _face(who: String) -> String:   # mặt người gửi theo tên
-	return "pic:res://ui/img/vlface/" + str(maxi(0, TH.XN.find(who)) % 8) + ".webp"
+func _face(who: String) -> String:   # mặt người gửi (ảnh tròn đầu + vai) theo tên
+	return "pic:res://ui/img/vlface/m" + str(maxi(0, TH.XN.find(who)) % 8) + ".webp"
+
+func _noi(who: String) -> String:
+	return NOI[maxi(0, TH.XN.find(who)) % NOI.size()]
 
 static func _body(who: String, txt: String) -> String:   # lời thư: bỏ "Út Mến viết: " (đầu thư đã ghi tên) và ngoặc kép
 	var k := txt.find(": \"")
@@ -41,61 +49,72 @@ static func _body(who: String, txt: String) -> String:   # lời thư: bỏ "Út
 			txt = txt.substr(0, txt.length() - 1)
 	return txt
 
-func _letter(y: float, who: String, head: String, txt: String) -> Array:   # lá thư: đầu thư (mặt, tên) + lời thư trên giấy kẻ
+func _head(x: float, y: float, w: float, who: String, t: String, s: String) -> Array:   # đầu thư: mặt tròn, tên đậm, dòng phụ
+	return [_icx(x + 18.0, y + 18.0, 34.0, _face(who)), _dt(x + 42.0, y + 2.0, w - 46.0, 16.0, t, 12.0, 800, BROWN, "left"),
+		_dt(x + 42.0, y + 19.0, w - 46.0, 14.0, s, 10.0, 600, SUB, "left")]
+
+func _letter(y: float, who: String, txt: String) -> Array:   # lá thư giấy vở: đầu thư, vạch kẻ, lề đỏ, ký tên
 	var out := []
+	var noi := "Sài Gòn" if txt.contains("Sài Gòn") else _noi(who)   # thư tự ghi nơi thì theo thư
 	txt = _body(who, txt)
-	var P := _para(X0 + 14.0, 0.0, XW - 28.0, txt, 11.0, 600, BROWN, 17.0)
-	var h := 52.0 + float(P[1]) + 12.0
+	var lh := 18.0
+	var tx := X0 + 34.0
+	var P := _para(tx, 0.0, XW - 46.0, txt, 11.0, 600, BROWN, lh)
+	var nl := int(round(float(P[1]) / lh)) + 1   # thêm 1 dòng ký tên
+	var ty := y + 50.0
+	var h := 50.0 + nl * lh + 10.0
 	out.append(_chip(X0, y, XW, h, "paper"))
-	out.append(_icx(X0 + 26.0, y + 24.0, 30.0, _face(who)))
-	out.append(_dt(X0 + 48.0, y + 9.0, XW - 60.0, 16.0, "Thư của " + who, 12.0, 800, BROWN, "left"))
-	out.append(_dt(X0 + 48.0, y + 25.0, XW - 60.0, 14.0, head, 10.0, 600, SUB, "left"))
-	out.append(_dbx(X0 + 12.0, y + 46.0, XW - 24.0, 1.0, "rgb(222, 204, 164)", 0.0))
-	var ty := y + 52.0
-	for i in int(round(float(P[1]) / 17.0)):   # vạch kẻ giấy dưới mỗi dòng
-		out.append(_dbx(X0 + 12.0, ty + (i + 1) * 17.0 - 1.0, XW - 24.0, 1.0, "rgba(150, 170, 200, 0.28)", 0.0))
+	out.append_array(_head(X0 + 8.0, y + 7.0, XW - 16.0, who, "Thư của " + who, noi + " · hôm nay"))
+	for i in nl:   # vạch kẻ dưới mỗi dòng
+		out.append(_dbx(X0 + 8.0, ty + (i + 1) * lh - 2.0, XW - 16.0, 1.0, "rgba(110, 140, 190, 0.45)", 0.0))
+	out.append(_dbx(tx - 7.0, y + 46.0, 1.0, h - 52.0, "rgba(214, 90, 90, 0.55)", 0.0))   # lề đỏ
 	for n in P[0]:
 		n.r[1] = float(n.r[1]) + ty
 		out.append(n)
+	out.append(_dt(X0, ty + (nl - 1) * lh, XW - 16.0, lh, "— " + who, 11.0, 700, SUB, "right"))
 	return [out, h]
 
 func _gift(y: float, ic: String, t: String, s: String) -> Array:   # chip quà kèm thư: hình, số, dòng phụ
-	var c := _chip(X0, y, XW, 44.0, "now")
-	c.kids = [_icx(X0 + 26.0, y + 22.0, 30.0, ic), _dt(X0 + 48.0, y + 6.0, XW - 60.0, 18.0, t, 13.0, 800, BROWN, "left"),
+	var c := _chip(X0, y, XW, 44.0, "got")
+	c.kids = [_icx(X0 + 26.0, y + 22.0, 30.0, ic), _dt(X0 + 48.0, y + 6.0, XW - 60.0, 18.0, t, 13.0, 800, "rgb(40, 110, 50)", "left"),
 		_dt(X0 + 48.0, y + 24.0, XW - 60.0, 14.0, s, 10.0, 600, SUB, "left")]
 	return [[c], 44.0]
 
-func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   # món cần gửi + tiền cước, hàng nút
+func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   # chip món (có / cần) sát chip tiền cước, hàng nút
 	var out := []
 	var hv := _barn(id)
-	var lw := floorf((XW - 6.0) * 0.55)
-	var nd := _nchips(X0, y, lw, [[id, G.item_name(id), hv, q]])
-	nd[0][0].r[2] = lw   # chip món giãn đủ nửa trái, sát chip tiền cước
-	out.append_array(nd[0])
-	var rx := X0 + lw + 6.0
-	var rw := XW - lw - 6.0
-	var c := _chip(rx, y, rw, 34.0, "now")
-	c.kids = [_icx(rx + 18.0, y + 17.0, 24.0, "xu"), _dt(rx + 34.0, y + 3.0, rw - 38.0, 14.0, "Tiền cước", 10.0, 700, SUB, "left"),
-		_dt(rx + 34.0, y + 17.0, rw - 38.0, 14.0, "+" + G.fmt_n(xu) + " xu", 10.5, 800, "rgb(150, 90, 10)", "left")]
+	var ok := hv >= q
+	var g := 6.0
+	var lw := floorf((XW - g) * 0.5)
+	var c := _chip(X0, y, lw, 38.0, "fut")
+	c.kids = [_icx(X0 + 20.0, y + 19.0, 28.0, id), _dt(X0 + 40.0, y + 4.0, lw - 44.0, 15.0, _fitw(G.item_name(id), 10.5, 700, lw - 44.0), 10.5, 700, BROWN, "left"),
+		_dt(X0 + 40.0, y + 19.0, lw - 44.0, 15.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 11.0, 800, "rgb(46, 120, 50)" if ok else "rgb(190, 60, 50)", "left")]
+	c.act = _dsay.bind(G.item_name(id) + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
 	out.append(c)
-	y += 34.0 + GG
-	var bw := XW if de == null else floorf((XW - 6.0) * 0.6)
-	if hv >= q:
+	var rx := X0 + lw + g
+	var rw := XW - lw - g
+	var r := _chip(rx, y, rw, 38.0, "got")
+	r.kids = [_icx(rx + 20.0, y + 19.0, 26.0, "xu"), _dt(rx + 40.0, y + 4.0, rw - 44.0, 15.0, "Tiền cước", 10.5, 700, SUB, "left"),
+		_dt(rx + 40.0, y + 19.0, rw - 44.0, 15.0, "+" + G.fmt_n(xu) + " xu", 11.0, 800, "rgb(40, 110, 50)", "left")]
+	out.append(r)
+	y += 38.0 + GG
+	if ok and de != null:
+		var bw := floorf((XW - g) * 0.6)
 		out.append(_btn(X0, y, bw, 32.0, "Gửi đi", cb, "go"))
-	else:   # thiếu: chip đỏ, không bấm
-		var m := _chip(X0, y, bw, 32.0, "sen")
-		m.kids = [_dt(X0, y, bw, 32.0, "Thiếu " + G.fmt_n(q - hv) + " " + G.item_name(id).to_lower(), 11.0, 800, "rgb(190, 50, 60)")]
-		m.act = _dsay.bind("Kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ". Để dành rồi gửi sau khi đủ.")
-		out.append(m)
-	if de != null:
-		var dx := X0 + bw + 6.0
-		var dw := XW - bw - 6.0
-		var d := _chip(dx, y, dw, 32.0, "fut")
-		d.kids = [_dt(dx, y, dw, 32.0, "Để dành", 11.0, 700, BROWN)]
+		var d := _chip(X0 + bw + g, y, XW - bw - g, 32.0, "fut")
+		d.kids = [_dt(X0 + bw + g, y, XW - bw - g, 32.0, "Để dành", 11.0, 700, BROWN)]
 		d.act = de
 		out.append(d)
-	y += 32.0
-	return [out, y]
+	elif ok:
+		out.append(_btn(X0, y, XW, 32.0, "Gửi đi", cb, "go"))
+	elif de != null:   # thiếu hàng: chỉ còn Để dành
+		var d2 := _chip(X0, y, XW, 32.0, "fut")
+		d2.kids = [_dt(X0, y, XW, 32.0, "Để dành, đủ hàng gửi sau", 11.0, 700, BROWN)]
+		d2.act = de
+		out.append(d2)
+	else:
+		return [out, y - GG]
+	return [out, y + 32.0]
 
 func _old(y: float, t: Dictionary) -> Array:   # Thư cũ: mỗi lá một dòng
 	var out := []
@@ -111,9 +130,14 @@ func _old(y: float, t: Dictionary) -> Array:   # Thư cũ: mỗi lá một dòng
 		var ago: int = day - int(r.get("d", day))
 		var dn := "hôm nay" if ago <= 0 else ("hôm qua" if ago == 1 else str(ago) + " ngày trước")
 		var nw: float = Box.text_w(String(r.w), 10.5, 800) + 4.0
-		c.kids = [_icx(X0 + 16.0, y + 15.0, 20.0, _face(String(r.w))), _dt(X0 + 32.0, y, nw, 30.0, String(r.w), 10.5, 800, BROWN, "left"),
+		var rs := String(r.s)
+		var sw: float = minf(Box.text_w(rs, 10.5, 800) + 2.0, XW - 170.0)
+		var ks := [_icx(X0 + 16.0, y + 15.0, 22.0, _face(String(r.w))), _dt(X0 + 32.0, y, nw, 30.0, String(r.w), 10.5, 800, BROWN, "left"),
 			_dt(X0 + 32.0 + nw + 2.0, y, 90.0, 30.0, "· " + dn, 10.0, 600, SUB, "left"),
-			_dt(X0 + 150.0, y, XW - 158.0, 30.0, _fitw(String(r.s), 10.0, 700, XW - 158.0), 10.0, 700, SUB, "right")]
+			_dt(X0 + XW - 8.0 - sw, y, sw, 30.0, _fitw(rs, 10.5, 800, sw), 10.5, 800, String(LGC.get(String(r.get("k", "")), SUB)), "left")]
+		if r.has("ic"):
+			ks.append(_icx(X0 + XW - 8.0 - sw - 12.0, y + 15.0, 18.0, String(r.ic)))
+		c.kids = ks
 		out.append(c)
 		y += 30.0 + 4.0
 	return [out, y - 4.0]
@@ -125,8 +149,7 @@ func _build() -> void:   # kU
 	var out := []
 	var y := 6.0
 	if a is Dictionary:
-		var hd := "Từ Sài Gòn gửi về · hôm nay" if a.k == "tien" else ("Nhờ gửi đồ quê" if a.k == "nho" else "Thư thăm nhà")
-		var L := _letter(y, String(a.who), hd, String(a.txt))
+		var L := _letter(y, String(a.who), String(a.txt))
 		out.append_array(L[0])
 		y += float(L[1]) + GG
 		if a.k == "tien" or a.k == "tin":
@@ -138,14 +161,11 @@ func _build() -> void:   # kU
 		else:
 			var S := _send(y, String(a.id), int(a.q), int(a.xu), TH.wU.bind("gui"), TH.wU.bind("de"))
 			out.append_array(S[0])
-			y = float(S[1]) + 6.0
-			out.append(_dt(X0 + 2.0, y, XW, 14.0, "Để dành thì chạm hộp thư trước nhà để mở lại.", 10.0, 600, SUB, "left"))
-			y += 14.0
-	elif t.get("rq") is Dictionary:
+			y = float(S[1])
+	elif t.get("rq") is Dictionary:   # thư hẹn: một dòng đầu thư
 		var o: Dictionary = t.rq
-		var L2 := _letter(y, String(o.who), "Thư hẹn gửi đồ quê", "Còn hẹn gửi " + G.w_all.WC.ho(String(o.id), int(o.q)) + " cho " + String(o.who) + ". Đủ hàng là gửi được.")
-		out.append_array(L2[0])
-		y += float(L2[1]) + GG
+		out.append_array(_head(X0, y, XW, String(o.who), "Thư hẹn của " + String(o.who), "Còn hẹn gửi " + G.w_all.WC.ho(String(o.id), int(o.q))))
+		y += 36.0 + GG
 		var S2 := _send(y, String(o.id), int(o.q), int(o.xu), TH.wU.bind("gui2"), null)
 		out.append_array(S2[0])
 		y = float(S2[1])

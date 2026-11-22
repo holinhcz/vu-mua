@@ -296,7 +296,7 @@ func _thu(a: Array) -> void:   # (bản 491) test Thư nhà: thu:tien|tin|nho|rq
 		_: T.un = {"k": "nho", "who": "Út Mến", "id": "trung", "q": 12, "xu": 1061, "txt": tx}
 	if a.size() > 2:
 		var d: int = G.w_all.WL._vr()
-		T.lg = [{"w": "Hai Lúa", "s": "Gửi về 820 xu", "d": d - 1}, {"w": "Bé Na", "s": "Gửi 4 viên gạch", "d": d - 2}, {"w": "Cậu Ba", "s": "Đã gửi 6 bắp", "d": d - 4}]
+		T.lg = [{"w": "Hai Lúa", "s": "+820 xu", "ic": "xu", "k": "tien", "d": d - 1}, {"w": "Bé Na", "s": "+4 gạch", "ic": "svg:res://ui/svg/mat/gach.svg", "k": "tin", "d": d - 2}, {"w": "Cậu Ba", "s": "Gửi 6 trứng", "ic": "trung", "k": "nho", "d": d - 4}]
 	G.mark()
 	ui.thu_open()
 

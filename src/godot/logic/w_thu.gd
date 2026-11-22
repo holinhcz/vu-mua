@@ -167,7 +167,7 @@ func wU(t: String) -> void:   # nút trong bảng thư
 		else:
 			var e: Dictionary = WL._r0()
 			e.gach = int(e.get("gach", 0)) + int(n.gach)
-		_lg(a, String(n.who), ("Gửi về " + G.fmt_n(int(n.xu)) + " xu") if n.k == "tien" else ("Gửi " + str(int(n.gach)) + " viên gạch"))
+		_lg(a, String(n.who), ("+" + G.fmt_n(int(n.xu)) + " xu") if n.k == "tien" else ("+" + str(int(n.gach)) + " gạch"), "xu" if n.k == "tien" else "svg:res://ui/svg/mat/gach.svg", String(n.k))
 		a.un = null
 		_toast("Đọc thư xong xếp vô hộp, ấm lòng ghê.")
 	elif t == "gui" and _tr(n):
@@ -175,7 +175,7 @@ func wU(t: String) -> void:   # nút trong bảng thư
 			return
 		G.g.barn[n.id] = int(G.g.barn[n.id]) - int(n.q)
 		G.g.coins = int(G.g.coins) + int(n.xu)
-		_lg(a, String(n.who), "Đã gửi " + WC.ho(String(n.id), int(n.q)))
+		_lg(a, String(n.who), "Gửi " + WC.ho(String(n.id), int(n.q)), String(n.id), "nho")
 		a.un = null
 		_toast("Gói đồ quê gửi bưu điện lên cho " + String(n.who) + ". Nhận " + G.fmt_n(int(n.xu)) + " xu tiền cước gửi về.")
 		G.w_all.qi("thu")
@@ -190,16 +190,16 @@ func wU(t: String) -> void:   # nút trong bảng thư
 			return
 		G.g.barn[r.id] = int(G.g.barn[r.id]) - int(r.q)
 		G.g.coins = int(G.g.coins) + int(r.xu)
-		_lg(a, String(r.who), "Đã gửi " + WC.ho(String(r.id), int(r.q)))
+		_lg(a, String(r.who), "Gửi " + WC.ho(String(r.id), int(r.q)), String(r.id), "nho")
 		a.rq = null
 		_toast("Đã gửi đồ quê lên cho " + String(r.who) + ", nhận " + G.fmt_n(int(r.xu)) + " xu.")
 	G.mark()
 	if not _tr(a.get("un")) and not _tr(a.get("rq")):
 		_close()
 
-func _lg(a: Dictionary, who: String, s: String) -> void:   # (bản 491) Thư cũ: lá mới lên đầu, giữ 10 lá
+func _lg(a: Dictionary, who: String, s: String, ic: String, k: String) -> void:   # (bản 491) Thư cũ: lá mới lên đầu, giữ 10 lá; ic hình kết quả, k loại thư
 	var L: Array = a.get("lg", []) if a.get("lg") is Array else []
-	L.push_front({"w": who, "s": s, "d": WL._vr()})
+	L.push_front({"w": who, "s": s, "ic": ic, "k": k, "d": WL._vr()})
 	a.lg = L.slice(0, 10)
 
 func _close() -> void:
