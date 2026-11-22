@@ -67,8 +67,10 @@ var _thr: Thread = null
 var _baking := false
 
 # ============================================================ dựng
+var DPR := 1.0
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	DPR = maxf(1.0, k)
+	K = DPR
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -123,6 +125,12 @@ func board_rect(pad: float) -> Rect2:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
+	# Link 11-22 "menu UI kéo giãn theo tỉ lệ màn hình": cả sân + giao diện co giãn đều theo màn.
+	# Khổ chuẩn: dọc 412x915 css (S26 Ultra = 1), ngang 1280x720; màn khác nhân U = min(rộng, cao) so với khổ chuẩn.
+	var wc := vs.x / DPR
+	var hc := vs.y / DPR
+	var U := minf(wc / 412.0, hc / 915.0) if hc > wc * 1.05 else minf(wc / 1280.0, hc / 720.0)
+	K = DPR * clampf(U, 0.4, 3.0)
 	var W := vs.x / K
 	var H := vs.y / K
 	L.W = W
