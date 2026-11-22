@@ -397,7 +397,11 @@ func _bo_load() -> bool:
 	return true
 
 func _mat(hz: float, fol: float, mode: int) -> ShaderMaterial:
-	var aux := 1 if mode == 2 else 0
+	# ngày / đêm: KHÔNG dùng shader riêng. Godot 4.5 (gl_compatibility) vẽ shader canvas tự viết trong SubViewport bị đổi
+	# sRGB -> tuyến tính: màu tối hẳn đi (80,150,40 -> 25,88,6) = cây "xanh lè" (Link 11-22). Chỉ lớp mặt nạ đung đưa dùng.
+	if mode != 2:
+		return null
+	var aux := 1
 	var k := "%.2f_%d_%d" % [hz, int(fol), mode]
 	if not _mats.has(k):
 		var m := ShaderMaterial.new()
