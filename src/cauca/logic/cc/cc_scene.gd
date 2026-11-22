@@ -32,30 +32,75 @@ vec3 sky(vec2 p, float disc){
  c=mix(c,mix(c,uSunC+.15,.35),smoothstep(R*.088,R*.084,d)*sv);
  c=mix(c,mix(c,uSunC+.2,.55),smoothstep(R*.06,R*.057,d)*sv);
  c=mix(c,uSunC*1.1+.2,smoothstep(R*.038,R*.035,d)*sv);
+ // MÂY (vẽ lại 11-22): mây tích hoạt hình, nhiều múi tròn to nhỏ khác nhau, đáy bo tròn hơi bằng (không cắt thẳng),
+ // không viền; sáng phía mặt trời, bóng xanh xám mềm ở đáy + chỗ múi khuất nắng, mép mềm 1-2 px. Mỗi đám 1 dáng riêng,
+ // chia ô ngang nên không chồng lên nhau; vài vệt mây mỏng trên cao.
  float cl=0.; vec3 cc=uCloudC;
- for(int i=0;i<7;i++){
+ float CW=min(R,uRes.x*.7);
+ vec2 sd=uSun.z>0.?normalize(uSun.xy-vec2(uRes.x*.5,uYw*.4)+vec2(0.,-R*.3)):vec2(.3,-.95);
+ for(int i=0;i<6;i++){
   float fi=float(i);
-  if(h21(vec2(fi,7.3))>.42+uCloud*.58)continue;
-  float cw=min(R,uRes.x*.7)*(.1+.07*h21(vec2(fi,1.7)));
-  float span=uRes.x+cw*2.4;
-  float cx=mod(h21(vec2(fi,2.9))*span+uT*R*.0035*(.6+h21(vec2(fi,5.1))),span)-cw*1.2;
-  float cy=uYw*(.26+.42*h21(vec2(fi,3.3)));
-  float base=cy+cw*.13, dc=1e5;
-  if(abs(p.x-cx)>cw*1.45||abs(p.y-cy)>cw*.85)continue;
-  for(int j=0;j<6;j++){
-   float t=float(j)/5.;
-   vec2 c2=vec2(cx+(t-.5)*cw*1.7,cy+cw*.06-sin(t*3.1416)*cw*.26*(.7+.6*h21(vec2(fi,float(j)+9.))));
-   float r=cw*(.2+.15*sin(t*3.1416)+.05*h21(vec2(float(j),fi+4.)));
-   dc=min(dc,length(p-c2)-r);
+  if(h21(vec2(fi,7.3))>.45+uCloud*.55)continue;
+  float cw=CW*(.085+.075*h21(vec2(fi,1.7)));
+  float slot=(uRes.x+CW*.8)/6.;
+  float cx=mod(fi*slot+slot*.5*h21(vec2(fi,2.9))+uT*R*.0035*(.6+.5*h21(vec2(fi,5.1))),uRes.x+CW*.8)-CW*.4;
+  float cy=uYw*(.12+.26*h21(vec2(fi,3.3)));
+  if(abs(p.x-cx)>cw*1.5||p.y<cy-cw*1.2||p.y>cy+cw*.4)continue;
+  float base=cy+cw*.26;
+  // múi: 1 hàng múi nhỏ sát đáy + 3-4 múi to phía trên, múi nào ra múi đó (thấy rõ đường cong từng múi)
+  float m1=1e5, m2=1e5; vec2 n1=vec2(0.,-1.); float r1=1.;
+  int nl=6+int(h21(vec2(fi,8.8))*3.);
+  for(int j=0;j<9;j++){
+   if(j>=nl)break;
+   float hj=h21(vec2(fi*3.1,float(j)+9.)), hk=h21(vec2(fi*5.7,float(j)+3.));
+   vec2 c2; float r;
+   if(j<3){                                              // múi to phía trên, giữa cao nhất
+    float t=(float(j)+.5)/3.;
+    r=cw*(.3+.12*hj)*(j==1?1.18:.9);
+    c2=vec2(cx+(t-.5)*cw*1.15+(hk-.5)*cw*.12, base-cw*(.42+.12*hj)-(j==1?cw*.14:0.));
+   } else {                                              // múi nhỏ dọc đáy, tràn 2 bên
+    float t=(float(j-3)+.5)/float(nl-3);
+    r=cw*(.2+.07*hj)*(.8+.3*sin(t*3.1416));
+    c2=vec2(cx+(t-.5)*cw*1.75+(hk-.5)*cw*.08, base-r*.8-sin(t*3.1416)*cw*.1);
+   }
+   float e=length(p-c2)-r;
+   if(e<m1){m2=m1; m1=e; n1=(p-c2)/max(r,1.); r1=r;} else if(e<m2){m2=e;}
   }
-  dc=max(dc,p.y-base);
-  if(dc<1.5){
-   float a=smoothstep(1.5,-.5,dc);
-   vec3 body=p.y>base-cw*.1?uCloudC*vec3(.84,.9,.98):uCloudC;
-   vec3 rim=uCloudC*vec3(.62,.7,.82);
-   vec3 col=mix(rim,body,smoothstep(-1.8,-3.2,dc));
+  // thân: 1 bầu dục dẹt nối các múi ở dưới (khỏi rời thành từng hòn)
+  vec2 bd=(p-vec2(cx,base-cw*.2))/vec2(cw*.88,cw*.2);
+  float eb=(length(bd)-1.)*cw*.2;
+  if(eb<m1){m2=m1; m1=eb; n1=vec2(0.,-.3);} else if(eb<m2){m2=eb;}
+  float k=cw*.03;
+  float hh=clamp(.5+.5*(m2-m1)/k,0.,1.); float dc=mix(m2,m1,hh)-k*hh*(1.-hh);
+  // đáy bo hơi bằng
+  float kb=cw*.06;
+  float yb=p.y-base; float hb=clamp(.5-.5*(yb-dc)/kb,0.,1.); dc=mix(yb,dc,hb)+kb*hb*(1.-hb);
+  float aa=max(1.,cw*.008);
+  if(dc<aa){
+   float a=smoothstep(aa,-aa,dc);
+   float yy=clamp((base-p.y)/(cw*.95),0.,1.);            // 0 đáy -> 1 đỉnh
+   // mỗi múi như 1 quả cầu bông: sáng phía mặt trời, tối dần về phía kia và xuống đáy
+   vec3 nn=vec3(n1, sqrt(max(0.,1.-dot(n1,n1))));
+   vec3 L=normalize(vec3(sd.x,sd.y,.9));
+   float lam=clamp(dot(nn,L)*.6+.45,0.,1.);
+   float crease=smoothstep(cw*.018,0.,m2-m1)*smoothstep(-cw*.02,-cw*.08,dc);   // nếp giữa 2 múi
+   vec3 top=uCloudC*1.03, mid=uCloudC*vec3(.9,.93,.985), low=uCloudC*vec3(.74,.8,.91);
+   vec3 col=mix(mid,top,smoothstep(.35,.85,lam));
+   col=mix(low,col,smoothstep(.0,.45,yy)*.65+.35*smoothstep(.2,.7,lam));
+   col=mix(col,low,crease*.14);
+   col=mix(col,low*.96,smoothstep(cw*.06,0.,base-p.y)*.5);                     // dải bóng mềm sát đáy
    cc=mix(cc,col,a); cl=max(cl,a);
   }
+ }
+ // vệt mây mỏng trên cao
+ for(int i=0;i<2;i++){
+  float fi=float(i);
+  float w=CW*(.5+.3*h21(vec2(fi,11.)));
+  float cx=mod(h21(vec2(fi,12.))*(uRes.x+w)+uT*R*.0015,uRes.x+w*2.)-w;
+  float cy=uYw*(.07+.1*h21(vec2(fi,13.)));
+  vec2 d2=(p-vec2(cx,cy))/vec2(w,CW*.022);
+  float m=exp(-dot(d2,d2)*1.6)*(.55+.45*vn(vec2(p.x/(CW*.08),fi*5.)))*.35*(.4+uCloud*.6);
+  cc=mix(cc,uCloudC*vec3(.97,.98,1.),m*(1.-cl)); cl=max(cl,m);
  }
  c=mix(c,cc,cl*smoothstep(.05,.2,h));
  if(uStar>0.){vec2 g=floor(p/(R*.012));float s=h21(g);
