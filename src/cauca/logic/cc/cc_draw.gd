@@ -125,6 +125,7 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 
 # ============================================================ lớp chính
 var dbg_skip := {}
+const BG_NEAR := [["bg_tim", .07, 332.0 / 645.0, 487.0 / 592.0, 0.0], ["bg_do", .93, 288.0 / 587.0, 448.0 / 563.0, 2.1]]   # tên, x/màn, neo x, neo y, pha
 const SEN_W := .85     # bụi sen rộng (đơn vị kênh), lục bình .6
 func _draw_main(ci: CanvasItem) -> void:
 	var tod: Dictionary = game.tod
@@ -598,6 +599,19 @@ func draw_fg(ci: CanvasItem, tod: Dictionary) -> void:
 	var h := w / ar
 	var tc: Color = (tod.tint as Color).lerp(Color.BLACK, .12)
 	ci.draw_texture_rect(t, Rect2((L.W - w) / 2, L.H - h + 2, w, h), false, Color(tc.r, tc.g, tc.b, 1))
+	# 2 cây bông giấy trên bờ bên này (bộ vẽ bông giấy của nông trại, màu tím trái / đỏ phải), nghiêng nhẹ quanh gốc như nông trại
+	var T: float = game.W.t
+	for q in BG_NEAR:
+		var bt: Texture2D = A.img(q[0])
+		if bt == null:
+			continue
+		var bh: float = L.fgH * 1.55
+		var bw: float = bh * bt.get_size().x / bt.get_size().y
+		var foot := Vector2(L.W * float(q[1]), L.H - L.fgH * .5)
+		var ang := sin(T * 1.1 + float(q[4])) * .017
+		ci.draw_set_transform(foot, ang, Vector2.ONE)
+		ci.draw_texture_rect(bt, Rect2(-float(q[2]) * bw, -float(q[3]) * bh, bw, bh), false, Color(tc.r, tc.g, tc.b, 1))
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # ------------------------------------------------------------ chuồn chuồn
 func draw_dragonfly(ci: CanvasItem, tod: Dictionary) -> void:

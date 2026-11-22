@@ -198,7 +198,9 @@ func world_init() -> void:
 	for i in 4:
 		var z: float = sz[i] + rnd(-1.5, 1.5)
 		var sd := -1.0 if i % 2 == 0 else 1.0
-		W.props.append({"z": z, "x": sd * half_x(z) * rnd(.62, .86), "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
+		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ
+		var fx: float = sd * rnd(.4, .6)
+		W.props.append({"z": z, "x": fx * half_x(z), "fx": fx, "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
 	W.spots = []
 	for i in 2:
 		W.spots.append(new_spot())
@@ -262,6 +264,7 @@ func world_update(dt: float) -> void:
 	# lục bình trôi
 	for p in W.props:
 		if p.has("sen"):
+			p.x = float(p.get("fx", p.x / maxf(1.0, half_x(p.z)))) * half_x(p.z)
 			continue
 		p.x += p.v * dt * (1 + W.wind * .5)
 		if p.x > half_x(p.z) + 3:
