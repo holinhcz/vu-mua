@@ -391,12 +391,20 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 			break
 	var out := []
 	var x := 16.5
+	# (bản 490) tab dài theo chữ: phần dư chia đều vào từng tab cho hàng tab sát đều hai mép (trước dồn hết bên phải)
+	var ws := []
+	var sw := (n - 1) * 4.5
+	for i in n:
+		var w1: float = weq if pick[0] else float(tw0[i]) * float(pick[1]) / fs0 + (float(pick[2]) * 2.0 + 7.0) * z0
+		ws.append(w1)
+		sw += w1
+	var ex := maxf(0.0, 305.0 - sw) / n if not pick[0] else 0.0
 	for i in n:
 		var a: bool = cur == L[i][0]
 		var c := _cl(on_t if a else off_t)
 		var z := _z(c)
 		var tw: float = float(tw0[i]) * float(pick[1]) / fs0
-		var w: float = weq if pick[0] else tw + (float(pick[2]) * 2.0 + 7.0) * z
+		var w: float = float(ws[i]) + ex
 		if float(pick[1]) != fs0:
 			c.css["font-size"] = str(pick[1]) + "px"
 		_mv(c, x, float(c.r[1]))
@@ -767,6 +775,14 @@ func _qe_make(sel: String, ph: String, txt: String, cb: Callable) -> void:
 		var sb := StyleBoxEmpty.new()
 		for s in ["normal", "focus", "read_only"]:
 			qe.add_theme_stylebox_override(s, sb)
+		qe.caret_blink = true
+		qe.focus_entered.connect(func() -> void:   # (bản 490) chạm vào: bỏ chữ mờ, con trỏ nháy, viền ô đổi màu (bảng dựng lại)
+			qe.placeholder_text = ""
+			_redo())
+		qe.focus_exited.connect(func() -> void:
+			if qe != null:
+				qe.placeholder_text = ph
+			_redo())
 		U.root.add_child(qe)
 		_qe_last = txt
 	_qe_cb = cb
@@ -789,6 +805,9 @@ func _qe_place() -> void:   # gọi mỗi khung lúc bảng mở (ô có thể c
 		_qe_last = qe.text
 		if _qe_cb.is_valid():
 			_qe_cb.call(qe.text)
+
+func qe_on() -> bool:   # ô tìm đang gõ
+	return qe != null and qe.has_focus()
 
 func _qe_drop() -> void:
 	if qe != null:

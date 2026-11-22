@@ -1,6 +1,6 @@
 extends "res://logic/ui_kbang.gd"
 # SỔ TAY HƯỚNG DẪN (ZC bản web, Sổ làng › Sổ tay). (bản 484) làm lại trên khung Kho + chip chung (ui_kbang.gd):
-# hàng tab nhóm (chấm đỏ khi nhóm có mục chưa đọc), ô tìm có kính lúp, mỗi nhóm tiêu đề vạch màu + lưới 2 cột nền nhạt theo nhóm (hình riêng, tên, dòng phụ,
+# hàng tab nhóm, ô tìm có kính lúp, mỗi nhóm tiêu đề vạch màu + lưới 2 cột nền nhạt theo nhóm (hình riêng, tên, dòng phụ,
 # chấm đỏ góc phải khi chưa mở lần nào); chạm mục mở khối hướng dẫn ngay dưới hàng đó. Đọc rồi ghi g.tut.rd[mã]. Cuối: Chuyện làng, Tắt / Bật nhắc.
 # Nội dung: data/huong_dan/so_tay.json. Mục "Cấp nào mở gì": cây trồng / cây ăn trái tính lại từ data (_capdo).
 
@@ -109,13 +109,7 @@ func step(_dt: float) -> void:
 		_qe_place()
 
 func _build() -> void:
-	var rd: Dictionary = kh(G).rd
-	var red := {}
-	for sec in Y6:
-		for it in sec.items:
-			if not rd.has(it.id):
-				red[String(sec.sec)] = true
-	var L := TABS.map(func(x): return [x[0], x[1], red.has(x[0])])
+	var L := TABS.map(func(x): return [x[0], x[1], false])   # (bản 490) tab không chấm đỏ: chấm nằm trên từng mục
 	var sh := _kshell(L, tab, _tab_go)
 	var r := _body()
 	_kmount(sh[0], sh[1], float(sh[2]), r[0], float(r[1]))
@@ -151,7 +145,7 @@ func _body() -> Array:
 	var out := []
 	var y := 6.0
 	# ô tìm: nền trắng, kính lúp
-	var sb := _dbx(X0, y, XW, 30.0, "rgb(255, 255, 255)", 15.0, "", "rgba(150, 112, 48, 0.55) 0px 0px 0px 1px inset")
+	var sb := _dbx(X0, y, XW, 30.0, "rgb(255, 255, 255)", 15.0, "", "rgba(76, 150, 48, 0.95) 0px 0px 0px 2px inset" if qe_on() else "rgba(150, 112, 48, 0.55) 0px 0px 0px 1px inset")   # đang gõ: viền xanh
 	sb.cls = "u2gds"
 	sb.kids = [_dic(X0 + XW - 26.0, y + 7.0, 16.0, LUP)]
 	out.append(sb)
