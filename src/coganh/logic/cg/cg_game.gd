@@ -148,11 +148,14 @@ func _layout() -> void:
 		L.ox = (W - 4 * L.s) / 2
 		L.oy = (H - 4 * L.s) / 2 + minf(14.0, L.s * 0.1)
 	else:
+		# Link 11-22 "nia cờ trên nhỏ xíu": chừa chỗ trên + dưới bàn cho 2 nia cùng cỡ (bán kính FB * ô), dư thì chia đều
 		var top := maxf(c1.end.y, tl.end.y)
-		var bot := c0.position.y
-		L.s = minf(minf((W - 16) / (4 + 0.62), (bot - top - 16) / (4 + 2 * BM + 1.6)), 175.0)
+		const FB := 0.6
+		var bh := 4 + 2 * BM + 0.16            # bàn + mép phấn (board_rect pad 0.08 ô)
+		L.s = minf(minf((W - 16) / (4 + 0.62), (H - top - 32) / (bh + 4 * FB)), 175.0)
+		var extra := maxf(0.0, H - top - 32 - (bh + 4 * FB) * L.s)
 		L.ox = (W - 4 * L.s) / 2
-		L.oy = (top + bot) / 2 - 2 * L.s
+		L.oy = top + 16 + 2 * FB * L.s + extra / 2 + (BM + 0.08) * L.s
 	# rổ quân dư của mỗi bên: to nhất vừa chỗ (tới chừng 60 cm), phía bên mình, gần thẻ
 	var brd := board_rect(L.s * 0.08)
 	var blocks := [brd, c0.grow(8), c1.grow(8), tl.grow(8)]
@@ -167,27 +170,34 @@ func _layout() -> void:
 		var card: Rect2 = L.cards[p]
 		var cc := card.get_center()
 		var best = null
-		for f in [0.95, 0.88, 0.8, 0.72, 0.64, 0.56, 0.5]:
-			var r := maxf(26.0, minf(L.s * f, 120.0))
-			var bs := -1e9
-			var y := r + 6
-			while y <= H - r - 6:
-				var x := r + 6
-				while x <= W - r - 6:
-					if not hit.call(x, y, r + 4, blocks):
-						var ok := true
-						if L.bx.size():
-							var b0: Vector3 = L.bx[0]
-							if Vector2(x - b0.x, y - b0.y).length() < r + b0.z + 10:
-								ok = false
-						if ok:
-							var half := (0.0 if y > H / 2 else -400.0) if p == 0 else (0.0 if y < H / 2 else -400.0)
-							var sc := half - Vector2(x - cc.x, y - cc.y).length() * 0.6
-							if sc > bs:
-								bs = sc
-								best = Vector3(x, y, r)
-					x += 6
-				y += 6
+		# lượt 1 chỉ tìm bên nửa sân của mình (nia to nhất vừa chỗ); không có mới cho qua nửa kia
+		for own in [true, false]:
+			for f in [0.95, 0.88, 0.8, 0.72, 0.64, 0.6, 0.56, 0.5]:
+				var r := maxf(26.0, minf(L.s * f, 120.0))
+				var bs := -1e9
+				var y := r + 6
+				while y <= H - r - 6:
+					var mine := y > H / 2 if p == 0 else y < H / 2
+					if own and not mine:
+						y += 6
+						continue
+					var x := r + 6
+					while x <= W - r - 6:
+						if not hit.call(x, y, r + 4, blocks):
+							var ok := true
+							if L.bx.size():
+								var b0: Vector3 = L.bx[0]
+								if Vector2(x - b0.x, y - b0.y).length() < r + b0.z + 10:
+									ok = false
+							if ok:
+								var sc := -Vector2(x - cc.x, y - cc.y).length() * 0.6
+								if sc > bs:
+									bs = sc
+									best = Vector3(x, y, r)
+						x += 6
+					y += 6
+				if best != null:
+					break
 			if best != null:
 				break
 		if best == null:
