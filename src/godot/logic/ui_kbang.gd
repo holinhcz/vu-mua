@@ -439,8 +439,7 @@ const CHU := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><p
 const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
 func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
 	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
-	if f > 0.0:
-		out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))
+	out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))   # (bản 481) lúc 0 vẫn có chấm đỏ đầu thanh
 	return out
 
 static func _fcol(f: float) -> String:

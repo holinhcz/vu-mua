@@ -305,28 +305,24 @@ func _thi() -> Array:
 	out.append(lc[0])
 	out[2].r[2] = maxf(0.0, float(out[2].r[2]) - float(lc[1]) - 6.0)
 	y += 16.0 + GG
-	# (bản 480) thưởng: 3 ô bục vàng / bạc / đồng, huy chương to, "Hạng N" + xu, sen bằng hình
+	# (bản 481) thưởng: 3 ô cao bằng nhau, huy chương có dải (trái), "Hạng N" + xu, sen (phải); hạng 1 có chip Vua
 	var pw := (XW - 8.0) / 3.0
 	for i in 3:
 		var P: Array = WC2.KLPRIZE[i]
 		var px := X0 + i * (pw + 4.0)
-		var ph := 58.0 - i * 4.0
-		var py := y + (58.0 - ph)
-		var pc := _chip(px, py, pw, ph, "m" + str(i + 1))
-		var md := _medal(px + pw * 0.5 - 13.0, py + 6.0, i)
-		md.r = [px + pw * 0.5 - 13.0, py + 6.0, 26.0, 26.0]
-		md.css["border-radius"] = _cpx(13.0)
-		md.kids[0].r = md.r.duplicate()
-		md.kids[0].css["font-size"] = _cpx(12.0)
-		md.kids[0].css["line-height"] = _cpx(26.0)
-		var Rw := [WC2._sa(int(P[0])), "c", " " + str(P[1]), "i:pearl"]
-		var rw := float(_rowi(0.0, 0.0, 16.0, Rw, 10.0, 800, "")[1])
-		var kk := [md]
-		kk.append_array(_rowi(px + (pw - rw) * 0.5, py + ph - 21.0, 16.0, Rw, 10.0, 800, BROWN)[0])
+		var pc := _chip(px, y, pw, 56.0, "m" + str(i + 1))
+		var kk := [_dic(px + 4.0, y + 12.0, 32.0, _medsvg(i))]
+		kk.append(_dt(px + 38.0, y + 6.0, pw - 40.0, 16.0, "Hạng " + str(i + 1), 11.5, 800, ["rgb(170, 120, 10)", "rgb(100, 110, 126)", "rgb(160, 90, 40)"][i], "left"))
+		kk.append_array(_rowi(px + 36.0, y + 22.0, 15.0, [WC2._sa(int(P[0])), "c"], 10.5, 800, BROWN)[0])   # dòng 2: xu, dòng 3: sen
+		kk.append_array(_rowi(px + 36.0, y + 37.0, 15.0, [str(P[1]), "i:pearl"], 10.5, 800, BROWN)[0])
+		if i == 0:
+			var vc := _chip(px + pw - 30.0, y - 6.0, 30.0, 14.0, "sen")
+			vc.kids = [_dt(px + pw - 30.0, y - 6.0, 30.0, 14.0, "Vua", 8.5, 800, "rgb(190, 50, 60)")]
+			kk.append(vc)
 		pc.kids = kk
 		pc.act = _dsay.bind("Hạng " + str(i + 1) + " mỗi loại: " + WC2._sa(int(P[0])) + " xu, " + str(P[1]) + " sen đỏ" + (", danh hiệu Vua." if i == 0 else "."))
 		out.append(pc)
-	y += 58.0 + GG
+	y += 56.0 + GG
 	# lưới 2×2 loại thi
 	var g := 6.0
 	var bw := (XW - g) * 0.5
@@ -377,3 +373,7 @@ func _thi() -> Array:
 		out.append(_dt(X0, y, XW, 15.0, _fitw(str(none.size()) + " loại không ai dự thi: " + ", ".join(PackedStringArray(none)), 10.5, 600, XW), 10.5, 600, SUB, "left"))
 		y += 15.0 + 5.0
 	return [out, y + GG - 5.0]
+
+static func _medsvg(i: int) -> String:   # (bản 481) huy chương có dải ruy băng: vàng / bạc / đồng
+	var C: Array = [["rgb(250,204,60)", "rgb(200,150,20)"], ["rgb(214,220,230)", "rgb(140,150,166)"], ["rgb(222,150,90)", "rgb(160,96,44)"]][i]
+	return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M6 1 L10 10 L12 9 L8 1 Z\" fill=\"rgb(210,60,60)\"/><path d=\"M18 1 L14 10 L12 9 L16 1 Z\" fill=\"rgb(60,110,190)\"/><circle cx=\"12\" cy=\"15.5\" r=\"7\" fill=\"" + C[0] + "\" stroke=\"" + C[1] + "\" stroke-width=\"1.3\"/><circle cx=\"12\" cy=\"15.5\" r=\"4.8\" fill=\"none\" stroke=\"" + C[1] + "\" stroke-width=\"0.8\" opacity=\"0.7\"/><text x=\"12\" y=\"18.3\" font-size=\"7.5\" font-weight=\"800\" text-anchor=\"middle\" fill=\"" + C[1] + "\">" + str(i + 1) + "</text></svg>"
