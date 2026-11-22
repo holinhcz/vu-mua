@@ -359,10 +359,21 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		# tâm tán ~45% bề ngang, mép dưới lá chạm mép trên khung phản. Số đo vòm sau khi xoay (css tán): đáy lá 682 dưới tâm.
 		csc = maxf(tr.size.y / (230.0 if W < 500.0 else 150.0), 0.5 * u)     # điện thoại: tán nhỏ lại cho thấy dáng vòm (Link 11-22)
 		var Rc := Vector2(40, -150).rotated(PI / 4.0)
-		var ccx: float = W * 0.45
-		if W < 500.0: ccx = W * 0.67 - 387.0 * csc        # điện thoại: tán chỉ chiếm 2/3 trái, chừa hiên gạch bên phải (387 = mép phải vòm)
-		cpos = Vector2(ccx, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
-		canopy["rot"] = PI / 4.0
+		# Link 11-22 "tán tròn đâu": vòm tán tròn tự nhiên, xoay ít/không xoay; mỗi khung dọc cố định có số dò sẵn
+		# (tools caro/nen9 tan_do.py: không mép cắt ảnh nào lọt vào màn, mép phải lá ~2/3 (điện thoại) / ~1/2 (iPad) bề ngang).
+		# [góc độ, cỡ, tâm tán x, tâm tán y] theo (bề ngang khung, cao dải trên)
+		var TAN := {"360": [0, 1.5, -120, -802.7], "412_235": [0, 1.5, -90, -801.2], "412_145": [0, 1.1, 15, -613.8],
+			"474": [5, 1.1, 75, -635.2], "640": [5, 1.2, 135, -704.2], "768": [10, 1.4, 240, -836.5], "860": [10, 1.5, 270, -905.1]}
+		var key := str(int(W)) + ("_" + str(int(round(tr.size.y))) if int(W) == 412 else "")
+		if TAN.has(key):
+			var tv: Array = TAN[key]
+			var ang: float = deg_to_rad(float(tv[0]))
+			csc = float(tv[1])
+			cpos = Vector2(float(tv[2]), float(tv[3])) - Vector2(40, -150).rotated(ang) * csc
+			canopy["rot"] = ang
+		else:
+			cpos = Vector2(W * 0.45, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
+			canopy["rot"] = PI / 4.0
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
