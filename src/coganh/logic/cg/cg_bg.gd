@@ -124,10 +124,10 @@ func _draw() -> void:
 	var H: float = L.H
 	_rng_seed(20261107)
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	# đất sân: ảnh lặp, cỡ theo màn
-	var ts := maxf(560.0, maxf(W, H) * 0.62) / 1024.0
+	# đất sân: ảnh đất 9px của sân caro (Link 11-22 "nền lấy bên caro"), 9 điểm ảnh / css, lặp
+	var ts := 1.0 / 9.0
 	_T(xf(Vector2.ZERO, 0.0, Vector2(ts, ts)))
-	draw_texture_rect_region(A.img("ground"), Rect2(0, 0, W / ts, H / ts), Rect2(0, 0, W / ts, H / ts))
+	draw_texture_rect_region(A.img("dat"), Rect2(0, 0, W / ts, H / ts), Rect2(0, 0, W / ts, H / ts))
 	_T()
 	radial(Vector2(W * 0.46, H * 0.52), maxf(W, H) * 0.75, [[0.0, Color8(255, 236, 200, 26)], [1.0, Color8(60, 35, 15, 41)]])
 	_porch(L)
@@ -142,7 +142,7 @@ func _draw() -> void:
 	_decor(L)
 	for b in L.bx:
 		var D: float = b.z * 2 / 0.965
-		on_ground("basket", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.5)
+		on_ground("ro", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.5)
 	_chalk_board(L)
 
 func hits_obst(L: Dictionary, x: float, y: float, r: float) -> bool:
@@ -320,7 +320,7 @@ func _decor(L: Dictionary) -> void:
 				return -1e9
 			return -absf(y - (ph + lr * 0.1)) * 0.6 + absf(x - cx) * 0.6 - off * 2)
 		if sp != null:
-			var D := lr * 2 / 0.92
+			var D := lr * 2 / 0.874   # lu 9px của caro: thân chiếm 87% ảnh
 			on_ground("lu", Rect2i(), sp, D, D, 0.0, lr * 1.3)
 			used.call(sp.x, sp.y, lr * 1.02)
 			break

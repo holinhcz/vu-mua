@@ -414,10 +414,10 @@ func step_animals(dt: float) -> void:
 			c.x = q3.x
 			c.y = q3.y
 
-func _draw_animal(name: String, cell: int, ln: float, span: float, x: float, y: float, a: float, pose: int, off: Vector2) -> void:
-	var k := ((roundi(a / TAU * 16) % 16) + 16) % 16
+func _draw_animal(name: String, ln: float, span: float, x: float, y: float, rot: float, off: Vector2) -> void:
+	# gà 9px của caro: 1 ảnh nhìn từ trên, xoay theo hướng đi; chỉ bóng sát đất (bóng đổ xoay theo sẽ phải làm lại mỗi khung)
 	var D := ln / span
-	A.on_ground(self, K, name, Rect2i(k * cell, pose * cell, cell, cell), Vector2(x, y) + off, D, D, 0.0, ln * 0.5)
+	A.on_ground(self, K, name, Rect2i(), Vector2(x, y) + off, D, D, rot, 0.0)
 
 # ============================================================ quân cờ (hình + vật lý)
 func mk_stone(kind: int, home: String, p: Vector2) -> Dictionary:
@@ -758,10 +758,10 @@ func _draw() -> void:
 	if FARM.hen != null and not _baking:
 		for c in FARM.chicks:
 			var hop: float = absf(sin(c.hop)) * c.len * 0.06
-			_draw_animal("chick", 72, c.len, 0.57, c.x, c.y - hop, c.a, c.peck, sh)
+			_draw_animal("gacon", c.len, 0.91, c.x + cos(c.a) * c.len * 0.08 * c.peck, c.y - hop + sin(c.a) * c.len * 0.08 * c.peck, c.a, sh)
 		var h = FARM.hen
 		var bob: float = sin(h.bob) * h.len * 0.01
-		_draw_animal("hen", 200, h.len, 0.72, h.x, h.y + bob, h.a, h.peck, sh)
+		_draw_animal("ga", h.len, 0.6, h.x + cos(h.a) * h.len * 0.05 * h.peck, h.y + bob + sin(h.a) * h.len * 0.05 * h.peck, h.a - 2.6, sh)
 	var live := human_live()
 	var pulse := 0.5 + 0.5 * sin(clock * 3.2)
 	_LG(sh)
@@ -830,11 +830,10 @@ func _draw() -> void:
 		var P := map(hand.x, hand.y)
 		var off: float = (0.05 + hand.z * 0.42) * s
 		_arm_shadow(P.x + off * 0.55, P.y + off * 0.75, hand.p, hand.vis, sh)
-	var qt := A.img("quan")
 	_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
 	for st in lst:
 		if st.z <= 0.05:
-			_draw_st(st, qt)
+			_draw_st(st)
 	# gợi ý: quân nước này ăn được, khoanh phấn vàng; đòn gánh: vạch phấn từ quân này qua quân kia
 	if hov != null and hov.pv != null:
 		_T()
@@ -848,7 +847,7 @@ func _draw() -> void:
 		_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
 	for st in lst:
 		if st.z > 0.05:
-			_draw_st(st, qt)
+			_draw_st(st)
 	# chữ phấn trên chỗ đi: nước này ăn mấy quân
 	if live and Gm.sel >= 0 and int(S.hint):
 		for t in targets_of(Gm.sel):
@@ -877,11 +876,11 @@ func _draw() -> void:
 		petals = petals.filter(func(p): return p.y < L.H + 30)
 	_T()
 
-func _draw_st(st: Dictionary, qt: Texture2D) -> void:
+func _draw_st(st: Dictionary) -> void:
 	var P := map(st.x, st.y)
 	var Y: float = P.y - st.z * L.s * 0.34
 	var D: float = st.r * L.s * 2 / 0.82 * (1 + st.z * 0.28)
-	draw_texture_rect_region(qt, Rect2(P.x - D / 2, Y - D / 2, D, D), Rect2(st.v * A.QSZ, st.kind * A.QSZ, A.QSZ, A.QSZ))
+	draw_texture_rect(A.quan(st.kind, st.v), Rect2(P.x - D / 2, Y - D / 2, D, D), false)
 
 func _arm_shadow(fx: float, fy: float, p: int, vis: float, sh: Vector2) -> void:
 	var s: float = L.s
