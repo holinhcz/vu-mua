@@ -1995,7 +1995,8 @@ var hop: Node2D = null   # hộp thư có thư (w_thu)
 
 func _hop_sync() -> void:
 	var W = G.w_all
-	var on: bool = W != null and W.WTH != null and W.WTH._tr(W.WTH.Eg().get("un")) and int(W.WTH.mi.st) != 2
+	var T9 = W.WTH.Eg() if W != null and W.WTH != null else {}
+	var on: bool = W != null and W.WTH != null and (W.WTH._tr(T9.get("un")) or W.WTH._tr(T9.get("rq"))) and int(W.WTH.mi.st) != 2   # (bản 492) thư hẹn cũng giữ hộp thư
 	if not on:
 		if hop != null:
 			for e in sortables:
@@ -2012,6 +2013,9 @@ func _hop_sync() -> void:
 		main.obj_root.add_child(hop)
 		sortables.insert(sortables.size() - 1, [hop, nn(6.85, 5.2), -2])
 	hop.bub = ui.bdp == null or ui.bdp.mode == "off"
+	var rq9 = T9.get("rq") if not W.WTH._tr(T9.get("un")) else null
+	hop.bid = String(rq9.id) if rq9 is Dictionary else "thu"   # thư hẹn: hình món hẹn gửi
+	hop.ok = rq9 is Dictionary and bool(rq9.get("ok", false))
 
 func _dan_sync(tt: float) -> void:
 	dans = _dan_list(tt)

@@ -2,7 +2,7 @@ extends "res://logic/ui_kbang.gd"
 # BẢNG THƯ NHÀ (kU bản web). (bản 491) khung Kho + chip chung (ui_kbang.gd), không tab; (bản 492) khung co vừa nội dung (fit):
 #  - lá thư: giấy vở (vạch kẻ, lề đỏ), đầu thư mặt người gửi (ảnh tròn vlface/m*.webp) + "Thư của …" + nơi gửi, ký tên cuối thư;
 #  - thư gửi tiền / gửi gạch: chip quà kèm (xanh), nút Nhận;
-#  - thư nhờ gửi đồ quê: chip món (có / cần) sát chip tiền cước (xanh), đủ hàng: Gửi đi + Để dành, thiếu: chỉ Để dành;
+#  - thư nhờ gửi đồ quê: chip món (có / cần) sát chip tiền cước (xanh), đủ hàng: Gửi đi + Để dành, thiếu: dòng chỗ kiếm (G.where) + Để dành;
 #    thư hẹn (để dành): một dòng đầu thư, không giấy;
 #  - dưới: Thư cũ (g.thu.lg, w_thu.gd ghi lúc nhận / gửi): tên, ngày, kết quả có hình + màu theo loại.
 # Luật ở w_thu.gd (wU).
@@ -12,7 +12,6 @@ var TH            # w_thu.gd
 const THC := {   # màu riêng: giấy thư
 	"paper": ["rgb(255, 254, 248)", "rgb(255, 253, 244)", "rgb(253, 250, 238)", "rgb(196, 178, 136)"],
 }
-const NOI := ["Sài Gòn", "Cần Thơ", "Biên Hòa", "Bình Dương", "Sài Gòn", "Vũng Tàu"]   # nơi người nhà đi làm, theo tên (XN)
 const LGC := {"tien": "rgb(200, 120, 20)", "tin": "rgb(170, 80, 50)", "nho": "rgb(46, 130, 60)"}   # màu kết quả Thư cũ
 
 func _ck(kind: String) -> Array:
@@ -38,9 +37,6 @@ func _sig() -> String:
 func _face(who: String) -> String:   # mặt người gửi (ảnh tròn đầu + vai) theo tên
 	return "pic:res://ui/img/vlface/m" + str(maxi(0, TH.XN.find(who)) % 8) + ".webp"
 
-func _noi(who: String) -> String:
-	return NOI[maxi(0, TH.XN.find(who)) % NOI.size()]
-
 static func _body(who: String, txt: String) -> String:   # lời thư: bỏ "Út Mến viết: " (đầu thư đã ghi tên) và ngoặc kép
 	var k := txt.find(": \"")
 	if txt.begins_with(who) and k > 0:
@@ -53,9 +49,8 @@ func _head(x: float, y: float, w: float, who: String, t: String, s: String) -> A
 	return [_icx(x + 18.0, y + 18.0, 34.0, _face(who)), _dt(x + 42.0, y + 2.0, w - 46.0, 16.0, t, 12.0, 800, BROWN, "left"),
 		_dt(x + 42.0, y + 19.0, w - 46.0, 14.0, s, 10.0, 600, SUB, "left")]
 
-func _letter(y: float, who: String, txt: String) -> Array:   # lá thư giấy vở: đầu thư, vạch kẻ, lề đỏ, ký tên
+func _letter(y: float, who: String, txt: String, noi: String) -> Array:   # lá thư giấy vở: đầu thư, vạch kẻ, lề đỏ, ký tên
 	var out := []
-	var noi := "Sài Gòn" if txt.contains("Sài Gòn") else _noi(who)   # thư tự ghi nơi thì theo thư
 	txt = _body(who, txt)
 	var lh := 18.0
 	var tx := X0 + 34.0
@@ -98,6 +93,9 @@ func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   
 		_dt(rx + 40.0, y + 19.0, rw - 44.0, 15.0, "+" + G.fmt_n(xu) + " xu", 11.0, 800, "rgb(40, 110, 50)", "left")]
 	out.append(r)
 	y += 38.0 + GG
+	if not ok:   # (bản 492) thiếu hàng: chỉ chỗ kiếm
+		out.append_array(_rowi(X0 + 2.0, y, 16.0, ["i:" + id, " Còn thiếu " + G.fmt_n(q - hv) + " · " + G.where(id)], 10.5, 700, SUB)[0])
+		y += 16.0 + 8.0
 	if ok and de != null:
 		var bw := floorf((XW - g) * 0.6)
 		out.append(_btn(X0, y, bw, 32.0, "Gửi đi", cb, "go"))
@@ -149,7 +147,7 @@ func _build() -> void:   # kU
 	var out := []
 	var y := 6.0
 	if a is Dictionary:
-		var L := _letter(y, String(a.who), String(a.txt))
+		var L := _letter(y, String(a.who), String(a.txt), String(a.get("noi", TH.noi(String(a.who)))))   # thư cũ trong bản lưu chưa ghi nơi: theo tên
 		out.append_array(L[0])
 		y += float(L[1]) + GG
 		if a.k == "tien" or a.k == "tin":

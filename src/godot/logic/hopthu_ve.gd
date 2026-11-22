@@ -1,8 +1,10 @@
 extends "res://logic/ve_aa.gd"
-# HỘP THƯ trước nhà (yU bản web, khi có thư chưa đọc và ông đưa thư không đứng chờ): cọc gỗ, hộp xanh, cờ đỏ,
+# HỘP THƯ trước nhà (yU bản web, khi có thư chưa đọc hoặc thư hẹn, và ông đưa thư không đứng chờ): cọc gỗ, hộp xanh, cờ đỏ,
 # bong bóng lá thư (chỉ lúc không xây dựng). Vẽ ở toạ độ làng (không nhân le như bản web).
 
 var bub := true
+var bid := "thu"    # (bản 492) hình trong bong bóng: lá thư, hoặc món của thư hẹn
+var ok := false     # thư hẹn đã đủ hàng: dấu ✓ xanh, nhún mạnh hơn
 
 func _process(dt: float) -> void:
 	tt += dt
@@ -20,5 +22,12 @@ func _draw() -> void:
 	_xe([e + 4, r - 30, e + 5.4, r - 30, e + 5.4, r - 24, e + 4, r - 24], _m("#c4302a", "#6a1a18"))
 	_flush()
 	if bub:
-		_x0(Vector2(e, r - 40.0 + (0.0 if farm.G.motion_off() else sin(tt * 3.0) * 1.2)), "thu")
+		var at := Vector2(e, r - 40.0 + (0.0 if farm.G.motion_off() else sin(tt * (6.0 if ok else 3.0)) * (2.4 if ok else 1.2)))
+		_x0(at, bid)
+		if ok:
+			_flush()
+			var le: float = farm.sign_le()
+			var tk: Texture2D = Bong.anh("tick", le * farm.main.zoom)
+			if tk != null:
+				draw_texture_rect(tk, Rect2(at + Vector2(5.0, -13.0) * le, Vector2(9.0, 9.0) * le), false)
 	_flush()

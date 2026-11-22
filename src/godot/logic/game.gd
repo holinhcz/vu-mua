@@ -1575,6 +1575,19 @@ func _src_lv(t: String) -> int:
 		return SRC_LV[t]
 	return int(SRC_FROM.get(String(item(t).get("from", "")), 0))
 
+const WHERE_F := {"ga": "Nuôi gà, lượm ở chuồng gà", "cuu": "Nuôi cừu ở chuồng cừu", "bo": "Nuôi bò ở chuồng bò", "heo": "Nuôi heo ở chuồng heo", "de": "Nuôi dê ở chuồng dê",
+	"vit": "Thả vịt ra ao", "tree": "Hái ở cây ăn trái", "fish": "Câu cá, đặt lờ lọp", "bun": "Mò bãi bùn lúc nước ròng", "song": "Hái ven sông mùa nước nổi",
+	"ao": "Kéo lưới ao cá nhà", "ong": "Lấy mật tổ ong rừng tràm", "dog": "Chó đánh hơi trong vườn", "bao": "Dọn cây đổ, mua ở bếp", "nghe": "Làm ở bảng Nghề"}
+func where(t: String) -> String:   # (bản 492, chung) chỗ kiếm một món, một câu ngắn (Thư nhà, Thiên tai...)
+	if D.crops.has(t):
+		return "Trồng ngoài ruộng"
+	var f := String(item(t).get("from", ""))
+	if WHERE_F.has(f):
+		return WHERE_F[f]
+	if xw != null and xw.T.has(f):
+		return "Làm ở " + String(xw.T[f].name)
+	return "Mua ở chợ phiên"
+
 var _i8 := {}
 var _ep := 0
 func _f8(t: String, a := 0) -> bool:   # F8: món còn làm ra được (hoặc đang có trong kho)

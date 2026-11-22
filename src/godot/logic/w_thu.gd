@@ -11,6 +11,9 @@ var U = null
 
 var mi := {"st": 0, "x": 0.0, "y": 0.0, "path": [], "i": 0, "face": 1, "ph": 0.0, "al": 0.0, "wait": 0.0, "ring": 0}
 const XN := ["Út Mến", "Hai Lúa", "Thằng Tí", "Bé Na", "Cậu Ba", "Dì Sáu"]
+const NOI := ["Cần Thơ", "Sài Gòn", "Biên Hòa", "Bình Dương", "Vũng Tàu", "Long An"]   # (bản 492) nơi người nhà đi làm, theo tên (cùng thứ tự XN)
+static func noi(who: String) -> String:
+	return NOI[maxi(0, XN.find(who)) % NOI.size()]
 
 func _init(g) -> void:
 	G = g
@@ -54,7 +57,7 @@ func vU() -> Dictionary:   # lá thư hôm nay
 	var r: int = WC.v1()
 	if e < 0.4:
 		return {"k": "tien", "who": n, "xu": G.nv.v0((300.0 + a.next() * 500.0) * (1.0 + 0.6 * r)),
-			"txt": n + " ở Sài Gòn viết thư về: \"Con đi làm ở xưởng may cũng đỡ, gửi về chút tiền ông bà tiêu Tết. Nhớ quê lắm, nhớ cá kho tộ với canh chua.\""}
+			"noi": noi(n), "txt": n + " ở " + noi(n) + " viết thư về: \"Con đi làm ở xưởng may cũng đỡ, gửi về chút tiền ông bà tiêu Tết. Nhớ quê lắm, nhớ cá kho tộ với canh chua.\""}
 	if e < 0.8:
 		var o: Array = WC.s2().filter(func(s): return float(G.item(s).get("sell", 0)) < 200)
 		var l: String = String(o[int(floor(a.next() * o.size()))]) if o.size() else "qua_xoai"
@@ -65,14 +68,23 @@ func vU() -> Dictionary:   # lá thư hôm nay
 			c = 10.0
 		var f := maxi(2, mini(12, int(round((200.0 + a.next() * 200.0) * (1.0 + 0.4 * r) / c))))
 		return {"k": "nho", "who": n, "id": l, "q": f, "xu": int(round(f * G.price0(l) * 1.7)),
-			"txt": n + " viết: \"Trên này mua đồ quê đắt mà không ngon. Nhà mình gửi giùm con " + WC.ho(l, f) + " theo đường bưu điện nha, con gửi tiền cước về.\""}
+			"noi": noi(n), "txt": n + " ở " + noi(n) + " viết: \"Trên này mua đồ quê đắt mà không ngon. Nhà mình gửi giùm con " + WC.ho(l, f) + " theo đường bưu điện nha, con gửi tiền cước về.\""}
 	return {"k": "tin", "who": n, "gach": 3 + int(floor(a.next() * 4)),
-		"txt": n + " gửi thư thăm: \"Nghe nói làng mình mới làm cầu bắc qua sông, con mừng lắm. Con gửi kèm mấy viên gạch nung cũ ở nhà chủ cho, để dành sửa nhà.\""}
+		"noi": noi(n), "txt": n + " ở " + noi(n) + " gửi thư thăm: \"Nghe nói làng mình mới làm cầu bắc qua sông, con mừng lắm. Con gửi kèm mấy viên gạch nung cũ ở nhà chủ cho, để dành sửa nhà.\""}
 
+var _okt := 0.0
 func step(t: float) -> void:   # mU
 	if WC._cr():
 		return
 	var a := Eg()
+	_okt -= t
+	if _okt <= 0.0 and _tr(a.get("rq")):   # (bản 492) thư hẹn: kho đủ hàng thì báo một lần (bong bóng hộp thư có dấu ✓)
+		_okt = 2.0
+		var rq: Dictionary = a.rq
+		var ok := int(G.g.barn.get(rq.id, 0)) >= int(rq.q)
+		if ok and not rq.get("ok", false):
+			_toast("Đủ " + WC.ho(String(rq.id), int(rq.q)) + " rồi, ra hộp thư trước nhà gửi cho " + String(rq.who) + ".")
+		rq.ok = ok
 	var n: int = WL._vr()
 	var e: float = WC._hour()
 	if int(mi.st) == 0:
@@ -140,7 +152,7 @@ func hit(F, w: Vector2):   # xU: chạm ông đưa thư (đang đứng chờ) ho
 		var r: float = F.nn(float(mi.x), float(mi.y))
 		if absf(w.x - e) < 16.0 * le and w.y > r - 56.0 * le and w.y < r + 6.0:
 			return {"type": "thu"}
-	if _tr(n.get("un")) and int(mi.st) != 2:
+	if (_tr(n.get("un")) or _tr(n.get("rq"))) and int(mi.st) != 2:   # (bản 492) hộp thư còn giữ thư hẹn
 		var o := w6()
 		var l: float = F.en(o.x + 0.35, o.y - 0.3)
 		var c: float = F.nn(o.x + 0.35, o.y - 0.3)
@@ -180,10 +192,10 @@ func wU(t: String) -> void:   # nút trong bảng thư
 		_toast("Gói đồ quê gửi bưu điện lên cho " + String(n.who) + ". Nhận " + G.fmt_n(int(n.xu)) + " xu tiền cước gửi về.")
 		G.w_all.qi("thu")
 	elif t == "de" and _tr(n):
-		a.rq = {"id": n.id, "q": n.q, "xu": n.xu, "who": n.who}
+		a.rq = {"id": n.id, "q": n.q, "xu": n.xu, "who": n.who, "ok": int(G.g.barn.get(n.id, 0)) >= int(n.q)}
 		a.un = null
 		_close()
-		_toast("Để dành gửi sau. Chạm hộp thư trước nhà để mở lại.")
+		_toast("Hộp thư trước nhà giữ đơn này, đủ hàng chạm vào để gửi.")
 	elif t == "gui2" and _tr(a.get("rq")):
 		var r: Dictionary = a.rq
 		if int(G.g.barn.get(r.id, 0)) < int(r.q):
