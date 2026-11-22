@@ -198,18 +198,19 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			if sd.size.x > 720:
 				add.call("lu", nx + nr + 150, clampf(gy + 10, band0 + 30, bot - 26), 50.0 / 92.0, [8, 10, 6, 0.45])
 			# Link 11-22 "cây chuối to ra dời vô trong": to hơn, tâm lùi vào trong màn
-			var bw: float = R.size.x * 2.9; var bz_: float = bw / 437.0
-			short_banana = Rect2(Vector2(sd.end.x - 45.0, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))     # gốc chuối thấy được trong màn
+			# Link 11-22: chuối cùng cỡ mọi điện thoại (= màn 412x915), gốc ló ra ngoài mép phải, thấy chủ yếu lá to
+			var bw: float = 458.0; var bz_: float = bw / 437.0
+			short_banana = Rect2(Vector2(sd.end.x + 40.0, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
 		else:
 			hp = Vector2(sd.position.x + maxf(mL, 40) * 0.5, bd.position.y + dF * 0.45)
 			hs = clampf(mL / 200.0, 0.25, 0.5)
 			if rgap >= 70 and mL < 60:
 				# điện thoại ngắn (Link 11-21 "bỏ lu, chuối xuống góc dưới phải, xếp cân đối"): gà mẹ cạnh thẻ "Bạn", chuối ôm góc
 				var kk := clampf(minf(R.size.x / 170.0, R.size.y / 170.0), 0.3, 0.75)
-				hp = Vector2(R.position.x + R.size.x * 0.3, R.position.y + R.size.y * 0.42)
+				hp = Vector2(R.position.x + 26.0, R.position.y + R.size.y * 0.3)     # chuối to ra: gà mẹ đứng mép trái trên, khỏi bị lá che
 				hs = 0.8 * kk
-				var bw: float = R.size.x * 1.7; var bz_: float = bw / 437.0
-				short_banana = Rect2(Vector2(R.position.x + R.size.x * 0.42 + 205.0 * bz_, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
+				var bw: float = 458.0; var bz_: float = bw / 437.0          # cùng cỡ chuối màn 412x915 (Link 11-22)
+				short_banana = Rect2(Vector2(sd.end.x + 40.0, bd.end.y - 2.0 + 114.0 * bz_), Vector2(bw, 0))
 			elif rgap >= 70:
 				var k2 := clampf(rgap / 120.0, 0.35, 0.55)
 				add.call("lu", sd.end.x - 46 * k2 / 0.55, bot - 50 * k2 / 0.55, 50.0 / 92.0 * k2 / 0.55, [8, 10, 6, 0.45])
@@ -316,7 +317,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		m.texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
 		m.region_enabled = true; m.region_rect = Rect2(0, 0, maxf(m.texture.get_width(), (E.end.x - roof_x) / u * PXU), (E.size.y / u + 20) * PXU)
 	# ---- hiên gạch tàu
-	var gt := tex("gach"); var ph := 54.0 if port else 30.0      # (css thiết kế, co theo u)
+	var gt := tex("gach"); var ph := (100.0 if W < 500.0 else 54.0) if port else 30.0     # điện thoại: hiên gạch dài xuống thêm (Link 11-22)      # (css thiết kế, co theo u)
 	var th := gt.get_height() / PXU
 	# hiên gạch: phủ từ mép trên cửa sổ xuống tới bậc hiên (cửa sổ cao hơn khung thì hiên dài thêm lên trên)
 	var gy0: float = minf(0.0, E.position.y)
@@ -358,7 +359,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		# tâm tán ~45% bề ngang, mép dưới lá chạm mép trên khung phản. Số đo vòm sau khi xoay (css tán): đáy lá 682 dưới tâm.
 		csc = maxf(tr.size.y / (230.0 if W < 500.0 else 150.0), 0.5 * u)     # điện thoại: tán nhỏ lại cho thấy dáng vòm (Link 11-22)
 		var Rc := Vector2(40, -150).rotated(PI / 4.0)
-		cpos = Vector2(W * 0.45, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
+		var ccx: float = W * 0.45
+		if W < 500.0: ccx = W * 0.67 - 387.0 * csc        # điện thoại: tán chỉ chiếm 2/3 trái, chừa hiên gạch bên phải (387 = mép phải vòm)
+		cpos = Vector2(ccx, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
 		canopy["rot"] = PI / 4.0
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
