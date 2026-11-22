@@ -159,6 +159,15 @@ func _layout() -> void:
 		L.s = minf(minf((H - 16) / (5.0 if H < 500 else 5.7), (W - 2 * side) / (4 + 2 * BM * 0.6)), 165.0)
 		L.ox = (W - 4 * L.s) / 2
 		L.oy = (H - 4 * L.s) / 2 + minf(14.0, L.s * 0.1)
+		# Link 11-22 "1000x860 bàn cờ nhỏ so với khung": màn ngang gần vuông thì bàn nằm giữa 2 hàng thẻ (trên/dưới),
+		# không cần né thẻ theo bề ngang; chừa 2 bên đủ cho nia (bán kính 0.6 ô như màn dọc)
+		var top := maxf(c1.end.y, tl.end.y)
+		var bh := 4 + 2 * BM + 0.16
+		var s2 := minf(minf((c0.position.y - top - 24) / bh, (W - 80) / (bh + 2.6)), 180.0)
+		if s2 > L.s:
+			L.s = s2
+			L.ox = (W - 4 * s2) / 2
+			L.oy = top + 12 + (c0.position.y - top - 24 - bh * s2) / 2 + (BM + 0.08) * s2
 	else:
 		# Link 11-22 "nia cờ trên nhỏ xíu": chừa chỗ trên + dưới bàn cho 2 nia cùng cỡ (bán kính FB * ô), dư thì chia đều
 		var top := maxf(c1.end.y, tl.end.y)
