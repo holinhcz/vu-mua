@@ -347,7 +347,6 @@ func _ready() -> void:
 	bnode = Node2D.new()
 	bnode.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(bnode)
-	add_child(sun.make_flare())
 	bmat = ShaderMaterial.new()
 	var bsh := Shader.new()
 	bsh.code = LIVE_SH
