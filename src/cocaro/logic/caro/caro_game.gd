@@ -42,7 +42,8 @@ var S := DEF.duplicate()
 var stats := {"w": [0, 0, 0, 0], "l": [0, 0, 0, 0]}
 var Gm := {}
 var ov := "menu"            # "", "menu", "rules", "end"
-var hits := []              # [Rect2, id] nút đang hiện (vẽ xong mới có)
+var hits := []              # [Rect2, id] nút đang hiện (điểm ảnh, tính từ góc khung _off)
+var KU := 1.0               # cỡ giao diện như cờ gánh: điểm ảnh / css chuẩn (dọc 412x915, ngang 1280x720)
 var snd: Node = null
 var reward_txt := ""
 var _bg: Control
@@ -377,6 +378,10 @@ func _layout() -> void:
 	_off = ((vs - DS * K) / 2.0).round()
 	for c in [_bg, _pc, _hud]:
 		c.position = _off
+	# Link 11-22 "tỉ lệ màn hình như cờ gánh": giao diện (thanh công cụ, thẻ, hộp thoại) co giãn theo khổ chuẩn
+	# dọc 412x915 / ngang 1280x720, màn khác nhân U = min(rộng, cao) so với khổ chuẩn; cảnh + bàn cờ giữ khung đã duyệt
+	KU = clampf(minf(vs.x / 412.0, vs.y / 915.0) if vs.y > vs.x * 1.05 else minf(vs.x / 1280.0, vs.y / 720.0), 0.3, 6.0)
+	var V := Rect2(-_off / K, vs / K)       # cả cửa sổ (css khung)
 	L = {"port": port}
 	var safe := 6.0
 	L.tools = Rect2(8, 8 + safe, minf(W - 16, 420), 36)
@@ -392,9 +397,18 @@ func _layout() -> void:
 		# cả khối [thẻ đối thủ + phản + thẻ Bạn + luật] nằm GIỮA màn theo chiều dọc (Link: xếp hợp lý mọi màn)
 		fy = top + maxf(0, (bot - top - face) * 0.5)
 		var cw := minf(240, W - 16)
+		# cỡ thẻ theo KU (không lớn hơn chỗ chừa sẵn quanh phản), neo mép cửa sổ / mép phản; L.* tính trong hệ đã co (chia hs)
+		var hs := minf(1.0, KU / K)
+		L.hs = hs
+		var tw := minf(V.size.x - 16, 420 * hs)
+		# L.opp/me/tip = chỗ chừa cho cảnh (caro_nen né), giữ như cũ; L.u_* = thẻ thật vẽ ra (hệ đã co hs)
 		L.opp = Rect2(W - 8 - cw, maxf(54 + safe, fy - 66), cw, 58)
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
+		L.u_tools = Rect2((V.position.x + 8) / hs, (V.position.y + 8 + safe) / hs, tw / hs, 36)
+		L.u_opp = Rect2((V.end.x - 8) / hs - cw, (fy - 8) / hs - 58, cw, 58)
+		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 24) / hs, cw, 62)
+		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
 	else:
 		var colw := _colw(W, H)
 		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
@@ -403,13 +417,17 @@ func _layout() -> void:
 		face = minf(H - 24, (W - 2 * side) / rw)
 		fx = (W - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
-		# cột thẻ vẽ theo cỡ chuẩn 250 rồi co đều (hs) khi cột hẹp → chữ không bị chồng
-		var hs := colw / 250.0
+		# cột thẻ vẽ theo cỡ chuẩn 250, cỡ theo KU (như cờ gánh) nhưng không lấn qua khung phản; neo góc trái trên cửa sổ
+		var frl := fx - (rw - 1.0) * face / 2.0               # mép trái khung gỗ
+		var hs := minf(KU / K, (frl - V.position.x - 16) / 250.0)
+		hs = maxf(hs, 0.3)
 		L.hs = hs
-		L.tools = Rect2(8, 8 + safe, 250, 36)
-		L.opp = Rect2(8, 62, 250, 58)
-		L.me = Rect2(8, 140, 250, 62)
-		L.tip = Rect2(8, 214, 250, 46)
+		var o := (V.position + Vector2(8, 0)) / hs
+		L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(8, 62, 250, 58); L.me = Rect2(8, 140, 250, 62); L.tip = Rect2(8, 214, 250, 46)   # như cũ (cảnh dùng)
+		L.u_tools = Rect2(o.x, (V.position.y + 8 + safe) / hs, 250, 36)
+		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, 250, 58)
+		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, 250, 62)
+		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
 	L.face = Rect2(fx, fy, face, face)
 	# ô lưới trên màn (css)
 	var kb: float = BJ.kb
@@ -584,7 +602,7 @@ func _btn(ci: CanvasItem, r: Rect2, id: String, label: String, bg := CARD, fg :=
 		rr = Rect2(r.position + r.size * 0.03, r.size * 0.94)
 	_box(ci, rr, bg, minf(12, r.size.y / 2), ring, 1.2)
 	_text(ci, Vector2(rr.position.x, rr.position.y + rr.size.y / 2), label, fs, fg, 800, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x)
-	hits.append([r, id])
+	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _avatar(ci: CanvasItem, c: Vector2, k: String, r: float, ring: Color) -> void:
 	ci.draw_circle(c, r + 1.5, ring)
@@ -644,7 +662,7 @@ func _draw_hud() -> void:
 	K = K * hs            # cột thẻ: vẽ theo cỡ chuẩn, co đều bằng cách tạm nhân K
 	_T(ci)
 	# thanh công cụ
-	var tr: Rect2 = L.tools
+	var tr: Rect2 = L.u_tools
 	_box(ci, tr, CARD, 12, Color8(232, 214, 186), 1.2)
 	var items := [["menu", "Menu"], ["undo", "Đi lại" + (" " + str(Gm.undo) if Gm.mode == "ai" else "")], ["rules", "Luật"], ["sound", "Âm thanh" if int(S.sound) else "Tắt tiếng"]]
 	var bw := tr.size.x / items.size()
@@ -654,10 +672,10 @@ func _draw_hud() -> void:
 		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], 12.5, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if j > 0:
 			ci.draw_line(Vector2(r.position.x, r.position.y + 8), Vector2(r.position.x, r.end.y - 8), LINE, 1.0)
-		hits.append([Rect2(r.position * hs, r.size * hs), items[j][0]])
-	_card(ci, L.opp, 2)
-	_card(ci, L.me, 1)
-	var tp: Rect2 = L.tip
+		hits.append([Rect2(r.position * K, r.size * K), items[j][0]])
+	_card(ci, L.u_opp, 2)
+	_card(ci, L.u_me, 1)
+	var tp: Rect2 = L.u_tip
 	_box(ci, tp, Color(DARK, 0.93), 12, Color(0, 0, 0, 0), 0)
 	var t1 := "5 con liền là thắng"
 	var t2 := "ngang, dọc hay chéo đều được"
@@ -671,21 +689,31 @@ func _draw_hud() -> void:
 	K = k_save
 	if ov != "":
 		hits = []
+		# hộp thoại: cỡ KU như cờ gánh, co lại nếu màn thấp (không bị cắt); nằm giữa cả cửa sổ
+		var hp := {"menu": 588.0, "rules": 420.0, "end": 250.0}
+		K = minf(KU, (_vs.y - 24.0) / float(hp.get(ov, 540.0)))
+		var w0 := W; var h0 := H
+		W = _vs.x / K; H = _vs.y / K
+		_ov_o = _off / K; _ks = k_save
 		_T(ci)
 		_draw_ov(ci)
+		W = w0; H = h0; K = k_save; _ov_o = Vector2.ZERO
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # ------------------------------------------------------------ hộp thoại
+var _ks := 1.0
+var _ov_o := Vector2.ZERO    # góc khung _off tính trong hệ hộp thoại (hộp thoại canh theo cả cửa sổ)
 func _panel(ci: CanvasItem, h: float, low := false) -> Rect2:
 	var w := minf(364, W - 24)
-	var r := Rect2((W - w) / 2, maxf(12, (H - h) / 2), w, h)
+	var r := Rect2((W - w) / 2 - _ov_o.x, maxf(12, (H - h) / 2) - _ov_o.y, w, h)
 	if low:
 		# hết ván: hộp nằm dưới phản cho còn thấy vệt gạch 5 con
 		var f: Rect2 = L.face
+		f = Rect2(f.position * _ks / K, f.size * _ks / K)      # phản đổi sang hệ hộp thoại
 		if L.port:
-			r.position.y = clampf(f.end.y + 18, 12, H - h - 12)
+			r.position.y = clampf(f.end.y + 18, 12 - _ov_o.y, H - h - 12 - _ov_o.y)
 		else:
-			r.position.x = maxf(12, f.position.x - w - 16)
+			r.position.x = maxf(12 - _ov_o.x, f.position.x - w - 16)
 		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 50))
 	else:
 		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 120))
@@ -736,7 +764,7 @@ func _ov_menu(ci: CanvasItem) -> void:
 		var wl := "thắng " + str(int(stats.w[j])) + " · thua " + str(int(stats.l[j]))
 		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 33), str(o.lvl) + " · " + wl, 11, INK2, 600)
 		_text(ci, Vector2(rr.end.x - 12, rr.position.y + 23), "+" + str(o.xu) + " xu", 13, Color8(190, 120, 20), 800, HORIZONTAL_ALIGNMENT_RIGHT)
-		hits.append([br, id])
+		hits.append([Rect2(br.position * K, br.size * K), id])
 		y += 52
 	_btn(ci, Rect2(x, y, w, 40), "pvp", "Hai người chơi chung 1 máy", Color8(255, 252, 244), INK, 14)
 	y += 50
@@ -758,7 +786,7 @@ func _opt(ci: CanvasItem, r: Rect2, id: String, label: String, val: String) -> v
 	var on := val != "Tắt"
 	_box(ci, vr, Color8(250, 226, 160) if on else Color8(236, 226, 210), 13, Color8(214, 184, 120), 1.2, false)
 	_text(ci, Vector2(vr.position.x, vr.position.y + vr.size.y / 2), val, 12, INK, 800, HORIZONTAL_ALIGNMENT_CENTER, vr.size.x)
-	hits.append([r, id])
+	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _ov_rules(ci: CanvasItem) -> void:
 	var r := _panel(ci, 420)
@@ -850,12 +878,13 @@ func _gui_input(ev: InputEvent) -> void:
 		return
 	accept_event()
 	var X := (pos - _off) / K
+	var XP := pos - _off
 	if down:
-		_press = _hit(X)
+		_press = _hit(XP)
 		if _press != "":
 			_hud.queue_redraw()
 		return
-	var id := _hit(X)
+	var id := _hit(XP)
 	var was := _press
 	_press = ""
 	if was != "" or id != "":
