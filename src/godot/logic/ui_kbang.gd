@@ -37,7 +37,7 @@ func _kshell(L: Array, cur: String, go: Callable) -> Array:
 		_mv(tabs, float(tabs.r[0]), ty0)
 		vy = ty0 + float(tabs.r[3]) + 6.0
 		var bd := _cl(ST.ttdot)
-		bd.text = "1"
+		bd.text = ""   # (bản 489) chấm đỏ trơn, không ghi số
 		_seg_tabs(tabs, L, cur, go, bd)
 	var vb := float(vt.r[1]) + float(vt.r[3])
 	vt.r = [vt.r[0], vy, vt.r[2], vb - vy]

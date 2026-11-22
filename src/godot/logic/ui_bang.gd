@@ -365,7 +365,7 @@ func _re_act(node: Control, k: Dictionary) -> void:   # khối dùng lại: tr�
 	for q in mini(A.size(), B.size()):
 		B[q].set_meta("snap", A[q])
 
-func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Dictionary) -> void:   # hàng tab .khseg: L = [[khóa, chữ, chấm? (true / số)]]
+func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Dictionary) -> void:   # hàng tab .khseg: L = [[khóa, chữ, chấm?]]
 	var K: Array = seg.kids
 	var on_t: Dictionary = K[0] if String(K[0].cls).split(" ").has("on") else K[1]
 	var off_t: Dictionary = K[1] if on_t == K[0] else K[0]
@@ -412,8 +412,6 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
-			if typeof(L[i][2]) == TYPE_INT:   # (bản 488) chấm ghi đúng số (vd mục chưa đọc), còn true thì giữ chữ của bd
-				b.text = str(mini(int(L[i][2]), 99))
 			_mv(b, x + w - 11.5, float(c.r[1]) - 3.5)
 			c.kids = [b]
 		out.append(c)
@@ -737,9 +735,23 @@ func _chips_drag(e: InputEvent, sel := ".khchips") -> bool:   # kéo ngang hàng
 		return true
 	return false
 
+const _VNA := "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ"
+const _VNB := "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd"
+static func _low(s: String) -> String:   # (bản 489, chung) chữ thường, bỏ dấu tiếng Việt: gõ "lua" vẫn ra "lúa" (gpLow)
+	var out := ""
+	for ch in s.to_lower():
+		var c := ch.unicode_at(0)
+		if c >= 0x300 and c <= 0x36f:   # dấu rời (chữ tổ hợp)
+			continue
+		var k := _VNA.find(ch)
+		out += _VNB[k] if k >= 0 else ch
+	return out.strip_edges()
+
 # ------------------------------------------------------------------ ô tìm (input[type=search]): LineEdit nằm đè lên ô chụp, giữ qua các lần dựng lại
 var qe: LineEdit = null
 var _qe_sel := ""
+var _qe_cb := Callable()
+var _qe_last := ""   # (bản 489) chữ đã báo: bàn phím ảo trên web đổi chữ không phát text_changed, nên dò mỗi khung
 
 func _qe_make(sel: String, ph: String, txt: String, cb: Callable) -> void:
 	_qe_sel = sel
@@ -755,11 +767,9 @@ func _qe_make(sel: String, ph: String, txt: String, cb: Callable) -> void:
 		var sb := StyleBoxEmpty.new()
 		for s in ["normal", "focus", "read_only"]:
 			qe.add_theme_stylebox_override(s, sb)
-		qe.text_changed.connect(func(t: String) -> void:
-			cb.call(t)
-			if qe != null:
-				qe.grab_focus())
 		U.root.add_child(qe)
+		_qe_last = txt
+	_qe_cb = cb
 	_qe_place()
 
 func _qe_place() -> void:   # gọi mỗi khung lúc bảng mở (ô có thể cuộn theo thân)
@@ -775,11 +785,16 @@ func _qe_place() -> void:   # gọi mỗi khung lúc bảng mở (ô có thể c
 	var vb = ids.get("." + _area) if _area != "" else null
 	qe.visible = inp.is_visible_in_tree() and (vb == null or vb.get_global_rect().grow(1.0).encloses(r))
 	qe.move_to_front()
+	if qe.text != _qe_last:
+		_qe_last = qe.text
+		if _qe_cb.is_valid():
+			_qe_cb.call(qe.text)
 
 func _qe_drop() -> void:
 	if qe != null:
 		qe.queue_free()
 		qe = null
+		_qe_last = ""
 
 # ------------------------------------------------------------------ cuộn
 func _redo() -> void:
@@ -808,7 +823,18 @@ func _scroll_to(v: float) -> void:
 	if inner != null:
 		U._move(inner, in0 - Vector2(0, sc.s))
 
+func _qe_touch(e: InputEvent) -> void:   # (bản 489) máy cảm ứng không giả chuột (emulate_mouse_from_touch tắt): chạm nhả trên ô tìm thì tự lấy focus (hiện bàn phím), chạm chỗ khác thì thả
+	if qe == null or not qe.visible or not (e is InputEventScreenTouch) or e.pressed:
+		return
+	if qe.get_global_rect().has_point(e.position):
+		if not sc._moved:
+			qe.grab_focus()
+			qe.caret_column = qe.text.length()
+	elif qe.has_focus():
+		qe.release_focus()
+
 func input(e: InputEvent) -> bool:
+	_qe_touch(e)
 	if not on or inner == null:
 		sc.input(e)   # vẫn xoá cờ "vừa kéo" khi chạm xuống
 		return false

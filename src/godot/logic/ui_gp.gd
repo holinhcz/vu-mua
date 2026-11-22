@@ -82,16 +82,6 @@ func _tags(k, f: Dictionary) -> Array:   # gpTags
 		t.append("lam")
 	return t
 
-static func _low(s: String) -> String:   # gpLow: bỏ dấu, chữ thường
-	var t := s.to_lower().replace("đ", "d")
-	var out := ""
-	for ch in t:
-		var c := ch.unicode_at(0)
-		if c >= 0x300 and c <= 0x36f:
-			continue
-		out += ch
-	return out.strip_edges()
-
 # ------------------------------------------------------------------ hàng của tab đang mở (gpRows)
 func _rows() -> Array:
 	var F: Dictionary = W.gp_fam()
