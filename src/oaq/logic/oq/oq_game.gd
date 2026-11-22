@@ -13,6 +13,7 @@ const A := preload("res://logic/oq/oq_art.gd")
 const BG := preload("res://logic/oq/oq_bg.gd")
 const SND := preload("res://logic/oq/oq_snd.gd")
 const HUD := preload("res://logic/oq/oq_hud.gd")
+const TAN := preload("res://logic/oq/oq_tan.gd")
 
 const QW := 0.95
 const DR := 0.088
@@ -57,6 +58,8 @@ var tut_step := 0
 var ai_token := 0
 var snd: Node = null
 var hud: Control = null
+var tan: Node2D = null
+var DPR := 1.0
 var bg_tex: Texture2D = null
 var shade: TextureRect = null
 var _svp: SubViewport = null
@@ -72,7 +75,8 @@ var _pressing := false
 
 # ============================================================ dựng
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	DPR = maxf(1.0, k)
+	K = DPR
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -92,6 +96,8 @@ func _ready() -> void:
 	A.build_arm()
 	ME.next = 3 + randf() * 4
 	_build_shade()
+	tan = TAN.new()
+	add_child(tan)
 	hud = HUD.new()
 	hud.game = self
 	add_child(hud)
@@ -143,6 +149,12 @@ func board_rect(pad: float) -> Rect2:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
+	# Link 11-22 "sắp xếp nền cảnh cho phù hợp các màn hình": cả sân + giao diện co giãn đều theo màn như cờ gánh.
+	# Khổ chuẩn: dọc 412x915 css, ngang 1280x720; màn khác nhân U = min(rộng, cao) so với khổ chuẩn.
+	var wc := vs.x / DPR
+	var hc := vs.y / DPR
+	var U := minf(wc / 412.0, hc / 915.0) if hc > wc * 1.05 else minf(wc / 1280.0, hc / 720.0)
+	K = DPR * clampf(U, 0.4, 3.0)
 	var W := vs.x / K
 	var H := vs.y / K
 	L.W = W
@@ -174,6 +186,16 @@ func _layout() -> void:
 	for b in L.bx:
 		var u := unmap(b.x, b.y)
 		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
+	# Link 11-22 tán xoài caro bên trái (như cờ gánh): to nhất mà lá không chạm bàn, rổ, thẻ mình
+	var ban := [board_rect(L.s * 0.12)]
+	for b in L.bx:
+		ban.append(Rect2(b.x - b.z - 6, b.y - b.z - 6, 2 * b.z + 12, 2 * b.z + 12))
+	ban.append((c0 as Rect2).grow(4))
+	var tch := TAN.choices_in(ban, Rect2(0, (L.tools as Rect2).end.y, W, H - (L.tools as Rect2).end.y))
+	L.tan_sc = tch[0].sc if tch.size() else 0.3
+	L.tan_sh = tch[0].sh if tch.size() else Vector2(-400, -400)
+	L.tan = TAN.rects(L.tan_sc, 2, L.tan_sh)
+	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
 	_resize_shade()
 	_bake_bg()
 
@@ -808,7 +830,7 @@ func chalk_text(at: Vector2, txt: String, fs: float, col: Color, alpha := 1.0) -
 	var asc := f.get_ascent(n) / K
 	var dsc := f.get_descent(n) / K
 	var p := Vector2(at.x - w / 2, at.y + (asc - dsc) / 2)
-	_T()
+	draw_set_transform_matrix(Transform2D.IDENTITY)   # chữ vẽ thẳng theo điểm ảnh (toạ độ đã nhân K)
 	draw_string(f, (p + Vector2(fs * 0.04, fs * 0.06)) * K, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, n, Color8(60, 38, 18, int(77 * alpha)))
 	draw_string(f, (p + Vector2(-fs * 0.025, fs * 0.02)) * K, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, n, Color(col, 0.45 * alpha))
 	draw_string(f, (p + Vector2(fs * 0.02, -fs * 0.02)) * K, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, n, Color(col, 0.45 * alpha))
@@ -848,7 +870,7 @@ func _pill(at: Vector2, txt: String, fg: Color, bgc: Color, fs: float, alpha: fl
 	var tw_ := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, n).x / K
 	var w := maxf(fs * 1.5, tw_ + fs * 0.9)
 	var h := fs * 1.3
-	_T()
+	draw_set_transform_matrix(Transform2D.IDENTITY)   # chữ vẽ thẳng theo điểm ảnh (toạ độ đã nhân K)
 	A.box(self, Rect2((at.x - w / 2 + 1) * K, (at.y - h / 2 + 2) * K, w * K, h * K), Color(50 / 255.0, 28 / 255.0, 10 / 255.0, 0.28 * alpha), h / 2, K)
 	A.box(self, Rect2((at.x - w / 2) * K, (at.y - h / 2) * K, w * K, h * K), Color(bgc, alpha), h / 2, K)
 	var asc := f.get_ascent(n) / K

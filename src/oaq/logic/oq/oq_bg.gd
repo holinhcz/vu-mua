@@ -140,6 +140,8 @@ func _draw() -> void:
 		L.obst.append((c as Rect2).grow(6))
 	L.obst.append((L.tools as Rect2).grow(6))
 	L.obst.append(Rect2(W - 190, H - 64, 190, 64))
+	for r in L.get("tan", []):     # dưới tán xoài: không đặt đồ (bị lá che mất)
+		L.obst.append(r)
 	_decor(L)
 	for b in L.bx:
 		var D: float = b.z * 2 / 0.965
@@ -249,15 +251,17 @@ func _decor(L: Dictionary) -> void:
 				return false
 		return true
 	var done := false
-	for hb in [[0.0, true], [0.22, true], [0.22, false]]:
+	# ưu tiên gà nằm trọn trong màn; hết chỗ mới cho ló ra mép màn (cỡ thật, không thu nhỏ cho vừa: luật v7)
+	# hb = [phần được ló ra mép màn, né dải gợi ý, dải rộng đủ cho gà quay ngang]: thử chỗ rộng trọn trong màn trước
+	for hb in [[0.0, true, true], [0.0, false, true], [0.0, true, false], [0.22, true, false], [0.22, false, false]]:
 		if done:
 			break
 		for f in [40, 36, 32]:
 			st_band[0] = hb[1]
 			var hl: float = f * CM
 			var jr := hl * 0.06
-			var ha := hl * 0.5
-			var hc := hl * 0.3 + jr
+			var ha := hl * 0.72   # ảnh gà caro (D = dài / 0.6) to hơn hộp cũ: hộp ôm hết hình
+			var hc := maxf(hl * 0.3 + jr, ha * 0.92) if hb[2] else hl * 0.3 + jr   # gà quay đủ hướng (mổ, ngó): bề ngang dải cũng phải vừa thân gà
 			var best = null
 			var bs := -1e9
 			var st := maxf(8.0, hc * 0.5)
