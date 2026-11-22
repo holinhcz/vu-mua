@@ -1,8 +1,12 @@
-extends "res://logic/ui_bang.gd"
-# GIA PHẢ (gpOpen / gpRender bản web, Sổ làng › Gia phả): khung chung với Kho (ui_bang.gd), 3 tab .khseg.gptabs:
-# Dòng họ (chip từng họ, cây theo cha con, bung/thu), Quan hệ (vòng quan hệ của nhà đang chọn), Danh bạ (ô tìm + chip lọc).
-# Đáy bảng .khdock.gpdock: nhà đang chọn + Ghé chơi / Đi tới nhà / Quan hệ.
-# Mẫu: ui/snap/gp.json (khung), gp_tab.json (hàng, chip, ô tìm, đáy). Luật ở w_lang.gd (gp_*).
+extends "res://logic/ui_kbang.gd"
+# GIA PHẢ (gpOpen / gpRender bản web, Sổ làng › Gia phả). (bản 493) làm lại trên khung Kho + chip chung (ui_kbang.gd), 3 tab:
+#  - Dòng họ: chip từng họ (màu riêng mỗi họ, gói xuống hàng), cây cha con thụt lề theo đời có đường nối, nút +/− bung thu;
+#  - Quan hệ: nhà đang chọn trên đầu, rồi nhóm Gia đình (cha mẹ, con cháu, anh em) / Bà con (sui gia, bà con trong họ) /
+#    Hàng xóm (bạn làm ăn, hàng xóm), mỗi nhà có chip vai;
+#  - Danh bạ: ô tìm chung (_qbox, gõ không dấu) + chip lọc gói xuống hàng.
+# Mỗi nhà: chip nền nhạt theo màu họ, mặt tròn (vlface/m*.webp), tên, dòng phụ (đời / họ · tính), dấu việc (muốn nói chuyện,
+# đang nhờ, ngày riêng, đang làm thuê), 1 tim + số. Đáy cố định: nhà đang chọn + Ghé chơi / Đi tới nhà / Quan hệ.
+# Luật ở w_lang.gd (gp_*).
 
 var W          # w_lang.gd
 var tab := "ho"             # GPS.tab
@@ -12,20 +16,18 @@ var q := ""                 # GPS.q
 var loc := "all"            # GPS.loc
 var ex := {}                # GPS.ex: bung / thu
 var more := {}              # GPS.more: hiện hết con
-var GB := {}
-var GT := {}
 var _lk := ""               # khóa danh sách: đổi tab / họ / lọc thì cuộn về đầu
-const ROW := 39.0           # GPROW 52px
 const LOCS := [["all", "Tất cả"], ["mo", "Muốn nói chuyện"], ["nho", "Đang nhờ"], ["than", "Thân nhất"], ["lau", "Lâu chưa ghé"], ["ngay", "Ngày riêng"]]
-const GPN := {"cha": "Cha mẹ", "con": "Con cháu", "ae": "Anh em", "sui": "Sui gia", "bc": "Bà con trong họ", "ban": "Bạn làm ăn", "xom": "Hàng xóm"}
+const GPN := {"cha": "Cha mẹ", "con": "Con cháu", "ae": "Anh em", "sui": "Sui gia", "bc": "Bà con", "ban": "Bạn làm ăn", "xom": "Hàng xóm"}
+const QHG := [["Gia đình", ["cha", "con", "ae"], "rgb(214, 140, 40)"], ["Bà con", ["sui", "bc"], "rgb(76, 150, 48)"], ["Hàng xóm", ["ban", "xom"], "rgb(70, 120, 180)"]]
 const HOMAU := ["#b5653a", "#5f8a3c", "#c4932c", "#4f7896", "#7a5a8c", "#3f8a7a", "#a34d70", "#8a6a2e", "#4a7a4a", "#9a5040"]
-const TAGC := {"ng": "rgb(216, 160, 48)"}
+const TAGI := {"mo": "pic:res://ui/img/bong/chat.png", "nho": "pic:res://ui/img/bong/gap.png", "ng": "pic:res://ui/img/bong/sao.png", "lam": "pic:res://ui/img/xt/b_cuoc.webp"}
+const TAGS := {"mo": "Muốn nói chuyện", "nho": "Đang nhờ việc", "ng": "Hôm nay ngày riêng", "lam": "Đang làm thuê cho bạn"}
+const DOCK := 86.0          # cao đáy cố định
 
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
-	GB = Snap.load_snap("gp")["#pov"][0]
-	GT = Snap.load_snap("gp_tab")
 
 func open(u = null) -> void:   # gpOpen(u)
 	var F: Dictionary = W.gp_fam()
@@ -56,19 +58,25 @@ func step(dt: float) -> void:   # gpRender mỗi giây
 func _sig() -> String:
 	return JSON.stringify([tab, ho, sel, q, loc, ex, more, W.gp_fam(), W._vr()])
 
-static func gp_init(n: String) -> String:   # gpInit: chữ đầu tên (bỏ danh xưng)
-	var w := n.split(" ")
-	var s: String = w[2 if w.size() > 2 else 1] if w.size() > 1 else (w[0] if w.size() else "?")
-	return s.substr(0, 1) if s != "" else "?"
-
-static func gp_color(h: String) -> String:   # gpColor
+static func gp_color(h: String) -> String:   # gpColor: màu họ
 	var k := 0
 	for i in h.length():
 		k = (k * 31 + h.unicode_at(i)) & 0xffffffff
 	return HOMAU[k % HOMAU.size()]
 
-func _sub(k, f: Dictionary) -> String:   # gpSub
-	return "Họ " + String(f.get("ho", "")) + " · đời " + str(W._i(f.get("doi")) if W._i(f.get("doi")) else 1) + (" · sui gia của bạn" if W.gp_is_sui_minh(k) else "")
+func _ck(kind: String) -> Array:   # "ho:<#màu>": nền nhạt theo màu họ; "hoon:<#màu>": họ đang chọn (đậm hơn)
+	if kind.begins_with("ho:") or kind.begins_with("hoon:"):
+		var on_ := kind.begins_with("hoon:")
+		var c := Color(kind.substr(kind.find(":") + 1))
+		var w := Color.WHITE
+		var f := func(t: float) -> String:
+			var m := c.lerp(w, t)
+			return "rgb(%d, %d, %d)" % [int(m.r8), int(m.g8), int(m.b8)]
+		return [f.call(0.62 if on_ else 0.80), f.call(0.70 if on_ else 0.86), f.call(0.78 if on_ else 0.92), f.call(0.0 if on_ else 0.45)]
+	return super(kind)
+
+func _face(f: Dictionary) -> String:
+	return "pic:res://ui/img/vlface/m" + str(clampi(W._i(f.get("lk")), 0, 7) % 8) + ".webp"
 
 func _tags(k, f: Dictionary) -> Array:   # gpTags
 	var t := []
@@ -81,6 +89,9 @@ func _tags(k, f: Dictionary) -> Array:   # gpTags
 	if W._tr(f.get("job")):
 		t.append("lam")
 	return t
+
+func _doi(f: Dictionary) -> int:
+	return W._i(f.get("doi")) if W._i(f.get("doi")) else 1
 
 # ------------------------------------------------------------------ hàng của tab đang mở (gpRows)
 func _rows() -> Array:
@@ -98,35 +109,40 @@ func _rows() -> Array:
 				if not kids.has(c):
 					kids[c] = []
 				kids[c].append(int(k))
-		var walk := func(walk_f: Callable, k: int, d: int) -> void:
+		var walk := func(walk_f: Callable, k: int, d: int, last: bool) -> void:
 			var ch: Array = kids.get(k, [])
 			var opn: bool = bool(ex[k]) if ex.has(k) else d < 1
-			rows.append({"u": k, "d": d, "tg": ("-" if opn else "+") if ch.size() else "", "n": ch.size()})
+			rows.append({"u": k, "d": d, "tg": ("-" if opn else "+") if ch.size() else "", "n": ch.size(), "last": last})
 			if not opn:
 				return
 			var lim: int = ch.size() if more.has(k) else 5
-			for c in ch.slice(0, lim):
-				walk_f.call(walk_f, int(c), d + 1)
+			var L: Array = ch.slice(0, lim)
+			for i in L.size():
+				walk_f.call(walk_f, int(L[i]), d + 1, i == L.size() - 1 and ch.size() <= lim)
 			if ch.size() > lim:
 				rows.append({"mo": k, "d": d + 1, "n": ch.size() - lim})
 		for k in mem:
 			var c: int = W._i(F[str(k)].get("cha"))
 			if not (c and in_ho.has(c)):
-				walk.call(walk, int(k), 0)
+				walk.call(walk, int(k), 0, true)
 	elif tab == "qh":
 		if not F.has(str(sel)):
 			return rows
 		var R: Dictionary = W.gp_rel(sel)
 		rows.append({"u": sel, "d": 0, "me": 1})
-		for t in ["cha", "con", "ae", "sui", "bc", "ban", "xom"]:
-			var a: Array = R.get(t, [])
-			if a.is_empty():
+		for g in QHG:
+			var n := 0
+			for t in g[1]:
+				n += (R.get(t, []) as Array).size()
+			if n == 0:
 				continue
-			rows.append({"h": GPN[t] + " (" + str(a.size()) + ")"})
-			for k in a.slice(0, 12 if t == "bc" else a.size()):
-				rows.append({"u": int(k), "d": 0})
-			if t == "bc" and a.size() > 12:
-				rows.append({"h": "… còn " + str(a.size() - 12) + " nhà, xem ở tab Dòng họ"})
+			rows.append({"h": String(g[0]) + " (" + str(n) + ")", "c": g[2]})
+			for t in g[1]:
+				var a: Array = R.get(t, [])
+				for k in a.slice(0, 12 if t == "bc" else a.size()):
+					rows.append({"u": int(k), "d": 0, "vai": GPN[t]})
+				if t == "bc" and a.size() > 12:
+					rows.append({"note": "… còn " + str(a.size() - 12) + " nhà bà con, xem ở tab Dòng họ"})
 	else:
 		var qq := _low(q)
 		var d: int = W._vr()
@@ -167,56 +183,46 @@ func _build() -> void:
 	hl.sort_custom(func(a, b): return hos[a] > hos[b])
 	if not hos.has(ho):
 		ho = String(hl[0]) if hl.size() else ""
-	var n := _cl(GB)
-	_seg_tabs(_find(n, "gptabs"), [["ho", "Dòng họ", false], ["qh", "Quan hệ", false], ["db", "Danh bạ", false]], tab, _tab_go, {})
-	var tl := _find(n, "gptools")
-	var vt := _find(n, "gplist")
-	var y_list := 148.4
-	tl.kids = []
-	if tab == "ho":
-		var row := _cl(GT.chips_c)
-		_chip_row(row, hl.map(func(h): return [h, String(h) + " " + str(hos[h]), h == ho]), _ho_go, true)
-		tl.kids = [row]
-		y_list = 194.2
-	elif tab == "db":
-		var inp := _cl(GT.q)
-		var row := _cl(GT.chips)
-		_chip_row(row, LOCS.map(func(x): return [x[0], x[1], x[0] == loc]), _loc_go, false)
-		tl.kids = [inp, row]
-		y_list = 230.2
 	var key := tab + "|" + ho + "|" + loc
 	if key != _lk:
 		_lk = key
 		scroll = 0.0
-	vt.r[3] = 522.9 - y_list
-	vt.r[1] = y_list
-	vt.cls = "gplist"
-	var blocks := []
+	var out := []
+	var y := 6.0
+	if tab == "ho":   # chip họ, gói xuống hàng
+		var C := _wrapchips(y, hl.map(func(h): return [h, String(h) + " · " + str(hos[h]), h == ho, gp_color(String(h))]), _ho_go)
+		out.append_array(C[0])
+		y = float(C[1]) + GG
+	elif tab == "db":
+		out.append(_qbox(y, "gpq"))
+		y += 30.0 + 8.0
+		var C2 := _wrapchips(y, LOCS.map(func(x): return [x[0], x[1], x[0] == loc, ""]), _loc_go)
+		out.append_array(C2[0])
+		y = float(C2[1]) + GG
 	var R := _rows()
-	for i in R.size():
-		var b := _row(R[i], F)
-		if b.is_empty():
-			continue
-		b.gap = 4.5
-		blocks.append(b)
-	if blocks.is_empty():
-		var e := _cl(GT.gph)
-		e.kids[0].text = "Không có nhà nào hợp." if tab == "db" else "Chưa có nhà nào."
-		blocks.append(e)
-	_dock(n, F)
-	_show(n, vt, blocks, 3.0)
-	var cr = ids.get(".khchips")
-	if cr != null:
-		cr._kids.clip_contents = true
+	var nr := 0
+	for r in R:
+		var b := _row(y, r, F)
+		out.append_array(b[0])
+		y += float(b[1]) + 5.0
+		nr += 1
+	if nr == 0:
+		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không có nhà nào hợp." if tab == "db" else "Chưa có nhà nào.", 11.0, 700, SUB, "left"))
+		y += 16.0 + 5.0
+	y += GG - 5.0
+	var sh := _kshell([["ho", "Dòng họ", false], ["qh", "Quan hệ", false], ["db", "Danh bạ", false]], tab, _tab_go)
+	var vt: Dictionary = sh[1]
+	vt.r[3] = float(vt.r[3]) - DOCK - 6.0   # chừa đáy cố định
+	_hb = float(vt.r[3])
+	_find(sh[0], "khcard").kids.append_array(_dock(float(vt.r[1]) + float(vt.r[3]) + 6.0, F))
+	_kmount(sh[0], vt, float(sh[2]), out, y)
 	if tab == "db":
 		_qe_make(".gpq", "Tìm tên, họ…", q, _q_changed)
 	else:
 		_qe_drop()
-	U._layout()
 
 func _tab_go(k: String) -> void:   # data-gt
 	tab = k
-	chx = 0.0
 
 func _ho_go(h: String) -> void:   # data-gho
 	ho = h
@@ -224,125 +230,99 @@ func _ho_go(h: String) -> void:   # data-gho
 func _loc_go(k: String) -> void:   # data-gl
 	loc = k
 
-# .khchips: [[khóa, chữ, đang chọn]]; giữa: căn giữa khi vừa (tab Dòng họ), không thì cuộn ngang
-func _chip_row(row: Dictionary, L: Array, go: Callable, center: bool) -> void:
-	var x := float(row.r[0])
+func _wrapchips(y: float, L: Array, go: Callable) -> Array:   # chip chữ gói xuống hàng: [[khóa, chữ, đang chọn, màu họ ("" = xanh chung)]]
 	var out := []
-	var onr := [0.0, 0.0]
+	var x := X0
+	var h := 26.0
 	for o in L:
-		var c := _cl(GT.chip_on if o[2] else GT.chip)
-		var sp: Dictionary = c.kids[0]
-		var tw := _dw(sp, String(o[1]))
-		var w := tw + 18.0
-		_mv(c, x, float(row.r[1]) + 0.7)
-		c.r[2] = w
-		sp.text = o[1]
-		sp.r = [x + 9.0, float(c.r[1]) + 8.8, tw, sp.r[3]]
-		sp.tr = sp.r.duplicate()
+		var t := String(o[1])
+		var w: float = Box.text_w(t, 10.5, 700) + 18.0
+		if x > X0 and x + w > X0 + XW:
+			x = X0
+			y += h + 6.0
+		var mc := String(o[3])
+		var kd := ("hoon:" + mc if o[2] else "ho:" + mc) if mc != "" else ("thue" if o[2] else "fut")
+		var c := _chip(x, y, w, h, kd)
+		c.kids = [_dt(x, y, w, h, t, 10.5, 800 if o[2] else 700, BROWN)]
 		c.act = go.bind(o[0])
-		if o[2]:
-			onr = [x, x + w]
 		out.append(c)
-		x += w + 4.5
-	var tot := x - 4.5 - float(row.r[0])
-	if center and tot < 305.0:
-		var dx := (305.0 - tot) * 0.5
-		for c in out:
-			Snap._move(c, Vector2(dx, 0))
-	else:
-		_chips_keep(out, onr, x - 4.5)
-	row.r = [16.5, row.r[1], 305.0, row.r[3]]
-	row.kids = out
+		x += w + 6.0
+	return [out, y + h]
 
-# một hàng .gprow: tiêu đề (.gph), "+n nhà nữa", hoặc một nhà (.gpn)
-func _row(r: Dictionary, F: Dictionary) -> Dictionary:
+# một hàng: tiêu đề nhóm, ghi chú, "+n nhà nữa", hoặc một nhà
+func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	if r.has("h"):
-		var hh := _cl(GT.gph)
-		hh.kids[0].text = r.h
-		return hh
+		return [_sect(y + 4.0, String(r.h), String(r.c)), 20.0]
+	if r.has("note"):
+		return [[_dt(X0 + 2.0, y, XW, 14.0, String(r.note), 10.0, 600, SUB, "left")], 14.0]
+	var d := int(r.get("d", 0))
+	var ind := d * 16.0
 	if r.has("mo"):
-		var m := _cl(GT.gph)
-		var d0 := int(r.d)
-		_mv(m, 16.5 + d0 * 13.5, float(m.r[1]))
-		m.r[2] = 305.0 - d0 * 13.5
-		m.kids[0].text = "+" + str(r.n) + " nhà nữa"
+		var w0 := XW - ind
+		var m := _chip(X0 + ind, y, w0, 24.0, "fut")
+		m.kids = [_dt(X0 + ind, y, w0, 24.0, "+" + str(r.n) + " nhà nữa", 10.5, 700, SUB)]
 		m.act = func(): more[int(r.mo)] = 1
-		m.dx = d0 * 13.5
-		return m
+		return [[m] + _elbow(y, d, 12.0, true), 24.0]
 	var u := int(r.u)
 	if not F.has(str(u)):
-		return {}
+		return [[], -5.0]
 	var f: Dictionary = F[str(u)]
-	var d := int(r.get("d", 0))
-	var on_: bool = u == sel
-	var c := _cl(GT.row_me if r.has("me") else (GT.row_on if on_ else (GT.row_c if d > 0 else GT.row)))
-	var x := 16.5 + d * 13.5
-	var w := 305.0 - d * 13.5
-	_mv(c, x, float(c.r[1]))
-	c.r[2] = w
-	c.dx = d * 13.5
-	var y := float(c.r[1])
-	var K: Array = c.kids
-	var gx = null
-	var av: Dictionary = {}
-	var nm: Dictionary = {}
-	var hr: Dictionary = {}
-	for k in K:
-		var cl := String(k.cls)
-		if cl == "gpx": gx = k
-		elif cl == "gpav": av = k
-		elif cl == "gpnm": nm = k
-		elif cl == "gphr": hr = k
-	var kids := []
-	var ax := x + 4.5
-	if String(r.get("tg", "")) != "":
-		var g: Dictionary = _cl(gx if gx != null else GT.row_on.kids[0])
-		_mv(g, x + 4.5, y + 8.2)
-		g.text = "+" if r.tg == "+" else "−"
-		g.act = _tog.bind(u, r.tg == "+")
-		kids.append(g)
-		ax += 24.0
-	_mv(av, ax, y + 5.25)
-	av.text = gp_init(String(f.n))
-	av.css["background-color"] = gp_color(String(f.get("ho", "")))
-	kids.append(av)
-	var tg := _tags(u, f)
-	var right := x + w - 6.0
-	var tx := right - 13.5 * tg.size() - 1.5 * maxf(0.0, tg.size() - 1.0)
-	for i in tg.size():
-		var t := _cl(GT.get("t_" + tg[i], GT.t_nho))
-		if tg[i] == "ng":
-			t.text = "★"
-			t.css["background-color"] = TAGC.ng
-		_mv(t, tx + i * 15.0, y + 10.5)
-		kids.append(t)
-	hr.text = W.e_t(W._i(f.get("tim")))
-	var hw := float(hr.r[2])
-	var hx := (tx - 6.0 if tg.size() else right) - hw
-	_mv(hr, hx, y + 11.0)
-	kids.append(hr)
-	var nx := ax + 30.0
-	_mv(nm, nx, y + 5.2)
-	nm.r[2] = hx - 6.0 - nx
-	var nb: Dictionary = nm.kids[0]
-	var ns: Dictionary = nm.kids[1]
-	nb.text = _fit(nb, String(f.n), nm.r[2])
-	nb.r[2] = nm.r[2]
-	nb.tr = [nb.r[0], nb.tr[1], _tw(nb, nb.text), nb.tr[3]]
-	ns.text = _fit(ns, _sub(u, f), nm.r[2])
-	ns.r[2] = nm.r[2]
-	ns.tr = [ns.r[0], ns.tr[1], _tw(ns, ns.text), ns.tr[3]]
-	kids.append(nm)
-	c.kids = kids
+	var out := []
+	var x := X0 + ind
+	var w := XW - ind
+	var h := 42.0
+	var mc := gp_color(String(f.get("ho", "")))
+	var c := _chip(x, y, w, h, "now" if u == sel and not r.has("me") else ("hoon:" + mc if r.has("me") else "ho:" + mc))
 	c.act = _pick.bind(u)
-	return c
+	out.append(c)
+	if d > 0:
+		out.append_array(_elbow(y, d, h * 0.5, bool(r.get("last", false))))
+	var ax := x + 6.0
+	if String(r.get("tg", "")) != "":   # nút bung / thu
+		var g := _chip(ax, y + 11.0, 20.0, 20.0, "fut")
+		g.kids = [_dt(ax, y + 11.0, 20.0, 20.0, "−" if r.tg == "-" else "+", 13.0, 800, BROWN)]
+		g.act = _tog.bind(u, r.tg == "+")
+		out.append(g)
+		ax += 24.0
+	out.append(_icx(ax + 15.0, y + h * 0.5, 30.0, _face(f)))
+	var nx := ax + 36.0
+	# phải: tim + số, dấu việc
+	var tim: int = W._i(f.get("tim"))
+	var rx := x + w - 8.0
+	var tw: float = Box.text_w(str(tim), 11.0, 800)
+	out.append(_dt(rx - tw, y, tw + 2.0, h, str(tim), 11.0, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
+	out.append(_dic(rx - tw - 17.0, y + h * 0.5 - 7.0, 14.0, HEART if tim > 0 else HEART0))
+	rx -= tw + 22.0
+	for t in _tags(u, f):
+		rx -= 18.0
+		var ti := _icx(rx + 8.0, y + h * 0.5, 17.0, String(TAGI[t]))
+		out.append(ti)
+		var hit := _dbx(rx - 1.0, y + 8.0, 18.0, h - 16.0, "rgba(0, 0, 0, 0)", 0.0)
+		hit.act = _dsay.bind(String(f.n) + ": " + String(TAGS[t]) + ".")
+		out.append(hit)
+	var nw := rx - 6.0 - nx
+	out.append(_dt(nx, y + 5.0, nw, 16.0, _fitw(String(f.n), 11.5, 800, nw), 11.5, 800, BROWN, "left"))
+	var sub := ""
+	if tab == "ho":
+		sub = "Đời " + str(_doi(f)) + " · " + String(W.tinh_of(f).n)
+	elif r.has("me"):
+		sub = "Họ " + String(f.get("ho", "")) + " · đời " + str(_doi(f)) + " · nhà đang xem"
+	else:
+		sub = "Họ " + String(f.get("ho", "")) + " · " + String(W.tinh_of(f).n)
+	if W.gp_is_sui_minh(u):
+		sub += " · sui gia của bạn"
+	var sx := nx
+	if r.has("vai"):   # chip vai (tab Quan hệ)
+		var V := _tchip(sx, y + 23.0, String(r.vai), "info", "rgb(50, 90, 140)", null, 15.0, 9.0)
+		out.append(V[0])
+		sx += float(V[1]) + 5.0
+	out.append(_dt(sx, y + 23.0, nx + nw - sx, 15.0, _fitw(sub, 9.5, 600, nx + nw - sx), 9.5, 600, SUB, "left"))
+	return [out, h]
 
-func _fit(n: Dictionary, s: String, w: float) -> String:   # text-overflow: ellipsis
-	if _tw(n, s) <= w:
-		return s
-	while s.length() > 1 and _tw(n, s + "…") > w:
-		s = s.substr(0, s.length() - 1)
-	return s.strip_edges() + "…"
+func _elbow(y: float, d: int, my: float, last: bool) -> Array:   # đường nối cha con: vạch dọc từ hàng trên + gạch ngang vào hàng
+	var lx := X0 + (d - 1) * 16.0 + 8.0
+	var col := "rgba(150, 112, 48, 0.5)"
+	return [_dbx(lx, y - 5.0, 1.5, (my + 5.0) if last else 47.0, col, 0.0), _dbx(lx, y + my, 8.0, 1.5, col, 0.0)]
 
 func _tog(u: int, opn: bool) -> void:   # data-gx
 	ex[u] = 1 if opn else 0
@@ -350,43 +330,39 @@ func _tog(u: int, opn: bool) -> void:   # data-gx
 func _pick(u: int) -> void:   # data-gu
 	sel = u
 
-# .khdock.gpdock: nhà đang chọn + nút
-func _dock(n: Dictionary, F: Dictionary) -> void:
-	var dk := _find(n, "gpdock")
-	var src: Dictionary = GT.dock2 if tab == "qh" else GT.dock
-	var d := _cl(src)
+# đáy cố định: nhà đang chọn + nút (giữ như bản cũ: Ghé chơi / Đi tới nhà / Quan hệ, tab Quan hệ bỏ nút Quan hệ)
+func _dock(y: float, F: Dictionary) -> Array:
+	var out := []
 	var f = F.get(str(sel))
-	if f == null:
-		var sl := _find(d, "gpsel")
-		sl.kids = []
-		var ac := _find(d, "gpacts")
-		ac.kids = []
-		dk.kids = d.kids
-		return
-	var gs := _find(d, "gpsel")
-	var av: Dictionary = gs.kids[0]
-	var nm: Dictionary = gs.kids[1]
-	av.text = gp_init(String(f.n))
-	av.css["background-color"] = gp_color(String(f.get("ho", "")))
-	var b: Dictionary = nm.kids[0]
-	var hs: Dictionary = b.kids[0]
-	b.text = String(f.n)
-	var bw := _tw(b, b.text + " ")
-	b.tr = [b.r[0], b.tr[1], _tw(b, b.text), b.tr[3]]
-	hs.text = W.e_t(W._i(f.get("tim")))
-	_mv(hs, float(b.r[0]) + bw, float(hs.r[1]))
-	var sm: Dictionary = nm.kids[1]
-	sm.text = _sub(sel, f) + " · " + String(W.tinh_of(f).n)
-	var sw := _tw(sm, sm.text)
-	sm.tr = [sm.r[0], sm.tr[1], sw, sm.tr[3]]
-	sm.r[2] = sw
-	var acts := _find(d, "gpacts")
-	var bt: Array = acts.kids
-	bt[0].act = _ghe
-	bt[1].act = _toi
-	if bt.size() > 2:
-		bt[2].act = _tab_go.bind("qh")
-	dk.kids = d.kids
+	out.append(_dbx(X0, y - 4.0, XW, 1.0, "rgb(222, 204, 164)", 0.0))
+	if not (f is Dictionary):
+		out.append(_dt(X0, y, XW, 40.0, "Chưa có nhà nào trong làng.", 11.0, 700, SUB, "left"))
+		return out
+	out.append(_icx(X0 + 18.0, y + 20.0, 34.0, _face(f)))
+	var nm := String(f.n)
+	var nw: float = minf(Box.text_w(nm, 12.0, 800) + 2.0, XW - 110.0)
+	out.append(_dt(X0 + 42.0, y + 2.0, nw, 18.0, _fitw(nm, 12.0, 800, nw), 12.0, 800, BROWN, "left"))
+	var tim: int = W._i(f.get("tim"))
+	var hx := X0 + 42.0 + nw + 8.0
+	out.append(_dic(hx, y + 4.0, 14.0, HEART if tim > 0 else HEART0))
+	out.append(_dt(hx + 17.0, y + 2.0, 30.0, 18.0, str(tim), 11.0, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
+	var sm := "Họ " + String(f.get("ho", "")) + " · đời " + str(_doi(f)) + " · " + String(W.tinh_of(f).n)
+	out.append(_dt(X0 + 42.0, y + 21.0, XW - 46.0, 14.0, _fitw(sm, 10.0, 600, XW - 46.0), 10.0, 600, SUB, "left"))
+	var by := y + 46.0
+	var g := 6.0
+	var n := 2 if tab == "qh" else 3
+	var bw := floorf((XW - g * (n - 1)) / n)
+	out.append(_btn(X0, by, bw, 32.0, "Ghé chơi", _ghe, "go"))
+	var b2 := _chip(X0 + bw + g, by, bw, 32.0, "fut")
+	b2.kids = [_dt(X0 + bw + g, by, bw, 32.0, "Đi tới nhà", 11.0, 700, BROWN)]
+	b2.act = _toi
+	out.append(b2)
+	if n == 3:
+		var b3 := _chip(X0 + (bw + g) * 2.0, by, XW - (bw + g) * 2.0, 32.0, "fut")
+		b3.kids = [_dt(X0 + (bw + g) * 2.0, by, XW - (bw + g) * 2.0, 32.0, "Quan hệ", 11.0, 700, BROWN)]
+		b3.act = _tab_go.bind("qh")
+		out.append(b3)
+	return out
 
 func _ghe() -> void:   # data-ga="ghe"
 	U.vl_open(sel)
@@ -407,8 +383,3 @@ func _toi() -> void:   # data-ga="toi": gpGo
 func _q_changed(t: String) -> void:   # input .gpq
 	q = t
 	_redo()
-
-func input(e: InputEvent) -> bool:
-	if on and tab != "qh" and _chips_drag(e):
-		return true
-	return super(e)

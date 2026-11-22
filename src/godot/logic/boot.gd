@@ -217,6 +217,8 @@ func _test_hook() -> void:
 			"thu": _thu(a)
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
+			"gptree": _gptree()
+			"gp": ui.gp_open(int(a[2]) if a.size() > 2 else null); if a.size() > 1: ui.gpp._tab_go(a[1]); ui.gpp._build()   # gp[:tab[:nhà]]
 			"thux": G.w_all.WTH.wU(a[1])
 			"thugive": var T7: Dictionary = G.w_all.WTH.Eg(); var o7 = T7.get("rq") if T7.get("rq") is Dictionary else T7.get("un"); if o7 is Dictionary and o7.has("id"): G.g.barn[o7.id] = int(o7.q) + 1; G.mark()
 			"dlrv": var R6: Dictionary = G.w_all.WDL.r6(); for i in 4: R6.rv.push_front({"s": [5, 4, 3, 2][i], "t": ["Làng đẹp, quán ngon, sẽ quay lại!", "Ở được, hơi ít món.", "Phòng ổn mà chẳng có gì chơi.", "Mưa suốt, chán."][i], "k": ["sg", "tay", "sg", "tay"][i], "n": 2, "xu": 300 - i * 50, "at": Time.get_unix_time_from_system() * 1000.0 - i * 3600000.0}); R6.n = 8; R6.xu = 1200; G.mark()
@@ -288,6 +290,24 @@ func _test_hook() -> void:
 
 func R2(rid: String) -> Array:
 	return G.xw.R[rid].in
+
+func _gptree() -> void:   # (bản 493) test Gia phả: nhân bản 12 nhà, chia 3 họ, nối cha con thành cây, tim / việc khác nhau
+	var F0: Dictionary = G.w_all.WL._r0().fam
+	var k0 = F0.keys()[0]
+	var hos := ["Nguyễn", "Trần", "Lê"]
+	var nm := ["Ông Ba Tèo", "Bà Tư Lành", "Anh Năm Sang", "Chị Sáu Mai", "Út Hiền", "Cô Bảy Lan", "Chú Tám Hùng", "Anh Hai Phúc", "Chị Mười Thu", "Bé Na", "Thằng Tí", "Dì Sáu"]
+	for i in 12:
+		var f: Dictionary = F0[k0].duplicate(true)
+		var h: int = 0 if i < 6 else (1 if i < 10 else 2)
+		f.n = nm[i]; f.ho = hos[h]; f.lk = i % 8; f.tim = [5, 3, 2, 0, 1, 4, 2, 0, 3, 1, 0, 2][i]
+		f.cha = null; f.doi = 1
+		if h == 0 and i > 0:
+			f.cha = 900 + (0 if i < 3 else (1 if i < 5 else 2)); f.doi = 2 if i < 3 else 3
+		if h == 1 and i > 6:
+			f.cha = 906; f.doi = 2
+		f.mo = 1 if i % 3 == 0 else 0
+		F0[str(900 + i)] = f
+	G.mark()
 
 func _thu(a: Array) -> void:   # (bản 491) test Thư nhà: thu:tien|tin|nho|rq[:lg] (lg: thêm thư cũ giả)
 	var T: Dictionary = G.w_all.WTH.Eg()

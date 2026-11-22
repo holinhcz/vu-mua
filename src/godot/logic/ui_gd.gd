@@ -145,9 +145,7 @@ func _body() -> Array:
 	var out := []
 	var y := 6.0
 	# ô tìm: nền trắng, kính lúp
-	var sb := _dbx(X0, y, XW, 30.0, "rgb(255, 255, 255)", 15.0, "", "rgba(76, 150, 48, 0.95) 0px 0px 0px 2px inset" if qe_on() else "rgba(150, 112, 48, 0.55) 0px 0px 0px 1px inset")   # đang gõ: viền xanh
-	sb.cls = "u2gds"
-	sb.kids = [_dic(X0 + XW - 26.0, y + 7.0, 16.0, LUP)]
+	var sb := _qbox(y, "u2gds")
 	out.append(sb)
 	y += 30.0 + GG
 	var nf := 0
@@ -258,4 +256,3 @@ func _tip() -> void:   # data-gd="tip"
 func _clg() -> void:   # data-gd="st": Chuyện làng
 	U.clg_open()
 
-const LUP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"10\" cy=\"10\" r=\"6.5\" fill=\"none\" stroke=\"rgb(150,112,60)\" stroke-width=\"2.2\"/><path d=\"M15 15 L21 21\" stroke=\"rgb(150,112,60)\" stroke-width=\"2.6\" stroke-linecap=\"round\"/></svg>"

@@ -389,6 +389,13 @@ func _parab(x: float, y: float, w: float, t: String, fs := 10.5, fw := 600, col 
 			sp = false
 	return [out, (ln + 1) * lh if out.size() else 0.0]
 
+const LUP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><circle cx=\"10\" cy=\"10\" r=\"6.5\" fill=\"none\" stroke=\"rgb(150,112,60)\" stroke-width=\"2.2\"/><path d=\"M15 15 L21 21\" stroke=\"rgb(150,112,60)\" stroke-width=\"2.6\" stroke-linecap=\"round\"/></svg>"
+func _qbox(y: float, cls: String) -> Dictionary:   # (bản 493, chung) ô tìm: nền trắng, kính lúp, đang gõ viền xanh; LineEdit đặt đè bằng _qe_make("." + cls)
+	var sb := _dbx(X0, y, XW, 30.0, "rgb(255, 255, 255)", 15.0, "", "rgba(76, 150, 48, 0.95) 0px 0px 0px 2px inset" if qe_on() else "rgba(150, 112, 48, 0.55) 0px 0px 0px 1px inset")
+	sb.cls = cls
+	sb.kids = [_dic(X0 + XW - 26.0, y + 7.0, 16.0, LUP)]
+	return sb
+
 func _sect(y: float, t: String, col: String) -> Array:   # tiêu đề phần: vạch màu tab + chữ đậm
 	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
 	return [_dbx(X0, y + 2.0, 3.0, 13.0, col, 1.5), _dt(X0 + 8.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"),
