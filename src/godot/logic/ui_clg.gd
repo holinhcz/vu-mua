@@ -1,16 +1,23 @@
-extends "res://logic/ui_ls.gd"
-# CHUYỆN LÀNG (clgOpen / clgRender bản web, Sổ làng › Tin tức trong làng): bảng sổ có tab chung (ui_ls.gd),
-# tab Tất cả / Nhà mình / Xóm làng / Thiên tai / Buôn bán; chuyện gom theo ngày, chuyện mới tô nền, việc xen vào có nút.
-# Mở xem 1,5 giây thì tính là đã đọc (g.clg.sn). Luật ở w_lang.gd (clg_s, clg_act, clg_act_lb, clg_tick).
+extends "res://logic/ui_kbang.gd"
+# CHUYỆN LÀNG (clgOpen / clgRender bản web, Sổ làng › Tin tức trong làng). (bản 476) làm lại trên khung Kho + chip chung (ui_kbang.gd):
+# tab Tất cả / Nhà mình / Xóm làng / Thiên tai / Buôn bán (chấm đỏ khi có chuyện chưa đọc); chuyện gom theo ngày (ghi mùa),
+# việc có nút lên đầu mỗi ngày thành khối vàng; chuyện thường là dòng nhẹ có hình + vạch màu theo loại; chuyện lặp trong ngày gộp 1 dòng
+# (chạm mở ra); chuyện chưa đọc có chip "Mới" tới lần mở bảng sau. Mở xem 1,5 giây thì tính là đã đọc (g.clg.sn).
+# Luật ở w_lang.gd (clg_s, clg_act, clg_act_lb, clg_tick).
 
 var W          # w_lang.gd
 var tab := "all"            # CLGV.tab
 var _mk := -1.0             # CLGV.mk: đếm 1,5 giây rồi ghi đã đọc
+var sn0 := 0                # (bản 476) mốc đã đọc lúc mở bảng: chuyện sau mốc này hiện "Mới" suốt lần mở này
+var ex := {}                # nhóm chuyện gộp đang mở
+var SK := {}                # sky.json: hình thời tiết
 const TABS := [["all", "Tất cả"], ["nha", "Nhà mình"], ["xom", "Xóm làng"], ["tt", "Thiên tai"], ["buon", "Buôn bán"]]
+const TABC := {"all": "rgb(150, 112, 60)", "nha": "rgb(214, 160, 30)", "xom": "rgb(76, 150, 48)", "tt": "rgb(70, 120, 180)", "buon": "rgb(222, 130, 40)"}
 
 func _init(ui, wl) -> void:
 	super(ui)
 	W = wl
+	SK = Snap.load_snap("sky")
 
 func open(t := "") -> void:   # clgOpen
 	if t != "":
@@ -19,6 +26,8 @@ func open(t := "") -> void:   # clgOpen
 	scroll = 0.0
 	sig = ""
 	_mk = -1.0
+	ex = {}
+	sn0 = int(W.clg_s().sn)
 	_build()
 
 func step(dt: float) -> void:   # clgRender mỗi giây
@@ -40,45 +49,162 @@ func step(dt: float) -> void:   # clgRender mỗi giây
 
 func _sig() -> String:
 	var o: Dictionary = W.clg_s()
-	return JSON.stringify([tab, o.q, o.sn, o.l.size(), o.l.slice(0, 40).map(func(r): return r.get("x")), W._vr()])
+	return JSON.stringify([tab, ex, o.q, o.l.size(), o.l.slice(0, 40).map(func(r): return r.get("x")), W._vr()])
 
 func _build() -> void:
 	sig = _sig()
 	var o: Dictionary = W.clg_s()
 	if o.sn != o.q and _mk < 0.0:
 		_mk = 1.5
-	var L := TABS.map(func(x): return [x[0], x[1], false])
-	_ls_build(L, tab, _tab_go, _body())
+	var nw := {}   # loại nào có chuyện chưa đọc (tính theo mốc lúc mở)
+	for r in o.l:
+		if int(r.q) > sn0:
+			nw[String(r.k)] = true
+			nw["all"] = true
+	var L := TABS.map(func(x): return [x[0], x[1], nw.has(x[0])])
+	var sh := _kshell(L, tab, _tab_go)
+	var b := _body()
+	_kmount(sh[0], sh[1], float(sh[2]), b[0], float(b[1]))
 
 func _tab_go(k: String) -> void:   # data-clg="tab"
 	if tab != k:
 		tab = k
 		scroll = 0.0
+		ex = {}
+
+func _kic(cx: float, cy: float, s: float, k: String) -> Dictionary:   # hình theo loại chuyện
+	match k:
+		"nha":
+			return _icx(cx, cy, s, "pic:res://ui/img/xt/g_nha11.webp")
+		"xom":
+			return _icx(cx, cy, s, "pic:res://ui/img/vlface/0.webp")
+		"tt":
+			return _dic(cx - s * 0.5, cy - s * 0.5, s, String(SK.ic.mua))
+		_:
+			return _icx(cx, cy, s, "xu")
+
+func _key(t: String) -> String:   # mẫu câu để gộp chuyện lặp: số thay bằng #
+	var re := RegEx.create_from_string("\\d[\\d.]*")
+	return re.sub(t, "#", true)
 
 func _body() -> Array:   # clgTab
 	var o: Dictionary = W.clg_s()
 	var day: int = W._vr()
 	var L: Array = o.l.filter(func(r): return tab == "all" or r.k == tab)
-	if L.is_empty():
-		return [_sum2([["Chưa có chuyện gì" + ("" if tab == "all" else " trong mục này") + ". Mỗi ngày trong làng đều có chuyện, ghé lại sau nha.", false]])]
 	var out := []
-	var cur = null
-	var rows := []
+	var y := 6.0
+	if L.is_empty():
+		out.append(_dt(X0, y, XW, 16.0, "Chưa có chuyện gì" + ("" if tab == "all" else " trong mục này") + ". Ghé lại sau nha.", 11.0, 700, SUB, "left"))
+		return [out, y + 16.0 + GG]
+	# gom theo ngày
+	var days := []
+	var by := {}
 	for r in L:
-		if cur == null or int(r.d) != int(cur):
-			if rows.size():
-				out.append(_rows(rows))
-				rows = []
-			cur = r.d
-			var ago := day - int(r.d)
-			out.append(_sec2("Hôm nay" if ago <= 0 else ("Hôm qua" if ago == 1 else str(ago) + " ngày trước")))
-		var lb: String = W.clg_act_lb(r)
-		var sm := []
-		if tab == "all":
-			sm.append(String(W.CLGK.get(r.k, "")))
-		if W._tr(r.get("r")):
-			sm.append(String(r.r))
-		rows.append({"b": r.t, "s": " · ".join(PackedStringArray(sm)), "right": [lb, true, true, W.clg_act.bind(int(r.q))] if lb != "" else "", "me": int(r.q) > int(o.sn)})
-	if rows.size():
-		out.append(_rows(rows))
-	return out
+		var d := int(r.d)
+		if not by.has(d):
+			by[d] = []
+			days.append(d)
+		by[d].append(r)
+	for d in days:
+		var ago: int = day - d
+		var sea := int(floor(posmod(d, 28) / 7.0))
+		var dn := ("Hôm nay" if ago <= 0 else ("Hôm qua" if ago == 1 else str(ago) + " ngày trước")) + " · " + String(G.SEA_N[sea]) + " " + str(posmod(d, 28) % 7 + 1)
+		out.append_array(_sect(y, dn, String(TABC.get(tab, TABC.all))))
+		y += 16.0 + GG
+		var R: Array = by[d]
+		# việc có nút lên đầu
+		for r in R:
+			var lb: String = W.clg_act_lb(r)
+			if lb == "":
+				continue
+			var k := String(r.k)
+			var P := _para(X0 + 42.0, y + 10.0, XW - 52.0, String(r.t), 11.0, 700, BROWN, 15.0)
+			var h := maxf(10.0 + float(P[1]) + 6.0 + 26.0 + 10.0, 60.0)
+			var c := _chip(X0, y, XW, h, "now")
+			out.append(c)
+			out.append(_kic(X0 + 20.0, y + 22.0, 24.0, k))
+			out.append_array(P[0])
+			if int(r.q) > sn0:
+				out.append(_new(X0 + 8.0, y + h - 22.0))
+			var bw: float = minf(Box.text_w(lb, 10.5, 700) + 24.0, XW - 52.0)
+			out.append(_btn(X0 + XW - 10.0 - bw, y + h - 36.0, bw, 26.0, lb, W.clg_act.bind(int(r.q)), "go"))
+			y += h + 6.0
+		# chuyện thường: gộp chuyện lặp liền nhau (cùng loại, cùng mẫu câu)
+		var G0 := []
+		for r in R:
+			if W.clg_act_lb(r) != "":
+				continue
+			var kk := String(r.k) + "|" + _key(String(r.t))
+			if G0.size() and String(G0.back()[0]) == kk:
+				G0.back()[1].append(r)
+			else:
+				G0.append([kk, [r]])
+		for g in G0:
+			var rs: Array = g[1]
+			var gid := str(d) + "|" + String(g[0])
+			var opn: bool = ex.has(gid)
+			if rs.size() > 1:
+				var r0: Dictionary = rs[0]
+				var r1: Dictionary = rs[rs.size() - 1]
+				var re := RegEx.create_from_string("\\d[\\d.]*")
+				var m0 := re.search_all(String(r0.t))
+				var m1 := re.search_all(String(r1.t))
+				var t := String(r0.t)
+				if m0.size() == 1 and m1.size() == 1:   # 1 số: ghi khoảng "30 → 40"
+					var a := int(String(m1[0].get_string()).replace(".", ""))
+					var b := int(String(m0[0].get_string()).replace(".", ""))
+					t = re.sub(String(r0.t), (str(mini(a, b)) + " → " + str(maxi(a, b))), false)
+				else:
+					t = String(r0.t) + " (" + str(rs.size()) + " lần)"
+				var rr := _line(y, String(r0.k), t, "", int(r0.q) > sn0, _tg.bind(gid), CHU if opn else CHD)
+				out.append_array(rr[0])
+				y += float(rr[1]) + 4.0
+				if opn:
+					for r in rs:
+						var r2 := _line(y, String(r.k), String(r.t), String(r.get("r", "")), int(r.q) > sn0, null, "", 20.0)
+						out.append_array(r2[0])
+						y += float(r2[1]) + 4.0
+			else:
+				var r3 := _line(y, String(rs[0].k), String(rs[0].t), String(rs[0].get("r", "")) if W._tr(rs[0].get("r")) else "", int(rs[0].q) > sn0, null, "")
+				out.append_array(r3[0])
+				y += float(r3[1]) + 4.0
+		y += GG - 4.0
+	return [out, y]
+
+func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: String, ind := 0.0) -> Array:   # dòng chuyện nhẹ: vạch màu loại, hình, chữ (+ dòng phụ), chip Mới, mũi tên (nhóm gộp)
+	var out := []
+	var x := X0 + ind
+	var w := XW - ind
+	var rw := (36.0 if nw else 0.0) + (16.0 if chev != "" else 0.0)
+	var L := _wrap(t, 11.0, 600, w - 40.0 - rw)
+	var h := 8.0 + L.size() * 15.0 + (13.0 if sub != "" else 0.0) + 8.0
+	h = maxf(h, 32.0)
+	var c := _chip(x, y, w, h, "fut")
+	out.append(c)
+	out.append(_dbx(x + 3.0, y + 5.0, 3.0, h - 10.0, String(TABC.get(k, TABC.all)), 1.5))
+	out.append(_kic(x + 20.0, y + h * 0.5, 20.0, k))
+	var ty := y + (h - L.size() * 15.0 - (13.0 if sub != "" else 0.0)) * 0.5
+	for i in L.size():
+		out.append(_dt(x + 36.0, ty + i * 15.0, w - 40.0 - rw, 15.0, String(L[i]), 11.0, 600, BROWN, "left"))
+	if sub != "":
+		out.append(_dt(x + 36.0, ty + L.size() * 15.0, w - 40.0 - rw, 13.0, _fitw(sub, 10.0, 600, w - 40.0 - rw), 10.0, 600, SUB, "left"))
+	var rx := x + w - 8.0
+	if chev != "":
+		out.append(_dic(rx - 10.0, y + h * 0.5 - 5.0, 10.0, chev))
+		rx -= 16.0
+	if nw:
+		out.append(_new(rx - 32.0, y + h * 0.5 - 8.0))
+	if act != null:
+		c.act = act
+	return [out, h]
+
+func _new(x: float, y: float) -> Dictionary:   # chip đỏ "Mới"
+	var c := _chip(x, y, 32.0, 16.0, "sen")
+	c.kids = [_dt(x, y, 32.0, 16.0, "Mới", 9.0, 800, "rgb(190, 50, 60)")]
+	return c
+
+func _tg(gid: String) -> void:   # chạm nhóm gộp: mở / đóng
+	if ex.has(gid):
+		ex.erase(gid)
+	else:
+		ex[gid] = true
