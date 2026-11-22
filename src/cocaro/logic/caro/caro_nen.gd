@@ -405,6 +405,10 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var t := tex("xoai%d" % i); xt.append(t)
 		var s := _spr(croot, t, Vector2(w[0], w[1]) + shoff, false)
 		s.material = _wmat(t, (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * 1.5 * PXU, 3.0 * PXU, 0.0, ph4[i], 0.0, 0.3, 0.5, log(7.0 * PXU) / log(2.0))
+		if canopy.has("top"):
+			# màn dọc: tán soi gương qua mép cắt trái của ảnh (x=-40) thành nửa vòm liền, không bao giờ lòi mép cắt (cả bóng)
+			var sm := _spr(croot, t, Vector2(-80.0 - float(w[0]) - t.get_width() / PXU, float(w[1])) + shoff, false); sm.flip_h = true
+			sm.material = s.material
 	var bt := tex("chuoi")
 	var bsh := _spr(self, bt, Vector2(bc.x, bc.y) + Vector2(34, 44) * bc.z, true, 0.0, bc.z)
 	bsh.material = _wmat(bt, bt.get_size() / 2, bt.get_size().x / 2, 0.0, 1.5 * PXU, 0.035, 0.9, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
@@ -433,6 +437,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
 		s.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i], 0.1, 0.0, 0.0, 0.0)
+		if canopy.has("top"):
+			var sm2 := _spr(croot, xt[i], Vector2(-80.0 - float(w[0]) - xt[i].get_width() / PXU, float(w[1])), false); sm2.flip_h = true
+			sm2.material = _wmat(xt[i], (Vector2(M.cx, M.cy) - Vector2(w[0], w[1])) * PXU, float(M.R) * PXU, amps[i] * PXU, 2.0 * PXU, 0.0, ph4[i] + 0.8, 0.1, 0.0, 0.0, 0.0)
 	if tc.x > -9999 and roof_x >= 0:
 		# lá tre bay rơi từ bụi tre trên mái: chao lượn, gió đẩy về phía sân
 		var rgf := RandomNumberGenerator.new(); rgf.seed = 91
