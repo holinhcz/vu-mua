@@ -244,6 +244,8 @@ const TALIC := {"ruong": "lua", "vuon": "qua_xoai", "chan": "trung", "xuong": "g
 func _icx(cx: float, cy: float, s: float, id: String) -> Dictionary:   # (bản 462) hình theo mã: "xu" đồng xu, "svg:<đường dẫn>" hình svg, "pic:<đường dẫn>" ảnh, còn lại hình món Kho
 	if id == "xu":
 		return _dick(cx, cy, s * 0.8, "coin")
+	if id == "pearl":   # sen đỏ
+		return _dick(cx, cy, s, "pearl")
 	if id.begins_with("svg:"):
 		return _dic(cx - s * 0.5, cy - s * 0.5, s, FileAccess.get_file_as_string(id.substr(4)))
 	if id.begins_with("pic:"):   # ảnh chữ nhật: giữ tỉ lệ, vừa khung s

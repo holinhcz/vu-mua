@@ -17,6 +17,10 @@ const KLC := {   # nền ô theo nhóm cây: [gradient trên, giữa, dưới, v
 	"g_rau": ["rgb(219, 234, 214)", "rgb(230, 240, 226)", "rgb(241, 247, 238)", "rgb(157, 197, 141)"],
 	"g_trai": ["rgb(248, 230, 212)", "rgb(250, 238, 225)", "rgb(252, 245, 238)", "rgb(237, 186, 137)"],
 	"g_quy": ["rgb(234, 226, 244)", "rgb(240, 235, 247)", "rgb(247, 243, 251)", "rgb(192, 168, 222)"],
+	"k_tot": ["rgb(255, 240, 200)", "rgb(255, 245, 216)", "rgb(255, 250, 234)", "rgb(222, 170, 60)"],   # (bản 480) chip tổng: vàng nhạt
+	"m1": ["rgb(255, 236, 170)", "rgb(255, 243, 196)", "rgb(255, 249, 222)", "rgb(222, 170, 40)"],   # nền huy chương vàng, bạc, đồng
+	"m2": ["rgb(232, 236, 242)", "rgb(240, 243, 247)", "rgb(247, 249, 251)", "rgb(160, 168, 182)"],
+	"m3": ["rgb(246, 224, 204)", "rgb(249, 234, 220)", "rgb(252, 243, 234)", "rgb(200, 136, 80)"],
 	"g_no": ["rgb(246, 242, 234)", "rgb(248, 245, 238)", "rgb(250, 248, 243)", "rgba(150, 112, 48, 0.3)"],
 }
 const MEDAL := ["rgb(240, 190, 40)", "rgb(180, 186, 196)", "rgb(205, 135, 75)"]   # vàng, bạc, đồng
@@ -120,7 +124,7 @@ func _tu() -> Array:
 	var out := []
 	var y := 6.0
 	# chip tổng + thanh
-	var hc := _chip(X0, y, XW, 50.0, "fut")   # (bản 479) kem, khác màu ô đang chọn
+	var hc := _chip(X0, y, XW, 50.0, "k_tot")   # (bản 480) vàng nhạt, khác ô đang chọn (vàng đậm)
 	out.append(hc)
 	out.append_array(_rowi(X0 + 10.0, y + 7.0, 17.0, ["Đã có " + str(got) + "/" + str(ids.size()) + " loại"], 12.5, 800, BROWN)[0])
 	var nt := str(int(k.get("n", 0))) + " trái khủng" + ((" · " + String(k.tt[0])) if k.tt.size() else "")
@@ -153,8 +157,8 @@ func _tu() -> Array:
 		out.append_array(g[0])
 		y += float(g[1]) + GG
 	if L2.size() and flt != "co":   # (bản 479) loại chưa có: thu 1 chip, chạm mở lưới mờ
-		var nc := _chip(X0, y, XW, 30.0, "fut")
-		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 11.0, 700, SUB, "left"),
+		var nc := _chip(X0, y, XW, 30.0, "info")   # (bản 480) xanh dương nhạt
+		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 11.0, 700, "rgb(50, 96, 150)", "left"),
 			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if nox else CHD)]
 		nc.act = func(): nox = not nox
 		out.append(nc)
@@ -301,23 +305,28 @@ func _thi() -> Array:
 	out.append(lc[0])
 	out[2].r[2] = maxf(0.0, float(out[2].r[2]) - float(lc[1]) - 6.0)
 	y += 16.0 + GG
-	# chip thưởng: 3 chip rộng bằng nhau, vạch màu huy chương
+	# (bản 480) thưởng: 3 ô bục vàng / bạc / đồng, huy chương to, "Hạng N" + xu, sen bằng hình
 	var pw := (XW - 8.0) / 3.0
 	for i in 3:
 		var P: Array = WC2.KLPRIZE[i]
 		var px := X0 + i * (pw + 4.0)
-		var Rw := [WC2._sa(int(P[0])), "c", " · " + str(P[1]) + " sen"]
-		var rw := float(_rowi(0.0, 0.0, 22.0, Rw, 9.5, 700, "")[1])
-		var pc := _chip(px, y, pw, 22.0, "fut")
-		var kk := [_medal(px + 3.0, y + 2.0, i)]
-		kk[0].r[2] = 18.0
-		kk[0].r[3] = 18.0
-		kk[0].kids[0].r = [px + 3.0, y + 2.0, 18.0, 18.0]
-		kk[0].kids[0].css["font-size"] = _cpx(9.5)
-		kk.append_array(_rowi(px + 24.0 + maxf(0.0, (pw - 28.0 - rw) * 0.5), y, 22.0, Rw, 9.5, 700, BROWN)[0])
+		var ph := 58.0 - i * 4.0
+		var py := y + (58.0 - ph)
+		var pc := _chip(px, py, pw, ph, "m" + str(i + 1))
+		var md := _medal(px + pw * 0.5 - 13.0, py + 6.0, i)
+		md.r = [px + pw * 0.5 - 13.0, py + 6.0, 26.0, 26.0]
+		md.css["border-radius"] = _cpx(13.0)
+		md.kids[0].r = md.r.duplicate()
+		md.kids[0].css["font-size"] = _cpx(12.0)
+		md.kids[0].css["line-height"] = _cpx(26.0)
+		var Rw := [WC2._sa(int(P[0])), "c", " " + str(P[1]), "i:pearl"]
+		var rw := float(_rowi(0.0, 0.0, 16.0, Rw, 10.0, 800, "")[1])
+		var kk := [md]
+		kk.append_array(_rowi(px + (pw - rw) * 0.5, py + ph - 21.0, 16.0, Rw, 10.0, 800, BROWN)[0])
 		pc.kids = kk
+		pc.act = _dsay.bind("Hạng " + str(i + 1) + " mỗi loại: " + WC2._sa(int(P[0])) + " xu, " + str(P[1]) + " sen đỏ" + (", danh hiệu Vua." if i == 0 else "."))
 		out.append(pc)
-	y += 22.0 + GG
+	y += 58.0 + GG
 	# lưới 2×2 loại thi
 	var g := 6.0
 	var bw := (XW - g) * 0.5
