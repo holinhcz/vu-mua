@@ -1409,7 +1409,7 @@ func s_h() -> bool:   # SH: đổi sang nhịp Hay Day (một lần)
 	if _n(G.g.get("hdv")) == 1:
 		t_h(1)
 		G.g.hdv = 2
-		_later(1.5, func(): _ta("Cây ăn trái đổi nhịp Hay Day: ra trái mỗi 16 giờ tới 1 ngày rưỡi, mở theo cấp (tối đa cấp 100). Có thêm cây cam sành và cây mận."))
+		_later(1.5, func(): _ta("Cây ăn trái đổi nhịp mới: ra trái mỗi 16 giờ tới 1 ngày rưỡi, mở theo cấp (tối đa cấp 100). Có thêm cây cam sành và cây mận."))
 		_ba()
 		return true
 	for n in G.g.get("plots", []):
@@ -1440,7 +1440,7 @@ func s_h() -> bool:   # SH: đổi sang nhịp Hay Day (một lần)
 		a.append(e.name)
 	G.g.hdv = 2
 	var gift := (" Tặng 4 hạt: " + ", ".join(PackedStringArray(a)) + ".") if a.size() else ""
-	_later(1.5, func(): _ta("Làng đổi sang nhịp Hay Day: cây lớn theo phút, giờ thật, không tưới vẫn lớn, tưới thì nhanh hơn 10%. Giá bán, cấp mở giống đổi theo." + gift))
+	_later(1.5, func(): _ta("Làng đổi sang nhịp mới: cây lớn theo phút, giờ thật, không tưới vẫn lớn, tưới thì nhanh hơn 10%. Giá bán, cấp mở giống đổi theo." + gift))
 	_kn()
 	_ba()
 	return true

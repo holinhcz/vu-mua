@@ -365,7 +365,7 @@ func _re_act(node: Control, k: Dictionary) -> void:   # khối dùng lại: tr�
 	for q in mini(A.size(), B.size()):
 		B[q].set_meta("snap", A[q])
 
-func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Dictionary) -> void:   # hàng tab .khseg: L = [[khóa, chữ, chấm?]]
+func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Dictionary) -> void:   # hàng tab .khseg: L = [[khóa, chữ, chấm? (true / số)]]
 	var K: Array = seg.kids
 	var on_t: Dictionary = K[0] if String(K[0].cls).split(" ").has("on") else K[1]
 	var off_t: Dictionary = K[1] if on_t == K[0] else K[0]
@@ -412,6 +412,8 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
+			if typeof(L[i][2]) == TYPE_INT:   # (bản 488) chấm ghi đúng số (vd mục chưa đọc), còn true thì giữ chữ của bd
+				b.text = str(mini(int(L[i][2]), 99))
 			_mv(b, x + w - 11.5, float(c.r[1]) - 3.5)
 			c.kids = [b]
 		out.append(c)

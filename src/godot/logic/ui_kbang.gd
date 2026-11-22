@@ -324,6 +324,45 @@ func _para(x: float, y: float, w: float, t: String, fs := 10.5, fw := 600, col :
 		out.append(_dt(x, y + i * lh, w, lh, L[i], fs, fw, col, "left"))
 	return [out, L.size() * lh]
 
+const _NUMB := "[+−-]?\\d+(?:[.,]\\d+)*(?:[–-]\\d+)?(?:%|★| ?♥| ?(?:phút|giờ|tiếng|xu|ngày|lần|bó|viên|sức|câu|hạt|ô|món)(?![\\p{L}]))?"
+func _parab(x: float, y: float, w: float, t: String, fs := 10.5, fw := 600, col := SUB, lh := 14.0, bcol := "rgb(150, 70, 20)") -> Array:   # (bản 488) đoạn chữ, số liệu (2 phút, +10%, 3 ♥) tô đậm: [khối, cao]
+	var segs := []   # [chữ, đậm?]
+	var re := RegEx.create_from_string(_NUMB)
+	var p0 := 0
+	for m in re.search_all(t):
+		if m.get_start() > p0:
+			segs.append([t.substr(p0, m.get_start() - p0), false])
+		segs.append([m.get_string(), true])
+		p0 = m.get_end()
+	if p0 < t.length():
+		segs.append([t.substr(p0), false])
+	# xếp từng chữ (đo bằng Box.text_w như _wrap): mỗi dòng là các mẩu [chữ, đậm, x]
+	var sw: float = Box.text_w("a a", fs, fw) - Box.text_w("aa", fs, fw)
+	var out := []
+	var cx := 0.0
+	var ln := 0
+	var sp := false   # có khoảng trắng chờ trước chữ kế
+	for sg in segs:
+		var b: bool = sg[1]
+		var s0: String = sg[0]
+		var ws := s0.split(" ")
+		for k in ws.size():
+			if k > 0:
+				sp = true
+			var wd: String = ws[k]
+			if wd == "":
+				continue
+			var ww: float = Box.text_w(wd, fs, 800 if b else fw)
+			var gx := (sw if sp and cx > 0.0 else 0.0)
+			if cx > 0.0 and cx + gx + ww > w + 0.5:
+				ln += 1
+				cx = 0.0
+				gx = 0.0
+			out.append(_dt(x + cx + gx, y + ln * lh, ww + 2.0, lh, wd, fs, 800 if b else fw, bcol if b else col, "left"))
+			cx += gx + ww
+			sp = false
+	return [out, (ln + 1) * lh if out.size() else 0.0]
+
 func _sect(y: float, t: String, col: String) -> Array:   # tiêu đề phần: vạch màu tab + chữ đậm
 	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
 	return [_dbx(X0, y + 2.0, 3.0, 13.0, col, 1.5), _dt(X0 + 8.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"),

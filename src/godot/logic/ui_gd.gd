@@ -104,8 +104,8 @@ func _build() -> void:
 	for sec in Y6:
 		for it in sec.items:
 			if not rd.has(it.id):
-				red[String(sec.sec)] = true
-	var L := TABS.map(func(x): return [x[0], x[1], red.has(x[0])])
+				red[String(sec.sec)] = int(red.get(String(sec.sec), 0)) + 1
+	var L := TABS.map(func(x): return [x[0], x[1], int(red.get(x[0], 0))])   # (bản 488) chấm tab ghi số mục chưa đọc
 	var sh := _kshell(L, tab, _tab_go)
 	var r := _body()
 	_kmount(sh[0], sh[1], float(sh[2]), r[0], float(r[1]))
@@ -205,25 +205,25 @@ func _body() -> Array:
 	y += 30.0 + GG
 	return [out, y]
 
-func _det(y: float, it: Dictionary, col: String) -> Array:   # khối hướng dẫn: vạch màu nhóm, từng dòng có chấm
+func _det(y: float, it: Dictionary, col: String) -> Array:   # khối hướng dẫn: vạch màu nhóm, từng dòng có chấm, số liệu tô đậm (bản 488)
 	var out := []
-	var lines := []
-	for s0 in it.b:
-		lines.append(_wrap(String(s0), 10.5, 600, XW - 34.0))
+	var ps := []
 	var h := 10.0
-	for L in lines:
-		h += L.size() * 14.5 + 4.0
+	for s0 in it.b:
+		var P := _parab(X0 + 26.0, 0.0, XW - 34.0, String(s0), 10.5, 600, BROWN, 14.5)
+		ps.append(P)
+		h += float(P[1]) + 4.0
 	h += 6.0
 	var c := _chip(X0, y, XW, h, "fut")
 	out.append(c)
 	out.append(_dbx(X0 + 4.0, y + 6.0, 3.0, h - 12.0, col, 1.5))
 	var yy := y + 10.0
-	for L in lines:
+	for P in ps:
 		out.append(_dbx(X0 + 16.0, yy + 5.5, 4.0, 4.0, col, 2.0))
-		for ln in L:
-			out.append(_dt(X0 + 26.0, yy, XW - 34.0, 14.5, String(ln), 10.5, 600, BROWN, "left"))
-			yy += 14.5
-		yy += 4.0
+		for n in P[0]:
+			n.r[1] = float(n.r[1]) + yy
+			out.append(n)
+		yy += float(P[1]) + 4.0
 	return [out, h]
 
 func W_off() -> bool:
