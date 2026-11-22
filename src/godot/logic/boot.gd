@@ -212,6 +212,8 @@ func _test_hook() -> void:
 			"tn": ui.tn_open(a[1] if a.size() > 1 else "")
 			"ut": ui.ut_open(a[1] if a.size() > 1 else "")
 			"hr": ui.hr_open()
+			"dl": ui.dl_open()
+			"dlrv": var R6: Dictionary = G.w_all.WDL.r6(); for i in 4: R6.rv.push_front({"s": [5, 4, 3, 2][i], "t": ["Làng đẹp, quán ngon, sẽ quay lại!", "Ở được, hơi ít món.", "Phòng ổn mà chẳng có gì chơi.", "Mưa suốt, chán."][i], "k": ["sg", "tay", "sg", "tay"][i], "n": 2, "xu": 300 - i * 50, "at": Time.get_unix_time_from_system() * 1000.0 - i * 3600000.0}); R6.n = 8; R6.xu = 1200; G.mark()
 			"kl": ui.kl_open(a[1] if a.size() > 1 else "")
 			"clg": ui.clg_open(a[1] if a.size() > 1 else "")
 			"famx": var F0: Dictionary = G.w_all.WL._r0().fam; var k0 = F0.keys()[0]; for i in int(a[1]): F0[str(900 + i)] = F0[k0].duplicate(true); F0[str(900 + i)].n = "Nhà " + str(i); F0[str(900 + i)].tal = ["ruong", "vuon", "chan", "xuong"][i % 4]
