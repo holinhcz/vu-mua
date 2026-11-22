@@ -9,11 +9,10 @@ const A := preload("res://logic/cc/cc_art.gd")
 const SH := """
 shader_type canvas_item;
 uniform vec2 uRes; uniform float uT; uniform float uHor; uniform float uYw; uniform float uF; uniform float uS;
-uniform vec4 uBank; uniform float uExact = 0.;
+uniform vec4 uBank; uniform float uExact = 0.; uniform float uNoBank = 0.;
 uniform vec4 uSub = vec4(0.,0.,1.,1.);
 uniform vec2 uUV = vec2(1.,1.);
 uniform sampler2D uBankTex : filter_linear_mipmap, repeat_disable;
-uniform sampler2D uAuxTex : filter_linear, repeat_disable;
 uniform sampler2D uBankN : filter_linear_mipmap, repeat_disable;
 uniform sampler2D uData : filter_nearest, repeat_disable;
 uniform vec3 uTop; uniform vec3 uHorC; uniform vec3 uSunC; uniform vec3 uTint; uniform vec3 uWater; uniform vec3 uCloudC; uniform vec3 uFog;
@@ -72,13 +71,8 @@ vec4 bank(vec2 p, float sway){
  vec2 uv=(p-uBank.xy)/uBank.zw;
  if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.)return vec4(0.);
  vec2 buv=clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.));
+ if(uNoBank>.5)return vec4(0.);
  vec2 TS=vec2(textureSize(uBankTex,0));
- vec4 a=uExact>.5?texelFetch(uAuxTex,ivec2(min(buv*TS,TS-1.)),0):texture(uAuxTex,buv);
- if(sway>0.){float hf=clamp((uYw-p.y)/(uRes.y*.25),0.,1.);
-  float dx=a.g*hf*(sin(uT*1.3+uv.x*70.+uv.y*9.)*1.1+sin(uT*2.1+uv.x*170.)*.5)*(0.6+uWind)*uS;
-  if(uExact>.5)dx=floor(dx+.5);     // lá đung đưa nhích nguyên điểm ảnh: không lấy mẫu lại -> không nhòe
-  uv.x+=dx/uBank.z;
-  buv=clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.));}
  // bờ ghép trong SubViewport: màu đã nhân alpha -> chia lại. Ảnh đêm của nông trại = ảnh ngày x(.61,.68,.82) + đèn:
  // lấy phần đèn dư ra cộng vào ban đêm
  vec4 b; vec4 bn;
@@ -276,6 +270,36 @@ var mat: ShaderMaterial
 var trect: ColorRect      # trời + bờ vẽ đúng độ phân giải màn hình (nét), đè lên phần trên mặt nước
 var tmat: ShaderMaterial
 var _bank_key := ""
+var bnode: Node2D = null          # bờ vẽ trực tiếp: mỗi món 1 Sprite2D, chung 1 atlas (ít lệnh vẽ), cây nghiêng quanh gốc như nông trại
+var bmat: ShaderMaterial = null
+const LIVE_SH := """
+shader_type canvas_item;
+// Bờ bên kia vẽ trực tiếp lên màn (không qua SubViewport). Ngày = TEXTURE, đêm = uN (cùng chỗ trong atlas).
+// Cây (alpha đánh dấu 254/255) nghiêng quanh gốc: sin(t*1.1 + pha)*.017 rad, pha theo chỗ đứng = y như nông trại.
+uniform sampler2D uN : filter_linear;
+uniform vec3 uTint = vec3(1.); uniform float uNight = 0.; uniform float uRain = 0.; uniform float uSway = 1.;
+varying float vm;
+void vertex(){
+ vm = 0.;
+ if(COLOR.a>0.993&&COLOR.a<0.998){
+  vm = 1.;
+  if(uSway>0.){
+   vec2 wo=MODEL_MATRIX[3].xy;
+   float ph=fract(sin(dot(floor(wo),vec2(12.9898,78.233)))*43758.5453)*6.2832;
+   float a=sin(TIME*1.1+ph)*.017;
+   float c=cos(a), s=sin(a);
+   VERTEX=vec2(c*VERTEX.x-s*VERTEX.y, s*VERTEX.x+c*VERTEX.y);}}
+}
+void fragment(){
+ vec4 d=texture(TEXTURE,UV); vec4 n=texture(uN,UV);
+ float mx=max(uTint.r,max(uTint.g,uTint.b));
+ vec3 tt=mix(uTint,vec3(1.),smoothstep(.85,.95,mx));
+ vec3 lit=max(n.rgb-d.rgb*vec3(.61,.68,.82)-.04,vec3(0.));
+ vec3 col=d.rgb*tt+lit*uNight*1.6;
+ col=mix(col,vec3(dot(col,vec3(.3,.5,.2)))*vec3(.9,.95,1.02),uRain*.35);
+ COLOR=vec4(col,d.a);
+}
+"""
 var _bank_sub := Vector4(0, 0, 1, 1)
 var wrect: ColorRect
 var wmat: ShaderMaterial
@@ -329,6 +353,14 @@ func _ready() -> void:
 	trect.material = tmat
 	trect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(trect)
+	tmat.set_shader_parameter("uNoBank", 1.0)
+	bnode = Node2D.new()
+	bnode.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	add_child(bnode)
+	bmat = ShaderMaterial.new()
+	var bsh := Shader.new()
+	bsh.code = LIVE_SH
+	bmat.shader = bsh
 	data_img = Image.create(24, 1, false, Image.FORMAT_RGBAF)
 	data_tex = ImageTexture.create_from_image(data_img)
 	mat.set_shader_parameter("uData", data_tex)
@@ -376,9 +408,9 @@ func resize() -> void:
 const BO := "res://ui/img/cc/bo/"
 const SPR_SH := """
 shader_type canvas_item;
-uniform float hz = 0.; uniform vec3 haze = vec3(.74,.86,.92); uniform float aux = 0.; uniform float fol = 0.;
-void fragment(){ vec4 c=texture(TEXTURE,UV)*COLOR;
- if(aux>.5){COLOR=vec4(0.,fol,0.,c.a);} else {COLOR=vec4(mix(c.rgb,haze,hz),c.a);} }
+uniform float fol = 0.; uniform float ph = 0.; uniform float foot = 0.;
+// chỉ dùng cho mặt nạ đung đưa. SubViewport (gl_compatibility) đổi màu shader tự viết sRGB -> tuyến tính, nên ghi pow(1/2.2)
+void fragment(){ float a=texture(TEXTURE,UV).a*COLOR.a; COLOR=vec4(pow(vec3(ph,fol,foot),vec3(1./2.2)),a); }
 """
 var _bo := {}
 var _spr_sh: Shader
@@ -396,21 +428,18 @@ func _bo_load() -> bool:
 	_spr_sh.code = SPR_SH
 	return true
 
-func _mat(hz: float, fol: float, mode: int) -> ShaderMaterial:
+func _mat(hz: float, fol: float, mode: int, ph := 0.0, foot := 0.0) -> ShaderMaterial:
 	# ngày / đêm: KHÔNG dùng shader riêng. Godot 4.5 (gl_compatibility) vẽ shader canvas tự viết trong SubViewport bị đổi
 	# sRGB -> tuyến tính: màu tối hẳn đi (80,150,40 -> 25,88,6) = cây "xanh lè" (Link 11-22). Chỉ lớp mặt nạ đung đưa dùng.
 	if mode != 2:
 		return null
-	var aux := 1
-	var k := "%.2f_%d_%d" % [hz, int(fol), mode]
+	var k := "%d_%.3f_%.3f" % [int(fol), ph, foot]
 	if not _mats.has(k):
 		var m := ShaderMaterial.new()
 		m.shader = _spr_sh
-		m.set_shader_parameter("hz", hz)
 		m.set_shader_parameter("fol", fol)
-		m.set_shader_parameter("aux", float(aux))
-		var hc := Color(.74, .86, .92) * (NIGHT if mode == 1 else Color.WHITE)
-		m.set_shader_parameter("haze", Vector3(hc.r, hc.g, hc.b))
+		m.set_shader_parameter("ph", ph)
+		m.set_shader_parameter("foot", foot)
 		_mats[k] = m
 	return _mats[k]
 
@@ -476,6 +505,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 				im.resize(maxi(1, int(round(im.get_width() * r))), maxi(1, int(round(im.get_height() * r))), Image.INTERPOLATE_LANCZOS)
 			mid[m][nm] = im
 	var tex := [{}, {}]
+	var imgs := [{}, {}]
 	for p in vis:
 		if p[1] == "#bo" or not mid[0].has(p[1]):
 			continue
@@ -494,6 +524,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 				im.resize(w, h, Image.INTERPOLATE_LANCZOS)
 			if fl:
 				im.flip_x()
+			imgs[m][ck] = im
 			tex[m][ck] = ImageTexture.create_from_image(im)
 		p.resize(6)
 		p.append(ck)
@@ -505,8 +536,9 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		grass.generate_mipmaps(); tg = ImageTexture.create_from_image(grass)
 	if dirt:
 		dirt.generate_mipmaps(); td = ImageTexture.create_from_image(dirt)
+	# 0/1 = ảnh ghép ngày/đêm cho bóng dưới nước (độ phân giải thấp); 2/3 = hàng cây xa, 4/5 = bờ đất+cỏ (ngày/đêm) cho lớp vẽ trực tiếp
 	var vps := []
-	for mode in 3:          # 0 ngày, 1 đêm, 2 mặt nạ đung đưa
+	for mode in 6:
 		var v := SubViewport.new()
 		v.size = Vector2i(tw, th)
 		v.transparent_bg = true
@@ -517,7 +549,10 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		root.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 		v.add_child(root)
-		_fill(root, mode, vis, tex[mini(mode, 1) if mode < 2 else 0], hzs, u0, u1, f, tg, td)
+		if mode < 2:
+			_fill(root, mode, vis, tex[mode], hzs, u0, u1, f, tg, td)
+		else:
+			_fill_part(root, mode % 2, "far" if mode < 4 else "bo", u0, u1, f, tg, td)
 		vps.append(v)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
@@ -525,16 +560,131 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		for v in vps: v.queue_free()
 		return
 	var out := []
-	for v in vps:
-		var im: Image = v.get_texture().get_image()
-		im.generate_mipmaps()
-		out.append(ImageTexture.create_from_image(im))
-		v.queue_free()
+	var parts := [{}, {}]
+	for i in vps.size():
+		var im: Image = vps[i].get_texture().get_image()
+		vps[i].queue_free()
+		if i < 2:
+			im.generate_mipmaps()
+			out.append(ImageTexture.create_from_image(im))
+		else:
+			# (đa giác không khử răng cưa: alpha chỉ 0/255, khỏi chia lại alpha)
+			var nm := "#far" if i < 4 else "#bo"
+			if i % 2 == 0:
+				parts[0][nm + "_r"] = im.get_used_rect()
+			var rr: Rect2i = parts[0][nm + "_r"]
+			var c := im.get_region(rr)
+			parts[i % 2][nm] = c
 	for m in [mat, tmat]:
 		m.set_shader_parameter("uBankTex", out[0])
 		m.set_shader_parameter("uBankN", out[1])
-		m.set_shader_parameter("uAuxTex", out[2])
 		m.set_shader_parameter("uSub", sub)
+	_live_build(vis, imgs, parts, u0, f)
+
+static func _unpremul(im: Image) -> void:
+	var b := im.get_data()
+	for i in range(0, b.size(), 4):
+		var a := b[i + 3]
+		if a > 0 and a < 255:
+			b[i] = mini(255, b[i] * 255 / a); b[i + 1] = mini(255, b[i + 1] * 255 / a); b[i + 2] = mini(255, b[i + 2] * 255 / a)
+	im.set_data(im.get_width(), im.get_height(), false, Image.FORMAT_RGBA8, b)
+
+# lớp bờ vẽ trực tiếp: xếp mọi ảnh vào 1 atlas ngày + 1 atlas đêm (cùng chỗ), mỗi món 1 Sprite2D vùng atlas, đúng thứ tự cũ
+func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> void:
+	var L: Dictionary = game.L
+	var K: float = game.K
+	for ch in bnode.get_children():
+		ch.queue_free()
+	var keys := []
+	var seen := {}
+	for nm in ["#far", "#bo"]:
+		if parts[0].has(nm):
+			keys.append(nm); seen[nm] = true
+	for p in vis:
+		if p.size() >= 7 and not seen.has(p[6]) and imgs[0].has(p[6]):
+			keys.append(p[6]); seen[p[6]] = true
+	var AW := 4096
+	var pos := {}
+	var x := 0; var y := 0; var rh := 0
+	var srt := keys.duplicate()
+	srt.sort_custom(func(a, b): return _li(imgs, parts, a, 0).get_height() > _li(imgs, parts, b, 0).get_height())
+	for k in srt:
+		var im: Image = _li(imgs, parts, k, 0)
+		var w := im.get_width() + 2; var h := im.get_height() + 2
+		if x + w > AW:
+			x = 0; y += rh; rh = 0
+		pos[k] = Vector2i(x + 1, y + 1)
+		x += w; rh = maxi(rh, h)
+	var AH := y + rh
+	var atl := [Image.create(AW, maxi(AH, 4), false, Image.FORMAT_RGBA8), Image.create(AW, maxi(AH, 4), false, Image.FORMAT_RGBA8)]
+	for m in 2:
+		for k in keys:
+			var im: Image = _li(imgs, parts, k, m)
+			atl[m].blit_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), pos[k])
+	var td := ImageTexture.create_from_image(atl[0])
+	var tn := ImageTexture.create_from_image(atl[1])
+	bmat.set_shader_parameter("uN", tn)
+	print("bank atlas ", AW, "x", AH, " items ", keys.size())
+	var btop: float = L.yw - L.bankH * 872.0 / 900.0
+	bnode.position = Vector2(round(L.bankX * K), round(btop * K)) / K
+	bnode.scale = Vector2.ONE / K
+	var items: Dictionary = _bo.items
+	var mk := func(k: String, tl: Vector2, foot: Vector2, sway: bool) -> void:
+		var im: Image = _li(imgs, parts, k, 0)
+		var s := Sprite2D.new()
+		s.texture = td
+		s.centered = false
+		s.region_enabled = true
+		s.region_rect = Rect2(Vector2(pos[k]), Vector2(im.get_size()))
+		s.position = foot
+		s.offset = tl - foot
+		s.material = bmat
+		if sway:
+			s.self_modulate = Color(1, 1, 1, 254.0 / 255.0)
+		bnode.add_child(s)
+	if parts[0].has("#far"):
+		var r: Rect2i = parts[0]["#far_r"]
+		mk.call("#far", Vector2(r.position) + Vector2(round(u0 * f), 0), Vector2(r.position) + Vector2(round(u0 * f), 0), false)
+	for p in vis:
+		if p[1] == "#bo":
+			if parts[0].has("#bo"):
+				var r: Rect2i = parts[0]["#bo_r"]
+				mk.call("#bo", Vector2(r.position) + Vector2(round(u0 * f), 0), Vector2(r.position) + Vector2(round(u0 * f), 0), false)
+			continue
+		if p.size() < 7 or not pos.has(p[6]):
+			continue
+		var it: Dictionary = items[p[1]]
+		var sc: float = absf(float(p[4])) * f
+		var im: Image = imgs[0][p[6]]
+		var ax: float = float(it.ax) * sc
+		if float(p[4]) < 0:
+			ax = im.get_width() - ax
+		var ay: float = float(it.ay) * sc
+		var tl := Vector2(round(float(p[2]) * f - ax), round(float(p[3]) * f - ay))
+		var foot := tl + Vector2(round(ax), round(ay))
+		mk.call(p[6], tl, foot, float(p[5]) > 0.5)
+
+func _li(imgs: Array, parts: Array, k: String, m: int) -> Image:
+	if k.begins_with("#"):
+		return parts[m][k]
+	return imgs[m].get(k, imgs[0][k])
+
+func _fill_part(root: Node2D, mode: int, what: String, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
+	var nc := NIGHT if mode == 1 else Color.WHITE
+	if what == "far":
+		var far := Polygon2D.new()
+		var pts := PackedVector2Array(); var cols := PackedColorArray()
+		for q in _bo.far:
+			pts.append(Vector2((float(q[0]) - u0) * f, float(q[1]) * f))
+			var t := clampf((float(q[1]) - (872.0 - 190.0)) / 150.0, 0.0, 1.0)
+			cols.append(Color("#8cc86a").lerp(Color("#4e8a4a"), t) * nc)
+		far.polygon = pts
+		far.vertex_colors = cols
+		root.add_child(far)
+	else:
+		var bo := Node2D.new()
+		bo.draw.connect(_draw_bo.bind(bo, mode, u0, u1, f, tg, td))
+		root.add_child(bo)
 
 const NIGHT := Color(.61, .68, .82)
 func _fill(root: Node2D, mode: int, vis: Array, tx: Dictionary, hzs: Array, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
@@ -567,12 +717,21 @@ func _fill(root: Node2D, mode: int, vis: Array, tx: Dictionary, hzs: Array, u0: 
 		var ax: float = float(it.ax) * sc
 		if float(p[4]) < 0:
 			ax = t.get_width() - ax
-		var s := Sprite2D.new()
-		s.texture = t
-		s.centered = false
-		s.position = Vector2(round((float(p[2]) - u0) * f - ax), round(float(p[3]) * f - float(it.ay) * sc))
-		s.material = _mat(0.0, float(p[5]), mode)
-		root.add_child(s)
+		var pos := Vector2(round((float(p[2]) - u0) * f - ax), round(float(p[3]) * f - float(it.ay) * sc))
+		var ph := fposmod(float(p[2]) * 0.6180339 + float(p[3]) * 0.137, 1.0)
+		var m := _mat(0.0, float(p[5]), mode, ph, clampf(float(p[3]) / 900.0, 0.0, 1.0))
+		# mặt nạ đung đưa nới rộng 2 bên (cây nghiêng ra ngoài bóng cũ vẫn có mặt nạ để kéo theo)
+		var offs := [0.0]
+		if mode == 2 and float(p[5]) > 0.5:
+			var dd := ceilf(float(it.ay) * sc * 0.024)
+			offs = [-dd, dd, 0.0]
+		for o in offs:
+			var s := Sprite2D.new()
+			s.texture = t
+			s.centered = false
+			s.position = pos + Vector2(o, 0)
+			s.material = m
+			root.add_child(s)
 
 func _draw_bo(n: Node2D, mode: int, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
 	var nc := NIGHT if mode == 1 else Color.WHITE
@@ -642,6 +801,11 @@ func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, 
 	_scene_u(mat, scale_s, Vector2(vp.size), t, tod, W)
 	_scene_u(tmat, game.K, Vector2(L.W, L.H) * game.K, t, tod, W)
 	tmat.set_shader_parameter("uExact", 1.0)
+	if bmat:
+		var tc: Color = tod.tint
+		bmat.set_shader_parameter("uTint", Vector3(tc.r, tc.g, tc.b))
+		bmat.set_shader_parameter("uNight", tod.night)
+		bmat.set_shader_parameter("uRain", W.rain)
 	var ywc := floorf(L.yw * scale_s) / scale_s
 	tmat.set_shader_parameter("uUV", Vector2(1.0, ywc / L.H))
 	var m := mat
