@@ -14,6 +14,7 @@ from bank2 import WL, BW, BH, ground, CREEK
 G = '/mnt/project-files/nong-trai-chung/godot/'
 NT = '/mnt/project-files/nong-trai-chung/img/'
 OUT = sys.argv[1]
+NHA = sys.argv[2] if len(sys.argv) > 2 else None     # nha_ngang.py OUT: nhà tranh nhìn ngang
 os.makedirs(OUT, exist_ok=True)
 
 def night_key(k):
@@ -66,6 +67,15 @@ def put(L, dir_, key, x, y, k, flip=False):
     sc = k / used[nm]['ppu']
     place.append([L, nm, round(x, 1), round(y, 1), round(-sc if flip else sc, 4), 1 if dir_.split('/')[-1] in FOL else 0])
 
+nm_meta = json.load(open(os.path.join(NHA, 'nha.json'))) if NHA else {}
+def put_nha(L, nm, x, y, k, flip=False):
+    if nm not in used:
+        for m in ('d', 'n'):
+            Image.open(os.path.join(NHA, '%s_%s.webp' % (nm, m))).save(os.path.join(OUT, '%s_%s.webp' % (nm, m)), lossless=True, quality=100, method=4)
+        mm = nm_meta[nm]; used[nm] = dict(w=mm['w'], h=mm['h'], ax=mm['ax'], ay=mm['ay'], ppu=mm['ppu'])
+    sc = k / used[nm]['ppu']
+    place.append([L, nm, round(x, 1), round(y, 1), round(-sc if flip else sc, 4), 0])
+
 cnt = {}
 for L, key, a, kw in rec9.rec:
     n = cnt[key] = cnt.get(key, -1) + 1
@@ -98,9 +108,9 @@ for L, key, a, kw in rec9.rec:
     elif key == 'nha':
         x, y, s = a[0], a[1], a[2]
         if s > 1:   # nhà chính bên kênh + bến ghe
-            put(L, 'congtrinh/hut', 'd0', x, ground(x) - 6, 2.5)
+            put_nha(L, 'nha_lon', x, ground(x) + 7, 3.3)
         else:
-            put(L, 'congtrinh/hutnho', 'd0', x, y - 10, 2.9 * s, n % 2 == 1)
+            put_nha(L, 'nha_nho', x, y + 2, 4.3 * s, n % 2 == 1)
     elif key == 'mieu':
         put(L, 'congtrinh/shrine', 'bd', a[0], a[1] - 8, 2.2)
     elif key == 'bo':
@@ -124,7 +134,7 @@ for nm in ('n2_co', 'dg2_dat'):
 def ord3(p):
     if p[0] != 3: return 0
     n = p[1]
-    return 0 if n.startswith(('hut', 'shrine')) else 1 if n == '#bo' else 3 if n.startswith('ben') else 2
+    return 0 if n.startswith(('nha_', 'shrine')) else 1 if n == '#bo' else 3 if n.startswith('ben') else 2
 place = sorted(place, key=lambda p: (p[0], ord3(p)))
 gx = list(range(-40, BW + 41, 10))
 lay = dict(W=BW, H=BH, WL=WL, far=[[round(x, 1), round(y, 1)] for x, y in rec9.FAR],
