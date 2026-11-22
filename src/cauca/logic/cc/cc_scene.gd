@@ -5,6 +5,7 @@ extends Control
 # Vòng gợn + bóng cá đưa vào bằng một ảnh dữ liệu 24x1 (máy Adreno không chịu mảng uniform), 3 ảnh mẫu tất cả.
 
 const A := preload("res://logic/cc/cc_art.gd")
+const MAY := preload("res://logic/cc/cc_may.gd")
 
 const SH := """
 shader_type canvas_item;
@@ -32,77 +33,9 @@ vec3 sky(vec2 p, float disc){
  c=mix(c,mix(c,uSunC+.15,.35),smoothstep(R*.088,R*.084,d)*sv);
  c=mix(c,mix(c,uSunC+.2,.55),smoothstep(R*.06,R*.057,d)*sv);
  c=mix(c,uSunC*1.1+.2,smoothstep(R*.038,R*.035,d)*sv);
- // MÂY (vẽ lại 11-22): mây tích hoạt hình, nhiều múi tròn to nhỏ khác nhau, đáy bo tròn hơi bằng (không cắt thẳng),
- // không viền; sáng phía mặt trời, bóng xanh xám mềm ở đáy + chỗ múi khuất nắng, mép mềm 1-2 px. Mỗi đám 1 dáng riêng,
- // chia ô ngang nên không chồng lên nhau; vài vệt mây mỏng trên cao.
- float cl=0.; vec3 cc=uCloudC;
- float CW=min(R,uRes.x*.7);
- vec2 sd=uSun.z>0.?normalize(uSun.xy-vec2(uRes.x*.5,uYw*.4)+vec2(0.,-R*.3)):vec2(.3,-.95);
- for(int i=0;i<6;i++){
-  float fi=float(i);
-  if(h21(vec2(fi,7.3))>.45+uCloud*.55)continue;
-  float cw=CW*(.085+.075*h21(vec2(fi,1.7)));
-  float slot=(uRes.x+CW*.8)/6.;
-  float cx=mod(fi*slot+slot*.5*h21(vec2(fi,2.9))+uT*R*.0035*(.6+.5*h21(vec2(fi,5.1))),uRes.x+CW*.8)-CW*.4;
-  float cy=uYw*(.12+.26*h21(vec2(fi,3.3)));
-  if(abs(p.x-cx)>cw*1.5||p.y<cy-cw*1.2||p.y>cy+cw*.4)continue;
-  float base=cy+cw*.26;
-  // múi: 1 hàng múi nhỏ sát đáy + 3-4 múi to phía trên, múi nào ra múi đó (thấy rõ đường cong từng múi)
-  float m1=1e5, m2=1e5; vec2 n1=vec2(0.,-1.); float r1=1.;
-  int nl=6+int(h21(vec2(fi,8.8))*3.);
-  for(int j=0;j<9;j++){
-   if(j>=nl)break;
-   float hj=h21(vec2(fi*3.1,float(j)+9.)), hk=h21(vec2(fi*5.7,float(j)+3.));
-   vec2 c2; float r;
-   if(j<3){                                              // múi to phía trên, giữa cao nhất
-    float t=(float(j)+.5)/3.;
-    r=cw*(.3+.12*hj)*(j==1?1.18:.9);
-    c2=vec2(cx+(t-.5)*cw*1.15+(hk-.5)*cw*.12, base-cw*(.42+.12*hj)-(j==1?cw*.14:0.));
-   } else {                                              // múi nhỏ dọc đáy, tràn 2 bên
-    float t=(float(j-3)+.5)/float(nl-3);
-    r=cw*(.2+.07*hj)*(.8+.3*sin(t*3.1416));
-    c2=vec2(cx+(t-.5)*cw*1.75+(hk-.5)*cw*.08, base-r*.8-sin(t*3.1416)*cw*.1);
-   }
-   float e=length(p-c2)-r;
-   if(e<m1){m2=m1; m1=e; n1=(p-c2)/max(r,1.); r1=r;} else if(e<m2){m2=e;}
-  }
-  // thân: 1 bầu dục dẹt nối các múi ở dưới (khỏi rời thành từng hòn)
-  vec2 bd=(p-vec2(cx,base-cw*.2))/vec2(cw*.88,cw*.2);
-  float eb=(length(bd)-1.)*cw*.2;
-  if(eb<m1){m2=m1; m1=eb; n1=vec2(0.,-.3);} else if(eb<m2){m2=eb;}
-  float k=cw*.03;
-  float hh=clamp(.5+.5*(m2-m1)/k,0.,1.); float dc=mix(m2,m1,hh)-k*hh*(1.-hh);
-  // đáy bo hơi bằng
-  float kb=cw*.06;
-  float yb=p.y-base; float hb=clamp(.5-.5*(yb-dc)/kb,0.,1.); dc=mix(yb,dc,hb)+kb*hb*(1.-hb);
-  float aa=max(1.,cw*.008);
-  if(dc<aa){
-   float a=smoothstep(aa,-aa,dc);
-   float yy=clamp((base-p.y)/(cw*.95),0.,1.);            // 0 đáy -> 1 đỉnh
-   // mỗi múi như 1 quả cầu bông: sáng phía mặt trời, tối dần về phía kia và xuống đáy
-   vec3 nn=vec3(n1, sqrt(max(0.,1.-dot(n1,n1))));
-   vec3 L=normalize(vec3(sd.x,sd.y,.9));
-   float lam=clamp(dot(nn,L)*.6+.45,0.,1.);
-   float crease=smoothstep(cw*.018,0.,m2-m1)*smoothstep(-cw*.02,-cw*.08,dc);   // nếp giữa 2 múi
-   vec3 top=uCloudC*1.03, mid=uCloudC*vec3(.9,.93,.985), low=uCloudC*vec3(.74,.8,.91);
-   vec3 col=mix(mid,top,smoothstep(.35,.85,lam));
-   col=mix(low,col,smoothstep(.0,.45,yy)*.65+.35*smoothstep(.2,.7,lam));
-   col=mix(col,low,crease*.14);
-   col=mix(col,low*.96,smoothstep(cw*.06,0.,base-p.y)*.5);                     // dải bóng mềm sát đáy
-   cc=mix(cc,col,a); cl=max(cl,a);
-  }
- }
- // vệt mây mỏng trên cao
- for(int i=0;i<2;i++){
-  float fi=float(i);
-  float w=CW*(.5+.3*h21(vec2(fi,11.)));
-  float cx=mod(h21(vec2(fi,12.))*(uRes.x+w)+uT*R*.0015,uRes.x+w*2.)-w;
-  float cy=uYw*(.07+.1*h21(vec2(fi,13.)));
-  vec2 d2=(p-vec2(cx,cy))/vec2(w,CW*.022);
-  float m=exp(-dot(d2,d2)*1.6)*(.55+.45*vn(vec2(p.x/(CW*.08),fi*5.)))*.35*(.4+uCloud*.6);
-  cc=mix(cc,uCloudC*vec3(.97,.98,1.),m*(1.-cl)); cl=max(cl,m);
- }
- c=mix(c,cc,cl*smoothstep(.05,.2,h));
+ // mây = ảnh vẽ sẵn (cc_may.gd), không vẽ trong shader nữa
+ float cl=0.;
+
  if(uStar>0.){vec2 g=floor(p/(R*.012));float s=h21(g);
   vec2 f=fract(p/(R*.012))-.5;
   float st=step(.985,s)*smoothstep(.12,.0,length(f))*(.6+.4*sin(uT*3.+s*60.));
@@ -317,6 +250,8 @@ var tmat: ShaderMaterial
 var _bank_key := ""
 var bnode: Node2D = null          # bờ vẽ trực tiếp: mỗi món 1 Sprite2D, chung 1 atlas (ít lệnh vẽ), cây nghiêng quanh gốc như nông trại
 var bmat: ShaderMaterial = null
+var may_s = null    # mây trên màn (sau bờ)
+var may_v = null    # mây trong SubViewport (để nước soi)
 const LIVE_SH := """
 shader_type canvas_item;
 // Bờ bên kia vẽ trực tiếp lên màn (không qua SubViewport). Ngày = TEXTURE, đêm = uN (cùng chỗ trong atlas).
@@ -374,6 +309,8 @@ func _ready() -> void:
 	mat.shader = sh
 	rect.material = mat
 	vp.add_child(rect)
+	may_v = MAY.new(game)
+	vp.add_child(may_v)
 	wrect = ColorRect.new()
 	wrect.color = Color.WHITE
 	var wsh := Shader.new()
@@ -399,6 +336,8 @@ func _ready() -> void:
 	trect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(trect)
 	tmat.set_shader_parameter("uNoBank", 1.0)
+	may_s = MAY.new(game)
+	add_child(may_s)
 	bnode = Node2D.new()
 	bnode.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(bnode)
@@ -445,6 +384,8 @@ func resize() -> void:
 	view.size = Vector2(L.W, L.H)
 	trect.position = Vector2.ZERO
 	trect.size = Vector2(L.W, ywp / scale_s)
+	may_s.rebuild(1.0, game.K)
+	may_v.rebuild(scale_s, scale_s, L.yw - L.bankH * 872.0 / 900.0)
 	_bank_build()
 
 # BỜ BÊN KIA = ghép ảnh 9px có sẵn của Nông trại (ui/img/cc/bo/, mỗi khung 1 file, bo.json = chỗ đứng từng món,
@@ -846,6 +787,8 @@ func render(t: float, tod: Dictionary, W: Dictionary, rips: PackedFloat32Array, 
 	_scene_u(mat, scale_s, Vector2(vp.size), t, tod, W)
 	_scene_u(tmat, game.K, Vector2(L.W, L.H) * game.K, t, tod, W)
 	tmat.set_shader_parameter("uExact", 1.0)
+	may_s.upd(t, tod, W)
+	may_v.upd(t, tod, W)
 	if bmat:
 		var tc: Color = tod.tint
 		bmat.set_shader_parameter("uTint", Vector3(tc.r, tc.g, tc.b))
