@@ -121,23 +121,26 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # ============================================================ lớp chính
+var dbg_skip := {}
 func _draw_main(ci: CanvasItem) -> void:
 	var tod: Dictionary = game.tod
 	var W: Dictionary = game.W
 	_glows = []
-	for b in W.birds:
-		draw_bird(ci, b, tod)
-	for p in W.props:
-		draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
-	if W.boat != null:
+	if not dbg_skip.has("bird"):
+		for b in W.birds:
+			draw_bird(ci, b, tod)
+	if not dbg_skip.has("prop"):
+		for p in W.props:
+			draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
+	if W.boat != null and not dbg_skip.has("boat"):
 		draw_boat(ci, W.boat, tod)
-	fx_draw(ci, tod)
+	if not dbg_skip.has("fx"): fx_draw(ci, tod)
 	draw_leaps(ci)
-	if game.started:
+	if game.started and not dbg_skip.has("tackle"):
 		draw_tackle(ci, tod)
 	draw_dragonfly(ci, tod)
-	draw_fg(ci, tod)
-	if game.started:
+	if not dbg_skip.has("fg"): draw_fg(ci, tod)
+	if game.started and not dbg_skip.has("rod"):
 		draw_rod(ci, tod)
 	draw_landing(ci)
 
@@ -533,11 +536,15 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 		P.append([b * u * u + c * 2 * u * tt + t * tt * tt, lerpf(16, 3, pow(tt, .8)) * k, tt])
 	var shc := func(r: float, g: float, bl: float) -> Color: return Color(r * lit.r, g * lit.g, bl * lit.b)
 	var pass_ := func(m: float, a: float, col, from: int) -> void:
-		for i in range(maxi(1, from), N + 1):
-			var cc: Color = col.call(P[i][2]) if col is Callable else col
-			var wd: float = P[i][1] * m + a
-			ci.draw_line(P[i - 1][0], P[i][0], cc, wd, true)
-			ci.draw_circle(P[i][0], wd * .5, cc)
+		var pp := PackedVector2Array()
+		var ww := PackedFloat32Array()
+		var cs := PackedColorArray()
+		for i in range(maxi(1, from) - 1, N + 1):
+			pp.append(P[i][0])
+			ww.append(P[i][1] * m + a)
+			if i > maxi(1, from) - 1:
+				cs.append(col.call(P[i][2]) if col is Callable else col)
+		A.ribbon(ci, pp, ww, cs)
 	pass_.call(1.0, 4 * k + 1.5, shc.call(.16, .1, .05), 0)
 	var c_dark: Color = shc.call(.42, .24, .12)
 	var c_light: Color = shc.call(.86, .72, .38)
