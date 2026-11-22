@@ -1295,8 +1295,6 @@ func r6() -> Dictionary:   # R6: g.dl (du lịch)
 		G.g.dl = t
 	if not (t.get("rv") is Array):
 		t.rv = []
-	if not _num(t.get("lv")):
-		t.lv = 1
 	if not _num(t.get("xu")):
 		t.xu = 0
 	if not _num(t.get("n")):

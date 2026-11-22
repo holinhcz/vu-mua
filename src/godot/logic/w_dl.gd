@@ -18,7 +18,7 @@ var WR         # w_ruong.gd: gg, _pi, _hrl, m0
 var WC         # w_cho.gd: Rl
 var WCA        # w_ca.gd: _a0, _ci
 
-var PR := []               # giá phòng [{n, xu, r}]
+const ROOM := 75           # (bản 482) giá phòng mỗi người một đêm (bỏ 3 hạng giá)
 var A7 := {}               # loại khách {sg|tay: {n, looks}}
 var V_ := {}               # câu đánh giá theo số sao
 var Jc := []               # đoàn đang ở
@@ -27,7 +27,6 @@ var _nid := 0
 
 func _init(game) -> void:
 	G = game
-	PR = G._j("du_lich/gia_phong")
 	A7 = G._j("du_lich/khach")
 	V_ = G._j("du_lich/danh_gia")
 
@@ -50,6 +49,12 @@ func _saps() -> Array:   # Hr có sạp (sap, sap2)
 func _quan() -> bool:   # Gs: có quán cơm (bản Godot chưa có)
 	var f = WL.ext.get("Gs")
 	return f is Callable and f.is_valid() and bool(f.call())
+
+func vui() -> Array:   # (bản 482) điều làm khách vui (cho bảng Du lịch): [[có chưa, chữ]]
+	var e: bool = G.troi != null and (G.troi.cur == "mua" or G.troi.cur == "rao")
+	return [[_quan(), "Có quán cơm"], [_saps().size() > 0 and z5().filter(func(k): return int(G.g.barn.get(k, 0)) >= 2).size() > 0, "Sạp có đặc sản (mỗi món còn từ 2)"],
+		[WH._z6() != null, "Có đình làng"], [WR._hrl().filter(func(p): return RegEx.create_from_string("^ben[34]$").search(String(p.id)) != null and _ben_ok(p)).size() > 0, "Bến ghe đi xuồng được"],
+		[G.lang.beauty() > 250, "Làng đẹp (trên 250)"], [not e, "Trời không mưa"]]
 
 func p_c() -> bool:   # pC: đủ điều kiện đón khách
 	return WL.bl().size() > 0 and (_quan() or _saps().size() > 0)
@@ -236,11 +241,10 @@ func __(t: Dictionary) -> void:   # __: tới một chỗ ghé
 
 func b_r(t: Dictionary) -> void:   # BR: trả phòng, chấm sao
 	var a := r6()
-	var n: Dictionary = PR[int(a.lv)]
 	var e: int = t.m.size()
 	var r := maxi(1, int(t.night))
-	var o := int(n.xu) * e * r
-	var l := maxi(1, mini(5, int(round(2.4 + float(t.happy) * 0.35 + float(n.r)))))
+	var o := ROOM * e * r
+	var l := maxi(1, mini(5, int(round(2.4 + float(t.happy) * 0.35))))
 	G.g.coins = float(G.g.coins) + o
 	a.xu = float(a.xu) + o + int(t.spent)
 	a.n = float(a.n) + e

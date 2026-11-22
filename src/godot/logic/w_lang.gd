@@ -88,7 +88,6 @@ var UTTUAN := []
 var XO := []               # xo
 var WF := []               # Wf
 var PT := []               # pT
-var PR := []
 var V_ := {}
 var A7 := {}               # a7
 var CO := {}               # Co
@@ -148,7 +147,6 @@ func _init(game) -> void:
 	for t in _ja("che_bien/thu_tu_hang"):   # pT = to.filter(...)
 		if t != "mat_ong" and t != "dien_dien" and t != "bong_sung" and t != "keo_neo":
 			PT.append(t)
-	PR = _ja("du_lich/gia_phong")
 	V_ = _jd("du_lich/danh_gia")
 	A7 = _jd("du_lich/khach")
 	CO = _jd("che_bien/ten_cong_trinh_lam_an")
@@ -2864,31 +2862,6 @@ func hui_ky(t: bool) -> void:   # KN: tới kỳ góp hụi (t = im lặng khi c
 				f.tim = minf(5, _n(f.get("tim")) + 1)
 	if not t:
 		_ba()
-
-func br(t: Dictionary) -> void:   # BR: đoàn khách trả phòng
-	var fr6 := _x("R6")
-	if not fr6.is_valid():
-		return
-	var a: Dictionary = fr6.call()
-	var n: Dictionary = PR[int(a.lv)]
-	var e: int = t.m.size()
-	var r := maxf(1, _n(t.get("night")))
-	var o := float(n.xu) * e * r
-	var l := maxi(1, mini(5, _rnd(2.4 + _n(t.get("happy")) * 0.35 + float(n.r))))
-	G.g.coins = _n(G.g.coins) + o
-	a.xu = _n(a.xu) + o + _n(t.get("spent"))
-	a.n = _n(a.n) + e
-	var c = _t0(V_[str(l)])
-	a.rv.push_front({"s": l, "t": c, "k": t.k, "n": e, "xu": o + _n(t.get("spent")), "at": _now()})
-	a.rv = a.rv.slice(0, 20)
-	var f = _fam_of(t.host)
-	if f != null and l >= 4 and _n(f.get("tim")) < 5 and randf() < 0.4:
-		f.tim = _n(f.get("tim")) + 1
-	_ta(String(A7[String(t.k)].n) + " trả phòng: +" + _sa(o) + " xu tiền phòng, đánh giá " + str(l) + "★ “" + String(c) + "”")
-	_ba()
-	var fe := _x("e7")   # tp && e7(): bảng Du lịch miệt vườn đang mở thì dựng lại
-	if fe.is_valid():
-		fe.call()
 
 # ------------------------------------------------------------------ báo khi xây xong (Kq), chữ rê chuột (Vq)
 func kq(t: String) -> void:   # Kq
