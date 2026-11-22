@@ -142,7 +142,7 @@ func _draw() -> void:
 	_decor(L)
 	for b in L.bx:
 		var D: float = b.z * 2 / 0.965
-		on_ground("ro", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.5)
+		on_ground("ro", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.14)   # nia cạn: bóng đổ ngắn
 	_chalk_board(L)
 
 func hits_obst(L: Dictionary, x: float, y: float, r: float) -> bool:
