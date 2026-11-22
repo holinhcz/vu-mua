@@ -386,13 +386,8 @@ func fx_drop(x: float, z: float, vx: float, vy: float, vz: float, s := 1.0, life
 	FX.p.append({"k": "drop", "x": x, "y": .02, "z": z, "vx": vx, "vy": vy, "vz": vz, "s": s, "life": life, "age": 0.0})
 
 func fx_splash(x: float, z: float, sz := 1.0) -> void:
-	var n := int(10 + sz * 22)
-	for i in n:
-		var a := rnd(TAU)
-		var sp := rnd(.2, .9) * sz
-		fx_drop(x + cos(a) * .05, z + sin(a) * .05, cos(a) * sp * .6, rnd(.8, 2.2) * sqrt(sz), sin(a) * sp * .4, rnd(.6, 1.3) * sqrt(sz))
+	drw.pfx.splash(x, z, sz)   # giọt + hơi nước = CPUParticles2D (cc_fx.gd)
 	FX.p.append({"k": "crown", "x": x, "z": z, "y": 0.0, "s": sz, "age": 0.0, "life": .45})
-	FX.p.append({"k": "mist", "x": x, "z": z, "y": .05, "s": sz, "age": 0.0, "life": .9})
 
 func fx_bubble(x: float, z: float) -> void:
 	FX.p.append({"k": "bub", "x": x, "z": z, "y": 0.0, "s": rnd(.6, 1.2), "age": 0.0, "life": rnd(.8, 1.6)})
@@ -435,7 +430,7 @@ func fx_update(dt: float) -> void:
 			ripple(l.x, l.z, 1.2)
 			snd.plop(1.4, clampf(l.z / 30, 0, .8))
 	FX.leaps = FX.leaps.filter(func(l): return l.age < l.dur + .05)
-	var want := int(W.rain * (90 if L.portrait else 160))
+	var want := 0   # mưa rơi = CPUParticles2D (cc_fx.gd)
 	while FX.rain.size() < want:
 		FX.rain.append({"x": rnd(-50, L.W + 50), "y": rnd(-L.H, L.H), "v": rnd(900, 1300), "l": rnd(14, 26)})
 	if FX.rain.size() > want:
@@ -1069,6 +1064,7 @@ func _process(dt: float) -> void:
 		snd.ambience(dt, tod, W.rain)
 	scn.render(W.t, tod, W, rips, shs)
 	drw.redraw()
+	drw.pfx.step(dt)
 	ui.step(dt)
 	save()
 

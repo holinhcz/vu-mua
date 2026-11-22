@@ -34,6 +34,7 @@ var l_main: Lay
 var l_add: Lay
 var l_rain: Lay
 var refl_mat: ShaderMaterial
+var pfx   # cc_fx.gd: tia nước + mưa bằng CPUParticles2D
 var _glows: Array = []
 
 func _init(gm) -> void:
@@ -55,6 +56,8 @@ func _ready() -> void:
 	am.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	l_add.material = am
 	add_child(l_add)
+	pfx = preload("res://logic/cc/cc_fx.gd").new(game)
+	add_child(pfx)
 	l_rain = Lay.new(_draw_rain)
 	add_child(l_rain)
 	for l in [l_refl, l_main, l_add, l_rain]:
