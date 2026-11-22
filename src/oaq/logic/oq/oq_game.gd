@@ -184,12 +184,13 @@ func _layout() -> void:
 	L.cards = [c0, c1]
 	L.tools = hud.tools_rect()
 	var ch := maxf(maxf(c0.size.y, c1.size.y), 44.0)
-	# Link 11-22 "nhỏ lại chút tán ló ra to hơn": bàn thu nhỏ từng nấc (tối đa 15%) tới khi lá xoài thấy được đủ nhiều
+	# Link 11-22 "nhỏ lại chút tán ló ra to hơn" (chỉ màn 1980x900): bàn thu nhỏ từng nấc (tối đa 20%) tới khi lá xoài thấy được đủ nhiều
 	var vis := Rect2(0, (L.tools as Rect2).end.y, W, H - (L.tools as Rect2).end.y)
 	var want := W * H * 0.07
 	var best_f := 1.0
 	var best_a := -1.0
-	for f in [1.0, 0.95, 0.9, 0.85, 0.8]:
+	# chỉ màn ngang rất dài (như 1980x900) mới thu bàn; màn khác giữ cỡ bàn cũ (Link 11-22 "bảo làm 1980x900 thôi")
+	for f in ([1.0, 0.95, 0.9, 0.85, 0.8] if W > H * 2.0 else [1.0]):
 		var a := _place(f, W, H, c0, c1, ch, vis)
 		if a > best_a * 1.15:
 			best_a = a
