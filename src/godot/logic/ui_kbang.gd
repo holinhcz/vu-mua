@@ -25,12 +25,13 @@ func step(dt: float) -> void:   # dựng lại khi trạng thái đổi
 		_build()
 
 # khung Kho: L = [[khóa, chữ, chấm?]] hàng tab (rỗng = không tab, thân lên đỉnh thẻ). Trả [khung, vùng thân, đỉnh thân]; _hb = cao thân
-func _kshell(L: Array, cur: String, go: Callable) -> Array:
+func _kshell(L: Array, cur: String, go: Callable, th := 0.0) -> Array:   # th > 0: (bản 496) chừa dải đầu cao th trên hàng tab (đỉnh dải = phần tử thứ 4 trả về)
 	var n := _cl(SB)
 	var card := _find(n, "khcard")
 	var tabs := _find(n, "bk2tabs")
 	var vt := _find(n, "bk2v")
-	var ty0 := float(_find(n, "bk2top").r[1])   # bỏ đầu bảng danh hiệu của Sổ làng
+	var th0 := float(_find(n, "bk2top").r[1])
+	var ty0 := th0 + th   # bỏ đầu bảng danh hiệu của Sổ làng
 	card.kids = card.kids.filter(func(k): return not String(k.get("cls", "")).contains("bk2top") and (L.size() or not String(k.get("cls", "")).contains("bk2tabs")))
 	var vy := ty0
 	if L.size():
@@ -42,7 +43,7 @@ func _kshell(L: Array, cur: String, go: Callable) -> Array:
 	var vb := float(vt.r[1]) + float(vt.r[3])
 	vt.r = [vt.r[0], vy, vt.r[2], vb - vy]
 	_hb = float(vt.r[3])
-	return [n, vt, vy]
+	return [n, vt, vy, th0]
 
 var fit := false   # (bản 492) bảng ngắn (Thư nhà): khung co lại vừa nội dung, đứng giữa màn
 

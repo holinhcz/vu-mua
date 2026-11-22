@@ -218,6 +218,7 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"sl": ui.sl_open(); if a.size() > 1: ui.slp.tab = a[1]; if a.size() > 2: ui.slp.bs = a[2]; ui.slp._build()   # sl[:tab[:loại bst]]
 			"gpt": var t0 := Time.get_ticks_usec(); ui.gpp._tab_go(a[1] if a.size() > 1 else "db"); ui.gpp._build(); if OS.has_feature("web"): JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"gp": (Time.get_ticks_usec() - t0) / 1000.0}))   # (bản 495) đo dựng Gia phả
 			"gp": ui.gp_open(int(a[2]) if a.size() > 2 else null); if a.size() > 1: ui.gpp._tab_go(a[1]); ui.gpp._build()   # gp[:tab[:nhà]]
 			"thux": G.w_all.WTH.wU(a[1])
