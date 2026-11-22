@@ -311,11 +311,16 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		band.gradient = gr; band.width = 112; band.height = 4
 		roof_nodes = []
 		var bd := Sprite2D.new(); bd.texture = band; bd.centered = false; bd.position = Vector2(roof_x - 72 * u, E.position.y); bd.scale = Vector2(112.0 * u / 112.0, E.size.y / 4.0); add_child(bd)
-		var m := _spr(self, tex("mai"), Vector2(roof_x, E.position.y - 10 * u), false, 0.0, u)
-		roof_nodes = [bd, m]
-		# mái phủ hết chiều cao màn: lặp soi gương theo chiều dọc (liền mạch, không cắt đáy); cửa sổ rộng hơn khung -> mái lặp ngang ra tới mép
-		m.texture_repeat = CanvasItem.TEXTURE_REPEAT_MIRROR
-		m.region_enabled = true; m.region_rect = Rect2(0, 0, maxf(m.texture.get_width(), (E.end.x - roof_x) / u * PXU), (E.size.y / u + 20) * PXU)
+		roof_nodes = [bd]
+		# mái = 1 đoạn ~4k đã nối khớp đầu-đuôi (Link 11-22 "8k giảm xuống 4k"): lặp THẲNG theo chiều dọc phủ hết chiều cao màn;
+		# cửa sổ rộng hơn khung -> thêm tấm lật ngang kế bên (soi gương ngang, mép tua rơm chỉ ở bên trái)
+		var mt := tex("mai"); var mw: float = mt.get_width() / PXU * u
+		var nx := 0
+		while roof_x + nx * mw < E.end.x:
+			var m := _spr(self, mt, Vector2(roof_x + nx * mw, E.position.y - 10 * u), false, 0.0, u)
+			m.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED; m.flip_h = (nx % 2) == 1
+			m.region_enabled = true; m.region_rect = Rect2(0, 0, mt.get_width(), (E.size.y / u + 20) * PXU)
+			roof_nodes.append(m); nx += 1
 	# ---- hiên gạch tàu
 	var gt := tex("gach"); var ph := (100.0 if W < 500.0 else 54.0) if port else 30.0     # điện thoại: hiên gạch dài xuống thêm (Link 11-22)      # (css thiết kế, co theo u)
 	var th := gt.get_height() / PXU
