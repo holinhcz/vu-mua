@@ -212,6 +212,7 @@ func _test_hook() -> void:
 			"tn": ui.tn_open(a[1] if a.size() > 1 else "")
 			"ut": ui.ut_open(a[1] if a.size() > 1 else "")
 			"hr": ui.hr_open()
+			"kl": ui.kl_open(a[1] if a.size() > 1 else "")
 			"clg": ui.clg_open(a[1] if a.size() > 1 else "")
 			"famx": var F0: Dictionary = G.w_all.WL._r0().fam; var k0 = F0.keys()[0]; for i in int(a[1]): F0[str(900 + i)] = F0[k0].duplicate(true); F0[str(900 + i)].n = "Nhà " + str(i); F0[str(900 + i)].tal = ["ruong", "vuon", "chan", "xuong"][i % 4]
 			"hrt": _hrt()
