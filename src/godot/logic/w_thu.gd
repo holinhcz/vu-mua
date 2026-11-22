@@ -167,6 +167,7 @@ func wU(t: String) -> void:   # nút trong bảng thư
 		else:
 			var e: Dictionary = WL._r0()
 			e.gach = int(e.get("gach", 0)) + int(n.gach)
+		_lg(a, String(n.who), ("Gửi về " + G.fmt_n(int(n.xu)) + " xu") if n.k == "tien" else ("Gửi " + str(int(n.gach)) + " viên gạch"))
 		a.un = null
 		_toast("Đọc thư xong xếp vô hộp, ấm lòng ghê.")
 	elif t == "gui" and _tr(n):
@@ -174,6 +175,7 @@ func wU(t: String) -> void:   # nút trong bảng thư
 			return
 		G.g.barn[n.id] = int(G.g.barn[n.id]) - int(n.q)
 		G.g.coins = int(G.g.coins) + int(n.xu)
+		_lg(a, String(n.who), "Đã gửi " + WC.ho(String(n.id), int(n.q)))
 		a.un = null
 		_toast("Gói đồ quê gửi bưu điện lên cho " + String(n.who) + ". Nhận " + G.fmt_n(int(n.xu)) + " xu tiền cước gửi về.")
 		G.w_all.qi("thu")
@@ -181,18 +183,24 @@ func wU(t: String) -> void:   # nút trong bảng thư
 		a.rq = {"id": n.id, "q": n.q, "xu": n.xu, "who": n.who}
 		a.un = null
 		_close()
-		_toast("Để dành gửi sau. Mở lại trong Trời đất › Thư nhà.")
+		_toast("Để dành gửi sau. Chạm hộp thư trước nhà để mở lại.")
 	elif t == "gui2" and _tr(a.get("rq")):
 		var r: Dictionary = a.rq
 		if int(G.g.barn.get(r.id, 0)) < int(r.q):
 			return
 		G.g.barn[r.id] = int(G.g.barn[r.id]) - int(r.q)
 		G.g.coins = int(G.g.coins) + int(r.xu)
+		_lg(a, String(r.who), "Đã gửi " + WC.ho(String(r.id), int(r.q)))
 		a.rq = null
 		_toast("Đã gửi đồ quê lên cho " + String(r.who) + ", nhận " + G.fmt_n(int(r.xu)) + " xu.")
 	G.mark()
 	if not _tr(a.get("un")) and not _tr(a.get("rq")):
 		_close()
+
+func _lg(a: Dictionary, who: String, s: String) -> void:   # (bản 491) Thư cũ: lá mới lên đầu, giữ 10 lá
+	var L: Array = a.get("lg", []) if a.get("lg") is Array else []
+	L.push_front({"w": who, "s": s, "d": WL._vr()})
+	a.lg = L.slice(0, 10)
 
 func _close() -> void:
 	if U != null and U.thup != null:

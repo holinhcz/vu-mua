@@ -214,6 +214,7 @@ func _test_hook() -> void:
 			"hr": ui.hr_open()
 			"gd": ui.gd_open(a[1] if a.size() > 1 else "")
 			"dl": ui.dl_open()
+			"thu": _thu(a)
 			"dlrv": var R6: Dictionary = G.w_all.WDL.r6(); for i in 4: R6.rv.push_front({"s": [5, 4, 3, 2][i], "t": ["Làng đẹp, quán ngon, sẽ quay lại!", "Ở được, hơi ít món.", "Phòng ổn mà chẳng có gì chơi.", "Mưa suốt, chán."][i], "k": ["sg", "tay", "sg", "tay"][i], "n": 2, "xu": 300 - i * 50, "at": Time.get_unix_time_from_system() * 1000.0 - i * 3600000.0}); R6.n = 8; R6.xu = 1200; G.mark()
 			"kl": ui.kl_open(a[1] if a.size() > 1 else "")
 			"clg": ui.clg_open(a[1] if a.size() > 1 else "")
@@ -283,6 +284,21 @@ func _test_hook() -> void:
 
 func R2(rid: String) -> Array:
 	return G.xw.R[rid].in
+
+func _thu(a: Array) -> void:   # (bản 491) test Thư nhà: thu:tien|tin|nho|rq[:lg] (lg: thêm thư cũ giả)
+	var T: Dictionary = G.w_all.WTH.Eg()
+	var k: String = a[1] if a.size() > 1 else "nho"
+	var tx := "Út Mến viết: \"Trên này mua đồ quê đắt mà không ngon. Nhà mình gửi giùm con 12 trứng gà theo đường bưu điện nha, con gửi tiền cước về.\""
+	match k:
+		"tien": T.un = {"k": "tien", "who": "Hai Lúa", "xu": 1061, "txt": "Hai Lúa ở Sài Gòn viết thư về: \"Con đi làm ở xưởng may cũng đỡ, gửi về chút tiền ông bà tiêu Tết.\""}
+		"tin": T.un = {"k": "tin", "who": "Bé Na", "gach": 5, "txt": "Bé Na gửi thư thăm: \"Con gửi kèm mấy viên gạch nung cũ ở nhà chủ cho, để dành sửa nhà.\""}
+		"rq": T.un = null; T.rq = {"id": "trung", "q": 12, "xu": 1061, "who": "Út Mến"}
+		_: T.un = {"k": "nho", "who": "Út Mến", "id": "trung", "q": 12, "xu": 1061, "txt": tx}
+	if a.size() > 2:
+		var d: int = G.w_all.WL._vr()
+		T.lg = [{"w": "Hai Lúa", "s": "Gửi về 820 xu", "d": d - 1}, {"w": "Bé Na", "s": "Gửi 4 viên gạch", "d": d - 2}, {"w": "Cậu Ba", "s": "Đã gửi 6 bắp", "d": d - 4}]
+	G.mark()
+	ui.thu_open()
 
 func _tnsim(a: Array) -> void:   # thử Thiên tai: tnsim:next (dời ngày tới hôm trước trận kế) | tnsim:hit:loại (trận xảy ra hôm nay)
 	var W = G.w_all.WL
