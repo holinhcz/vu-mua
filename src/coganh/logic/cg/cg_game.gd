@@ -11,6 +11,7 @@ const A := preload("res://logic/cg/cg_art.gd")
 const BG := preload("res://logic/cg/cg_bg.gd")
 const SND := preload("res://logic/cg/cg_snd.gd")
 const HUD := preload("res://logic/cg/cg_hud.gd")
+const TAN := preload("res://logic/cg/cg_tan.gd")
 
 const PR := 0.155
 const TOTAL := 16
@@ -54,6 +55,7 @@ var tut_step := 0
 var ai_token := 0
 var snd: Node = null
 var hud: Control = null
+var tan: Node2D = null
 var bg_tex: Texture2D = null
 var shade: TextureRect = null
 var _svp: SubViewport = null
@@ -91,6 +93,8 @@ func _ready() -> void:
 	A.build_arm()
 	ME.next = 3 + randf() * 4
 	_build_shade()
+	tan = TAN.new()
+	add_child(tan)
 	hud = HUD.new()
 	hud.game = self
 	add_child(hud)
@@ -156,16 +160,64 @@ func _layout() -> void:
 		var extra := maxf(0.0, H - top - 32 - (bh + 4 * FB) * L.s)
 		L.ox = (W - 4 * L.s) / 2
 		L.oy = top + 16 + 2 * FB * L.s + extra / 2 + (BM + 0.08) * L.s
-	# rổ quân dư của mỗi bên: to nhất vừa chỗ (tới chừng 60 cm), phía bên mình, gần thẻ
+	# Link 11-22 tán xoài góc trái trên: to nhất mà lá không chạm bàn cờ; nia né tán (không bị lá che).
+	# tán to quá làm nia bên trên nhỏ đi / phải qua nửa sân kia thì thu tán lại.
 	var brd := board_rect(L.s * 0.08)
 	var blocks := [brd, c0.grow(8), c1.grow(8), tl.grow(8)]
+	var nia0 := _place_baskets(blocks)
+	var ban := Rect2(map(-0.45, -0.45), Vector2(4.9, 4.9) * L.s)      # quân + vạch phấn hai đầu bàn
+	var tch := TAN.choices(ban, Rect2(0, tl.end.y, W, H - tl.end.y))
+	var tsc := 0.3
+	var tsh := Vector2(-200, -200)       # không chỗ nào vừa: tán khuất hẳn
+	L.bx = nia0.bx
+	# chọn chỗ tán: nia vẫn bên nửa sân mình, nia ≥ 90% cỡ khi không có tán; không có thì lấy chỗ cân nhất (lá thấy được x cỡ nia)
+	var r0 := minf(nia0.bx[0].z, nia0.bx[1].z)
+	var bsc := -1.0
+	for i in mini(tch.size(), 16):
+		var tb := blocks.duplicate()
+		for r in TAN.rects(tch[i].sc, 4, tch[i].sh):
+			tb.append((r as Rect2).grow(4))
+		var nb := _place_baskets(tb)
+		if not nb.own:
+			continue
+		var rr := minf(nb.bx[0].z, nb.bx[1].z) / r0
+		var sc2: float = tch[i].a / tch[0].a * rr * rr * (2.0 if rr >= 0.9 else 1.0)
+		if sc2 > bsc:
+			bsc = sc2
+			L.bx = nb.bx
+			tsc = tch[i].sc
+			tsh = tch[i].sh
+		if rr >= 0.9:
+			break
+	L.tan_sc = tsc
+	L.tan_sh = tsh
+	L.tan = TAN.rects(tsc, 2, tsh)
+	# Link 11-22: 2 nia phải đúng 1 cỡ: lấy cỡ nia nhỏ hơn cho cả hai (giữ tâm, nhỏ lại thì vẫn vừa chỗ)
+	var rz := minf(L.bx[0].z, L.bx[1].z)
+	for i in 2:
+		L.bx[i] = Vector3(L.bx[i].x, L.bx[i].y, rz)
+	L.bas = []
+	for b in L.bx:
+		var u := unmap(b.x, b.y)
+		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
+	_resize_shade()
+	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
+	_bake_bg()
+
+func _place_baskets(blocks0: Array) -> Dictionary:
+	# rổ quân dư của mỗi bên: to nhất vừa chỗ (tới chừng 60 cm), phía bên mình, gần thẻ
+	var W: float = L.W
+	var H: float = L.H
+	var tl: Rect2 = L.tools
+	var blocks := blocks0.duplicate()
+	var own_all := true
 	var hit := func(x: float, y: float, r: float, lst: Array) -> bool:
 		for o in lst:
 			var q: Rect2 = o
 			if Vector2(clampf(x, q.position.x, q.end.x) - x, clampf(y, q.position.y, q.end.y) - y).length() < r:
 				return true
 		return false
-	L.bx = []
+	var bx := []
 	for p in [0, 1]:
 		var card: Rect2 = L.cards[p]
 		var cc := card.get_center()
@@ -185,8 +237,8 @@ func _layout() -> void:
 					while x <= W - r - 6:
 						if not hit.call(x, y, r + 4, blocks):
 							var ok := true
-							if L.bx.size():
-								var b0: Vector3 = L.bx[0]
+							if bx.size():
+								var b0: Vector3 = bx[0]
 								if Vector2(x - b0.x, y - b0.y).length() < r + b0.z + 10:
 									ok = false
 							if ok:
@@ -199,21 +251,15 @@ func _layout() -> void:
 				if best != null:
 					break
 			if best != null:
+				if not own:
+					own_all = false
 				break
 		if best == null:
+			own_all = false
 			best = Vector3(W - 40, H - 40, 30) if p == 0 else Vector3(40, 40 + tl.size.y, 30)
-		L.bx.append(best)
+		bx.append(best)
 		blocks.append(Rect2(best.x - best.z, best.y - best.z, best.z * 2, best.z * 2))
-	# Link 11-22: 2 nia phải đúng 1 cỡ: lấy cỡ nia nhỏ hơn cho cả hai (giữ tâm, nhỏ lại thì vẫn vừa chỗ)
-	var rz := minf(L.bx[0].z, L.bx[1].z)
-	for i in 2:
-		L.bx[i] = Vector3(L.bx[i].x, L.bx[i].y, rz)
-	L.bas = []
-	for b in L.bx:
-		var u := unmap(b.x, b.y)
-		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
-	_resize_shade()
-	_bake_bg()
+	return {"bx": bx, "own": own_all}
 
 func _bake_bg() -> void:
 	# nền tĩnh: vẽ một lần trong SubViewport, chụp ra ảnh
@@ -1059,6 +1105,7 @@ func petal_rain(n: int) -> void:
 			"va": (randf() - 0.5) * 4, "s": 6 + randf() * 7, "ph": randf() * 6.28, "c": Color("#ffd23a") if randf() < 0.8 else Color("#ffefa8")})
 
 # ============================================================ bóng cây lay (WebGL của web: nhân màu đè lên cảnh)
+# Link 11-22: bóng tàu lá góc phải nhỏ lại + nhạt hơn; đốm bóng lá dồn về góc trái trên (dưới tán xoài)
 const SHADE_SRC := """shader_type canvas_item;
 uniform vec2 res;
 uniform float t;
@@ -1081,16 +1128,16 @@ void fragment(){
   float a=(.018*sin(t*.55)+.007*sin(t*1.63+1.))*smoothstep(0.,1.,dist);
   d=mat2(vec2(cos(a),sin(a)),vec2(-sin(a),cos(a)))*d;
   d+=vec2(sin(t*1.9+p.y*9.),cos(t*1.7+p.x*8.))*.004*dist;
-  vec2 q=vec2(1.)+d/1.25;
-  float fsh=frond(q,.003+.006*dist)*.92;
+  vec2 q=vec2(1.)+d/0.8;
+  float fsh=frond(q,.003+.006*dist)*.75;
   vec2 w=vec2(sin(t*.45+p.y*3.)+sin(t*.23+p.x*1.7),cos(t*.37+p.x*2.6)+sin(t*.19+p.y*2.))*.006;
   float big=fbm((p+w)*2.4+vec2(3.1,1.3)),fine=fbm((p+w*1.8)*8.+vec2(7.,2.)),vf=fbm((p+w*2.2)*22.+vec2(4.,8.));
-  float dd=length((p-tree)*vec2(1.,1.12));
+  float dd=length((p-vec2(tree.x,corner.y-tree.y))*vec2(1.,1.12));
   float th=mix(.36,.95,smoothstep(.05,.9,dd));
   float v=big*.5+fine*.3+vf*.2;
   float cover=smoothstep(th-.03,th+.03,v)*.8;
   float sh=clamp(max(fsh,cover),0.,1.)*str;
-  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.64,.66,.72);
+  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.72,.74,.79);
   vec3 col=mix(lit,shade,sh);
   vec2 qv=(uv-.5)*vec2(res.x/res.y,1.);float vig=smoothstep(1.15,.35,length(qv*vec2(.9,1.15)));
   col*=mix(.88,1.,vig);
@@ -1110,7 +1157,7 @@ func _build_shade() -> void:
 	_shade_mat.shader = sh
 	_shade_mat.set_shader_parameter("fr", A.img("frond"))
 	_shade_mat.set_shader_parameter("tree", Vector2(-0.08, -0.1))
-	_shade_mat.set_shader_parameter("str", 0.9)
+	_shade_mat.set_shader_parameter("str", 0.6)
 	cr.material = _shade_mat
 	_svp.add_child(cr)
 	add_child(_svp)

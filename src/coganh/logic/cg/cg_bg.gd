@@ -1,5 +1,5 @@
 extends Node2D
-# CỜ GÁNH: lớp nền tĩnh (buildBG của game.js): đất sân, hiên gạch tàu, cỏ, dép, lu, chổi chà, tàu dừa, nón lá, lá khô,
+# CỜ GÁNH: lớp nền tĩnh (buildBG của game.js): đất sân, hiên gạch tàu, cỏ, dép, chổi chà, tàu dừa, lá khô,
 # hai cái rổ, bàn kẻ phấn. Vẽ một lần trong SubViewport rồi chụp thành ảnh (không vẽ lại mỗi khung).
 # Đơn vị: css px của bản web (nhân K ra điểm ảnh thật). Cùng hạt giống ngẫu nhiên (mulberry32 20261107) như web.
 
@@ -139,6 +139,8 @@ func _draw() -> void:
 		L.obst.append((c as Rect2).grow(6))
 	L.obst.append((L.tools as Rect2).grow(6))
 	L.obst.append(Rect2(W - 190, H - 64, 190, 64))
+	for r in L.get("tan", []):     # dưới tán xoài: không đặt đồ (bị lá che mất)
+		L.obst.append(r)
 	_decor(L)
 	for b in L.bx:
 		var D: float = b.z * 2 / 0.965
@@ -311,19 +313,6 @@ func _decor(L: Dictionary) -> void:
 		var a := (rng() - 0.5) * 0.5
 		on_ground("dep", Rect2i(), sp, dD, dD, a, dl * 0.035)
 		used.call(sp.x, sp.y, dl * 0.6)
-	# lu da lươn ở góc hiên
-	for f in [30, 27]:
-		var lr: float = f * CM
-		sp = _find_spot(L, lr, false, func(x: float, y: float) -> float:
-			var off := maxf(0, lr - x) + maxf(0, x + lr - W) + maxf(0, lr - y) + maxf(0, y + lr - H)
-			if off > lr * 0.8 or absf(x - cx) < W * 0.22:
-				return -1e9
-			return -absf(y - (ph + lr * 0.1)) * 0.6 + absf(x - cx) * 0.6 - off * 2)
-		if sp != null:
-			var D := lr * 2 / 0.874   # lu 9px của caro: thân chiếm 87% ảnh
-			on_ground("lu", Rect2i(), sp, D, D, 0.0, lr * 1.3)
-			used.call(sp.x, sp.y, lr * 1.02)
-			break
 	# chổi chà nằm dọc bậc hiên hoặc mép dưới, cán ló ra ngoài màn
 	var bl := minf(110 * CM, W * 0.5)
 	var bh := bl / 3
@@ -383,14 +372,6 @@ func _decor(L: Dictionary) -> void:
 		while t <= 0.5:
 			used.call(fb[0] + cos(fb[2]) * fl * t, fb[1] + sin(fb[2]) * fl * t, fl * 0.13)
 			t += 0.125
-	# nón lá 42 cm, ló ra mép màn tối đa một phần ba
-	var nr := 21 * CM
-	sp = _find_spot(L, nr * 1.05, false, func(x: float, y: float) -> float:
-		var off := maxf(0, nr - x) + maxf(0, x + nr - W) + maxf(0, nr - y) + maxf(0, y + nr - H)
-		return -1e9 if off > nr * 0.65 else far.call(x, y) * 0.5 + (40.0 if y > cy else 0.0) - off * 2)
-	if sp != null:
-		_non(sp.x, sp.y, nr)
-		used.call(sp.x, sp.y, nr * 1.08)
 	# lá khô (lá bàng, lá xoài) rải rác
 	var placed := 0
 	var want := mini(10, roundi(W * H / (s * s * 3.2)))
@@ -442,16 +423,6 @@ func _grass(x: float, y: float, sz: float) -> void:
 	for b in blades:
 		_fill(b[0], b[1])
 	_T()
-
-func _non(x: float, y: float, r: float) -> void:
-	# quai nón nằm lòi ra dưới vành
-	var pts := cubic(Vector2(x - r * 0.5, y + r * 0.62), Vector2(x - r * 0.75, y + r * 1.1), Vector2(x - r * 0.2, y + r * 1.25), Vector2(x + r * 0.15, y + r * 0.9), 20)
-	var lw := maxf(2.0, r * 0.05)
-	_T(xf(Vector2(1.5, 2)))
-	draw_polyline(pts, Color8(40, 25, 10, 60), lw * 1.4, true)
-	_T()
-	draw_polyline(pts, Color("#e9e2d6"), lw, true)
-	on_ground("non", Rect2i(), Vector2(x, y), 2 * r, 2 * r, 0.0, r * 0.8)
 
 func _frond(x: float, y: float, ln: float, ang: float) -> void:
 	var bend := ln * 0.12
