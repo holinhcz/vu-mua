@@ -14,6 +14,7 @@ uniform vec4 uSub = vec4(0.,0.,1.,1.);
 uniform vec2 uUV = vec2(1.,1.);
 uniform sampler2D uBankTex : filter_linear_mipmap, repeat_disable;
 uniform sampler2D uAuxTex : filter_linear, repeat_disable;
+uniform sampler2D uBankN : filter_linear_mipmap, repeat_disable;
 uniform sampler2D uData : filter_nearest, repeat_disable;
 uniform vec3 uTop; uniform vec3 uHorC; uniform vec3 uSunC; uniform vec3 uTint; uniform vec3 uWater; uniform vec3 uCloudC; uniform vec3 uFog;
 uniform vec3 uSun; uniform vec3 uMoon;
@@ -70,14 +71,20 @@ vec3 sky(vec2 p, float disc){
 vec4 bank(vec2 p, float sway){
  vec2 uv=(p-uBank.xy)/uBank.zw;
  if(uv.x<0.||uv.x>1.||uv.y<0.||uv.y>1.)return vec4(0.);
- vec4 a=texture(uAuxTex,uv);
+ vec2 buv=clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.));
+ vec4 a=texture(uAuxTex,buv);
  if(sway>0.){float hf=clamp((uYw-p.y)/(uRes.y*.25),0.,1.);
-  uv.x+=a.g*hf*(sin(uT*1.3+uv.x*70.+uv.y*9.)*1.1+sin(uT*2.1+uv.x*170.)*.5)*(0.6+uWind)*uS/uBank.z;}
- vec4 b=texture(uBankTex,clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.)));
- vec3 col=b.rgb*uTint+vec3(1.,.72,.38)*a.r*uNight*1.7;
+  uv.x+=a.g*hf*(sin(uT*1.3+uv.x*70.+uv.y*9.)*1.1+sin(uT*2.1+uv.x*170.)*.5)*(0.6+uWind)*uS/uBank.z;
+  buv=clamp((uv-uSub.xy)/uSub.zw,vec2(0.),vec2(1.));}
+ // bờ ghép trong SubViewport: màu đã nhân alpha -> chia lại. Ảnh đêm của nông trại = ảnh ngày x(.61,.68,.82) + đèn:
+ // lấy phần đèn dư ra cộng vào ban đêm
+ vec4 b=texture(uBankTex,buv); vec4 bn=texture(uBankN,buv);
+ b.rgb/=max(b.a,1e-3); bn.rgb/=max(bn.a,1e-3);
+ vec3 lit=max(bn.rgb-b.rgb*vec3(.61,.68,.82)-.04,vec3(0.));
+ vec3 col=b.rgb*uTint+lit*uNight*1.6;
  col=mix(col,uFog,.03);
  col=mix(col,vec3(dot(col,vec3(.3,.5,.2)))*vec3(.9,.95,1.02),uRain*.35);
- return vec4(col,b.a)+vec4(vec3(1.,.66,.3)*a.r*uNight*.35,0.);
+ return vec4(col,b.a);
 }
 vec3 scene(vec2 p, float sway){
  vec3 c=sky(p,sway>0.?1.:0.); vec4 b=bank(p,sway);
@@ -320,7 +327,6 @@ func _ready() -> void:
 	mat.set_shader_parameter("uData", data_tex)
 	wmat.set_shader_parameter("uData", data_tex)
 	for m in [mat, tmat]:
-		m.set_shader_parameter("uAuxTex", A.img("bank_aux"))
 		m.set_shader_parameter("uData", data_tex)
 	scale_s = fixed_scale if fixed_scale > 0 else minf(game.K, 1.25)
 
@@ -357,58 +363,206 @@ func resize() -> void:
 	trect.size = Vector2(L.W, ywp / scale_s)
 	_bank_build()
 
-# bờ 9px: 6 mảnh 2700x2700 (+ lề 48) của ảnh 16200x2700; chỉ lấy đoạn thấy trên màn hình, thu về đúng số điểm ảnh máy
-const BT_N := 6
-const BT_W := 2700
-const BT_M := 48
-const BT_H := 2700
+# BỜ BÊN KIA = ghép ảnh 9px có sẵn của Nông trại (ui/img/cc/bo/, mỗi khung 1 file, bo.json = chỗ đứng từng món,
+# toạ độ bờ cũ 5400x900). Chỉ ghép đoạn thấy trên màn, đúng số điểm ảnh máy, 1 lần trong SubViewport
+# (ngày, đêm, mặt nạ đung đưa) rồi chép ra 3 ảnh tĩnh. Bờ đất + mép cỏ vẽ bằng code với ảnh nền n2_co / dg2_dat.
+const BO := "res://ui/img/cc/bo/"
+const SPR_SH := """
+shader_type canvas_item;
+uniform float hz = 0.; uniform vec3 haze = vec3(.74,.86,.92); uniform float aux = 0.; uniform float fol = 0.;
+void fragment(){ vec4 c=texture(TEXTURE,UV)*COLOR;
+ if(aux>.5){COLOR=vec4(0.,fol,0.,c.a);} else {COLOR=vec4(mix(c.rgb,haze,hz),c.a);} }
+"""
+var _bo := {}
+var _spr_sh: Shader
+var _mats := {}
+
+func _bo_load() -> bool:
+	if not _bo.is_empty():
+		return true
+	var t := FileAccess.get_file_as_string(BO + "bo.json")
+	var j = JSON.parse_string(t)
+	if typeof(j) != TYPE_DICTIONARY:
+		return false
+	_bo = j
+	_spr_sh = Shader.new()
+	_spr_sh.code = SPR_SH
+	return true
+
+func _mat(hz: float, fol: float, mode: int) -> ShaderMaterial:
+	var aux := 1 if mode == 2 else 0
+	var k := "%.2f_%d_%d" % [hz, int(fol), mode]
+	if not _mats.has(k):
+		var m := ShaderMaterial.new()
+		m.shader = _spr_sh
+		m.set_shader_parameter("hz", hz)
+		m.set_shader_parameter("fol", fol)
+		m.set_shader_parameter("aux", float(aux))
+		var hc := Color(.74, .86, .92) * (NIGHT if mode == 1 else Color.WHITE)
+		m.set_shader_parameter("haze", Vector3(hc.r, hc.g, hc.b))
+		_mats[k] = m
+	return _mats[k]
+
+func _bo_img(name: String) -> Image:
+	var b := FileAccess.get_file_as_bytes(BO + name + ".webp")
+	var im := Image.new()
+	if b.is_empty() or im.load_webp_from_buffer(b) != OK:
+		return null
+	im.convert(Image.FORMAT_RGBA8)
+	return im
+
+func _ground(x: float) -> float:
+	var g: Array = _bo.ground
+	var fi := (x - float(_bo.gx0)) / float(_bo.gdx)
+	var i := clampi(int(floor(fi)), 0, g.size() - 2)
+	var t := clampf(fi - i, 0.0, 1.0)
+	return lerpf(float(g[i]), float(g[i + 1]), t)
+
 func _bank_build() -> void:
 	var L: Dictionary = game.L
 	var K: float = game.K
+	if not _bo_load():
+		return
 	var c0: float = clampf(-L.bankX - 8.0, 0.0, L.bankW)
 	var c1: float = clampf(L.W - L.bankX + 8.0, 0.0, L.bankW)
-	var f: float = minf(1.0, L.bankH * K / BT_H)
-	var th := maxi(8, int(round(BT_H * f)))
-	var sx0: float = c0 / L.bankW * BT_W * BT_N
-	var sx1: float = c1 / L.bankW * BT_W * BT_N
-	var key := "%d_%d_%d" % [int(sx0), int(sx1), th]
+	var f: float = minf(9.0, L.bankH * K / 900.0)        # điểm ảnh máy / đơn vị bờ
+	var u0: float = c0 / L.bankW * 5400.0
+	var u1: float = c1 / L.bankW * 5400.0
+	var tw := maxi(8, int(ceil((u1 - u0) * f)))
+	var th := maxi(8, int(round(900.0 * f)))
+	var key := "%d_%d_%d" % [int(u0), int(u1), th]
 	if key == _bank_key:
 		return
-	var tw := maxi(8, int(ceil((sx1 - sx0) * f)))
-	var out: Image = null
-	for i in BT_N:
-		var a := maxf(sx0, i * BT_W)
-		var b := minf(sx1, (i + 1) * BT_W)
-		if b <= a:
-			continue
-		var im := Image.new()
-		var bytes := FileAccess.get_file_as_bytes(A.DIR + "bank9_%d.webp" % i)
-		if bytes.is_empty() or im.load_webp_from_buffer(bytes) != OK:
-			out = null
-			break
-		if out == null:
-			out = Image.create(tw, th, false, Image.FORMAT_RGBA8)
-		im.convert(Image.FORMAT_RGBA8)
-		var fx0 := i * BT_W - BT_M
-		im.resize(maxi(1, int(round(im.get_width() * f))), th, Image.INTERPOLATE_LANCZOS)
-		var dx := int(round((a - sx0) * f))
-		var dw := mini(tw, int(round((b - sx0) * f))) - dx
-		var sx := int(round((a - fx0) * f))
-		if dw > 0:
-			out.blit_rect(im, Rect2i(sx, 0, mini(dw, im.get_width() - sx), th), Vector2i(dx, 0))
-	var tex: Texture2D
-	if out != null:
-		out.fix_alpha_edges()
-		out.generate_mipmaps()
-		tex = ImageTexture.create_from_image(out)
-		_bank_sub = Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1)
-	else:
-		tex = A.img("bank")      # không có ảnh 9px: dùng ảnh cũ
-		_bank_sub = Vector4(0, 0, 1, 1)
 	_bank_key = key
+	_compose(key, u0, u1, f, tw, th, Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1))
+
+func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub: Vector4) -> void:
+	var items: Dictionary = _bo.items
+	var hzs: Array = _bo.hz
+	# món nào thấy được + cần thu nhỏ bao nhiêu
+	var need := {}
+	var vis := []
+	for p in _bo.place:
+		if p[1] == "#bo":
+			vis.append(p)
+			continue
+		var it: Dictionary = items[p[1]]
+		var sc: float = absf(float(p[4]))
+		var x: float = p[2]
+		if x + it.w * sc < u0 - 20 or x - it.w * sc > u1 + 20:
+			continue
+		vis.append(p)
+		need[p[1]] = maxf(need.get(p[1], 0.0), sc * f)
+	var tex := [{}, {}]      # [ngày, đêm] tên -> [Texture2D, tỉ lệ đã thu]
+	for nm in need:
+		var r: float = minf(1.0, need[nm] * 1.15)
+		for m in 2:
+			var im := _bo_img(nm + ("_d" if m == 0 else "_n"))
+			if im == null:
+				continue
+			if r < 0.92:
+				im.resize(maxi(1, int(round(im.get_width() * r))), maxi(1, int(round(im.get_height() * r))), Image.INTERPOLATE_LANCZOS)
+			im.generate_mipmaps()
+			tex[m][nm] = [ImageTexture.create_from_image(im), float(im.get_width()) / float(items[nm].w)]
+	var grass := _bo_img("n2_co")
+	var dirt := _bo_img("dg2_dat")
+	var tg: Texture2D = null
+	var td: Texture2D = null
+	if grass:
+		grass.generate_mipmaps(); tg = ImageTexture.create_from_image(grass)
+	if dirt:
+		dirt.generate_mipmaps(); td = ImageTexture.create_from_image(dirt)
+	var vps := []
+	for mode in 3:          # 0 ngày, 1 đêm, 2 mặt nạ đung đưa
+		var v := SubViewport.new()
+		v.size = Vector2i(tw, th)
+		v.transparent_bg = true
+		v.disable_3d = true
+		v.render_target_update_mode = SubViewport.UPDATE_ONCE
+		add_child(v)
+		var root := Node2D.new()
+		root.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		root.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		v.add_child(root)
+		_fill(root, mode, vis, tex[mini(mode, 1) if mode < 2 else 0], hzs, u0, u1, f, tg, td)
+		vps.append(v)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	if key != _bank_key:
+		for v in vps: v.queue_free()
+		return
+	var out := []
+	for v in vps:
+		var im: Image = v.get_texture().get_image()
+		im.generate_mipmaps()
+		out.append(ImageTexture.create_from_image(im))
+		v.queue_free()
 	for m in [mat, tmat]:
-		m.set_shader_parameter("uBankTex", tex)
-		m.set_shader_parameter("uSub", _bank_sub)
+		m.set_shader_parameter("uBankTex", out[0])
+		m.set_shader_parameter("uBankN", out[1])
+		m.set_shader_parameter("uAuxTex", out[2])
+		m.set_shader_parameter("uSub", sub)
+
+const NIGHT := Color(.61, .68, .82)
+func _fill(root: Node2D, mode: int, vis: Array, tx: Dictionary, hzs: Array, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
+	var items: Dictionary = _bo.items
+	var nc := NIGHT if mode == 1 else Color.WHITE
+	# hàng cây xa (lớp 0): đa giác tô dọc
+	var far := Polygon2D.new()
+	var pts := PackedVector2Array(); var cols := PackedColorArray()
+	for q in _bo.far:
+		pts.append(Vector2((float(q[0]) - u0) * f, float(q[1]) * f))
+		var t := clampf((float(q[1]) - (872.0 - 190.0)) / 150.0, 0.0, 1.0)
+		cols.append(Color("#8cc86a").lerp(Color("#4e8a4a"), t) * nc)
+	far.polygon = pts
+	far.vertex_colors = cols
+	far.material = _mat(float(hzs[0]), 1.0, mode)
+	root.add_child(far)
+	for p in vis:
+		var Lr: int = int(p[0])
+		if p[1] == "#bo":
+			var bo := Node2D.new()
+			bo.material = _mat(0.0, 0.0, mode)
+			bo.draw.connect(_draw_bo.bind(bo, mode, u0, u1, f, tg, td))
+			root.add_child(bo)
+			continue
+		if not tx.has(p[1]):
+			continue
+		var it: Dictionary = items[p[1]]
+		var tr: Array = tx[p[1]]
+		var r: float = tr[1]
+		var s := Sprite2D.new()
+		s.texture = tr[0]
+		s.centered = false
+		s.offset = Vector2(-float(it.ax) * r, -float(it.ay) * r)
+		s.position = Vector2((float(p[2]) - u0) * f, float(p[3]) * f)
+		var sc: float = absf(float(p[4])) * f / r
+		s.scale = Vector2(-sc if float(p[4]) < 0 else sc, sc)
+		s.material = _mat(float(hzs[Lr]), float(p[5]), mode)
+		root.add_child(s)
+
+func _draw_bo(n: Node2D, mode: int, u0: float, u1: float, f: float, tg: Texture2D, td: Texture2D) -> void:
+	var nc := NIGHT if mode == 1 else Color.WHITE
+	var WL := 872.0
+	var x := floorf((u0 - 40.0) / 10.0) * 10.0
+	while x < u1 + 40.0:
+		var x2 := x + 10.0
+		var g1 := _ground(x); var g2 := _ground(x2)
+		var X1 := (x - u0) * f; var X2 := (x2 - u0) * f
+		# vách đất: sáng trên, tối dần xuống mép nước
+		for band in [[g1, g2, WL - 16.0, Color(1.0, .94, .86), Color(.80, .68, .56)], [WL - 16.0, WL - 16.0, WL + 6.0, Color(.80, .68, .56), Color(.42, .33, .26)]]:
+			var ya1: float = band[0]; var ya2: float = band[1]; var yb: float = band[2]
+			var ca: Color = band[3]; var cb: Color = band[4]
+			var P := PackedVector2Array([Vector2(X1, ya1 * f), Vector2(X2, ya2 * f), Vector2(X2, yb * f), Vector2(X1, yb * f)])
+			var UV := PackedVector2Array([Vector2(x / 420.0, ya1 / 420.0), Vector2(x2 / 420.0, ya2 / 420.0), Vector2(x2 / 420.0, yb / 420.0), Vector2(x / 420.0, yb / 420.0)])
+			n.draw_polygon(P, PackedColorArray([ca * nc, ca * nc, cb * nc, cb * nc]), UV, td)
+		# mép cỏ: dải cỏ phủ lên đầu vách, sáng ở trên
+		var e1 := g1 + 12.0 + 3.0 * sin(x / 37.0); var e2 := g2 + 12.0 + 3.0 * sin(x2 / 37.0)
+		var Pg := PackedVector2Array([Vector2(X1, (g1 - 3.0) * f), Vector2(X2, (g2 - 3.0) * f), Vector2(X2, e2 * f), Vector2(X1, e1 * f)])
+		var UVg := PackedVector2Array([Vector2(x / 300.0, g1 / 300.0), Vector2(x2 / 300.0, g2 / 300.0), Vector2(x2 / 300.0, e2 / 300.0), Vector2(x / 300.0, e1 / 300.0)])
+		var ct := Color(1.35, 1.4, 1.1) * nc; var cbt := Color(.8, .85, .7) * nc
+		n.draw_polygon(Pg, PackedColorArray([ct, ct, cbt, cbt]), UVg, tg)
+		x = x2
 
 # đo khung hình: chậm quá thì hạ độ phân giải mặt nước (như web: sau 120 khung, trung bình > 26 ms)
 func perf(dt: float) -> void:
