@@ -4,14 +4,15 @@ extends Node2D
 # Toạ độ trong node này là css (điểm giao diện); ảnh 9 điểm ảnh / css.
 
 const D := "res://ui/img/caro/nen/"
-const PXU := 9.0
+const PXU := 6.0     # Link 11-23: cảnh hạ 9px -> 6px (máy nét nhất chỉ cần ~4); số đo điểm ảnh gốc 9px nhân PX9
+const PX9 := PXU / 9.0
 const WIND := preload("res://logic/caro/wind9.gdshader")
 const SHAD := preload("res://logic/caro/shadow9.gdshader")
 static var _tex := {}
 static var _noise: Texture2D = null
 # Q = số điểm ảnh/css nạp vào GPU. File gốc vẫn 9px; màn hình chỉ hiện ~dpr điểm/css nên nạp Q = ceil(điểm màn/css cảnh) (tối đa 9)
 # để không tràn bộ nhớ đồ hoạ (9px nguyên = ~756 MB). Kích thước báo về vẫn là 9px (size_override) nên toạ độ không đổi.
-static var Q := 9.0
+static var Q := PXU
 static var Q_fixed := false
 static var _qr := {}     # texture -> tỉ lệ ảnh thật / 9px (để mức mờ mipmap của bóng đúng)
 var LJ: Dictionary
@@ -111,7 +112,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	# BỐ CỤC CẢNH = 1 KHỐI co giãn cùng tấm phản (Link): bản thiết kế (ngang 1920x920, dọc 412x891) đặt mọi món
 	# quanh tấm phản; trên màn thật cả khối được co theo đúng tỉ lệ tấm phản (u) và neo vào tấm phản.
 	if _tex.is_empty() and not Q_fixed:
-		Q = clampf(ceilf(scale.x), 2.0, 9.0)   # = điểm ảnh màn / css cảnh
+		Q = clampf(ceilf(scale.x), 2.0, PXU)   # = điểm ảnh màn / css cảnh
 	var f: Rect2 = L.face
 	var bimg: Rect2 = L.bimg
 	var dB: Vector2; var dF: float
@@ -241,7 +242,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			bc = Vector3(-99999, -99999, 0.01)
 			if short_banana.size.x > 0:
 				var bp: Vector2 = P.call(short_banana.position.x, short_banana.position.y)
-				bc = Vector3(bp.x, bp.y, short_banana.size.x / (3934.0 / PXU) * u)   # 3934 = bề ngang lá chuối thật trong ảnh
+				bc = Vector3(bp.x, bp.y, short_banana.size.x / (3934.0 * PX9 / PXU) * u)   # 3934 = bề ngang lá chuối thật trong ảnh
 		var rg := RandomNumberGenerator.new(); rg.seed = 5
 		var tries := 0
 		while gl.size() < 10 and tries < 300:
@@ -433,7 +434,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		# bụi tre: không lá nào chạm khung phản (đẩy ra phía mép màn gần nhất)
 		# ảnh tre chỉ giữ nửa trái bụi: tâm gốc = (cao/2, cao/2) điểm ảnh
 		# ảnh tre đã cắt vừa đủ phần có thể hiện trên màn (9px): tâm gốc bụi nằm ở (2973, 2610) điểm ảnh của ảnh
-		var tt := tex("tre"); var tur := _used("tre"); var tcp := Vector2(2973, 2610)
+		var tt := tex("tre"); var tur := _used("tre"); var tcp := Vector2(2973, 2610) * PX9
 		var trr := Rect2(Vector2(tc.x, tc.y) + (tur.position - tcp / PXU) * tc.z, tur.size * tc.z)
 		var fz: Rect2 = fr.grow(-3)
 		if trr.intersects(fz):
@@ -445,9 +446,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			tc.x += best.x; tc.y += best.y
 		var t0p := Vector2(tc.x, tc.y) - tcp / PXU * tc.z
 		var tsh := _spr(self, tt, t0p + Vector2(30, 40) * tc.z, false, 0.0, tc.z)
-		tsh.material = _wmat(tt, tcp, 3420.0, 0.0, 2.0 * PXU, 0.05, 2.3, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
+		tsh.material = _wmat(tt, tcp, 3420.0 * PX9, 0.0, 2.0 * PXU, 0.05, 2.3, 0.0, 0.0, 0.45, log(6.0 * PXU) / log(2.0))
 		var tn := _spr(self, tt, t0p, false, 0.0, tc.z)
-		tn.material = _wmat(tt, tcp, 3420.0, 0.0, 1.6 * PXU, 0.05, 2.3, 0.06, 0.0, 0.0, 0.0)
+		tn.material = _wmat(tt, tcp, 3420.0 * PX9, 0.0, 1.6 * PXU, 0.05, 2.3, 0.06, 0.0, 0.0, 0.0)
 	for i in 4:
 		var w: Array = LJ.mango_wins[i]
 		var s := _spr(croot, xt[i], Vector2(w[0], w[1]), false)
