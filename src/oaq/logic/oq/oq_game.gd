@@ -137,6 +137,24 @@ func lg(sh := Vector2.ZERO) -> Transform2D:
 		return Transform2D(Vector2(0, s), Vector2(-s, 0), Vector2(L.ox + 2 * s, L.oy + QW * s) + sh)
 	return Transform2D(Vector2(s, 0), Vector2(0, s), Vector2(L.ox + QW * s, L.oy) + sh)
 
+# vùng cấm của bàn theo đúng hình (giữa chữ nhật + 2 đầu bầu dục cắt lát), pad tính theo ô: lá xoài được phủ góc sân trống cạnh đầu quan
+func board_bans(pad: float) -> Array:
+	var out := []
+	var rc := func(u0: float, v0: float, u1: float, v1: float) -> Rect2:
+		var a := map(u0, v0)
+		var b := map(u1, v1)
+		return Rect2(minf(a.x, b.x), minf(a.y, b.y), absf(b.x - a.x), absf(b.y - a.y))
+	out.append(rc.call(0.0, -pad, 5.0, 2 + pad))
+	var n := 6
+	for k in n:
+		var t0 := float(k) / n
+		var t1 := float(k + 1) / n
+		var h := sqrt(maxf(0.0, 1 - t0 * t0)) + pad      # nửa cao lát (lấy mép trong, to hơn)
+		var w1 := t1 * QW + (pad if k == n - 1 else 0.0)
+		out.append(rc.call(-w1, 1 - h, -t0 * QW, 1 + h))
+		out.append(rc.call(5 + t0 * QW, 1 - h, 5 + w1, 1 + h))
+	return out
+
 func board_rect(pad: float) -> Rect2:
 	var a := map(-QW, 0)
 	var b := map(5 + QW, 2)
@@ -166,17 +184,37 @@ func _layout() -> void:
 	L.cards = [c0, c1]
 	L.tools = hud.tools_rect()
 	var ch := maxf(maxf(c0.size.y, c1.size.y), 44.0)
+	# Link 11-22 "nhỏ lại chút tán ló ra to hơn": bàn thu nhỏ từng nấc (tối đa 15%) tới khi lá xoài thấy được đủ nhiều
+	var vis := Rect2(0, (L.tools as Rect2).end.y, W, H - (L.tools as Rect2).end.y)
+	var want := W * H * 0.07
+	var best_f := 1.0
+	var best_a := -1.0
+	for f in [1.0, 0.95, 0.9, 0.85, 0.8]:
+		var a := _place(f, W, H, c0, c1, ch, vis)
+		if a > best_a * 1.15:
+			best_a = a
+			best_f = f
+		if a >= want:
+			break
+	_place(best_f, W, H, c0, c1, ch, vis)
+	L.tan = TAN.rects(L.tan_sc, 2, L.tan_sh)
+	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
+	_resize_shade()
+	_bake_bg()
+
+# đặt bàn (cỡ nhân f) + 2 rổ + chỗ tán; trả về diện tích lá xoài thấy được
+func _place(f: float, W: float, H: float, c0: Rect2, c1: Rect2, ch: float, vis: Rect2) -> float:
 	# rổ của mỗi bên nằm ngay cạnh thẻ người đó
 	if not L.port:
 		# chừa một vòng sân quanh bàn cho gà, lu, nón vừa cỡ thật
-		L.s = minf(minf((W - 24) / (7.9 if W > 1000 else 7.3), (H - 2 * (ch + 14)) / 2.6), 195.0)
+		L.s = minf(minf((W - 24) / (7.9 if W > 1000 else 7.3), (H - 2 * (ch + 14)) / 2.6), 195.0) * f
 		L.ox = (W - BW * L.s) / 2
 		L.oy = (H - 2 * L.s) / 2
 		var room: float = L.oy - 10
 		var br := maxf(24.0, minf(minf(room / 2, L.s * 0.52), 105.0))
 		L.bx = [Vector3(c0.end.x + 14 + br, minf(H - 8 - br, c0.position.y + c0.size.y / 2), br), Vector3(c1.position.x - 14 - br, maxf(8 + br, c1.position.y + c1.size.y / 2), br)]
 	else:
-		L.s = minf(minf((W - 2 * maxf(62.0, W * 0.16)) / 2, (H - 2 * (ch + 16)) / (BW + 0.05)), 215.0)
+		L.s = minf(minf((W - 2 * maxf(62.0, W * 0.16)) / 2, (H - 2 * (ch + 16)) / (BW + 0.05)), 215.0) * f
 		L.ox = (W - 2 * L.s) / 2
 		L.oy = (H - BW * L.s) / 2
 		var m: float = L.ox
@@ -186,18 +224,15 @@ func _layout() -> void:
 	for b in L.bx:
 		var u := unmap(b.x, b.y)
 		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
-	# Link 11-22 tán xoài caro bên trái (như cờ gánh): to nhất mà lá không chạm bàn, rổ, thẻ mình
-	var ban := [board_rect(L.s * 0.12)]
+	# tán xoài caro bên trái (như cờ gánh): to nhất mà lá không chạm bàn, rổ, thẻ mình
+	var ban := board_bans(0.12)
 	for b in L.bx:
 		ban.append(Rect2(b.x - b.z - 6, b.y - b.z - 6, 2 * b.z + 12, 2 * b.z + 12))
-	ban.append((c0 as Rect2).grow(4))
-	var tch := TAN.choices_in(ban, Rect2(0, (L.tools as Rect2).end.y, W, H - (L.tools as Rect2).end.y))
+	ban.append(c0.grow(4))
+	var tch := TAN.choices_in(ban, vis)
 	L.tan_sc = tch[0].sc if tch.size() else 0.3
 	L.tan_sh = tch[0].sh if tch.size() else Vector2(-400, -400)
-	L.tan = TAN.rects(L.tan_sc, 2, L.tan_sh)
-	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
-	_resize_shade()
-	_bake_bg()
+	return tch[0].a / (1.0 + 0.15 * tch[0].sc) if tch.size() else 0.0
 
 func _bake_bg() -> void:
 	# nền tĩnh: vẽ một lần trong SubViewport, chụp ra ảnh
