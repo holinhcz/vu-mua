@@ -281,7 +281,7 @@ func fx_draw(ci: CanvasItem, tod: Dictionary) -> void:
 				ci.draw_rect(Rect2(c.x - r * .3, c.y - r * .5, maxf(1, r * .4), maxf(1, r * .3)), Color(1, 1, 1, .5 * (1 - t)))
 			"foam":
 				var r: float = (10 + t * 18) * k * p.s
-				A.ell(ci, s, r, r * .22, Color(lit, .25 * (1 - t)))
+				A.ell(ci, s, r, r * .22, Color(lit, .14 * (1 - t)))
 
 # cá cong mình quẫy: cắt dọc 14 dải, đuôi lắc nhiều nhất (đầu bên phải). clip_y: chỉ vẽ phần trên đường đó (toạ độ khung)
 func draw_bent(ci: CanvasItem, t: Texture2D, w: float, hh: float, ph: float, amp: float, mod := Color.WHITE, clip_y := INF) -> void:
@@ -439,12 +439,12 @@ func draw_surfacing(ci: CanvasItem, fx: float, fy: float, tod: Dictionary) -> vo
 	var fc := Color.WHITE.lerp(tod.tint, .3)
 	var e1 := A.ell_pts(Vector2(cx, wy), w * .55, w * .07, 24)
 	e1.append(e1[0])
-	ci.draw_polyline(e1, Color(fc, .7 * h.surf), maxf(1, w * .02), true)
+	ci.draw_polyline(e1, Color(fc, .35 * h.surf), maxf(1, w * .02), true)
 	var e2 := A.ell_pts(Vector2(cx - dir * w * .2, wy + 1), w * .8, w * .1, 24)
 	e2.append(e2[0])
-	ci.draw_polyline(e2, Color(fc, .35 * h.surf), maxf(1, w * .02), true)
-	if randf() < G.dt * 8 * h.surf:
-		game.ripple(G.fl.x - dir * .3, G.fl.z, .35)
+	ci.draw_polyline(e2, Color(fc, .14 * h.surf), maxf(1, w * .02), true)
+	if randf() < G.dt * 2.5 * h.surf:   # Link 11-22: bọt ít lại (8 -> 2.5 lần/giây)
+		game.ripple(G.fl.x - dir * .3, G.fl.z, .2)
 		game.fx_splash(G.fl.x - dir * .2, G.fl.z, .25)
 
 func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
@@ -481,7 +481,7 @@ func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
 		draw_line_q(ci, tip, f, sag, tod, .75)
 		var k: float = L.F / G.fl.z / 60
 		var d := -1.0 if G.hook.vx >= 0 else 1.0
-		ci.draw_polyline(PackedVector2Array([Vector2(f.x + d * 18 * k, f.y - 3 * k), f, Vector2(f.x + d * 18 * k, f.y + 3 * k)]), Color(Color.WHITE.lerp(tod.tint, .4), .5), 1.2, true)
+		ci.draw_polyline(PackedVector2Array([Vector2(f.x + d * 18 * k, f.y - 3 * k), f, Vector2(f.x + d * 18 * k, f.y + 3 * k)]), Color(Color.WHITE.lerp(tod.tint, .4), .25), 1.2, true)
 		return
 	var b: Vector2 = game.float_base()
 	var h: float = game.float_h(G.fl.z)

@@ -822,10 +822,11 @@ func fight_update(dt: float) -> void:
 	G.fl.z = z
 	h.wk -= dt
 	if h.wk < 0 and h.beh != "jump":
-		h.wk = .12 if h.beh == "run" else .28
-		ripple(h.x, z, .7 if h.beh == "run" else .4)
-		fx_wake(h.x, z, h.size)
-		if h.beh == "run" and randf() < .35:
+		# Link 11-22 "bọt loang lúc kéo ít lại": thưa hơn ~3 lần, gợn nhẹ hơn, ít bắn nước
+		h.wk = .38 if h.beh == "run" else .75
+		ripple(h.x, z, .35 if h.beh == "run" else .2)
+		fx_wake(h.x, z, h.size * .7)
+		if h.beh == "run" and randf() < .12:
 			fx_splash(h.x, z, .35 * h.size)
 			snd.plop(.7, .4)
 	if hold:

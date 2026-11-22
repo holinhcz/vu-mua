@@ -240,7 +240,7 @@ void fragment(){
  if(uMoon.z>0.){vec3 md=normalize(vec3((uMoon.x-uRes.x*.5)/uF*7.,(uHor-uMoon.y)/uF*7.,1.));
   float mq=max(dot(normalize(r*vec3(2.5,1.,1.)),md),0.);
   col+=vec3(.85,.9,1.)*(smoothstep(.994,.999,mq)*.9+pow(mq,40.)*.08)*uMoon.z*(1.-uRain);}
- col=mix(col,vec3(1.),clamp(ringW,0.,1.)*.85);
+ col=mix(col,vec3(1.),clamp(ringW,0.,1.)*.6);
  if(uFlt.w>0.){float d=length((w-uFlt.xy)*vec2(1.,.6)); col+=vec3(1.,.75,.35)*exp(-d*9.)*uFlt.w*.5;}
  // mép nước bờ xa: vệt sáng vỗ bờ + tối dưới chân bờ, sương xa
  float e0=(p.y-uYw)/uRes.y;

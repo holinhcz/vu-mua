@@ -118,18 +118,19 @@ func splash(x: float, z: float, sz := 1.0) -> void:
 	d.scale_amount_max = .17 * k * 2.2 * rs
 	d.emission_sphere_radius = .04 * u
 	d.color_ramp = _ramp(.92)
-	var m := _emitter(p, t_soft, 5, .9, 0)
-	m.direction = Vector2(0, -1)
-	m.spread = 40
-	m.initial_velocity_min = .15 * u * rs
-	m.initial_velocity_max = .35 * u * rs
-	m.gravity = Vector2.ZERO
-	m.damping_min = .2 * u
-	m.damping_max = .3 * u
-	m.scale_amount_min = .4 * k * 2.2 * rs
-	m.scale_amount_max = .65 * k * 2.2 * rs
-	m.emission_sphere_radius = .1 * u
-	m.color_ramp = _ramp(.32)
+	if sz >= .6:   # tia nhỏ (cá quẫy lúc kéo) không có hơi nước
+		var m := _emitter(p, t_soft, 5, .9, 0)
+		m.direction = Vector2(0, -1)
+		m.spread = 40
+		m.initial_velocity_min = .15 * u * rs
+		m.initial_velocity_max = .35 * u * rs
+		m.gravity = Vector2.ZERO
+		m.damping_min = .2 * u
+		m.damping_max = .3 * u
+		m.scale_amount_min = .4 * k * 2.2 * rs
+		m.scale_amount_max = .65 * k * 2.2 * rs
+		m.emission_sphere_radius = .1 * u
+		m.color_ramp = _ramp(.32)
 	# giọt rơi lại làm gợn nhỏ (thay cho giọt vẽ tay của web)
 	if sz > .5:
 		for i in 3:
