@@ -12,6 +12,9 @@ func _dpr() -> float:
 		return maxf(1.0, float(v)) if v != null else 1.0
 	return maxf(1.0, DisplayServer.screen_get_scale())
 func _ready() -> void:
+	# (Link 11-22 "fps còn 80 giựt"): màn 120Hz mà máy chỉ ra ~80 khung thì khung dài khung ngắn xen kẽ = giựt.
+	# Khoá 60 khung/giây: mỗi khung đúng 2 lần quét màn, chạy đều, còn dư sức (máy đang làm được 80).
+	Engine.max_fps = 60
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_open()
 	_meter_make()
