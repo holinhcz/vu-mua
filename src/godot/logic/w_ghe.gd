@@ -53,8 +53,8 @@ func ben_ok(t: Dictionary) -> bool:   # $M: bến có ô trên mé sông đã mu
 				return true
 	return false
 
-func mg() -> Array:   # mg: bến ghe dùng được (more "ben" = ben3, ben4)
-	return WR._hrl().filter(func(p): return (p.id == "ben3" or p.id == "ben4") and ben_ok(p))
+func mg() -> Array:   # mg: bến ghe dùng được (có ô trên mé sông Vàm), hướng xoay nào cũng được
+	return WR._hrl().filter(func(p): return String(p.id) in ["ben", "ben2", "ben3", "ben4"] and ben_ok(p))   # (bản 512) đủ 4 hướng xoay (trước chỉ nhận ben3 / ben4: bến xoay 2 hướng kia ghe không ghé)
 
 func fm() -> float:   # fm: giây tới lần ghé kế
 	var t: int = WC.O0()
