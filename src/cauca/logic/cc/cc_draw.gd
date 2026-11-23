@@ -521,9 +521,6 @@ func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
 		draw_surfacing(ci, f.x, f.y, tod)
 		var sag := maxf(0, 1 - G.ten * 1.4) * 40
 		draw_line_q(ci, tip, f, sag, tod, .75)
-		var k: float = L.F / G.fl.z / 60
-		var d := -1.0 if G.hook.vx >= 0 else 1.0
-		ci.draw_polyline(PackedVector2Array([Vector2(f.x + d * 18 * k, f.y - 3 * k), f, Vector2(f.x + d * 18 * k, f.y + 3 * k)]), Color(Color.WHITE.lerp(tod.tint, .4), .25), 1.2, true)
 		return
 	var b: Vector2 = game.float_base()
 	var h: float = game.float_h(G.fl.z)
