@@ -29,6 +29,8 @@ static var _ur := {}
 static func _used(n: String) -> Rect2:
 	# vùng có lá thật của ảnh (css thiết kế)
 	if not _ur.has(n):
+		tex(n)
+	if not _ur.has(n):
 		var t := tex(n); var im := t.get_image()
 		var r := im.get_used_rect(); var k := float(t.get_width()) / float(im.get_width()) / PXU
 		_ur[n] = Rect2(Vector2(r.position) * k, Vector2(r.size) * k)
@@ -44,6 +46,18 @@ static func tex(n: String) -> Texture2D:
 	im.load_webp_from_buffer(FileAccess.get_file_as_bytes(D + n + ".webp"))
 	im.convert(Image.FORMAT_RGBA8)
 	var full := im.get_size()
+	# Link 11-23: ảnh có nhiều khoảng trong suốt (xoài, chuối, gà) -> chỉ nạp phần có hình (+ lề trống cho gió lắc / bóng mờ),
+	# trả về AtlasTexture có margin nên ngoài nhìn vẫn đúng cỡ ảnh cũ; điểm ảnh phần có hình giữ nguyên
+	var off := Vector2i.ZERO
+	if n in CROP:
+		var ur := im.get_used_rect()
+		_ur[n] = Rect2(Vector2(ur.position) / PXU, Vector2(ur.size) / PXU)
+		var pad := int(16 * PXU)
+		var cr := Rect2i(ur.position - Vector2i(pad, pad), ur.size + Vector2i(pad, pad) * 2).intersection(Rect2i(Vector2i.ZERO, full))
+		if cr.size.x * cr.size.y < full.x * full.y * 0.9:
+			im = im.get_region(cr); off = cr.position
+	var whole := full
+	full = im.get_size()
 	var q := minf(Q / PXU, 8192.0 / maxf(full.x, full.y))
 	if q < 0.999:
 		# thu nhỏ bằng gộp 2x2 (không gợn viền như Lanczos, viền trong suốt giữ sạch), rồi chỉnh đúng cỡ
@@ -56,8 +70,21 @@ static func tex(n: String) -> Texture2D:
 	if q < 0.999:
 		t.set_size_override(full)
 	_qr[t] = minf(q, 1.0)
+	if off != Vector2i.ZERO or full != whole:
+		var at := AtlasTexture.new(); at.atlas = t; at.region = Rect2(Vector2.ZERO, Vector2(full))
+		at.margin = Rect2(Vector2(off), Vector2(whole - full)); at.filter_clip = true
+		_qr[at] = _qr[t]
+		_tex[n] = at
+		return at
 	_tex[n] = t
 	return t
+
+const CROP := ["chuoi", "ga", "xoai0", "xoai1", "xoai2", "xoai3"]
+# ảnh thật đưa vào shader + độ dời gốc (px ảnh cũ) cho ảnh đã cắt lề trống
+static func _base(t: Texture2D) -> Texture2D:
+	return (t as AtlasTexture).atlas if t is AtlasTexture else t
+static func _boff(t: Texture2D) -> Vector2:
+	return (t as AtlasTexture).margin.position if t is AtlasTexture else Vector2.ZERO
 
 static func noise_tex() -> Texture2D:
 	if _noise != null:
@@ -86,12 +113,12 @@ func _spr(parent: Node, t: Texture2D, pos: Vector2, centered := true, rot := 0.0
 func _shadow(parent: Node, t: Texture2D, pos: Vector2, off: Vector2, blur: float, a: float, rot := 0.0, sc := 1.0) -> Sprite2D:
 	var s := _spr(parent, t, pos + off * sc, true, rot, sc)
 	var m := ShaderMaterial.new(); m.shader = SHAD
-	m.set_shader_parameter("tex", t); m.set_shader_parameter("lod", _lod(t, log(maxf(1.0, blur * PXU)) / log(2.0))); m.set_shader_parameter("alpha", a)
+	m.set_shader_parameter("tex", _base(t)); m.set_shader_parameter("lod", _lod(t, log(maxf(1.0, blur * PXU)) / log(2.0))); m.set_shader_parameter("alpha", a)
 	s.material = m; return s
 
 func _wmat(t: Texture2D, pivot: Vector2, reach: float, amp: float, flutter: float, bend: float, phase: float, glint: float, fleck: float, shadow: float, lod: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new(); m.shader = WIND
-	var p := {"noise": noise_tex(), "tex": t, "tex_size": t.get_size(), "pivot": pivot, "reach": reach, "amp": amp, "flutter": flutter,
+	var p := {"noise": noise_tex(), "tex": _base(t), "tex_size": _base(t).get_size(), "pivot": pivot - _boff(t), "reach": reach, "amp": amp, "flutter": flutter,
 		"bend": bend, "phase": phase, "glint": glint, "fleck": fleck, "shadow": shadow, "lod": _lod(t, lod), "px_scale": PXU}
 	for k in p: m.set_shader_parameter(k, p[k])
 	return m
