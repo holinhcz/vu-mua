@@ -462,6 +462,7 @@ func _op_prep(names: Array) -> void:
 	if q.is_empty():
 		return
 	var base := _op_base()
+	print("QK op0 ", base, " ", q.size())
 	var got := {}
 	var live := [0]
 	var i := 0
@@ -471,6 +472,7 @@ func _op_prep(names: Array) -> void:
 			i += 1
 			live[0] += 1
 			var h := HTTPRequest.new()
+			h.download_chunk_size = 1 << 20
 			add_child(h)
 			h.request_completed.connect(func(res, code, _hd, body: PackedByteArray):
 				live[0] -= 1
@@ -484,6 +486,7 @@ func _op_prep(names: Array) -> void:
 	for nm in q:
 		if not (got[nm] as PackedByteArray).is_empty():
 			_opim[nm] = got[nm]
+	print("QK op ", base, " ", q.size(), " ", _opim.size(), " ", q[0])
 
 func _op_img(nm: String) -> Image:
 	var im := Image.new()
@@ -523,6 +526,7 @@ func _bank_build() -> void:
 	var key := "%d_%d_%d" % [int(u0), int(u1), th]
 	if key == _bank_key:
 		return
+	print("QK build ", key)
 	_bank_key = key
 	var sub := Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1)
 	if _bank_cached(key, sub):
@@ -609,6 +613,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			imgs[m][ck] = im
 		p.resize(6)
 		p.append(ck)
+	print("QK mid ", mid[0].size(), " need ", need.size())
 	var grass := _bo_img("n2_co")
 	var dirt := _bo_img("dg2_dat")
 	var tg: Texture2D = null
@@ -743,6 +748,7 @@ func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> 
 		var tl := Vector2(round(float(p[2]) * f - ax), round(float(p[3]) * f - ay))
 		var foot := tl + Vector2(round(ax), round(ay))
 		mk.call(p[6], tl, foot, float(p[5]) > 0.5)
+	print("QK done")
 	_live_apply(atl[0], atl[1], spr)
 	return [atl[0], atl[1], spr]
 
