@@ -220,6 +220,8 @@ func _test_hook() -> void:
 			"gptree": _gptree()
 			"ctdump": _ctdump()
 			"hdnx": var WH9 = G.w_all.WH; if a[1] == "open": WH9.hdn_open_hoi()
+			"hdng": var cu8 = G.w_all.WH.hdn_s().get("cur"); if cu8 is Dictionary: cu8.g = {"de": {"rd": 2, "st": "xong", "rank": 1}, "do": {"rd": 0, "st": "xong", "rank": 0}}; G.mark()   # thử: đá dế nhất, đố vui trượt
+			"hdnend": var cu7 = G.w_all.WH.hdn_s().get("cur"); if cu7 is Dictionary: G.w_all.WH._hdn_end0(cu7); G.mark()   # thử: hội xong, ghi sổ
 			"hdnt": var cu9 = G.w_all.WH.hdn_s().get("cur"); if cu9 is Dictionary: cu9.d = G.w_all.WH._vr(); G.w_all.WH.hdn_start(cu9); G.mark()   # thử: hội diễn ra hôm nay
 			"hdn": ui.hdn_open(a[1] if a.size() > 1 else "")   # (bản 501) thử Hội đình: hdn[:tab]
 			"slall": var T6: Dictionary = G.w_all.WCA.tc(); for i6 in G.w_all.WCA.book_ct(): T6.obj[i6] = 1   # (bản 498) thử: coi như đã có mọi công trình

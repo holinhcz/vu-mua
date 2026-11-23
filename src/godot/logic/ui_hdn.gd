@@ -13,8 +13,8 @@ const TABS := [["mo", "Mở hội"], ["giai", "Giải thi"], ["so", "Sổ hội"
 const DINH := "svg:res://ui/svg/mat/dinh_lang.svg"
 const CONG := "svg:res://ui/svg/mat/cong_lang.svg"
 const FLAG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M5 2v20\" stroke=\"rgb(110,80,40)\" stroke-width=\"2\"/><path d=\"M6 3h13l-3 4 3 4H6z\" fill=\"rgb(226,64,60)\"/><path d=\"M6 3h13l-1.5 2H6z\" fill=\"rgb(250,200,40)\"/><path d=\"M6 7.5h12.6l-1 1.5H6z\" fill=\"rgb(60,150,70)\"/></svg>"
-const CRICKET := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M9 7C7 4 5 3 2 3M11 7c1-3 3-5 6-5\" stroke=\"rgb(90,60,30)\" stroke-width=\"1.2\" fill=\"none\"/><ellipse cx=\"10\" cy=\"9\" rx=\"3\" ry=\"2.6\" fill=\"rgb(110,70,30)\"/><path d=\"M8 11c2-1 8-1 11 3 1 2 0 4-3 4-4 0-8-2-9-5z\" fill=\"rgb(150,96,40)\" stroke=\"rgb(90,60,30)\" stroke-width=\"0.8\"/><path d=\"M11 15l-4 6M14 16l-1 6M17 17l4 4\" stroke=\"rgb(90,60,30)\" stroke-width=\"1.4\"/></svg>"
-const QUIZ := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" fill=\"rgb(70,130,200)\" stroke=\"rgb(40,90,150)\" stroke-width=\"1\"/><text x=\"12\" y=\"14.5\" font-size=\"11\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#fff\" font-family=\"sans-serif\">?</text></svg>"
+const CRICKET := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><path d=\"M11 9C9 5 6 3 2 2M13 8c0-4 3-6 7-7\" stroke=\"#3b2410\" stroke-width=\"1.1\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M14 20l-5 9M17 21l-1 9M20 21l6 8\" stroke=\"#4a2e12\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M19 19c4-1 9 1 11 6\" stroke=\"#4a2e12\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M9 14c3-3 11-3 17 1 3 2 3 5 0 6-6 2-13 1-16-2z\" fill=\"#5a3412\"/><path d=\"M12 13.5c4-2 10-1.5 14 1.5-4-0.5-9-0.5-14 1.5z\" fill=\"#8a5422\"/><ellipse cx=\"11\" cy=\"12\" rx=\"4\" ry=\"3.6\" fill=\"#3f220c\"/><circle cx=\"10\" cy=\"11\" r=\"1\" fill=\"#f2d9a0\"/><path d=\"M14 15c3 0 7 0 10 1\" stroke=\"#c08a4a\" stroke-width=\"0.8\" opacity=\"0.7\"/></svg>"   # dế than (bản 502 vẽ lại)
+const QUIZ := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><path d=\"M5 6c4-2 8-2 11 0v21c-3-2-7-2-11 0z\" fill=\"#fdf6e3\" stroke=\"#3f6fae\" stroke-width=\"1.4\"/><path d=\"M27 6c-4-2-8-2-11 0v21c3-2 7-2 11 0z\" fill=\"#fff\" stroke=\"#3f6fae\" stroke-width=\"1.4\"/><path d=\"M3 8v21c5-2 9-2 13 0 4-2 8-2 13 0V8\" fill=\"none\" stroke=\"#2f5a90\" stroke-width=\"1.6\"/><circle cx=\"22\" cy=\"10\" r=\"7\" fill=\"#e8a020\" stroke=\"#a86a10\" stroke-width=\"1\"/><text x=\"22\" y=\"14\" font-size=\"11\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#fff\" font-family=\"sans-serif\">?</text><path d=\"M7 12h6M7 16h6M7 20h5\" stroke=\"#9ab0d0\" stroke-width=\"1.2\"/></svg>"   # sổ đố vui có dấu ? (bản 502)
 const GIC := {"de": CRICKET, "do": QUIZ}
 const ARR := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M8 4l8 8-8 8\" fill=\"none\" stroke=\"rgb(170,130,70)\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # mũi tên giữa các bước
 
@@ -67,6 +67,13 @@ func _hic(cx: float, cy: float, z: float, k: String) -> Dictionary:   # hình: s
 	if k.begins_with("<svg"):
 		return _dic(cx - z * 0.5, cy - z * 0.5, z, k)
 	return _icx(cx, cy, z, k)
+
+func _facen(nm: String) -> String:   # mặt tròn của nhà tên nm (nhà lạ: theo tên)
+	var F: Dictionary = WH.WL._r0().fam
+	for k in F:
+		if String(F[k].get("n", "")) == nm:
+			return "pic:res://ui/img/vlface/m" + str(clampi(int(F[k].get("lk", 0)), 0, 7)) + ".webp"
+	return "pic:res://ui/img/vlface/m" + str(abs(nm.hash()) % 8) + ".webp"
 
 func _ichip(x: float, y: float, w: float, ic: String, t: String, kd := "fut", col := BROWN) -> Dictionary:   # chip nhỏ: hình + chữ
 	var c := _chip(x, y, w, 26.0, kd)
@@ -159,60 +166,70 @@ func _mo() -> Array:
 	if left <= 0 and WH._tr(cu.get("att")):
 		out.append_array(_rowi(X0 + 2.0, y, 16.0, ["i:" + DINH, " " + str(cu.att.size()) + "/" + WH._sa(cu.tot) + " nhà tới dự · trò chuyện với nhà đi dự thân gấp đôi"], 10.0, 700, BROWN)[0])
 		y += 16.0 + GG
-	if left > 0:   # lễ vật
+	var g := 6.0
+	var cw := (XW - g) * 0.5
+	if left > 0:   # (bản 502) lễ vật: lưới 2 cột, đủ thì ô xanh ✓
 		out.append_array(_sect(y, "Lễ vật", "rgb(214, 130, 60)"))
 		out.append(_dt(X0 + 70.0, y, XW - 70.0, 16.0, "mình góp tối đa nửa, bà con góp nửa", 9.5, 600, SUB, "right"))
 		y += 16.0 + 8.0
-		for r in WH.HDNRES:
+		var R: Array = WH.HDNRES
+		for i in R.size():
+			var r: Array = R[i]
+			var x := X0 + (i % 2) * (cw + g)
+			if i > 0 and i % 2 == 0:
+				y += 66.0 + g
 			var k := String(r[0])
 			var gt: float = WH._n(cu.got[k])
 			var nd: float = WH._n(cu.need[k])
 			var full := gt >= nd
 			var mm: int = WH.hdn_me(cu, k)
-			var c := _chip(X0, y, XW, 46.0, "got" if full else "fut")
-			out.append(c)
-			out.append(_icx(X0 + 22.0, y + 23.0, 28.0, k))
-			out.append(_dt(X0 + 42.0, y + 5.0, 150.0, 16.0, String(WH.HDNMON[k]), 11.0, 800, BROWN, "left"))
+			out.append(_chip(x, y, cw, 66.0, "got" if full else "fut"))
+			out.append(_icx(x + 18.0, y + 17.0, 24.0, k))
+			out.append(_dt(x + 34.0, y + 4.0, cw - 40.0, 15.0, String(WH.HDNMON[k]), 10.5, 800, BROWN, "left"))
 			var ns: String = WH._sa(gt) + "/" + WH._sa(nd)
-			out.append(_dt(X0 + 150.0, y + 5.0, XW - 150.0 - 78.0, 16.0, ns, 10.5, 800, "rgb(40, 110, 50)" if full else BROWN, "right"))
-			out.append_array(_bar(X0 + 42.0, y + 24.0, XW - 42.0 - 78.0, gt / maxf(1.0, nd), 6.0))
-			out.append(_dt(X0 + 42.0, y + 31.0, XW - 42.0 - 78.0, 13.0, "" if full else ("Mình góp được thêm " + WH._sa(mm) + " " + String(r[1]) if mm else "Đủ phần mình, chờ bà con"), 9.0, 600, SUB, "left"))
+			out.append(_dt(x + 34.0, y + 18.0, cw - 40.0, 14.0, ns, 10.0, 800, "rgb(40, 110, 50)" if full else BROWN, "left"))
+			out.append_array(_bar(x + 8.0, y + 35.0, cw - 16.0, gt / maxf(1.0, nd), 5.0))
 			if full:
-				out.append(_dtick(X0 + XW - 40.0, y + 15.0, 16.0))
+				out.append(_dtick(x + cw - 24.0, y + 8.0, 14.0))
+				out.append(_dt(x + 8.0, y + 44.0, cw - 16.0, 18.0, "Đủ lễ", 9.5, 700, "rgb(40, 110, 50)", "left"))
 			else:
-				out.append(_btn(X0 + XW - 70.0, y + 9.0, 62.0, 28.0, "Góp", WH.hdn_give.bind(k), "go" if mm > 0 else "off"))
-			y += 46.0 + 5.0
-		y += GG - 5.0
-	if left >= 0:   # việc mình lo
+				out.append(_dt(x + 8.0, y + 44.0, cw - 66.0, 18.0, ("Góp thêm " + WH._sa(mm)) if mm else "Chờ bà con", 9.0, 600, SUB, "left"))
+				out.append(_btn(x + cw - 56.0, y + 42.0, 50.0, 20.0, "Góp", WH.hdn_give.bind(k), "go" if mm > 0 else "off"))
+		y += 66.0 + GG
+	if left >= 0:   # việc mình lo: 2 việc cạnh nhau
 		out.append_array(_sect(y, "Việc mình lo", "rgb(76, 150, 48)"))
 		out.append(_dt(X0 + 90.0, y, XW - 90.0, 16.0, "mỗi việc +2 uy tín, hội đông hơn", 9.5, 600, SUB, "right"))
 		y += 16.0 + 8.0
-		for k in WH.HDNVIEC:
+		var ks: Array = WH.HDNVIEC.keys()
+		for i in ks.size():
+			var k: String = ks[i]
 			var V: Array = WH.HDNVIEC[k]
+			var x := X0 + (i % 2) * (cw + g)
+			if i > 0 and i % 2 == 0:
+				y += 66.0 + g
 			var q: Dictionary = WH.hdn_scale(V[2])
 			var done: bool = WH._tr(cu.v.get(k))
-			var parts := []
-			for kk in q:
-				parts += ["i:" + String(kk), " " + WH._sa(q[kk]) + "  "]
-			var c2 := _chip(X0, y, XW, 44.0, "got" if done else "fut")
-			out.append(c2)
-			out.append(_hic(X0 + 22.0, y + 22.0, 26.0, CONG if k == "cong" else FLAG))
-			out.append(_dt(X0 + 42.0, y + 5.0, XW - 120.0, 16.0, String(V[0]), 11.0, 800, BROWN, "left"))
+			out.append(_chip(x, y, cw, 66.0, "got" if done else "fut"))
+			out.append(_hic(x + 18.0, y + 18.0, 24.0, CONG if k == "cong" else FLAG))
+			var L := _wrap(String(V[0]), 10.0, 800, cw - 40.0)
+			for li in mini(2, L.size()):
+				out.append(_dt(x + 34.0, y + 4.0 + li * 13.0, cw - 40.0, 13.0, String(L[li]), 10.0, 800, BROWN, "left"))
 			if done:
-				out.append(_dt(X0 + 42.0, y + 23.0, XW - 120.0, 14.0, "Đã xong", 9.5, 700, "rgb(40, 110, 50)", "left"))
-				out.append(_dtick(X0 + XW - 40.0, y + 14.0, 16.0))
+				out.append(_dtick(x + cw - 24.0, y + 42.0, 14.0))
+				out.append(_dt(x + 8.0, y + 42.0, cw - 40.0, 18.0, "Đã xong", 9.5, 700, "rgb(40, 110, 50)", "left"))
 			else:
-				out.append_array(_rowi(X0 + 42.0, y + 23.0, 14.0, parts, 9.5, 700, SUB)[0])
+				var parts := []
+				for kk in q:
+					parts += ["i:" + String(kk), " " + WH._sa(q[kk]) + " "]
+				out.append_array(_rowi(x + 8.0, y + 44.0, 14.0, parts, 9.0, 700, SUB)[0])
 				var ok: bool = WH.WL.WD.tn_have(q)
-				out.append(_btn(X0 + XW - 70.0, y + 8.0, 62.0, 28.0, "Làm", WH.hdn_viec.bind(k), "go" if ok else "off"))
-			y += 44.0 + 5.0
-		y += GG - 5.0
-	if left > 0:
-		var hc := _chip(X0, y, XW, 28.0, "fut")
-		hc.kids = [_dt(X0, y, XW, 28.0, "Hoãn hội (−10 uy tín)", 10.5, 700, "rgb(170, 60, 60)")]
+				out.append(_btn(x + cw - 56.0, y + 42.0, 50.0, 20.0, "Làm", WH.hdn_viec.bind(k), "go" if ok else "off"))
+		y += 66.0 + GG
+	if left > 0:   # hoãn: dòng chữ nhỏ
+		var hc := _dt(X0, y, XW, 18.0, "Hoãn hội (−10 uy tín)", 9.5, 700, "rgb(170, 60, 60)")
 		hc.act = WH.hdn_huy
 		out.append(hc)
-		y += 28.0
+		y += 18.0
 	return [_flat(out), y + GG]
 
 static func _flat(a: Array) -> Array:   # gộp mảng lồng (vd _para trả mảng) thành một hàng khối
@@ -262,17 +279,32 @@ func _giai() -> Array:
 		else:
 			sub = "10 câu, thi với nhà " + ", ".join(PackedStringArray(WH.hdn_names(cu, "do", 4)))
 		var won: bool = xong and WH._tr(gg.get("rank"))
-		var c2 := _chip(X0, y, XW, 50.0, "got" if won else "fut")
+		var who: Array = []   # nhà thi cùng: chip mặt tròn
+		if has and not xong:
+			who = [WH.hdn_names(cu, id, 3)[WH._i(gg.rd)]] if id == "de" else WH.hdn_names(cu, "do", 4)
+			sub = (WH.HDNVONG[WH._i(gg.rd)] + " · dế cấp " + str(WH.hdn_de_lv(WH._i(gg.rd))) + " · gặp") if id == "de" else "10 câu · thi với"
+		var c2 := _chip(X0, y, XW, 58.0, "got" if won else "fut")
 		out.append(c2)
-		out.append(_hic(X0 + 24.0, y + 25.0, 30.0, String(GIC.get(id, QUIZ))))
-		out.append(_dt(X0 + 46.0, y + 7.0, XW - 130.0, 17.0, String(WH.HDNG[id]), 11.5, 800, BROWN, "left"))
-		out.append(_dt(X0 + 46.0, y + 26.0, XW - 130.0, 15.0, _fitw(sub, 9.5, 600, XW - 130.0), 9.5, 600, "rgb(40, 110, 50)" if won else SUB, "left"))
+		out.append(_hic(X0 + 24.0, y + 29.0, 32.0, String(GIC.get(id, QUIZ))))
+		out.append(_dt(X0 + 46.0, y + 6.0, XW - 130.0, 17.0, String(WH.HDNG[id]), 11.5, 800, BROWN, "left"))
+		var sw: float = minf(Box.text_w(sub, 9.5, 600) + 4.0, XW - 130.0)
+		out.append(_dt(X0 + 46.0, y + 27.0, sw, 22.0, _fitw(sub, 9.5, 600, sw), 9.5, 600, "rgb(40, 110, 50)" if won else SUB, "left"))
+		var fx := X0 + 46.0 + sw + 2.0
+		for nm in who:
+			if fx + 22.0 > X0 + XW - 84.0:
+				break
+			var fc := _hic(fx + 11.0, y + 38.0, 22.0, _facen(String(nm)))
+			out.append(fc)
+			var hit := _dbx(fx, y + 27.0, 22.0, 22.0, "rgba(0, 0, 0, 0)", 0.0)
+			hit.act = _dsay.bind(String(nm))
+			out.append(hit)
+			fx += 24.0
 		if xong:
 			if won:
-				out.append(_dtick(X0 + XW - 36.0, y + 17.0, 16.0))
+				out.append(_dtick(X0 + XW - 36.0, y + 21.0, 16.0))
 		else:
-			out.append(_btn(X0 + XW - 80.0, y + 11.0, 72.0, 28.0, "Vào thi", WH.hdn_play.bind(String(id)), "go" if today else "off"))
-		y += 50.0 + 5.0
+			out.append(_btn(X0 + XW - 80.0, y + 15.0, 72.0, 28.0, "Vào thi", WH.hdn_play.bind(String(id)), "go" if today else "off"))
+		y += 58.0 + 5.0
 	return [out, y + GG]
 
 # ------------------------------------------------------------------ tab Sổ hội (hdnTabSo)
