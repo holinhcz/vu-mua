@@ -354,7 +354,6 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	WRU.cz()
 	if WRU.pill != null and WRU.pill.get_parent() != pills:
 		WRU.pill.reparent(pills, false)
-	WCU.sync_cho()
 	WCU.pill_sync(pills)
 	WCU.ghe_pill_sync(pills)
 	WCU.sync_ghe()
@@ -474,7 +473,7 @@ func _ray_pill() -> void:   # l_
 func any_on() -> bool:   # (bản 287) bảng cây, hạn mặn, chợ nổi, radio, lễ hội đang mở
 	if WRU == null:
 		return false
-	return WRU.man != null or WCU.cho != null or WCU.rd != null or WHU.fest != null
+	return WRU.man != null or (U.chop != null and U.chop.on) or WCU.rd != null or WHU.fest != null
 
 func close_all() -> void:   # ui.close_all
 	if WRU == null:

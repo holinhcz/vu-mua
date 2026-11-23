@@ -1,8 +1,6 @@
 extends "res://logic/w_ui_base.gd"
 # XU, CHỢ, GIÁ, CHỢ NỔI (giao diện): phần bảng bản web còn thiếu ở bản Godot.
-#  - jx: bảng "Chợ nổi sông Vàm" (#vlBody khi $r.mode === "cho"): 4 nút ghe (.btabs), dòng ghi chú ghe (.note),
-#    hộp "🔥 Hôm nay được giá" (lớp bọc jx thêm .u2hotc), danh sách kèo (.ws-rec li.rec: hình, tên, chữ nhỏ, ô cần, nút).
-#    Dựng lại chỉ khi chữ ký $r.sig đổi (web: JSON [ghe, g.cho, số trong kho, xu/10, phút còn/10]), không vẽ mỗi khung.
+#  - jx: bảng Chợ nổi sông Vàm -> (bản 517) ui_cho.gd (khung Kho); ở đây chỉ còn mở / đóng.
 #  - mQ: nút viên "Chợ nổi đang họp · tan lúc 9:00" (.ghepill.chopill, .hurry khi còn < 0,4 giờ).
 #  - MU / tR: bảng "Đài phát thanh huyện" (#rdBody).
 # Dựng bằng Control thường của Godot (bản web không có bản chụp cho các bảng này), cỡ theo Css.K như các bảng khác.
@@ -14,8 +12,6 @@ var W          # w_cho.gd
 #   Ns(t: Dictionary)     (Ns: nhân vật đi tới chỗ {type: "cho", k}) rồi chạy qN -> open_cho(k)
 #   cl(on: bool)          (radio: bật / tắt nhạc cải lương, âm thanh)
 
-var cho: Control = null     # bảng chợ nổi
-var cho_sig := ""           # $r.sig
 var rd: Control = null      # bảng radio (Cf)
 var rd_cl := false          # Cf.cl
 const PILL = preload("res://logic/pill.gd")
@@ -29,143 +25,16 @@ func _init(ui, wc) -> void:
 	W.panel_close.connect(_on_close)
 
 func _on_close() -> void:   # i1: $r.mode === "cho" thì đóng bảng
-	if cho != null:
-		close_cho()
+	close_cho()
 
-# ------------------------------------------------------------------ khối dựng chung
-func _note(b: String, rest: String) -> Control:   # .note (<b> đầu dòng + chữ thường)
-	var v := VBoxContainer.new()
-	if b != "":
-		v.add_child(_lbl(b, 12, 700, Color8(0x5a, 0x4a, 0x3a)))
-	if rest != "":
-		v.add_child(_lbl(rest, 12, 400, Color8(0x8a, 0x7a, 0x6a)))
-	return v
-
-func _chip(t: String, a: int) -> Control:   # nc: <span class="chip ok|no">Ai <b>n</b>/a tên</span>
-	var n := int(G.g.barn.get(t, 0))   # số trong kho (bản 285)
-	var h := HBoxContainer.new()   # (bản 291) chữ có/cần chung (qty.gd), tên món đi sau
-	h.add_theme_constant_override("separation", int(_k(Qty.GAP)))
-	h.add_child(_ic(t, Qty.ICON))
-	h.add_child(_lbl(Qty.text(n, a), Qty.FS, Qty.FW, Qty.color(n >= a), false))
-	h.add_child(_lbl(G.item_name(t), 12, 500, Color8(0x5a, 0x4a, 0x3a), false))
-	return h
-
-func _rec(ic: String, b: String, small: String, chip: Array, btns: Array) -> Control:   # li.rec
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", int(_k(8)))
-	h.add_child(_ic(ic, 36))
-	var v := VBoxContainer.new()
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	v.add_child(_lbl(b, 13.5, 700, Color8(0x3a, 0x2a, 0x1a)))
-	v.add_child(_lbl(small, 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-	if chip.size():
-		v.add_child(_chip(chip[0], chip[1]))
-	h.add_child(v)
-	for x in btns:
-		x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(x)
-	return h
-
-# ------------------------------------------------------------------ bảng chợ nổi
+# ------------------------------------------------------------------ bảng chợ nổi: (bản 517) ui_cho.gd (khung Kho)
 func open_cho(k: int) -> void:   # qN "cho": Ui.sel = k, gu("cho")
 	W.tap(k)
-	close_cho()
-	U.close_all()
-	cho_sig = ""
-	var p := _panel("Chợ nổi sông Vàm", close_cho)   # xr(#vlName, "Chợ nổi sông Vàm")
-	cho = p[0]
-	cho.set_meta("body", p[1])
-	sync_cho()
+	U.cho_open(k)
 
 func close_cho() -> void:   # i1
-	if cho != null:
-		cho.queue_free()
-		cho = null
-
-func sync_cho() -> void:   # jx (gọi mỗi khung khi bảng mở; chỉ dựng lại khi chữ ký đổi)
-	if cho == null:
-		return
-	if not W.b2() and float(W.Ui.al) <= 0:
-		close_cho()
-		return
-	var t: Array = W.jd()
-	var a: int = int(W.Ui.sel)
-	var r: float = G.nv.hour()
-	var o := maxf(0.0, W.wm() - r)
-	var cnt := []
-	for c in t[a]:
-		cnt.append(int(G.g.barn.get(c.id, 0)))
-	var l := JSON.stringify([a, G.g.get("cho"), cnt, int(floor(float(G.g.coins) / 10.0)), int(floor(o * 6.0))])
-	if l == cho_sig:
-		return
-	cho_sig = l
-	var body: VBoxContainer = cho.get_meta("body")
-	for k in body.get_children():
-		k.queue_free()
-	# lớp bọc jx: hộp "🔥 Hôm nay được giá" đầu bảng
-	var hl: Array = G.hot()
-	if hl.size():
-		var hb := PanelContainer.new()
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(236 / 255.0, 90 / 255.0, 79 / 255.0, 0.15)
-		sb.set_corner_radius_all(int(_k(14)))
-		sb.content_margin_left = _k(12)
-		sb.content_margin_right = _k(12)
-		sb.content_margin_top = _k(10)
-		sb.content_margin_bottom = _k(10)
-		hb.add_theme_stylebox_override("panel", sb)
-		var hv := VBoxContainer.new()
-		hv.add_child(_lbl("🔥 Hôm nay được giá", 13, 700, Color8(0xd6, 0x45, 0x3b)))
-		var ss := []
-		for f in hl:
-			ss.append(G.item_name(f[0]) + " " + W.h5(float(f[1])))
-		hv.add_child(_lbl(" · ".join(ss), 11.5, 500, Color8(0x5a, 0x4a, 0x3a)))
-		hv.add_child(_lbl("Bán trong Kho hoặc giao đơn có món này được thêm 30%.", 11.5, 500, Color8(0x5a, 0x4a, 0x3a)))
-		hb.add_child(hv)
-		body.add_child(hb)
-	# .btabs: 4 ghe
-	var tabs := HBoxContainer.new()
-	for f in W.s4.size():
-		var c: Dictionary = W.s4[f]
-		var bt := _btn(String(c.n).replace("Ghe ", ""), f == a, true, _sel_boat.bind(f))   # data-chob
-		bt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tabs.add_child(bt)
-	body.add_child(tabs)
-	var n: Dictionary = W.s4[a]
-	var left := ""
-	if o > 0:
-		left = " (còn khoảng " + ((str(int(floor(o))) + " tiếng ") if o >= 1 else "") + str(W._r(fmod(o, 1.0) * 60.0)) + " phút)"
-	body.add_child(_note(String(n.n) + " · " + String(n.who), String(n.d) + " Chợ tan lúc " + str(W.wm()) + " giờ" + left + "."))
-	for f in t[a].size():
-		var c: Dictionary = t[a][f]
-		var s: bool = W.Wx(a, f)
-		var go := _deal.bind(a, f)   # data-cho="a:f"
-		if c.t == "doi":
-			var h: bool = int(G.g.barn.get(c.g, 0)) >= int(c.gq)
-			body.add_child(_rec(String(c.id), "Đổi lấy " + str(int(c.q)) + " hạt giống " + G.item_name(c.id).to_lower(),
-				"Đưa ghe " + W.ho(c.g, int(c.gq)) + (" · đã đổi" if s else ""), [String(c.g), int(c.gq)],
-				[_btn("Xong" if s else "Đổi", true, h and not s, go)]))
-		elif c.t == "mua":
-			var h: bool = int(G.g.barn.get(c.id, 0)) >= int(c.q)
-			body.add_child(_rec(W.bB(c), "Ghe mua " + W.ho(c.id, int(c.q)),
-				"Trả " + G.fmt_n(int(c.xu)) + " xu (chợ làng " + G.fmt_n(int(c.q) * G.price(c.id)) + ")" + (" · đã bán" if s else ""),
-				[String(c.id), int(c.q)], [_btn("Xong" if s else "Bán", true, h and not s, go)]))
-		else:
-			var h: bool = int(G.g.coins) >= int(c.xu)
-			var k: String = c.k
-			var sub := " · thả ao sen nuôi lớn" if k == "cagiong" else " · thả ao sen, đẻ trứng vịt" if k == "vitcon" else " · rẻ hơn tiệm 20%" if k == "cg" else " · rẻ hơn chợ phiên" if k == "giong" else " · thả vô chuồng" if k == "con" else ""
-			body.add_child(_rec(W.bB(c), W.pQ(c), "Giá " + G.fmt_n(int(c.xu)) + " xu" + sub + (" · đã mua" if s else ""),
-				[], [_btn("Xong" if s else "Mua", false, h and not s, go)]))
-
-func _sel_boat(f: int) -> void:   # data-chob
-	W.Ui.sel = f
-	cho_sig = ""
-	sync_cho()
-
-func _deal(a: int, f: int) -> void:   # data-cho = "a:f" -> Dd
-	W.Dd(a, f)
-	cho_sig = ""
-	sync_cho()
+	if U.chop != null and U.chop.on:
+		U.chop.close()
 
 func tip(k: int) -> String:   # BN "cho": chữ nhắc khi giữ tay trên ghe
 	var a: Array = W.tip(k)
