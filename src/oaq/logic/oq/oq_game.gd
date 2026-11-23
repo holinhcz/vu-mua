@@ -1039,11 +1039,11 @@ func _draw() -> void:
 		var ss: float = R * (2.3 + st.z * 0.9)
 		var al := maxf(0.25, 1 - st.z * 0.55) * (1.0 if st.kind == "q" else 0.9)
 		if st.z < 0.03:
-			# nằm yên: bóng sát đen, bóng ngắn mềm về dưới phải (Link 11-23: bỏ hạt cát quanh sỏi)
-			var cs := R * 2.16
-			draw_texture_rect_region(A.atlas, Rect2(P.x + R * 0.07 - cs / 2, P.y + R * 0.1 - cs / 2, cs, cs * 0.96), A.R_CONT, Color(1, 1, 1, 0.5))
-			var ks := R * 2.3
-			draw_texture_rect_region(A.atlas, Rect2(P.x + R * 0.32 - ks / 2, P.y + R * 0.4 - ks / 2, ks, ks * 0.92), A.R_SOFT, Color(1, 1, 1, 0.22))
+			# nằm yên (Link 11-23 "sỏi lơ lửng"): bóng theo đúng hình viên, sát đen + đổ ngắn xuống dưới phải (tools/oq/peb_bong.py)
+			var Dg: float = st.r * s * 2 / 0.8
+			var q: bool = st.kind == "q"
+			var sht := A.img(("peb/t%d" % (int(st.v) % 2)) if q else ("peb/s%d" % (int(st.v) % A.PEB_N)))
+			draw_texture_rect(sht, Rect2(P.x - Dg * 0.75, P.y - Dg * 0.75, Dg * 1.5, Dg * 1.5), false)
 			continue
 		var a2 := (al * 0.45 if st.z > 0.25 else al) * 0.7
 		draw_texture_rect_region(A.atlas, Rect2(P.x + off * 0.55 - ss / 2, P.y + off * 0.75 - ss / 2 + R * 0.12, ss, ss * 0.92), A.R_SOFT, Color(1, 1, 1, a2))
@@ -1111,6 +1111,9 @@ func _draw_st(st: Dictionary, qt: Texture2D, pb: Texture2D) -> void:
 		draw_texture_rect(A.img("peb/q%d" % (int(st.v) % 2)), dst, false)
 	else:
 		draw_texture_rect(A.img("peb/p%d" % (int(st.v) % A.PEB_N)), dst, false)
+	if st.z < 0.03:
+		# mép dưới phải tối lại chỗ khuất sát đất: viên ngồi xuống đất, không nổi
+		draw_texture_rect(A.img(("peb/b%d" % (int(st.v) % 2)) if st.kind == "q" else ("peb/a%d" % (int(st.v) % A.PEB_N))), dst, false)
 
 # bóng mềm của cẳng tay + nắm tay trên đất, thò vô từ mép màn phía người đang rải
 func _arm_shadow(fx: float, fy: float, p: int, vis: float, sh: Vector2) -> void:
