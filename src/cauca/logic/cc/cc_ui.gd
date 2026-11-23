@@ -1237,7 +1237,7 @@ func _b_basket(ci, w: float, y: float) -> float:
 	var S: Dictionary = game.S
 	if S.basket.is_empty():
 		if ci != null:
-			A.pic(ci, "cage", Rect2(w / 2 + 14.0 - 48, y + 20 - _sc(ci), 96, 96), Color(1, 1, 1, .85))
+			A.pic(ci, "cage%d" % S.cage, Rect2(w / 2 + 14.0 - 48, y + 20 - _sc(ci), 96, 96), Color(1, 1, 1, .85))
 		_t(ci, "Giỏ trống trơn", w / 2 + 14.0, y + 20 + 96 + 6 + 10, 14, A.F_MUTED, 1)
 		var yy := y + 20 + 96 + 6 + 22
 		for ln in A.wrap("Cá câu được bỏ vô đây: bán lấy xu, hoặc để dành đổi đồ nghề.", 14, 600, w - 20):
@@ -1404,7 +1404,7 @@ func _b_shop(ci, w: float, y: float) -> float:
 				var ok: bool = S.xu >= nx.price and (not nx.has("need") or has_fish(nx.need))
 				st = "Đổi được" if ok else "Chưa đủ"
 				col = A.F_GREEN if ok else A.SMALL2
-			_tile(ci, r, "@" + k, list[cur].name, st, col, false, 0, sel == k, false, "s" + k, tap)
+			_tile(ci, r, "@%s%d" % [k, cur], list[cur].name, st, col, false, 0, sel == k, false, "s" + k, tap)
 	var rows := int(ceil(keys.size() / 4.0))
 	return y + rows * (TILE_H + 6)
 
@@ -1421,6 +1421,7 @@ func _shop_dock(ci, r: Rect2) -> float:
 	var hint := ""
 	var hint_bad := false
 	var btns := []   # [lab, kind, id, tap, disabled, ic]
+	var gic := ""    # đồ nghề: icon theo cấp (cấp kế tiếp nếu còn đổi được)
 	if _mod.get("arg") == "bait":
 		var b: Dictionary = D.BAIT[k]
 		title = b.name
@@ -1455,6 +1456,7 @@ func _shop_dock(ci, r: Rect2) -> float:
 	else:
 		var list: Array = D.gear(k)
 		var cur: int = S[k]
+		gic = str(mini(cur + 1, list.size() - 1))
 		if cur + 1 >= list.size():
 			title = list[cur].name
 			desc = list[cur].desc
@@ -1508,7 +1510,7 @@ func _shop_dock(ci, r: Rect2) -> float:
 	var dr := _dock_rect(r, h)
 	_dock_bg(ci, dr)
 	var y := dr.position.y + 10.5
-	_dic(ci, Vector2(x0, y), "@" + k)
+	_dic(ci, Vector2(x0, y), "@" + k + gic)
 	var ty := y + 15 - (tl.size() - 1) * 9
 	for i in tl.size():
 		A.text(ci, tl[i], x0 + 37.5, ty, 14, A.F_INK, 0, 800)
