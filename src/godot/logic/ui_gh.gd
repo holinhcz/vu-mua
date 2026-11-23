@@ -6,10 +6,12 @@ extends "res://logic/ui_kbang.gd"
 # Luật ở w_ghe.gd (Ae, Hd, bonus, cm).
 
 var WG         # w_ghe.gd
+const CLOCK := "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='13' r='9' fill='#fff3e0' stroke='#c8502a' stroke-width='2.4'/><path d='M12 8v5l3.2 2' fill='none' stroke='#c8502a' stroke-width='2.4' stroke-linecap='round'/><path d='M9 2.5h6' stroke='#c8502a' stroke-width='2.4' stroke-linecap='round'/></svg>"
 
 func _init(ui) -> void:
 	super(ui)
 	WG = G.w_all.WGH
+	fit = true
 
 func open() -> void:
 	on = true
@@ -40,12 +42,13 @@ func _build() -> void:
 	var At := maxf(0.0, float(A.left))
 	var c := _chip(X0, y, XW, 50.0, "now")
 	var tt := String(WG.cm(At))
-	var tw: float = Box.text_w(tt, 10.5, 800) + 30.0
+	var tw: float = Box.text_w(tt, 10.5, 800) + 34.0
 	c.kids = [_pic(X0 + 6.0, y + 5.0, 54.0, 40.0, "res://ui/img/xt/g_ghe1.webp"),
 		_dt(X0 + 66.0, y + 7.0, XW - 74.0 - tw, 18.0, "Ghe thương hồ", 12.5, 800, BROWN, "left"),
 		_dt(X0 + 66.0, y + 26.0, XW - 74.0 - tw, 16.0, "từ " + String(A.get("from", "")) if int(A.st) == 2 else "Đang vào bến", 10.5, 600, SUB, "left")]
 	var tc := _chip(X0 + XW - 8.0 - tw, y + 14.0, tw, 22.0, "sen" if At < 1800.0 else "fire_l")
-	tc.kids = [_dt(X0 + XW - 8.0 - tw, y + 14.0, tw, 22.0, "⏱ " + tt, 10.5, 800, "rgb(180, 60, 40)")]
+	tc.kids = [_dic(X0 + XW - 8.0 - tw + 7.0, y + 17.0, 16.0, CLOCK),
+		_dt(X0 + XW - 8.0 - tw + 26.0, y + 14.0, tw - 32.0, 22.0, tt, 10.5, 800, "rgb(180, 60, 40)", "left")]
 	c.kids.append(tc)
 	out.append(c)
 	y += 50.0 + GG
@@ -77,7 +80,7 @@ func _build() -> void:
 		return ra < rb or (ra == rb and a < b))
 	var g := 6.0
 	var cw := (XW - g) * 0.5
-	var ch := 92.0
+	var ch := 74.0
 	for k in idx.size():
 		var i: int = idx[k]
 		var o: Dictionary = L[i]
@@ -108,16 +111,23 @@ func _box(x: float, y: float, w: float, h: float, i: int, o: Dictionary, dock: b
 		out[0].css = out[0].css.duplicate()
 		out[0].css["opacity"] = "0.75"
 	var nm: String = G.item_name(id)
-	out.append(_dt(x + 46.0, y + 6.0, w - 50.0, 16.0, _fitw(nm, 10.5, 800, w - 50.0), 10.5, 800, BROWN, "left"))
-	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 11.0, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
-	out.append_array(_rowi(x + 8.0, y + 48.0, 14.0, ["c", " " + G.fmt_n(int(o.xu))], 10.0, 800, "rgb(150, 90, 10)")[0])
+	# góc trên phải: xu (đã chất thì dấu ✓)
+	var xs: String = " " + G.fmt_n(int(o.xu))
+	var xw: float = 16.0 + Box.text_w(xs, 10.0, 800) + 6.0
 	if done:
-		out.append(_dtick(x + w - 24.0, y + 8.0, 16.0))
+		xw = 22.0
+		out.append(_dtick(x + w - 22.0, y + 6.0, 16.0))
+	else:
+		out.append_array(_rowi(x + w - xw - 2.0, y + 6.0, 16.0, ["c", xs], 10.0, 800, "rgb(150, 90, 10)")[0])
+	var nw: float = w - 50.0 - xw
+	out.append(_dt(x + 46.0, y + 6.0, nw, 16.0, _fitw(nm, 10.5, 800, nw), 10.5, 800, BROWN, "left"))
+	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 11.0, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
+	if done:
 		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã chất lên ghe", 9.5, 700, "rgb(40, 110, 50)", "left"))
 	elif ok:
 		out.append(_btn(x + 8.0, y + h - 28.0, w - 16.0, 22.0, "Chất", _chat.bind(i), "go" if dock else "off"))
 	else:
-		out.append(_dt(x + 8.0, y + h - 28.0, w - 16.0, 22.0, _fitw(G.where(id), 9.0, 600, w - 16.0), 9.0, 600, SUB, "left"))
+		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, _fitw(G.where(id), 9.0, 600, w - 16.0), 9.0, 600, SUB, "left"))
 		c.act = _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ". " + G.where(id) + ".")
 	return out
 

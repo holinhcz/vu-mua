@@ -220,6 +220,7 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)
 			"paddyt": _paddyt(a)
 			"ctdump": _ctdump()
@@ -400,8 +401,17 @@ func _ghet() -> void:   # (bản 515) thử: ghe đậu bến ngay với 6 thùn
 	WG.Ae.left = 3.0 * 3600.0 + 1380.0
 	WG.Ae.from = "Cái Bè"
 	WG.test_hold = true
+	G.g.gh = {"from": "Cái Bè", "cr": L, "until": G._now_ms() + WG.Ae.left * 1000.0, "key": ""}
 	G.mark()
 	ui.ghe_open()
+
+func _ghxa() -> void:   # (bản 516) thử: kho đủ mọi thùng, chất hết trừ thùng cuối
+	var WG = G.w_all.WGH
+	var L: Array = WG.Ae.offers
+	for o in L:
+		G.g.barn[o.id] = int(G.g.barn.get(o.id, 0)) + int(o.q)
+	for i in L.size() - 1:
+		WG.Hd(i)
 
 func _gptree() -> void:   # (bản 493) test Gia phả: nhân bản 12 nhà, chia 3 họ, nối cha con thành cây, tim / việc khác nhau
 	var F0: Dictionary = G.w_all.WL._r0().fam
