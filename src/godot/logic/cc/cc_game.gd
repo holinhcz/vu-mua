@@ -1,7 +1,7 @@
 extends Control
 # CÂU CÁ BỜ KÊNH: viết lại bằng Godot từ bản web (cau-ca/src/js). Gốc này phóng to K lần, mọi con số bên trong là
 # css px của web. Đây là phần luật + thế giới: khổ màn và phép chiếu (00_core), đồng hồ / mưa / gió / lục bình /
-# ghe hàng / chim / đom đóm / chỗ sủi tăm (04_world), hạt nước + cá quẫy (05_fx), quăng / chờ / nhấp / giật /
+# chim / đom đóm / chỗ sủi tăm (04_world), hạt nước + cá quẫy (05_fx), quăng / chờ / nhấp / giật /
 # kéo / đứt dây / lên cá (08_game), vòng chính + chạm (10_main). Vẽ ở cc_draw, giao diện ở cc_ui, tiếng ở cc_snd.
 
 signal closed
@@ -72,7 +72,7 @@ func _ready() -> void:
 
 func _reset_state() -> void:
 	W = {"t": 0.0, "rain": 0.0, "rainT": 0.0, "rainTarget": 0, "nextRain": rnd(70, 140), "wind": .35, "windT": .35, "cloud": .6, "cloudBase": .6,
-		"floatGlow": [0.0, 0.0, 0.0], "rips": [], "spots": [], "props": [], "boat": null, "nextBoat": 50.0, "birds": [], "nextBird": 8.0, "flies": [], "nextJump": 6.0}
+		"floatGlow": [0.0, 0.0, 0.0], "rips": [], "spots": [], "props": [], "birds": [], "nextBird": 8.0, "flies": [], "nextJump": 6.0}
 	G = {"state": "idle", "t": 0.0, "fl": {"x": 0.0, "z": 10.0, "sink": 0.0, "tilt": 0.0, "dx": 0.0}, "fish": null, "ev": [], "hold": false,
 		"ten": 0.0, "over": 0.0, "slack": 0.0, "dist": 0.0, "rodA": 0.0, "rodV": 0.0, "shake": 0.0, "lastTarget": null, "shadow": null, "df": null,
 		"anim": null, "biteOpen": 0.0, "biteT": 0.0, "hook": null, "landing": null, "paused": false, "dt": .016, "reelA": 0.0, "tn": 0.0, "tick": 0.0, "idleWait": 0.0}
@@ -106,7 +106,7 @@ func _load() -> void:
 		var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
 		if d is Dictionary:
 			S.merge(d, true)
-	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut", "orders"]:
+	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut"]:
 		S[k] = int(S[k])
 	S.luck = float(S.luck)
 	S.hour = float(S.hour)
@@ -154,8 +154,10 @@ func layout(w: float, h: float) -> void:
 	L.fgH = h * (0.13 if L.portrait else 0.17)
 	L.zNear = L.F / (h - L.hor)
 	L.zEdge = L.F / (h - L.fgH * 0.45 - L.hor)
-	L.rodButt = Vector2(w * 1.04, h * 1.03) if L.portrait else Vector2(w * 0.9, h * 1.08)
-	L.rodTip = Vector2(w * 0.6, h * 0.56) if L.portrait else Vector2(w * 0.68, h * 0.5)
+	# cán cần ló ra từ mép phải, NGAY TRÊN cụm nút góc dưới (Link 11-23 "bố cục": cán + ống cước không bị nút che);
+	# màn dọc ngọn đưa ra giữa màn để phao rơi giữa chỗ nhìn
+	L.rodButt = Vector2(w * 1.05, h * 0.72) if L.portrait else Vector2(w * 1.04, h * 0.9)
+	L.rodTip = Vector2(w * 0.42, h * 0.46) if L.portrait else Vector2(w * 0.66, h * 0.5)
 
 func proj(X: float, z: float) -> Vector2:
 	return Vector2(L.W / 2 + L.F * X / z, L.hor + L.F / z)
@@ -193,12 +195,28 @@ func world_init() -> void:
 	W.props = []
 	for i in 7:
 		W.props.append(new_prop(true))
+	# 2 bè lục bình gần (giữa màn nước) cho mặt kênh khỏi trống (Link 11-23 "bố cục")
+	for i in 2:
+		var p := new_prop(true)
+		p.z = rnd(9.5, 12.5)
+		p.s = rnd(.75, .95)
+		p.x = rnd(-1, 1) * half_x(p.z) * .6
+		W.props.append(p)
+	# bụi sen (ảnh thủy sinh của nông trại): mọc tại chỗ ven 2 bên kênh, không trôi (Link 11-22)
+	var sz := [8.5, 11.5, 15.0, 19.0]     # gần xa so le; sen xa không đứng sát bờ, khỏi lá đè lên bờ (Link 11-23)
+	for i in 4:
+		var z: float = sz[i] + rnd(-.8, .8)
+		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ.
+		# Mỗi bụi 1 cột riêng, sen gần lệch vào trong, sen xa ra ngoài: không đứng thẳng hàng nhau
+		# (Link 11-22: sen đỏ trùng hàng sen tím). 0 đỏ (trái, gần), 1 trắng (phải), 2 tím (trái, xa), 3 vàng (phải, xa)
+		var fx: float = [-.38, .46, -.7, .7][i] + rnd(-.02, .02)     # Link 11-23 "gom ra chính giữa 1 cục": rải ra 2 bên
+		W.props.append({"z": z, "x": fx * half_x(z), "fx": fx, "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
 	W.spots = []
 	for i in 2:
 		W.spots.append(new_spot())
 
 func new_prop(anywhere: bool) -> Dictionary:
-	var z := rnd(10, 34)
+	var z := lerpf(9.0, 34.0, pow(randf(), .8))
 	var hx := half_x(z) + 2.5
 	return {"z": z, "x": rnd(-hx, hx) if anywhere else -hx - rnd(0, 3), "v": rnd(.05, .12), "k": randi() % 4, "s": rnd(.8, 1.25), "ph": rnd(TAU)}
 
@@ -255,6 +273,9 @@ func world_update(dt: float) -> void:
 		rips[i * 4 + 3] = r.a
 	# lục bình trôi
 	for p in W.props:
+		if p.has("sen"):
+			p.x = float(p.get("fx", p.x / maxf(1.0, half_x(p.z)))) * half_x(p.z)
+			continue
 		p.x += p.v * dt * (1 + W.wind * .5)
 		if p.x > half_x(p.z) + 3:
 			p.merge(new_prop(false), true)
@@ -285,72 +306,7 @@ func world_update(dt: float) -> void:
 		if randf() < .6:
 			fx_leap(pick(["linh", "mevinh", "he", "sac"]), x, z, .7)
 		snd.plop(.8, clampf(z / 34, 0, 1))
-	boat_update(dt)
 	life_update(dt)
-
-# ------------------------------------------------------------ ghe hàng
-func make_order() -> Dictionary:
-	var pool := []
-	for f in D.FISH:
-		if not f.has("junk") and f.rar <= (3 if S.lv >= 4 else 2) and (f.bait.get(S.bait, 0) or S.lv > 1):
-			pool.append(f)
-	if pool.is_empty():
-		pool = [D.fish("ro")]
-	var n := 1 + randi() % (3 if S.lv >= 3 else 2)
-	var need := {}
-	for i in n:
-		var cand: Array = pool.filter(func(f): return f.rar <= 2 or i == 0)
-		var f: Dictionary = pick(cand)
-		need[f.id] = need.get(f.id, 0) + ((1 + randi() % 2) if f.rar == 1 else 1)
-	var val := 0
-	for id in need:
-		var f := D.fish(id)
-		val += D.fish_value(f, (f.w[0] + f.w[1]) / 2.0) * need[id]
-	var bonus = null
-	if randf() < .45:
-		var bl := []
-		for b in D.BAIT_ORDER.slice(1):
-			if D.BAIT[b].lv <= S.lv + 1:
-				bl.append(b)
-		if bl.size():
-			bonus = pick(bl)
-	return {"need": need, "xu": int(round(val * 1.7 + 20)), "xp": 12 + need.size() * 6, "bonus": bonus, "who": pick(D.WHO)}
-
-func boat_update(dt: float) -> void:
-	W.nextBoat -= dt
-	if W.boat == null and W.nextBoat < 0 and G.state != "fight":
-		var z := 21.0
-		var hx := half_x(z)
-		W.boat = {"z": z, "x": -hx - 4, "tx": hx * .25 - .5, "stay": 70.0, "ph": 0.0, "mode": "in", "wake": 0.0, "order": make_order()}
-		if started:
-			ui.on_boat_arrive()
-	var b = W.boat
-	if b == null:
-		return
-	b.ph += dt
-	if b.mode == "in":
-		b.x += (b.tx - b.x) * dt * .35 + .35 * dt
-		if b.x >= b.tx:
-			b.x = b.tx
-			b.mode = "stay"
-	elif b.mode == "stay":
-		b.stay -= dt
-		if b.stay < 0:
-			b.mode = "out"
-	else:
-		b.x += 1.1 * dt
-		if b.x > half_x(b.z) + 5:
-			W.boat = null
-			W.nextBoat = rnd(110, 170)
-			ui.on_boat_leave()
-			return
-	b.wake -= dt
-	if b.mode != "stay" and b.wake < 0:
-		b.wake = .35
-		ripple(b.x - 1.2, b.z + .1, .5)
-	if b.mode == "stay" and b.wake < 0:
-		b.wake = 1.6
-		ripple(b.x + rnd(-1, 1), b.z, .25)
 
 # ------------------------------------------------------------ chim, đom đóm
 func life_update(dt: float) -> void:
@@ -386,13 +342,8 @@ func fx_drop(x: float, z: float, vx: float, vy: float, vz: float, s := 1.0, life
 	FX.p.append({"k": "drop", "x": x, "y": .02, "z": z, "vx": vx, "vy": vy, "vz": vz, "s": s, "life": life, "age": 0.0})
 
 func fx_splash(x: float, z: float, sz := 1.0) -> void:
-	var n := int(10 + sz * 22)
-	for i in n:
-		var a := rnd(TAU)
-		var sp := rnd(.2, .9) * sz
-		fx_drop(x + cos(a) * .05, z + sin(a) * .05, cos(a) * sp * .6, rnd(.8, 2.2) * sqrt(sz), sin(a) * sp * .4, rnd(.6, 1.3) * sqrt(sz))
+	drw.pfx.splash(x, z, sz)   # giọt + hơi nước = CPUParticles2D (cc_fx.gd)
 	FX.p.append({"k": "crown", "x": x, "z": z, "y": 0.0, "s": sz, "age": 0.0, "life": .45})
-	FX.p.append({"k": "mist", "x": x, "z": z, "y": .05, "s": sz, "age": 0.0, "life": .9})
 
 func fx_bubble(x: float, z: float) -> void:
 	FX.p.append({"k": "bub", "x": x, "z": z, "y": 0.0, "s": rnd(.6, 1.2), "age": 0.0, "life": rnd(.8, 1.6)})
@@ -435,7 +386,7 @@ func fx_update(dt: float) -> void:
 			ripple(l.x, l.z, 1.2)
 			snd.plop(1.4, clampf(l.z / 30, 0, .8))
 	FX.leaps = FX.leaps.filter(func(l): return l.age < l.dur + .05)
-	var want := int(W.rain * (90 if L.portrait else 160))
+	var want := 0   # mưa rơi = CPUParticles2D (cc_fx.gd)
 	while FX.rain.size() < want:
 		FX.rain.append({"x": rnd(-50, L.W + 50), "y": rnd(-L.H, L.H), "v": rnd(900, 1300), "l": rnd(14, 26)})
 	if FX.rain.size() > want:
@@ -827,10 +778,11 @@ func fight_update(dt: float) -> void:
 	G.fl.z = z
 	h.wk -= dt
 	if h.wk < 0 and h.beh != "jump":
-		h.wk = .12 if h.beh == "run" else .28
-		ripple(h.x, z, .7 if h.beh == "run" else .4)
-		fx_wake(h.x, z, h.size)
-		if h.beh == "run" and randf() < .35:
+		# Link 11-22 "bọt loang lúc kéo ít lại": thưa hơn ~3 lần, gợn nhẹ hơn, ít bắn nước
+		h.wk = .38 if h.beh == "run" else .75
+		ripple(h.x, z, .35 if h.beh == "run" else .2)
+		fx_wake(h.x, z, h.size * .7)
+		if h.beh == "run" and randf() < .12:
 			fx_splash(h.x, z, .35 * h.size)
 			snd.plop(.7, .4)
 	if hold:
@@ -972,6 +924,9 @@ func game_update(dt: float) -> void:
 	var rest: float = (.14 + minf(.25, G.ten * .12)) if G.state == "fight" else 0.0
 	G.rodV += ((rest - G.rodA) * 60 - G.rodV * 9) * dt
 	G.rodA += G.rodV * dt
+	# rung cần chỉ tăng lúc kéo cá căng dây; hết kéo (đứt dây, sổng cá, câu được) thì tắt dần trong ~0.4 s
+	if G.state != "fight":
+		G.shake = maxf(0, G.shake - dt * 2.5)
 	match G.state:
 		"cast":
 			var u: float = G.t / G.flight.dur
@@ -1043,10 +998,17 @@ func hint_once(k: String, msg: String) -> void:
 	ui.hint(msg)
 
 # ============================================================ vòng chính
+static var PT := {}       # đo: µs mỗi phần logic (đồng hồ đo đọc rồi xoá)
+func _pt(k: String, t0: int) -> int:
+	var t := Time.get_ticks_usec()
+	PT[k] = PT.get(k, 0) + t - t0
+	return t
+
 func _process(dt: float) -> void:
 	if L.is_empty():
 		return
 	dt = minf(.05, dt)
+	var t0 := Time.get_ticks_usec()
 	clock += dt
 	_run_sched()
 	if started:
@@ -1061,16 +1023,26 @@ func _process(dt: float) -> void:
 		tod.cloud = tod.cloud.lerp(grey, r * .6)
 		tod.fog = tod.fog.lerp(grey, r * .5)
 		tod.water = tod.water.lerp(tod.water.lerp(grey, .3), r * .5)
+	t0 = _pt("giờ", t0)
 	world_update(dt * .3 if G.paused else dt)
+	t0 = _pt("cảnh", t0)
 	if not G.paused and started:
 		game_update(dt)
+	t0 = _pt("chơi", t0)
 	fx_update(dt)
+	t0 = _pt("hiệu ứng", t0)
 	if started:
 		snd.ambience(dt, tod, W.rain)
+	t0 = _pt("âm", t0)
 	scn.render(W.t, tod, W, rips, shs)
+	t0 = _pt("shader", t0)
 	drw.redraw()
+	drw.pfx.step(dt)
+	t0 = _pt("hạt", t0)
 	ui.step(dt)
+	t0 = _pt("giao diện", t0)
 	save()
+	_pt("lưu", t0)
 
 # ============================================================ chạm
 func act(down: bool) -> void:

@@ -441,10 +441,6 @@ func bad() -> void:
 	pluck(220, .3, -2)
 	pluck(207, .25, 0, .12)
 
-func boat() -> void:
-	pluck(PENTA[4], .25)
-	pluck(PENTA[6], .25, 0, .15)
-
 func set_sound(on: bool) -> void:
 	game.S.sound = 1 if on else 0
 	_master()
