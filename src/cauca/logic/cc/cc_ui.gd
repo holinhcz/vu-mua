@@ -858,7 +858,7 @@ func _layout_modal() -> void:
 	_mod.top = _head_h(k)
 	_mod.dock = _dock_h(k)
 	var content_h := _body(null, KCW, false)
-	var br := Rect2(_mod.r.position.x + 2.5, top + _mod.top, pw - 5, ph - _mod.top - _mod.dock - (0.0 if _mod.dock > 0 else 6.0))
+	var br := Rect2(_mod.r.position.x + 2.5, top + _mod.top, pw - 5, ph - _mod.top - _mod.dock - (3.0 if _mod.dock > 0 else 6.0))
 	body.position = br.position
 	body.size = br.size
 	body.max_scroll = maxf(0, content_h + 12 - br.size.y)
@@ -885,7 +885,7 @@ func _dock_h(k: String) -> float:   # .khdock: 58.5 (một nút), ô xem cá th�
 		"basket":
 			if game.S.basket.is_empty():
 				return 0.0
-			return 128.5 if _bsel >= 0 and _bsel < game.S.basket.size() else 58.5
+			return (128.5 + (_bhint().size() - 1) * 18) if _bsel >= 0 and _bsel < game.S.basket.size() else 58.5
 		"dex":
 			return _dex_dock(null, Rect2()) if _mod.get("arg") != null else 0.0
 	return 0.0
@@ -1021,9 +1021,18 @@ func _kcbox(ci: Box, r: Rect2, frac: float, full: bool, parts: Array, st: String
 func _dock_rect(r: Rect2, h: float) -> Rect2:
 	return Rect2(r.position.x, r.end.y - h, r.size.x, h)
 
-func _dock_bg(ci: Box, dr: Rect2) -> void:   # .khdock: nền 247,234,208, bo 2 góc dưới 22
+func _dock_bg(ci: Box, dr: Rect2) -> void:   # .khdock: nền 247,234,208, bo 2 góc dưới 22, thanh tre ngang trên mép (::after top -3px, cao 9)
 	A.fbox(ci, dr, Vector4(0, 0, Tre.R, Tre.R), [[0.0, A._c(247, 234, 208)], [1.0, A._c(247, 234, 208)]], [], [])
+	var bw := dr.size.x - 8
+	ci.draw_texture_rect(Tre.bar(bw), Rect2(dr.position.x + 4, dr.position.y - 3, bw, Tre.T + Tre.S), false)
 	ci.items.append({"r": dr, "id": "dock"})
+
+# ô hình .khdic của Kho: 30x30 nền trắng bo 10
+func _dic(ci: Box, p: Vector2, fid: String, dark := false) -> void:
+	A.fbox(ci, Rect2(p, Vector2(30, 30)), 10, [[0.0, Color.WHITE], [1.0, Color.WHITE]], [[1.0, A._c(150, 112, 48, .22)]])
+	var t: Texture2D = A.img(fid)
+	if t != null:
+		A.fit(ci, t, Rect2(p + Vector2(2, 3), Vector2(26, 24)), Color(0, 0, 0, .3) if dark else Color.WHITE)
 
 # nút trong bảng (vẽ trong lớp bảng, không cuộn)
 func _mbt(ci: Box, r: Rect2, lab: String, kind: String, id: String, tap: Callable, ic := "") -> void:
@@ -1242,6 +1251,16 @@ func _need_by(fid: String) -> String:
 				return nx.name
 	return ""
 
+func _bhint() -> Array:   # lời nhắc dưới giá (.kdhint, cột trái 143.5)
+	var S: Dictionary = game.S
+	if _bsel < 0 or _bsel >= S.basket.size():
+		return []
+	var c: Dictionary = S.basket[_bsel]
+	var nb := _need_by(c.id)
+	var f := D.fish(c.id)
+	var h := ("Cần để đổi " + nb) if nb != "" else ("Cá hiếm, để dành đổi đồ" if int(f.rar) >= 3 else "Bán lấy xu")
+	return A.wrap(h, 14, 500, 143.5)
+
 func _basket_dock(ci: Box, r: Rect2) -> void:
 	var S: Dictionary = game.S
 	if S.basket.is_empty():
@@ -1251,36 +1270,30 @@ func _basket_dock(ci: Box, r: Rect2) -> void:
 	_dock_bg(ci, dr)
 	var x0 := r.position.x + KX
 	if _bsel >= 0 and _bsel < S.basket.size():
+		# = .khdet của Kho: hàng 1 ô hình 30 + tên (· cân nặng); hàng 2 giá trái, độ hiếm phải; hàng 3 lời nhắc trái, nút Bán phải
 		var c: Dictionary = S.basket[_bsel]
 		var f := D.fish(c.id)
 		var val := D.fish_value(f, c.w)
-		var y0 := dr.position.y + 10.5
-		var t: Texture2D = A.img(c.id)
-		if t != null:
-			A.fit(ci, t, Rect2(x0, y0, 56, 34), Color.WHITE)
-		var tx := x0 + 64
-		A.text(ci, f.name, tx, y0 + 8, 14, A.F_INK, 0, 800)
-		var wl := fmt_w(c.w) + " · "
-		A.text(ci, wl, tx, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
-		var sw := draw_stars(ci, f.rar, tx + A.tw(wl, 14, 500), y0 + 26, 13)
-		A.text(ci, " " + D.RAR[f.rar], tx + A.tw(wl, 14, 500) + sw, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
-		# giá + nút Bán (kdsell: xanh, bên phải)
-		var py := dr.position.y + 58
-		A.text(ci, str(val), x0, py, 20, A._c(240, 140, 0), 0, 800)
-		A.svg(ci, "coin", Rect2(x0 + A.tw(str(val), 20, 800) + 4, py - 8, 16, 16))
+		var y0 := dr.position.y
+		_dic(ci, Vector2(x0, y0 + 10.5), c.id)
+		A.text(ci, f.name, x0 + 37.5, y0 + 25.5, 14, A.F_INK, 0, 800)
+		A.text(ci, " · " + fmt_w(c.w), x0 + 37.5 + A.tw(f.name, 14, 800), y0 + 25.5, 14, A._c(154, 122, 72), 0, 500)
+		var py := y0 + 66.0
+		A.text(ci, str(val), x0, py, 20, A._c(240, 140, 0), 0, 700)
+		A.svg(ci, "coin", Rect2(x0 + A.tw(str(val), 20, 700) + 4, py - 6, 12, 12))
+		var rx := x0 + 152.5
+		var sw := draw_stars(ci, f.rar, rx, py, 13)
+		A.text(ci, " " + D.RAR[f.rar], rx + sw, py, 14, A._c(154, 122, 72), 0, 500)
 		var lab := "Bán · +%d" % val
-		var bw := maxf(152.5, btn_w(lab, "coin"))
-		var br := Rect2(x0 + KCW - bw, py - 15, bw, 30)
+		var br := Rect2(rx, y0 + 83.5, KCW - 152.5, 27)
 		var idx := _bsel
 		_mbt(ci, br, lab, "", "sell1", func():
 			var cc: Dictionary = S.basket[idx]
 			_bsel = -1
 			sell([cc], br.get_center())
 			_open("basket"), "coin")
-		var nb := _need_by(c.id)
-		var hint := ("Đang cần để đổi %s, nên giữ lại" % nb) if nb != "" else ("Cá hiếm: để dành đổi đồ nghề ở Chợ" if int(f.rar) >= 3 else "Chạm ô lần nữa để bỏ chọn")
-		var hl := A.wrap(hint, 14, 500, KCW)
-		A.text(ci, hl[0], x0, dr.position.y + 93, 14, A.F_RED if nb != "" else A._c(122, 114, 98), 0, 500)
+		for i in _bhint().size():
+			A.text(ci, _bhint()[i], x0, y0 + 97 + i * 18, 14, A.F_RED if _need_by(c.id) != "" else A._c(122, 114, 98), 0, 500)
 		return
 	var tot := 0
 	for c in S.basket:
@@ -1570,21 +1583,20 @@ func _dex_dock(ci, r: Rect2) -> float:
 		lines.append_array(A.wrap(s, 14, 500, KCW))
 	if d != null:
 		lines.append_array(A.wrap("Đã câu %d lần · con lớn nhất %s" % [int(d.n), fmt_w(float(d.best))], 14, 500, KCW))
-	var h := 10.5 + 34 + 8 + lines.size() * 18 + 14
+	var h := 10.5 + 30 + 12 + lines.size() * 18 + 14
 	if ci == null:
 		return h
 	var dr := _dock_rect(r, h)
 	_dock_bg(ci, dr)
 	var x0 := r.position.x + KX
-	var y0 := dr.position.y + 10.5
-	var t: Texture2D = A.img(sel)
-	if t != null:
-		A.fit(ci, t, Rect2(x0, y0, 56, 34), Color.WHITE if d != null else Color(0, 0, 0, .3))
-	var tx := x0 + 64
-	A.text(ci, f.name if d != null else "???", tx, y0 + 8, 14, A.F_INK, 0, 800)
-	var sw := draw_stars(ci, f.rar, tx, y0 + 26, 13)
-	A.text(ci, " " + D.RAR[f.rar], tx + sw, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
-	var yy := y0 + 34 + 8 + 9
+	var y0 := dr.position.y
+	_dic(ci, Vector2(x0, y0 + 10.5), sel, d == null)
+	var nm: String = f.name if d != null else "???"
+	A.text(ci, nm, x0 + 37.5, y0 + 25.5, 14, A.F_INK, 0, 800)
+	var nx := x0 + 37.5 + A.tw(nm, 14, 800) + 8
+	var sw := draw_stars(ci, f.rar, nx, y0 + 25.5, 13)
+	A.text(ci, " " + D.RAR[f.rar], nx + sw, y0 + 25.5, 14, A._c(154, 122, 72), 0, 500)
+	var yy := y0 + 10.5 + 30 + 12 + 9
 	for ln in lines:
 		A.text(ci, ln, x0, yy, 14, A.F_BROWN, 0, 500)
 		yy += 18
