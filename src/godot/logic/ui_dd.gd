@@ -80,6 +80,8 @@ func _tab7() -> Array:
 		elif now:
 			kids.append(_dbtn(x + (w - 58.0) * 0.5, y + rh - 29.0, 58.0, 22.0, "Nhận", E.tF))
 			c.act = E.tF
+		if not now:   # (bản 504) chạm ô: bong bóng hình quà, tên, số lượng
+			c.act = _dtip.bind(" ".join(L).replace(" +", ", "), String(D.dd7.kids[i].kids[1].svg), "Ngày " + str(i + 1) + (" · đã nhận" if got else ""))
 		c.kids = kids
 		out.append(c)
 	var fy := y2 + rh + g + 4.0
@@ -140,7 +142,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		if ok and not got:
 			ring.act = E.eF.bind(n)
 		else:
-			ring.act = _dsay.bind("Mốc " + str(n) + " ngày: " + String(R.t) + ("" if ok else " (còn " + str(n - v) + " ngày)"))
+			ring.act = _dtip.bind(String(R.t), "gift:" + String(R.ic), "Mốc " + str(n) + " ngày" + ("" if ok else " · còn " + str(n - v) + " ngày"))   # (bản 504) bong bóng: hình quà, tên, số lượng
 		out.append(ring)
 		out.append(_dt(cx - 30.0, ly, 60.0, 14.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
 		out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(176, 118, 10)" if nxt else SUB))
@@ -199,7 +201,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 		_dick(x + cw * 0.5, y + rh - s * 0.5 - 3.0, s, String(gd.ic), op)]
 	if got:
 		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))
-		c.act = _dsay.bind("Ngày " + str(w) + ": đã nhận " + String(gd.t) + ".")
+		c.act = _dtip.bind(String(gd.t), "gift:" + String(gd.ic), "Ngày " + str(w) + " · đã nhận")
 	elif now:
 		c.act = E.tA.bind(w, false)
 	elif miss:
@@ -208,7 +210,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 		else:
 			c.act = _dsay.bind("Ngày " + str(w) + " đã lỡ, hết lượt bù tháng này.")
 	else:
-		c.act = _dsay.bind("Ngày " + str(w) + ": " + String(gd.t) + ".")
+		c.act = _dtip.bind(String(gd.t), "gift:" + String(gd.ic), "Ngày " + str(w))
 	c.kids = kids
 	return c
 

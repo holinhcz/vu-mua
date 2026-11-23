@@ -273,9 +273,39 @@ func say(s: String) -> void:
 	n.css.erase("transform")
 	# giữa dòng toast ở y ~148 (1 dòng: top 128, 3 dòng: top 120 như web)
 	n.r = [12.0, roundf(147.5 - h * 0.5), w, h]
+	var pt := _panel_top()
+	if pt > 0.0:   # (bản 504) đang mở bảng: tin nằm trên mép bảng (không che hàng tab), rộng hơn cho ít dòng
+		maxw = minf(vw - 24.0, 330.0)
+		w = minf(maxw, tw + 2.0 * pl + 2.0)
+		lines = _nlines(s, fs, fw, maxw - 2.0 * pl - 2.0)
+		h = h0 + (lines - 1) * lh
+		n.r = [roundf((vw - w) * 0.5), maxf(4.0, roundf(pt - h - 18.0)), w, h]   # chừa nút × của bảng
 	toast_b = _build(n, {})
 	root.add_child(toast_b)
 	_toast_t = 2.3
+
+func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (đơn vị css), 0 = không có bảng
+	for p in _pans() + [ngp, nvp, vlp]:
+		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
+			var w = p.ids.get(".pwin") if "ids" in p else null
+			var c: Control = w if w is Control else p.box
+			return c.get_global_rect().position.y / Css.K
+	return 0.0
+
+# ------------------------------------------------------------------ (bản 504) bong bóng chạm xem: khung nhỏ ngay chỗ chạm (thay toast cho chữ giải thích)
+var last_tap := Vector2.ZERO   # chỗ chạm xuống gần nhất (px)
+var tip_b: Control = null
+var _tip_t := 0.0
+func tip_show(c: Control, sec := 3.5) -> void:
+	tip_close()
+	tip_b = c
+	root.add_child(c)
+	_tip_t = sec
+
+func tip_close() -> void:
+	if tip_b != null and is_instance_valid(tip_b):
+		tip_b.queue_free()
+	tip_b = null
 
 static func _nlines(s: String, fs: float, fw: int, w: float) -> int:
 	var n := 1
@@ -3825,6 +3855,12 @@ func _process(dt: float) -> void:
 		if kh_conf <= 0.0:
 			_kho_conf_off()
 			kh_sig = ""
+	if tip_b != null:
+		_tip_t -= dt
+		if is_instance_valid(tip_b):
+			tip_b.modulate.a = clampf(_tip_t / 0.25, 0.0, 1.0)
+		if _tip_t <= 0.0:
+			tip_close()
 	if toast_b != null:
 		_toast_t -= dt
 		toast_b.modulate.a = clampf(_toast_t / 0.25, 0.0, 1.0)
@@ -3839,6 +3875,9 @@ func _input(e: InputEvent) -> void:
 	# thì giữ đứng yên tới khi nhấc hết ngón (bảng tự đóng khi chạm ra ngoài, kéo tiếp cũng không lướt làng)
 	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
 		if e.pressed:
+			last_tap = e.position
+			if tip_b != null:   # chạm chỗ khác: tắt bong bóng
+				tip_close()
 			_fing[e.index if e is InputEventScreenTouch else -1] = true
 			open_at_down = any_open()
 			gv_at_down = gv_b != null and gv_b.visible

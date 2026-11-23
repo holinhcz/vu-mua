@@ -213,8 +213,13 @@ func _place(f: float, W: float, H: float, c0: Rect2, c1: Rect2, ch: float, vis: 
 		L.oy = (H - 2 * L.s) / 2
 		var room: float = L.oy - 10
 		var br := maxf(24.0, minf(minf(room / 2, L.s * 0.52), 105.0))
-		L.bx = [Vector3(c0.end.x + 14 + br, minf(H - 8 - br, c0.position.y + c0.size.y / 2), br), Vector3(c1.position.x - 14 - br, maxf(8 + br, c1.position.y + c1.size.y / 2), br)]
+		# Link 11-23 (nhận xét 6): rổ trên nằm trọn trên sân, không đè mép gạch hiên -> hiên mỏng lại vừa chừa chỗ rổ
+		var top: float = board_rect(0).position.y
+		L.porch_max = maxf(30.0, top - 16 - 2 * br)
+		var ph0 := float(roundi(minf(maxf(30.0, minf(L.s * 0.78, (top - 12) * 0.6)), L.porch_max)))
+		L.bx = [Vector3(c0.end.x + 14 + br, minf(H - 8 - br, c0.position.y + c0.size.y / 2), br), Vector3(c1.position.x - 14 - br, maxf(maxf(8 + br, ph0 + 4 + br), c1.position.y + c1.size.y / 2), br)]
 	else:
+		L.erase("porch_max")
 		L.s = minf(minf((W - 2 * maxf(62.0, W * 0.16)) / 2, (H - 2 * (ch + 16)) / (BW + 0.05)), 215.0) * f
 		L.ox = (W - 2 * L.s) / 2
 		L.oy = (H - BW * L.s) / 2
@@ -230,7 +235,7 @@ func _place(f: float, W: float, H: float, c0: Rect2, c1: Rect2, ch: float, vis: 
 	for b in L.bx:
 		ban.append(Rect2(b.x - b.z - 6, b.y - b.z - 6, 2 * b.z + 12, 2 * b.z + 12))
 	ban.append(c0.grow(4))
-	var tch := TAN.choices_in(ban, vis)
+	var tch := TAN.choices_in(ban, vis, L.port and W < 480)
 	L.tan_sc = tch[0].sc if tch.size() else 0.3
 	L.tan_sh = tch[0].sh if tch.size() else Vector2(-400, -400)
 	return tch[0].a / (1.0 + 0.15 * tch[0].sc) if tch.size() else 0.0

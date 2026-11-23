@@ -181,7 +181,8 @@ func _sbtn(b: Dictionary) -> Dictionary:   # nút chip Kho cỡ nhỏ: chữ 11
 func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiêu đề phần
 	return _dt(X0 + 2.0, y, XW - 4.0, 13.0, _fitw(t, 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left")
 
-# thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận]]; trả [khối, cao]
+const E8D := {20: "Túi xu", 40: "2 vật liệu nâng sao", 60: "Túi xu, 1 phần cơm hồi sức", 80: "Then cài, bao bố, tấm tôn", 100: "2 sen đỏ"}   # quà trong rương năng động (nv.gd _e8)
+# thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận, tên quà, quà bên trong]]; trả [khối, cao]
 func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Array:   # g: chip tên -> hàng hình
 	var out := []
 	var mw: float = Box.text_w(name, 12.5, 800) + 24.0
@@ -207,6 +208,8 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Arra
 		c.kids = ks
 		if ok and not got:
 			c.act = m[3]
+		elif m.size() > 4:   # (bản 504) chạm quà chưa nhận / đã nhận: bong bóng hình, tên, quà bên trong
+			c.act = _dtip.bind(String(m[5]), "gift:" + String(m[1]), String(m[4]) + " · mốc " + str(p) + (" · đã nhận" if got else ""))
 		out.append(c)
 		out.append(_dbx(cx - 1.0, by - 1.0, 2.0, 9.0, "rgb(190, 160, 100)" if not ok else "rgb(32, 112, 58)", 1.0))
 		out.append(_dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 9.5, 700, SUB))
@@ -223,7 +226,7 @@ func _day() -> Array:
 	var y := 8.0
 	var L := []
 	for c in N.E8:
-		L.append([int(c.p), String(c.ic), n.cl.has(str(c.p)), N.IL.bind(int(c.p))])
+		L.append([int(c.p), String(c.ic), n.cl.has(str(c.p)), N.IL.bind(int(c.p)), String(c.n), String(E8D.get(int(c.p), ""))])
 	var ms := _ms(y, "Năng động", ap, 100, L, g)
 	out.append_array(ms[0])
 	y += float(ms[1]) + 2.0 * g
@@ -314,7 +317,9 @@ func _week() -> Array:
 	var y := 8.0
 	var L := []
 	for i in N.NVWCH.size():
-		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i)])
+		var dc0: Array = N.deco_of(N.week())
+		var wd := ["Túi xu", "3 sen đỏ, then cài, bao bố, tấm tôn", "Xu, bùa +50% kinh nghiệm 1 ngày", String(dc0[1]) + ", 5 sen đỏ"]
+		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i), String(N.NVWCH[i].n), String(wd[i])])
 	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
 	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
 	var g := clampf((_hb - fix) / 5.0, 6.0, 14.0)
