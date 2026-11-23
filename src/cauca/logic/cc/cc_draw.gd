@@ -366,7 +366,7 @@ static func dim(c: Color, tod: Dictionary) -> Color:
 	return c.lerp(c.lerp(tod.tint, .8), .6)
 
 # 4 cấp dây (Link 11-23 "dây đổi theo nâng cấp"): cước 0.2 trong mảnh -> 0.35 -> 0.5 xanh lá to -> dây dù bện nâu có vân
-const LINE_W := [1.0, 1.35, 1.75, 2.3]
+const LINE_W := [.55, .7, .85, 1.1]     # css px (điện thoại x3.5 = 2-4 điểm ảnh): dây mảnh, chỉ to hơn chút theo cấp
 const LINE_C := [Color(.95, .95, .9), Color(.88, .94, .97), Color(.72, .9, .74), Color(.52, .36, .2)]
 const LINE_A := [1.0, 1.05, 1.15, 1.5]
 func _li() -> int:
@@ -375,7 +375,7 @@ func line_color(tod: Dictionary, a := .6) -> Color:
 	var i := _li()
 	return Color((LINE_C[i] as Color).lerp(tod.tint, .35), minf(1.0, a * LINE_A[i]))
 func line_w() -> float:
-	return LINE_W[_li()] * maxf(1.0, game.L.H / 900.0)
+	return LINE_W[_li()]
 
 func draw_line_q(ci: CanvasItem, p0: Vector2, p1: Vector2, sag: float, tod: Dictionary, a: float) -> void:
 	var i := _li()
