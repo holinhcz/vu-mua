@@ -233,6 +233,47 @@ func _decor(L: Dictionary) -> void:
 			continue
 		_grass(x, y, 18 + rng() * 26)
 	var CM := s / 33.0
+	# Link 11-23: màn ngang -> tàu dừa nằm góc dưới phải, bẹ ló ra ngoài mép màn, ngọn chĩa vô sân (đặt trước gà, lá khô)
+	var corner_fr := false
+	if not L.port:
+		var fl0 := minf(maxf(W, H) * 0.4, 95 * CM)
+		var corner_btn := Rect2(W - 190, H - 64, 190, 64)
+		var keep: Array = L.obst.filter(func(o): return o != corner_btn)   # lá nằm dưới đất, chồng dưới chỗ nút góc được
+		var bestc = null
+		var bsc := -1e9
+		for ang in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
+			for bx in [0.08, 0.0, 0.16, -0.06]:
+				for by in [0.06, -0.04, 0.14, -0.12]:
+					var b0 := Vector2(W + fl0 * bx, H + fl0 * by)
+					var dir := Vector2(-cos(ang), -sin(ang))
+					var ok := true
+					var on := 0
+					for i in 12:
+						var t := 0.12 + i / 11.0 * 0.88
+						var p := b0 + dir * fl0 * t
+						if p.x > 0 and p.x < W and p.y > 0 and p.y < H:
+							on += 1
+						for o in keep:
+							var q: Rect2 = o
+							if q.grow(fl0 * 0.13).has_point(p):
+								ok = false
+								break
+						if not ok:
+							break
+					if not ok:
+						continue
+					var sc := on * 10.0 - absf(ang - 0.45) * 8 - absf(bx - 0.05) * 20 - absf(by) * 10
+					if sc > bsc:
+						bsc = sc
+						bestc = [b0, dir, ang]
+		if bestc != null:
+			var mid: Vector2 = bestc[0] + bestc[1] * fl0 * 0.5
+			_frond(mid.x, mid.y, fl0, bestc[2], 1)
+			corner_fr = true
+			for i in 8:
+				var p: Vector2 = bestc[0] + bestc[1] * fl0 * (0.1 + i * 0.1)
+				var r := fl0 * (0.17 - i * 0.012)   # lá ngắn dần về ngọn
+				L.obst.append(Rect2(p.x - r, p.y - r, r * 2, r * 2))
 	var sp = null
 	# chỗ con gà mái đi dạo: một dải sân trống (đồ khác né ra)
 	g.home_spot = null
@@ -311,7 +352,7 @@ func _decor(L: Dictionary) -> void:
 	var fl := minf(maxf(W, H) * 0.4, 95 * CM)
 	var fb = null
 	var fs := -1e9
-	for k in 500:
+	for k in (0 if corner_fr else 500):
 		var x := rng() * W
 		var y := ph + rng() * (H - ph)
 		var ang := (rng() - 0.5) * 2.2     # ảnh nắng trên-trái: chỉ xoay vừa, ngọn trái/phải bằng 2 ảnh
