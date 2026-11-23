@@ -49,14 +49,19 @@ while x < W + 20:
     t = TUFT[0 if R.random() < .38 else 1 if R.random() < .7 else 2 if R.random() < .5 else 3]
     put(t[0], t[1] % R.randint(0, t[2] - 1), x, edge(x) + R.uniform(6, 16), R.uniform(t[3], t[4]), R.random() < .5)
     x += R.uniform(28, 55)
-for i in range(34):                      # cụm hoa: 2-4 bụi cùng loại đứng gần nhau, chen cỏ thấp
-    cx = R.uniform(0, W); y0 = edge(cx) + 30
-    if y0 > H - 30: continue
-    cy = R.uniform(y0, H + 5); f = R.choice(FLO)
-    for j in range(R.randint(2, 4)):
-        put('hoaco/' + f, 'd%s%d' % (f, R.randint(0, 3)), cx + R.uniform(-45, 45), cy + R.uniform(-14, 14), R.uniform(2.1, 2.7), R.random() < .5)
-    for j in range(R.randint(1, 3)):
-        put('hoaco/c_xanh', 'dc_xanh%d' % R.randint(0, 3), cx + R.uniform(-70, 70), cy + R.uniform(-20, 25), R.uniform(1.7, 2.3), R.random() < .5)
+# cụm hoa: ÍT cụm mà TO (Link 11-23 "hoa cỏ bên đây nhỏ bé xíu"): bờ này sát mắt nên hoa to ~2.5 lần hoa bờ bên kia,
+# càng xuống mép dưới màn càng to (phối cảnh). Rải đều theo bề ngang, mỗi cụm 2-3 bụi cùng loại + vài cọng cỏ.
+NC = 15
+for i in range(NC):
+    cx = (i + .5) / NC * W + R.uniform(-55, 55); y0 = edge(cx) + 40
+    if y0 > H - 40: continue
+    cy = R.uniform(y0, H - 10); f = FLO[(i * 3 + R.randint(0, 2)) % len(FLO)]
+    dep = (cy - y0) / max(1.0, H - 10 - y0)
+    k = 5.2 + 2.0 * dep
+    for j in range(R.randint(2, 3)):
+        put('hoaco/' + f, 'd%s%d' % (f, R.randint(0, 3)), cx + R.uniform(-60, 60), cy + R.uniform(-10, 14), k * R.uniform(.9, 1.1), R.random() < .5)
+    for j in range(R.randint(1, 2)):
+        put('hoaco/c_xanh', 'dc_xanh%d' % R.randint(0, 3), cx + R.uniform(-95, 95), cy + R.uniform(-12, 22), k * .75 * R.uniform(.9, 1.1), R.random() < .5)
 for i in range(4):                       # bụi vạn thọ thấp cho góc phải màn dọc (Godot đặt theo màn)
     frame('hoaco/h_van_tho', 'dh_van_tho%d' % i)
 place.sort(key=lambda p: p[2])
