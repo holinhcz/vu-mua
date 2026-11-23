@@ -148,6 +148,7 @@ func _layout() -> void:
 	L.W = W
 	L.H = H
 	L.port = H > W * 1.05
+	L.wide = not L.port and W > H * 2.0     # màn ngang dài (1980x900): Link 11-23 chỉ sửa màn này
 	hud.layout(W, H, L.port)
 	var c0: Rect2 = hud.card_rect(0)
 	var c1: Rect2 = hud.card_rect(1)
@@ -164,7 +165,7 @@ func _layout() -> void:
 		var top := maxf(c1.end.y, tl.end.y)
 		var bh := 4 + 2 * BM + 0.16
 		var s2 := minf(minf((c0.position.y - top - 24) / bh, (W - 80) / (bh + 2.6)), 180.0)
-		if s2 > L.s:
+		if s2 > L.s and W < H * 1.25:      # chỉ màn gần vuông (1000x860), màn khác giữ nguyên
 			L.s = s2
 			L.ox = (W - 4 * s2) / 2
 			L.oy = top + 12 + (c0.position.y - top - 24 - bh * s2) / 2 + (BM + 0.08) * s2
@@ -252,8 +253,8 @@ func _place_baskets(blocks0: Array) -> Dictionary:
 						continue
 					var x := r + 6
 					while x <= W - r - 6:
-						# Link 11-23 màn ngang: nia trắng bên trái bàn (phía thẻ Bạn), nia gạch bên phải
-						var side_ok: bool = L.port or not own or ((x < L.ox) if p == 0 else (x > L.ox + 4 * L.s))
+						# Link 11-23 màn 1980x900: nia trắng bên trái bàn (phía thẻ Bạn), nia gạch bên phải
+						var side_ok: bool = not L.wide or not own or ((x < L.ox) if p == 0 else (x > L.ox + 4 * L.s))
 						if side_ok and not hit.call(x, y, r + 4, blocks):
 							var ok := true
 							if bx.size():
