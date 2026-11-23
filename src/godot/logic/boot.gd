@@ -219,6 +219,7 @@ func _test_hook() -> void:
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
 			"ctdump": _ctdump()
+			"hdn": ui.hdn_open(a[1] if a.size() > 1 else "")   # (bản 501) thử Hội đình: hdn[:tab]
 			"slall": var T6: Dictionary = G.w_all.WCA.tc(); for i6 in G.w_all.WCA.book_ct(): T6.obj[i6] = 1   # (bản 498) thử: coi như đã có mọi công trình
 			"slt": _slt(a)
 			"sl": ui.sl_open(); if a.size() > 1: ui.slp.tab = a[1]; if a.size() > 2: ui.slp.bs = a[2]; ui.slp._build()   # sl[:tab[:loại bst]]
