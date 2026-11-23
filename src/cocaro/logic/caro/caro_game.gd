@@ -444,12 +444,15 @@ func _layout() -> void:
 		# cột thẻ vẽ theo cỡ chuẩn 250, cỡ theo KU (như cờ gánh) nhưng không lấn qua khung phản; neo góc trái trên cửa sổ
 		var frl := fx - (rw - 1.0) * face / 2.0               # mép trái khung gỗ
 		var hs := minf(KU / K, (frl - V.position.x - 16) / 250.0)
-		var band := DS == Vector2(1024, 768)
+		# Link 11-23 "cột thẻ trái + cột trống phải ăn hết bề ngang, càng lúc càng nhỏ": màn ngang nào xếp
+		# thanh công cụ + 2 thẻ thành 1 hàng trên cùng cho phản to hơn thì dùng kiểu hàng trên
+		var hb := minf(KU / K, (V.size.x - 16) / (250.0 + 12 + CARD_W + 12 + CARD_W))
+		var bh := 8 + safe + 62 * hb + 14
+		var face_b := minf((H - bh - 14) / (1.0 + 12.0 / 392.0), (W - 24) / rw)
+		var band := face_b > face * 1.05
 		if band:
-			# Link 11-23 "1024x768 phản nhỏ xíu": thanh công cụ + 2 thẻ xếp 1 hàng trên cùng, phản to ở giữa bên dưới
-			hs = KU / K
-			var bh := 8 + safe + 62 * hs + 14
-			face = minf((H - bh - 14) / (1.0 + 12.0 / 392.0), (W - 24) / rw)
+			hs = hb
+			face = face_b
 			fx = (W - face) / 2
 			fy = bh + (H - bh - 10 - face - face * 12 / 392) / 2
 		hs = maxf(hs, 0.3)
