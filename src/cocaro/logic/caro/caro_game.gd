@@ -411,8 +411,9 @@ func _layout() -> void:
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 		L.u_tools = Rect2((V.position.x + 8) / hs, (V.position.y + 8 + safe) / hs, tw / hs, 36)
-		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, (fy - 8) / hs - 58, CARD_W, 58)
-		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 24) / hs, CARD_W, 62)
+		# Link 11-23 "cách ra bàn cờ 1 chút": khe thẻ - khung phản rộng thêm ~10
+		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, maxf(L.u_tools.end.y + 4, (fy - 18) / hs - 58), CARD_W, 58)
+		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 34) / hs, CARD_W, 62)
 		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	else:
