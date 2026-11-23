@@ -1271,18 +1271,15 @@ uniform vec2 res;
 uniform float t;
 uniform vec2 tree;
 uniform float str;
-uniform sampler2D fr : filter_linear, repeat_disable;
+uniform sampler2D fr : filter_linear_mipmap, repeat_disable;
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.07+vec2(1.7,9.2);a*=.5;}return v;}
-float tx(vec2 q){return texture(fr,vec2(q.x,1.0-q.y)).r;}
-float frond(vec2 q,float r){
+// Link 11-23 "bóng lá dừa từng đốm đen": làm mờ bằng mipmap (1 lần lấy mẫu, mịn liền vệt), không chồng nhiều bản lệch
+float frond(vec2 q,float lod){
   if(q.x<0.||q.y<0.||q.x>1.||q.y>1.)return 0.;
-  float s=tx(q)*.2;
-  s+=(tx(q+vec2(r,0.))+tx(q-vec2(r,0.))+tx(q+vec2(0.,r))+tx(q-vec2(0.,r)))*.12;
-  float k=r*.7;
-  s+=(tx(q+vec2(k,k))+tx(q-vec2(k,k))+tx(q+vec2(k,-k))+tx(q-vec2(k,-k)))*.08;
-  return s;}
+  float e=smoothstep(0.,.04,q.x)*smoothstep(0.,.04,q.y)*smoothstep(1.,.96,q.x)*smoothstep(1.,.96,q.y);
+  return textureLod(fr,vec2(q.x,1.0-q.y),lod).r*e;}
 void fragment(){
   vec2 fc=vec2(UV.x,1.0-UV.y)*res;
   float m=min(res.x,res.y);vec2 p=fc/m;vec2 uv=fc/res;
@@ -1291,7 +1288,7 @@ void fragment(){
   d=mat2(vec2(cos(a),sin(a)),vec2(-sin(a),cos(a)))*d;
   d+=vec2(sin(t*1.9+p.y*9.),cos(t*1.7+p.x*8.))*.004*dist;
   vec2 q=vec2(1.)+d/.8;   // Link 11-23: bóng tàu lá góc phải nhỏ lại, mờ + nhạt
-  float fsh=frond(q,.012+.016*dist)*.5;
+  float fsh=frond(q,2.6+1.6*dist)*.5;
   vec2 w=vec2(sin(t*.45+p.y*3.)+sin(t*.23+p.x*1.7),cos(t*.37+p.x*2.6)+sin(t*.19+p.y*2.))*.006;
   float big=fbm((p+w)*2.4+vec2(3.1,1.3)),fine=fbm((p+w*1.8)*8.+vec2(7.,2.)),vf=fbm((p+w*2.2)*22.+vec2(4.,8.));
   float dd=length((p-tree)*vec2(1.,1.12));

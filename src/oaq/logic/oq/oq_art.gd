@@ -127,6 +127,7 @@ static func contact(name: String, cell: Rect2i, blur: int) -> Dictionary:
 	var pad := int(ceil(blur * 1.6 + 2))
 	var m := _padded(src, pad)
 	_blur(m, blur)
+	m.generate_mipmaps()   # Link 11-23 "bóng từng đốm đen": thiếu mipmap thì thu nhỏ ra lấm tấm
 	var r := {"tex": ImageTexture.create_from_image(m), "pad": pad}
 	_sil[key] = r
 	return r
@@ -151,6 +152,7 @@ static func cast(name: String, cell: Rect2i, blur: int, dx: int, dy: int) -> Dic
 		var t := float(k) / n
 		acc.blend_rect(m0, Rect2i(0, 0, w, h), Vector2i(x0 + int(round(dx * t)), y0 + int(round(dy * t))))
 	_blur(acc, blur)
+	acc.generate_mipmaps()
 	var r := {"tex": ImageTexture.create_from_image(acc), "ox": x0, "oy": y0}
 	_sil[key] = r
 	if _sil.size() > 600:
