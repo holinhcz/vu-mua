@@ -16,5 +16,6 @@ func _ready() -> void:
 func _open() -> void:
 	g = GAME.new()
 	g.setup(_dpr())
+	g.no_xu = true
 	g.closed.connect(func(): g.queue_free(); call_deferred("_open"))
 	add_child(g)
