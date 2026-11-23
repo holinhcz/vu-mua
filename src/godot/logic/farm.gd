@@ -1115,12 +1115,8 @@ func _tap_do(sp: Vector2) -> void:
 			var Od: Array = lang.objs()
 			if int(h.i) < Od.size():
 				ui.dn_open({"o": Od[int(h.i)]})
-		"paddy":
-			ui.close_all()
-			var key := ("scn" + String(h.o.key)) if h.type == "scn" else ("paddy" + str(h.gx) + "," + str(h.gy))
-			if not has_job(key):
-				var sp2: Vector2 = Vector2(h.o.gx + h.o.fw / 2.0, h.o.gy + h.o.fd + 0.3) if h.type == "scn" else Vector2(h.gx + 0.5, h.gy + 1.3)
-				q.append({"key": key, "kind": h.type, "i": -1, "seed": "", "h": h, "pos": sp2})
+		"paddy":   # (bản 514) ô lúa hoang: vòng nút Gặt như cỏ hoang (bấm mới đi tới gặt)
+			ui.dn_open({"pd": [int(h.gx), int(h.gy)]})
 		"ray":   # QS: đi tới ô phun thuốc
 			ui.close_all()
 			queue_job(int(h.i), "spray")
@@ -1445,7 +1441,14 @@ var cur = null
 var st := 0
 var wt := 0.0
 
-func don_job(k: Dictionary) -> void:   # bấm Dọn (rm_don.gd): nhân vật đi tới dọn {hu} cây cỏ hoang / {o} đồ có sẵn
+func don_job(k: Dictionary) -> void:   # bấm Dọn (rm_don.gd): nhân vật đi tới dọn {hu} cây cỏ hoang / {o} đồ có sẵn / {pd} gặt ô lúa hoang
+	if k.has("pd"):
+		var gx := int(k.pd[0])
+		var gy := int(k.pd[1])
+		var pk := "paddy" + str(gx) + "," + str(gy)
+		if not has_job(pk):
+			q.append({"key": pk, "kind": "paddy", "i": -1, "seed": "", "h": {"type": "paddy", "gx": gx, "gy": gy}, "pos": Vector2(gx + 0.5, gy + 1.3)})
+		return
 	if k.has("hu"):
 		var o: Dictionary = k.hu
 		var key := "scn" + String(o.key)

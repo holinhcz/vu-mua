@@ -1,11 +1,11 @@
 extends RefCounted
 # Vòng nút DỌN (bản 219): chạm cây cỏ hoang, bụi, đá, gốc cây, cây khô, cây rừng (lang.HU) hay đồ có sẵn của làng không có
-# việc gì khác (món f: hoa, đá, cây cảnh, cao su...) -> xài chung vòng nút ô ruộng (ui.gd rm_g, bản chụp rmg), chỉ một nút:
+# việc gì khác (món f: hoa, đá, cây cảnh, cao su...), ô ruộng lúa hoang (bản 514) -> xài chung vòng nút ô ruộng (ui.gd rm_g, bản chụp rmg), chỉ một nút:
 #   [Dọn: hình cuốc]   chip: tên vật + "+N xu". Bấm Dọn thì nhân vật đi tới dọn (farm job "scn" / "dobj").
 
 var U          # ui.gd
 var G
-var key := {}  # {"hu": vật lang.HU} hoặc {"o": món f (g.objs, giữ chính dict để chỉ số đổi vẫn tìm ra)}
+var key := {}  # {"hu": vật lang.HU} hoặc {"o": món f (g.objs, giữ chính dict để chỉ số đổi vẫn tìm ra)} hoặc {"pd": [x, y]} ô ruộng lúa hoang (bản 514)
 
 func _init(ui) -> void:
 	U = ui
@@ -41,6 +41,8 @@ func _o() -> Variant:   # món f còn trong làng (null = đã mất)
 
 func _name() -> String:
 	var L = G.lang
+	if key.has("pd"):
+		return "Lúa hoang"
 	if key.has("hu"):
 		var id: String = L.XV.get(key.hu.id, key.hu.id)
 		return String(L.Pi[id].n) if L.Pi.has(id) else "Bụi cây"
@@ -55,12 +57,12 @@ func _xu() -> int:
 	return L.refund(o) if o != null else 0
 
 func sync() -> void:
-	if (key.has("hu") and G.g.clr.has(key.hu.key)) or (key.has("o") and _o() == null):
+	if (key.has("hu") and G.g.clr.has(key.hu.key)) or (key.has("o") and _o() == null) or (key.has("pd") and G.g.clr.has(str(key.pd[0]) + "," + str(key.pd[1]))):
 		U.rm_close()
 		return
 	var rt: Control = U.rm_gi[".rmt"]
 	U._txt(rt, _name())
-	U._rm_note(rt, "Dọn · +" + G.fmt_n(_xu()) + " xu")
+	U._rm_note(rt, "Gặt · +1 lúa" if key.has("pd") else "Dọn · +" + G.fmt_n(_xu()) + " xu")
 
 func pos() -> void:
 	var F = U.F
@@ -71,7 +73,11 @@ func pos() -> void:
 	var fw := 1.0
 	var fd := 1.0
 	var top := -60.0
-	if key.has("hu"):
+	if key.has("pd"):
+		gx = float(key.pd[0])
+		gy = float(key.pd[1])
+		top = -14.0
+	elif key.has("hu"):
 		var d: Dictionary = key.hu
 		gx = float(d.gx)
 		gy = float(d.gy)
@@ -113,7 +119,9 @@ func act(k: String) -> void:   # nút Dọn (hoặc chạm chip): nhân vật đ
 	var F = U.F
 	var kk := key
 	U.rm_close()
-	if kk.has("hu"):
+	if kk.has("pd"):
+		F.don_job({"pd": kk.pd})
+	elif kk.has("hu"):
 		F.don_job({"hu": kk.hu})
 	else:
 		F.don_job({"o": kk.o})
