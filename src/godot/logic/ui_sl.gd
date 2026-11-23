@@ -3,7 +3,7 @@ extends "res://logic/ui_kbang.gd"
 #  - dải đầu cố định: huy chương + danh hiệu đang mang + "Đã đạt N/8 danh hiệu" + thanh (chạm: tab Danh hiệu);
 #  - tab Làng: lưới 2 cột (hình màu, tên, dòng phụ) nền nhạt theo nhóm; việc cần làm: chấm đỏ + dòng phụ đỏ; chưa mở: mờ + khóa;
 #  - tab Danh hiệu: đủ điều kiện lên đầu (nền xanh, nút Nhận), đang làm (2 dòng + thanh đỏ → xanh + chip xu), đã nhận gom cuối 1 dòng ✓;
-#  - tab Bộ sưu tập: chip loại gói hàng, thanh "N/M", lưới 5 cột nền theo loại (Món chia nhóm theo xưởng),
+#  - tab Bộ sưu tập: 5 chip loại đều nhau thẳng cột lưới, thanh "N/M", lưới 5 cột nền theo loại (Món chia nhóm theo xưởng),
 #    món chưa có: bóng mờ + "?", chạm ô: tên, giá, chỗ kiếm (G.where).
 # Luật danh hiệu ở w_ca.gd, dòng phụ thẻ ở w_lang.gd.
 
@@ -294,27 +294,25 @@ func _bst() -> Array:
 			K = D
 	var out := []
 	var y := 6.0
-	# chip loại: gói hàng, mỗi chip có hình + số đã có / tổng
-	var x := X0
-	var hh := 28.0
+	# (bản 499) chip loại: 5 chip đều nhau một hàng, thẳng cột với lưới bên dưới (hình / tên / số đã có)
+	var cw0 := (XW - 4.0 * 5.0) / 5.0
+	var hh := 56.0
 	var cnt := {}
-	for D in W5:
+	for i in W5.size():
+		var D: Array = W5[i]
 		var ra := 0
 		for e in D[2]:
 			if W._tr(M.obj.get(e) if D[3] else M.seen.get(e)):
 				ra += 1
 		cnt[D[0]] = ra
 		var a: bool = D == K
-		var t := String(D[1]) + "  " + str(ra) + "/" + str(D[2].size())
-		var w: float = Box.text_w(t, 10.5, 800 if a else 700) + 40.0
-		if x > X0 and x + w > X0 + XW:
-			x = X0
-			y += hh + 6.0
-		var c := _chip(x, y, w, hh, "b_" + String(D[0]) if a else "fut")
-		c.kids = [_ic2(x + 14.0, y + hh * 0.5, 18.0, String(D[4])), _dt(x + 26.0, y, w - 30.0, hh, t, 10.5, 800 if a else 700, BROWN, "left")]
+		var x := X0 + i * (cw0 + 5.0)
+		var c := _chip(x, y, cw0, hh, "b_" + String(D[0]) if a else "fut")
+		c.kids = [_ic2(x + cw0 * 0.5, y + 14.0, 20.0, String(D[4])),
+			_dt(x, y + 26.0, cw0, 14.0, _fitw(String(D[1]), 9.5, 800, cw0 - 4.0), 9.5, 800 if a else 700, BROWN),
+			_dt(x, y + 39.0, cw0, 13.0, str(ra) + "/" + str(D[2].size()), 9.5, 800, "rgb(40, 110, 50)" if a else SUB)]
 		c.act = _bs_go.bind(String(D[0]))
 		out.append(c)
-		x += w + 6.0
 	y += hh + GG
 	# thanh tiến độ loại đang xem
 	var n0: int = cnt[K[0]]
