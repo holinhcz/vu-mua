@@ -67,7 +67,9 @@ func _draw(e: float) -> void:
 	var h := clampi(int(f.h), 0, 3)
 	var hs: String = WC2.KLHANG[h]
 	var cs := [[hs, HANGK[h], BROWN]]
-	if f.rec:
+	if f.rec:   # hạng Kỷ lục mà lại kỷ lục mới: một chip thôi
+		if h == 3:
+			cs = []
 		cs.append(["Kỷ lục mới!", "sen", "rgb(180, 40, 50)"])
 	var tws := 0.0
 	for c in cs:
@@ -91,7 +93,8 @@ func _draw(e: float) -> void:
 		var bx := X0 + (i % 2) * (cw + g)
 		if i > 0 and i % 2 == 0:
 			y += ch + g
-		out.append_array(_stat(bx, y, cw, ch, String(r[0]), String(r[1])))
+		var ww := XW if i == L.size() - 1 and i % 2 == 0 else cw   # ô lẻ cuối: trải hết hàng
+		out.append_array(_stat(bx, y, ww, ch, String(r[0]), String(r[1])))
 	if L.size():
 		y += ch + GG
 	# nút
