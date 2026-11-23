@@ -438,6 +438,7 @@ func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bả
 		_wire(k)
 
 func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối dùng lại có việc mới)
+	U.last_btn = b   # (bản 506) ô vừa bấm: bong bóng chạm xem đặt theo ô này
 	var n: Dictionary = b.get_meta("snap", {})
 	if n.get("act") is Callable:
 		_on(n.act)

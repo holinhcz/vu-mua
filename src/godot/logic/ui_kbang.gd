@@ -165,7 +165,6 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"tre": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)"],   # dải thứ: nâu vàng
 	"sen": ["rgb(250, 210, 210)", "rgb(252, 222, 222)", "rgb(254, 234, 234)", "rgb(214, 120, 128)"],
 	"fire_l": ["rgb(255, 214, 178)", "rgb(255, 224, 194)", "rgb(255, 234, 212)", "rgb(226, 120, 50)", "rgb(232, 112, 40)"],   # (bản 460) cam lửa: Sổ nhiệm vụ (Chuỗi, quà mốc cuối), nghề chính
-	"tip": ["rgb(255, 253, 246)", "rgb(255, 253, 246)", "rgb(255, 251, 240)", "rgb(196, 160, 96)"],   # (bản 504) bong bóng chạm xem
 	"info": ["rgb(214, 232, 248)", "rgb(224, 238, 250)", "rgb(236, 244, 252)", "rgb(96, 146, 196)"],   # (bản 434) chip thông tin, thời gian (xanh dương nhạt)
 }
 func _ck(kind: String) -> Array:   # màu chip theo loại; bảng con thêm loại riêng thì ghi đè hàm này
@@ -252,8 +251,12 @@ func _dbtn(x: float, y: float, w: float, h: float, s: String, cb: Callable) -> D
 func _dsay(s: String) -> void:   # (bản 504) chạm xem: bong bóng tại chỗ chạm (không dùng toast chung)
 	_dtip(s)
 
-const TIPW := 230.0   # (bản 505) rộng tối đa; bong bóng rộng theo chữ, tối thiểu 120
+const TIPW := 230.0   # rộng tối đa; bong bóng rộng theo chữ, tối thiểu 120
+static var _TIPN := {}   # (bản 506) nền bong bóng = khung khay món xưởng (xf2_pd .xbar): tối trong mờ, bo 18, viền sáng
 func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] tên đậm + chữ; ic "gift:<loại>" hình quà, "<svg…" hình svg, còn lại mã _icx
+	if _TIPN.is_empty():
+		_TIPN = Snap.find(Snap.load_snap("xf2_pd")[".xf"][0], "xbar").duplicate(false)
+		_TIPN.kids = []
 	var iw := 38.0 if ic != "" else 0.0
 	var tw0 := TIPW - 20.0 - iw
 	var L := _wrap(body, 10.5, 600, tw0)
@@ -267,14 +270,24 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 	var h := 10.0 + (17.0 if ttl != "" else 0.0) + L.size() * 15.0 + 10.0
 	if ic != "":
 		h = maxf(h, 50.0)
-	var tp: Vector2 = U.last_tap / Css.K
+	# chỗ đặt: theo ô vừa bấm (U.last_btn), không theo điểm ngón tay; không vượt khung bảng
 	var vs: Vector2 = U.vsize()
-	var x := clampf(tp.x - W0 * 0.5, 8.0, vs.x - W0 - 8.0)
-	var up := tp.y - h - 18.0 >= 8.0   # luôn ở trên chỗ chạm, sát mép trên màn mới lật xuống
-	var y := (tp.y - h - 18.0) if up else (tp.y + 20.0)
-	var c := _chip(x, y, W0, h, "tip")
-	c.css = c.css.duplicate()
-	c.css["box-shadow"] = String(c.css.get("box-shadow", "none")).replace("none", "") + (", " if String(c.css.get("box-shadow", "none")) != "none" else "") + "rgba(60, 40, 10, 0.35) 0px 4px 12px 0px"   # bóng nổi khỏi bảng
+	var a := Rect2(U.last_tap / Css.K, Vector2.ZERO)
+	if U.last_btn != null and is_instance_valid(U.last_btn) and U.last_btn.is_visible_in_tree():
+		var gr: Rect2 = U.last_btn.get_global_rect()
+		a = Rect2(gr.position / Css.K, gr.size / Css.K)
+	var B: Rect2 = U.panel_rect()
+	if B.size == Vector2.ZERO:
+		B = Rect2(Vector2.ZERO, vs)
+	B = B.grow(-8.0)
+	var x := clampf(a.position.x + a.size.x * 0.5 - W0 * 0.5, B.position.x, B.end.x - W0)
+	var y := a.position.y - h - 6.0
+	if y < B.position.y:   # trên ô hết chỗ: xuống dưới ô
+		y = a.end.y + 6.0
+	y = clampf(y, B.position.y, B.end.y - h)
+	var c := _cl(_TIPN)
+	c.r = [x, y, W0, h]
+	c.erase("tr")
 	var ks := []
 	var tx := x + 10.0
 	if ic != "":
@@ -285,20 +298,15 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 		tx += iw
 	var ty := y + 10.0
 	if ttl != "":
-		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 800, BROWN, "left"))
+		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 800, "rgb(255, 255, 255)", "left"))
 		ty += 17.0
 	for i in L.size():
-		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, BROWN if ttl == "" else SUB, "left"))
-	var ax := clampf(tp.x - 11.0, x + 10.0, x + W0 - 32.0)   # mũi nhọn: đầu nhọn chỉ đúng chỗ chạm, trồi ra ngoài mép
-	var arr := _dic(ax, (y + h - 2.0) if up else (y - 11.0), 22.0, TIPA if up else TIPA2)
-	arr.r[3] = 13.5
-	var wrap := {"z": 1.0, "tag": "div", "id": "", "cls": "", "r": [0.0, 0.0, vs.x, vs.y], "css": {"display": "block", "position": "absolute"}, "kids": [c, arr]}
+		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(255, 255, 255)" if ttl == "" else "rgb(236, 228, 206)", "left"))
 	c.kids = ks
+	var wrap := {"z": 1.0, "tag": "div", "id": "", "cls": "", "r": [0.0, 0.0, vs.x, vs.y], "css": {"display": "block", "position": "absolute"}, "kids": [c]}
 	var b: Control = U._build(wrap, {})
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	U.tip_show(b)
-const TIPA := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 18 11\"><path d=\"M0.5 0.5L9 10.2L17.5 0.5\" fill=\"rgb(255,253,246)\" stroke=\"rgb(170,128,60)\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M1.5 0h15v1.4h-15z\" fill=\"rgb(255,253,246)\"/></svg>"   # mũi nhọn xuống (bong bóng ở trên)
-const TIPA2 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 18 11\"><path d=\"M0.5 10.5L9 0.8L17.5 10.5\" fill=\"rgb(255,253,246)\" stroke=\"rgb(170,128,60)\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M1.5 9.6h15v1.4h-15z\" fill=\"rgb(255,253,246)\"/></svg>"   # mũi nhọn lên
 
 # ------------------------------------------------------------------ (bản 453) khối chung dời từ Nhà dân sang (Nhà dân, Nghề dùng chung)
 const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(226,64,72)\" stroke=\"rgb(170,36,44)\" stroke-width=\"1.2\"/></svg>"

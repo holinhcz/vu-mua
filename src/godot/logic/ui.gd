@@ -324,6 +324,15 @@ func fly(s: String) -> void:   # (bản 505) chữ bay: kết quả bấm (+1.00
 	tw.parallel().tween_property(lb, "modulate:a", 0.0, 0.5).set_delay(0.8)
 	tw.tween_callback(lb.queue_free)
 
+func panel_rect() -> Rect2:   # (bản 506) thân bảng đang mở (vùng nội dung dưới hàng tab, css); rỗng = không có bảng
+	for p in _pans() + [ngp, nvp, vlp]:
+		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
+			var w = (p.ids.get(".bk2v", p.ids.get(".pwin")) if "ids" in p else null)
+			var c: Control = w if w is Control else p.box
+			var r := c.get_global_rect()
+			return Rect2(r.position / Css.K, r.size / Css.K)
+	return Rect2()
+
 func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (đơn vị css), 0 = không có bảng
 	for p in _pans() + [ngp, nvp, vlp]:
 		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
@@ -334,6 +343,7 @@ func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (
 
 # ------------------------------------------------------------------ (bản 504) bong bóng chạm xem: khung nhỏ ngay chỗ chạm (thay toast cho chữ giải thích)
 var last_tap := Vector2.ZERO   # chỗ chạm xuống gần nhất (px)
+var last_btn: Control = null   # (bản 506) ô bảng vừa bấm (ui_bang._on_b)
 var _fx: CanvasLayer = null    # (bản 505) lớp trên cùng cho bong bóng, chữ bay (bảng tự dời lên trước mỗi khung nên không bỏ chung root được)
 func fx_layer() -> CanvasLayer:
 	if _fx == null or not is_instance_valid(_fx):
