@@ -220,6 +220,7 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"chox": G.troi.hh = 7.0; G.w_all.WC.Ui.al = 1.0; G.w_all.WCU.open_cho(int(a[1]) if a.size() > 1 else 0)   # (bản 517) thử bảng Chợ nổi: chox[:ghe]
 			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)
 			"paddyt": _paddyt(a)
