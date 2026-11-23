@@ -4,8 +4,7 @@ extends RefCounted
 # chân dung phấn màu (SVG), biểu tượng nút.
 
 const DIR := "res://ui/img/cg/"
-const QSZ := 128
-const QN := 12
+const QN := 12   # mỗi loại quân 12 kiểu, mỗi kiểu 1 file 9px: quan/s0..11 (sỏi trắng), quan/g0..11 (miểng gạch)
 
 static var _font := {}
 static var _base: FontFile = null
@@ -58,6 +57,9 @@ static func img(name: String) -> ImageTexture:
 	var t := ImageTexture.create_from_image(im)
 	_img[name] = t
 	return t
+
+static func quan(kind: int, v: int) -> ImageTexture:
+	return img("quan/%s%d" % ["s" if kind == 0 else "g", v % QN])
 
 static var _raw := {}
 static func raw(name: String) -> Image:

@@ -11,6 +11,7 @@ const A := preload("res://logic/cg/cg_art.gd")
 const BG := preload("res://logic/cg/cg_bg.gd")
 const SND := preload("res://logic/cg/cg_snd.gd")
 const HUD := preload("res://logic/cg/cg_hud.gd")
+const TAN := preload("res://logic/cg/cg_tan.gd")
 
 const PR := 0.155
 const TOTAL := 16
@@ -54,6 +55,7 @@ var tut_step := 0
 var ai_token := 0
 var snd: Node = null
 var hud: Control = null
+var tan: Node2D = null
 var bg_tex: Texture2D = null
 var shade: TextureRect = null
 var _svp: SubViewport = null
@@ -67,8 +69,10 @@ var _thr: Thread = null
 var _baking := false
 
 # ============================================================ dựng
+var DPR := 1.0
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	DPR = maxf(1.0, k)
+	K = DPR
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -89,6 +93,16 @@ func _ready() -> void:
 	A.build_arm()
 	ME.next = 3 + randf() * 4
 	_build_shade()
+	tan = TAN.new()
+	add_child(tan)
+	# chỉnh màu như caro (Link 11-22 "ánh sáng bằng bên caro"): nằm trên cảnh + quân + tán, dưới thẻ/chữ
+	var gr := ColorRect.new()
+	gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var gm := ShaderMaterial.new()
+	gm.shader = load("res://logic/cg/grade.gdshader")
+	gr.material = gm
+	add_child(gr)
 	hud = HUD.new()
 	hud.game = self
 	add_child(hud)
@@ -123,11 +137,18 @@ func board_rect(pad: float) -> Rect2:
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
+	# Link 11-22 "menu UI kéo giãn theo tỉ lệ màn hình": cả sân + giao diện co giãn đều theo màn.
+	# Khổ chuẩn: dọc 412x915 css (S26 Ultra = 1), ngang 1280x720; màn khác nhân U = min(rộng, cao) so với khổ chuẩn.
+	var wc := vs.x / DPR
+	var hc := vs.y / DPR
+	var U := minf(wc / 412.0, hc / 915.0) if hc > wc * 1.05 else minf(wc / 1280.0, hc / 720.0)
+	K = DPR * clampf(U, 0.4, 3.0)
 	var W := vs.x / K
 	var H := vs.y / K
 	L.W = W
 	L.H = H
 	L.port = H > W * 1.05
+	L.wide = not L.port and W > H * 1.85    # màn ngang dài (1980x900, cửa sổ máy tính ~1760x920): Link 11-23 chỉ sửa mấy màn này
 	hud.layout(W, H, L.port)
 	var c0: Rect2 = hud.card_rect(0)
 	var c1: Rect2 = hud.card_rect(1)
@@ -139,59 +160,126 @@ func _layout() -> void:
 		L.s = minf(minf((H - 16) / (5.0 if H < 500 else 5.7), (W - 2 * side) / (4 + 2 * BM * 0.6)), 165.0)
 		L.ox = (W - 4 * L.s) / 2
 		L.oy = (H - 4 * L.s) / 2 + minf(14.0, L.s * 0.1)
-	else:
+		# Link 11-22 "1000x860 bàn cờ nhỏ so với khung": màn ngang gần vuông thì bàn nằm giữa 2 hàng thẻ (trên/dưới),
+		# không cần né thẻ theo bề ngang; chừa 2 bên đủ cho nia (bán kính 0.6 ô như màn dọc)
 		var top := maxf(c1.end.y, tl.end.y)
-		var bot := c0.position.y
-		L.s = minf(minf((W - 16) / (4 + 0.62), (bot - top - 16) / (4 + 2 * BM + 1.6)), 175.0)
+		var bh := 4 + 2 * BM + 0.16
+		var s2 := minf(minf((c0.position.y - top - 24) / bh, (W - 80) / (bh + 2.6)), 180.0)
+		if s2 > L.s and W < H * 1.25:      # chỉ màn gần vuông (1000x860), màn khác giữ nguyên
+			L.s = s2
+			L.ox = (W - 4 * s2) / 2
+			L.oy = top + 12 + (c0.position.y - top - 24 - bh * s2) / 2 + (BM + 0.08) * s2
+	else:
+		# Link 11-22 "nia cờ trên nhỏ xíu": chừa chỗ trên + dưới bàn cho 2 nia cùng cỡ (bán kính FB * ô), dư thì chia đều
+		var top := maxf(c1.end.y, tl.end.y)
+		const FB := 0.6
+		var bh := 4 + 2 * BM + 0.16            # bàn + mép phấn (board_rect pad 0.08 ô)
+		L.s = minf(minf((W - 16) / (4 + 0.62), (H - top - 32) / (bh + 4 * FB)), 175.0)
+		var extra := maxf(0.0, H - top - 32 - (bh + 4 * FB) * L.s)
 		L.ox = (W - 4 * L.s) / 2
-		L.oy = (top + bot) / 2 - 2 * L.s
-	# rổ quân dư của mỗi bên: to nhất vừa chỗ (tới chừng 60 cm), phía bên mình, gần thẻ
+		L.oy = top + 16 + 2 * FB * L.s + extra / 2 + (BM + 0.08) * L.s
+	# Link 11-22 tán xoài góc trái trên: to nhất mà lá không chạm bàn cờ; nia né tán (không bị lá che).
+	# tán to quá làm nia bên trên nhỏ đi / phải qua nửa sân kia thì thu tán lại.
 	var brd := board_rect(L.s * 0.08)
 	var blocks := [brd, c0.grow(8), c1.grow(8), tl.grow(8)]
+	var nia0 := _place_baskets(blocks)
+	var ban := Rect2(map(-0.45, -0.45), Vector2(4.9, 4.9) * L.s)      # quân + vạch phấn hai đầu bàn
+	var tch := TAN.choices(ban, Rect2(0, tl.end.y, W, H - tl.end.y))
+	var tsc := 0.3
+	var tsh := Vector2(-200, -200)       # không chỗ nào vừa: tán khuất hẳn
+	L.bx = nia0.bx
+	# chọn chỗ tán: nia vẫn bên nửa sân mình, nia ≥ 90% cỡ khi không có tán; không có thì lấy chỗ cân nhất (lá thấy được x cỡ nia)
+	var r0 := minf(nia0.bx[0].z, nia0.bx[1].z)
+	var bsc := -1.0
+	for i in mini(tch.size(), 16):
+		var tb := blocks.duplicate()
+		for r in TAN.rects(tch[i].sc, 4, tch[i].sh):
+			tb.append((r as Rect2).grow(4))
+		var nb := _place_baskets(tb)
+		if not nb.own:
+			continue
+		var rr := minf(nb.bx[0].z, nb.bx[1].z) / r0
+		var sc2: float = tch[i].a / tch[0].a * rr * rr * (2.0 if rr >= 0.9 else 1.0)
+		if sc2 > bsc:
+			bsc = sc2
+			L.bx = nb.bx
+			tsc = tch[i].sc
+			tsh = tch[i].sh
+		if rr >= 0.9:
+			break
+	L.tan_sc = tsc
+	L.tan_sh = tsh
+	L.tan = TAN.rects(tsc, 2, tsh)
+	# Link 11-22: 2 nia phải đúng 1 cỡ: lấy cỡ nia nhỏ hơn cho cả hai (giữ tâm, nhỏ lại thì vẫn vừa chỗ)
+	var rz := minf(L.bx[0].z, L.bx[1].z)
+	for i in 2:
+		L.bx[i] = Vector3(L.bx[i].x, L.bx[i].y, rz)
+	L.bas = []
+	for b in L.bx:
+		var u := unmap(b.x, b.y)
+		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
+	_resize_shade()
+	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
+	_bake_bg()
+
+func _place_baskets(blocks0: Array) -> Dictionary:
+	# rổ quân dư của mỗi bên: to nhất vừa chỗ (tới chừng 60 cm), phía bên mình, gần thẻ
+	var W: float = L.W
+	var H: float = L.H
+	var tl: Rect2 = L.tools
+	var blocks := blocks0.duplicate()
+	var own_all := true
 	var hit := func(x: float, y: float, r: float, lst: Array) -> bool:
 		for o in lst:
 			var q: Rect2 = o
 			if Vector2(clampf(x, q.position.x, q.end.x) - x, clampf(y, q.position.y, q.end.y) - y).length() < r:
 				return true
 		return false
-	L.bx = []
+	var bx := []
 	for p in [0, 1]:
 		var card: Rect2 = L.cards[p]
 		var cc := card.get_center()
 		var best = null
-		for f in [0.95, 0.88, 0.8, 0.72, 0.64, 0.56, 0.5]:
-			var r := maxf(26.0, minf(L.s * f, 120.0))
-			var bs := -1e9
-			var y := r + 6
-			while y <= H - r - 6:
-				var x := r + 6
-				while x <= W - r - 6:
-					if not hit.call(x, y, r + 4, blocks):
-						var ok := true
-						if L.bx.size():
-							var b0: Vector3 = L.bx[0]
-							if Vector2(x - b0.x, y - b0.y).length() < r + b0.z + 10:
-								ok = false
-						if ok:
-							var half := (0.0 if y > H / 2 else -400.0) if p == 0 else (0.0 if y < H / 2 else -400.0)
-							var sc := half - Vector2(x - cc.x, y - cc.y).length() * 0.6
-							if sc > bs:
-								bs = sc
-								best = Vector3(x, y, r)
-					x += 6
-				y += 6
+		# lượt 1 chỉ tìm bên nửa sân của mình (nia to nhất vừa chỗ); không có mới cho qua nửa kia
+		for own in [true, false]:
+			for f in [0.95, 0.88, 0.8, 0.72, 0.64, 0.6, 0.56, 0.5]:
+				var r := maxf(26.0, minf(L.s * f, 120.0))
+				var bs := -1e9
+				var y := r + 6
+				while y <= H - r - 6:
+					var mine := y > H / 2 if p == 0 else y < H / 2
+					if own and not mine:
+						y += 6
+						continue
+					var x := r + 6
+					while x <= W - r - 6:
+						# Link 11-23 màn 1980x900: nia trắng bên trái bàn (phía thẻ Bạn), nia gạch bên phải
+						var side_ok: bool = not L.wide or not own or ((x < L.ox) if p == 0 else (x > L.ox + 4 * L.s))
+						if side_ok and not hit.call(x, y, r + 4, blocks):
+							var ok := true
+							if bx.size():
+								var b0: Vector3 = bx[0]
+								if Vector2(x - b0.x, y - b0.y).length() < r + b0.z + 10:
+									ok = false
+							if ok:
+								var sc := -Vector2(x - cc.x, y - cc.y).length() * 0.6
+								if sc > bs:
+									bs = sc
+									best = Vector3(x, y, r)
+						x += 6
+					y += 6
+				if best != null:
+					break
 			if best != null:
+				if not own:
+					own_all = false
 				break
 		if best == null:
+			own_all = false
 			best = Vector3(W - 40, H - 40, 30) if p == 0 else Vector3(40, 40 + tl.size.y, 30)
-		L.bx.append(best)
+		bx.append(best)
 		blocks.append(Rect2(best.x - best.z, best.y - best.z, best.z * 2, best.z * 2))
-	L.bas = []
-	for b in L.bx:
-		var u := unmap(b.x, b.y)
-		L.bas.append({"x": u.x, "y": u.y, "r": b.z * 0.8 / L.s})
-	_resize_shade()
-	_bake_bg()
+	return {"bx": bx, "own": own_all}
 
 func _bake_bg() -> void:
 	# nền tĩnh: vẽ một lần trong SubViewport, chụp ra ảnh
@@ -414,10 +502,10 @@ func step_animals(dt: float) -> void:
 			c.x = q3.x
 			c.y = q3.y
 
-func _draw_animal(name: String, cell: int, ln: float, span: float, x: float, y: float, a: float, pose: int, off: Vector2) -> void:
-	var k := ((roundi(a / TAU * 16) % 16) + 16) % 16
+func _draw_animal(name: String, ln: float, span: float, x: float, y: float, rot: float, off: Vector2) -> void:
+	# gà 9px của caro: 1 ảnh nhìn từ trên, xoay theo hướng đi; chỉ bóng sát đất (bóng đổ xoay theo sẽ phải làm lại mỗi khung)
 	var D := ln / span
-	A.on_ground(self, K, name, Rect2i(k * cell, pose * cell, cell, cell), Vector2(x, y) + off, D, D, 0.0, ln * 0.5)
+	A.on_ground(self, K, name, Rect2i(), Vector2(x, y) + off, D, D, rot, 0.0)
 
 # ============================================================ quân cờ (hình + vật lý)
 func mk_stone(kind: int, home: String, p: Vector2) -> Dictionary:
@@ -758,10 +846,10 @@ func _draw() -> void:
 	if FARM.hen != null and not _baking:
 		for c in FARM.chicks:
 			var hop: float = absf(sin(c.hop)) * c.len * 0.06
-			_draw_animal("chick", 72, c.len, 0.57, c.x, c.y - hop, c.a, c.peck, sh)
+			_draw_animal("gacon", c.len, 0.91, c.x + cos(c.a) * c.len * 0.08 * c.peck, c.y - hop + sin(c.a) * c.len * 0.08 * c.peck, c.a, sh)
 		var h = FARM.hen
 		var bob: float = sin(h.bob) * h.len * 0.01
-		_draw_animal("hen", 200, h.len, 0.72, h.x, h.y + bob, h.a, h.peck, sh)
+		_draw_animal("ga", h.len, 0.6, h.x + cos(h.a) * h.len * 0.05 * h.peck, h.y + bob + sin(h.a) * h.len * 0.05 * h.peck, h.a - 2.6, sh)
 	var live := human_live()
 	var pulse := 0.5 + 0.5 * sin(clock * 3.2)
 	_LG(sh)
@@ -815,10 +903,7 @@ func _draw() -> void:
 		var ss: float = R * (2.3 + st.z * 0.9)
 		var al := maxf(0.25, 1 - st.z * 0.55) * 0.9
 		if st.z < 0.03:
-			var sz := R * 3.3
-			draw_set_transform_matrix(Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO) * Transform2D(st.id * 2.39, P + sh))
-			draw_texture_rect_region(A.atlas, Rect2(-sz / 2, -sz / 2, sz, sz), A.R_SAND, Color(1, 1, 1, 0.62))
-			_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
+			# Link 11-22: bỏ vòng cát sỏi nhỏ quanh chân quân, chỉ còn bóng
 			var cs := R * 2.16
 			draw_texture_rect_region(A.atlas, Rect2(P.x + R * 0.07 - cs / 2, P.y + R * 0.1 - cs / 2, cs, cs * 0.96), A.R_CONT, Color(1, 1, 1, 0.5))
 			var ks := R * 2.3
@@ -830,11 +915,10 @@ func _draw() -> void:
 		var P := map(hand.x, hand.y)
 		var off: float = (0.05 + hand.z * 0.42) * s
 		_arm_shadow(P.x + off * 0.55, P.y + off * 0.75, hand.p, hand.vis, sh)
-	var qt := A.img("quan")
 	_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
 	for st in lst:
 		if st.z <= 0.05:
-			_draw_st(st, qt)
+			_draw_st(st)
 	# gợi ý: quân nước này ăn được, khoanh phấn vàng; đòn gánh: vạch phấn từ quân này qua quân kia
 	if hov != null and hov.pv != null:
 		_T()
@@ -848,7 +932,7 @@ func _draw() -> void:
 		_T(Transform2D(0.0, Vector2.ONE, 0.0, sh))
 	for st in lst:
 		if st.z > 0.05:
-			_draw_st(st, qt)
+			_draw_st(st)
 	# chữ phấn trên chỗ đi: nước này ăn mấy quân
 	if live and Gm.sel >= 0 and int(S.hint):
 		for t in targets_of(Gm.sel):
@@ -877,11 +961,11 @@ func _draw() -> void:
 		petals = petals.filter(func(p): return p.y < L.H + 30)
 	_T()
 
-func _draw_st(st: Dictionary, qt: Texture2D) -> void:
+func _draw_st(st: Dictionary) -> void:
 	var P := map(st.x, st.y)
 	var Y: float = P.y - st.z * L.s * 0.34
 	var D: float = st.r * L.s * 2 / 0.82 * (1 + st.z * 0.28)
-	draw_texture_rect_region(qt, Rect2(P.x - D / 2, Y - D / 2, D, D), Rect2(st.v * A.QSZ, st.kind * A.QSZ, A.QSZ, A.QSZ))
+	draw_texture_rect(A.quan(st.kind, st.v), Rect2(P.x - D / 2, Y - D / 2, D, D), false)
 
 func _arm_shadow(fx: float, fy: float, p: int, vis: float, sh: Vector2) -> void:
 	var s: float = L.s
@@ -1041,6 +1125,7 @@ func petal_rain(n: int) -> void:
 			"va": (randf() - 0.5) * 4, "s": 6 + randf() * 7, "ph": randf() * 6.28, "c": Color("#ffd23a") if randf() < 0.8 else Color("#ffefa8")})
 
 # ============================================================ bóng cây lay (WebGL của web: nhân màu đè lên cảnh)
+# Link 11-22: bóng tàu lá góc phải nhỏ lại + nhạt hơn; đốm bóng lá dồn về góc trái trên (dưới tán xoài)
 const SHADE_SRC := """shader_type canvas_item;
 uniform vec2 res;
 uniform float t;
@@ -1063,16 +1148,16 @@ void fragment(){
   float a=(.018*sin(t*.55)+.007*sin(t*1.63+1.))*smoothstep(0.,1.,dist);
   d=mat2(vec2(cos(a),sin(a)),vec2(-sin(a),cos(a)))*d;
   d+=vec2(sin(t*1.9+p.y*9.),cos(t*1.7+p.x*8.))*.004*dist;
-  vec2 q=vec2(1.)+d/1.25;
-  float fsh=frond(q,.003+.006*dist)*.92;
+  vec2 q=vec2(1.)+d/0.8;
+  float fsh=frond(q,.003+.006*dist)*.75;
   vec2 w=vec2(sin(t*.45+p.y*3.)+sin(t*.23+p.x*1.7),cos(t*.37+p.x*2.6)+sin(t*.19+p.y*2.))*.006;
   float big=fbm((p+w)*2.4+vec2(3.1,1.3)),fine=fbm((p+w*1.8)*8.+vec2(7.,2.)),vf=fbm((p+w*2.2)*22.+vec2(4.,8.));
-  float dd=length((p-tree)*vec2(1.,1.12));
+  float dd=length((p-vec2(tree.x,corner.y-tree.y))*vec2(1.,1.12));
   float th=mix(.36,.95,smoothstep(.05,.9,dd));
   float v=big*.5+fine*.3+vf*.2;
   float cover=smoothstep(th-.03,th+.03,v)*.8;
   float sh=clamp(max(fsh,cover),0.,1.)*str;
-  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.64,.66,.72);
+  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.72,.74,.79);
   vec3 col=mix(lit,shade,sh);
   vec2 qv=(uv-.5)*vec2(res.x/res.y,1.);float vig=smoothstep(1.15,.35,length(qv*vec2(.9,1.15)));
   col*=mix(.88,1.,vig);
@@ -1092,7 +1177,7 @@ func _build_shade() -> void:
 	_shade_mat.shader = sh
 	_shade_mat.set_shader_parameter("fr", A.img("frond"))
 	_shade_mat.set_shader_parameter("tree", Vector2(-0.08, -0.1))
-	_shade_mat.set_shader_parameter("str", 0.9)
+	_shade_mat.set_shader_parameter("str", 0.6)
 	cr.material = _shade_mat
 	_svp.add_child(cr)
 	add_child(_svp)
