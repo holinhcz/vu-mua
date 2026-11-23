@@ -371,70 +371,48 @@ func line_color(tod: Dictionary, a := .6) -> Color:
 func draw_line_q(ci: CanvasItem, p0: Vector2, p1: Vector2, sag: float, tod: Dictionary, a: float) -> void:
 	ci.draw_polyline(A.quad_pts(p0, Vector2((p0.x + p1.x) / 2, maxf(p0.y, p1.y) + sag), p1, 16), line_color(tod, a), 1, true)
 
-const BANDS0 := ["#f2efe6", "#2a2a2a", "#f2efe6", "#e8402a", "#ff6a2a"]
-const BANDS1 := ["#2a7a5a", "#e8e0c8", "#2a4aa0", "#e84a2a", "#f8d040"]
 
 # hình phao ở (x,y) = điểm mặt nước, h = phần nổi; chìm sink, nghiêng tilt. Phần dưới nước mờ .22 (cắt theo mặt nước)
+# phao = ảnh 6px (ui/img/cc/can/phao0-2): cọng lông trên mặt nước, thân bấc dưới nước (mờ như thấy qua nước)
+var _can_meta := {}
 func draw_float_shape(ci: CanvasItem, x: float, y: float, h: float, sink: float, tilt: float, tod: Dictionary, flying: bool) -> void:
-	var kind: int = game.S.flo
-	var w := maxf(3, h * .15) * (1.3 if kind == 1 else 1.0)
-	var night: float = tod.night
-	var xf := Transform2D(tilt, Vector2(x, y + sink * h))
-	var bands: Array = BANDS1 if kind == 1 else BANDS0
-	var n := bands.size()
-	var shapes := []   # [poly local, colour]
-	for i in n:
-		var y0 := -h * i / n
-		var y1 := -h * (i + 1) / n
-		shapes.append([_rect_pts(-w / 2, y1, w, y0 - y1 + .5), dim(Color(bands[i]), tod)])
-	shapes.append([_rect_pts(-w / 2, -h, w * .3, h), Color(1, 1, 1, .4)])
-	var outline := _rect_pts(-w / 2, -h, w, h)
-	if kind == 2:
-		shapes.append([A.ell_pts(Vector2(0, -h), w * .9, w * 1.6, 16), Color("#d8ff7a") if night > .3 else dim(Color("#9adc4a"), tod)])
-	var body := A.quad_pts(Vector2(0, h * .05), Vector2(w * 2.4, h * .45), Vector2(0, h * .95), 8)
-	var b2 := A.quad_pts(Vector2(0, h * .95), Vector2(-w * 2.4, h * .45), Vector2(0, h * .05), 8)
-	for i in range(1, b2.size() - 1):
-		body.append(b2[i])
-	var ow := maxf(1, w * .22)
-	var oc := Color(30 / 255.0, 20 / 255.0, 12 / 255.0, .85)
-	if flying:
-		ci.draw_set_transform_matrix(xf)
-		for sp in shapes:
-			ci.draw_colored_polygon(sp[0], sp[1])
-		var oc2 := outline.duplicate()
-		oc2.append(outline[0])
-		ci.draw_polyline(oc2, oc, ow, true)
-		var bs := PackedVector2Array()
-		for p in body:
-			bs.append(Vector2(p.x * .45, p.y * .5))
-		ci.draw_colored_polygon(bs, dim(Color("#c8b080"), tod))
-		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	var kind: int = clampi(game.S.flo, 0, 2)
+	if _can_meta.is_empty():
+		var j = JSON.parse_string(FileAccess.get_file_as_string(A.DIR + "can/can.json"))
+		_can_meta = j if typeof(j) == TYPE_DICTIONARY else {"x": 1}
+	var nm := "phao%d" % kind
+	var m: Dictionary = _can_meta.get(nm, {})
+	var tx: Texture2D = A.img("can/" + nm)
+	if tx == null or m.is_empty():
 		return
-	var up := _rect_pts(x - h * 2, y - h * 3, h * 4, h * 3)
-	var dn := _rect_pts(x - h * 2, y, h * 4, h * 3)
-	for half in [[up, 1.0, dim(Color("#c8b080"), tod)], [dn, .22, Color("#c8b080")]]:
-		var al: float = half[1]
-		for sp in shapes:
-			_clip_fill(ci, xf * (sp[0] as PackedVector2Array), half[0], Color(sp[1], (sp[1] as Color).a * al))
-		_clip_fill(ci, xf * body, half[0], Color(half[2], al))
-		var ol := xf * outline
-		ol.append(ol[0])
-		for seg in Geometry2D.intersect_polyline_with_polygon(ol, half[0]):
-			ci.draw_polyline(seg, Color(oc, oc.a * al), ow, true)
-	if sink < 1.1:
-		var m := A.ell_pts(Vector2(x, y), w * 2.2, w * .7, 20)
-		m.append(m[0])
-		ci.draw_polyline(m, Color(Color.WHITE.lerp(tod.tint, .4), .55), 1, true)
-	if kind == 2 and night > .2 and sink < 1.2:
-		_glows.append([Vector2(x + sin(tilt) * h, y + sink * h - cos(tilt) * h), h * .9, .8 * night])
+	var night: float = tod.night
+	var f: float = h / float(m.hs)                 # css mỗi điểm ảnh của ảnh
+	var iw: float = m.w; var ih: float = m.h; var wl: float = m.wl
+	var dc := dim(Color.WHITE, tod)
+	var fx := maxf(1.0, 3.0 / (float(m.ws) * f))      # phao xa nhỏ: giữ cọng ít nhất 3 css cho dễ thấy (như bản cũ)
+	ci.draw_set_transform_matrix(Transform2D(tilt, Vector2(x, y + sink * h)) * Transform2D(0, Vector2(fx, 1), 0, Vector2.ZERO))
+	if flying:
+		ci.draw_texture_rect(tx, Rect2(-iw * .5 * f, -wl * f, iw * f, ih * f), false, dc)
+	else:
+		# cắt ngang ở mặt nước: trên rõ, dưới mờ
+		var cut := clampf(wl - sink * h / f, 0.0, ih)
+		if cut > 0:
+			ci.draw_texture_rect_region(tx, Rect2(-iw * .5 * f, -wl * f, iw * f, cut * f), Rect2(0, 0, iw, cut), dc)
+		if cut < ih:
+			var uc := Color(Color.WHITE.lerp(tod.water, .5), .3)
+			ci.draw_texture_rect_region(tx, Rect2(-iw * .5 * f, (cut - wl) * f, iw * f, (ih - cut) * f), Rect2(0, cut, iw, ih - cut), uc)
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	if not flying:
+		var w := float(m.ws) * f * fx
+		if sink < 1.1:
+			var e := A.ell_pts(Vector2(x, y), w * 2.4, w * .75, 20)
+			e.append(e[0])
+			ci.draw_polyline(e, Color(Color.WHITE.lerp(tod.tint, .4), .55), 1, true)
+		if kind == 2 and night > .2 and sink < 1.2:
+			_glows.append([Vector2(x + sin(tilt) * h, y + sink * h - cos(tilt) * h), h * .9, .8 * night])
 
 static func _rect_pts(x: float, y: float, w: float, h: float) -> PackedVector2Array:
 	return PackedVector2Array([Vector2(x, y), Vector2(x + w, y), Vector2(x + w, y + h), Vector2(x, y + h)])
-
-static func _clip_fill(ci: CanvasItem, poly: PackedVector2Array, clip: PackedVector2Array, col: Color) -> void:
-	for p in Geometry2D.intersect_polygons(poly, clip):
-		if p.size() >= 3 and not Geometry2D.triangulate_polygon(p).is_empty():
-			ci.draw_colored_polygon(p, col)
 
 # con cá đang dính câu trồi lưng lên mặt nước, bọt quanh
 func draw_surfacing(ci: CanvasItem, fx: float, fy: float, tod: Dictionary) -> void:
@@ -555,57 +533,88 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 	G.tipNow = t
 	var k: float = L.H / 900.0 * (.9 if L.portrait else 1.0)
 	var lit: Color = Color.WHITE.lerp(tod.tint, .7)
-	var N := 30
-	var P := []
+	var mc := Color(lit.r, lit.g, lit.b, 1)
+	# cần = ảnh 6px (ui/img/cc/can/can0, tools/cc/bank9/can_phao.py) dán dọc đường cong: cần vẫn uốn khi kéo cá
+	const N := 30
+	var P := PackedVector2Array()
+	P.resize(N + 1)
+	var S := 0.0
 	for i in N + 1:
 		var tt := float(i) / N
 		var u := 1 - tt
-		P.append([b * u * u + c * 2 * u * tt + t * tt * tt, lerpf(16, 3, pow(tt, .8)) * k, tt])
-	var shc := func(r: float, g: float, bl: float) -> Color: return Color(r * lit.r, g * lit.g, bl * lit.b)
-	var pass_ := func(m: float, a: float, col, from: int) -> void:
-		var pp := PackedVector2Array()
-		var ww := PackedFloat32Array()
+		P[i] = b * u * u + c * 2 * u * tt + t * tt * tt
+		if i > 0:
+			S += P[i].distance_to(P[i - 1])
+	var tx := _rod_tex(S)
+	if tx != null:
+		var hw := S * _rod_ar * .5
+		var pts := PackedVector2Array()
+		pts.resize((N + 1) * 2)
+		var uvs := PackedVector2Array()
+		uvs.resize((N + 1) * 2)
 		var cs := PackedColorArray()
-		for i in range(maxi(1, from) - 1, N + 1):
-			pp.append(P[i][0])
-			ww.append(P[i][1] * m + a)
-			if i > maxi(1, from) - 1:
-				cs.append(col.call(P[i][2]) if col is Callable else col)
-		A.ribbon(ci, pp, ww, cs)
-	pass_.call(1.0, 4 * k + 1.5, shc.call(.16, .1, .05), 0)
-	var c_dark: Color = shc.call(.42, .24, .12)
-	var c_light: Color = shc.call(.86, .72, .38)
-	pass_.call(1.0, 0.0, func(tt): return c_dark if tt < .18 else c_light, 0)
-	pass_.call(.28, 0.0, shc.call(1, .94, .7), 7)
-	var nc: Color = shc.call(.4, .28, .1)
-	var i2 := 8
-	while i2 < N:
-		var p: Vector2 = P[i2][0]
-		var p2: Vector2 = P[i2 + 1][0]
-		var wd: float = P[i2][1]
-		var dv := p2 - p
-		var dd := dv.length()
-		if dd == 0:
-			dd = 1
-		var nrm := Vector2(-dv.y, dv.x) / dd * wd * .55
-		ci.draw_line(p - nrm, p + nrm, nc, maxf(1.2, 2.2 * k), true)
-		i2 += 4
-	# ống cước gỗ gần cán, quay khi kéo
+		cs.resize((N + 1) * 2)
+		var idx := PackedInt32Array()
+		idx.resize(N * 6)
+		var acc := 0.0
+		for i in N + 1:
+			if i > 0:
+				acc += P[i].distance_to(P[i - 1])
+			var d := P[mini(i + 1, N)] - P[maxi(i - 1, 0)]
+			d = d.normalized()
+			var nr := Vector2(-d.y, d.x) * hw
+			var u := acc / S
+			pts[i * 2] = P[i] + nr; uvs[i * 2] = Vector2(u, 0)
+			pts[i * 2 + 1] = P[i] - nr; uvs[i * 2 + 1] = Vector2(u, 1)
+			cs[i * 2] = mc; cs[i * 2 + 1] = mc
+			if i < N:
+				var q := i * 6
+				idx[q] = i * 2; idx[q + 1] = i * 2 + 1; idx[q + 2] = i * 2 + 2
+				idx[q + 3] = i * 2 + 1; idx[q + 4] = i * 2 + 3; idx[q + 5] = i * 2 + 2
+		RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cs, uvs, PackedInt32Array(), PackedFloat32Array(), tx.get_rid())
+	# ống cước gỗ gần cán, quay khi kéo (1 ảnh, Godot xoay)
 	var tt := .2
 	var u := 1 - tt
 	var rp := b * u * u + c * 2 * u * tt + t * tt * tt
 	var R := 17 * k
 	var rc := rp + Vector2(-R * .4, -R * .9)
-	ci.draw_circle(rc, R, Color(.45, .3, .16).lerp(tod.tint, .4))
-	var rim := Color(.25, .16, .08).lerp(tod.tint, .4)
-	ci.draw_arc(rc, R, 0, TAU, 32, rim, 2.5 * k, true)
 	var hold_run: bool = G.state == "fight" and not G.hold and G.hook != null and G.hook.beh == "run"
 	G.reelA += (.35 if G.hold and G.state == "fight" else 0.0) - (.2 if hold_run else 0.0)
-	for i in 4:
-		var a: float = G.reelA + i * PI / 2
-		ci.draw_line(rc, rc + Vector2(cos(a), sin(a)) * R * .85, rim, 2.5 * k, true)
-	ci.draw_circle(rc + Vector2(cos(G.reelA), sin(G.reelA)) * R * .7, 3 * k, Color(.85, .75, .5).lerp(tod.tint, .4))
-	ci.draw_circle(t, 2.4 * k, Color(.9 * lit.r, .3 * lit.g, .2 * lit.b))
+	var rt: Texture2D = A.img("can/ongcuoc")
+	if rt != null:
+		var rs := R * 9.0 / 8.0
+		ci.draw_set_transform(rc, G.reelA)
+		ci.draw_texture_rect(rt, Rect2(-rs, -rs, rs * 2, rs * 2), false, mc)
+		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+# ảnh cần thu đúng số điểm ảnh máy theo độ dài trên màn (Lanczos 1 lần mỗi nấc 3%), vẽ 1:1 cho nét
+var _rod_src: Image = null
+var _rod_ar := .034
+var _rod_t: Texture2D = null
+var _rod_k := -1
+func _rod_tex(S: float) -> Texture2D:
+	if _rod_src == null:
+		var bb := FileAccess.get_file_as_bytes(A.DIR + "can/can0.webp")
+		var im := Image.new()
+		if bb.is_empty() or im.load_webp_from_buffer(bb) != OK:
+			return null
+		im.convert(Image.FORMAT_RGBA8)
+		im.fix_alpha_edges()
+		_rod_src = im
+		_rod_ar = float(im.get_height()) / float(im.get_width())
+	var K: float = game.K
+	var want := S * K
+	var key := int(round(log(maxf(want, 16.0)) / log(1.03)))
+	if key != _rod_k:
+		_rod_k = key
+		var w := maxi(16, int(round(pow(1.03, key))))
+		var h := maxi(4, int(round(w * _rod_ar)))
+		var im: Image = _rod_src.duplicate()
+		while im.get_width() > w * 2:
+			im.resize(im.get_width() / 2, im.get_height() / 2, Image.INTERPOLATE_CUBIC)
+		im.resize(w, h, Image.INTERPOLATE_LANCZOS)
+		_rod_t = ImageTexture.create_from_image(im)
+	return _rod_t
 
 # ------------------------------------------------------------ bờ bên này
 # Ghép 1 lần (mỗi lần đổi cỡ màn) từ ảnh 9px của nông trại theo gan.json (tools/cc/bank9/gan_pick.py): nền cỏ n2_co mép
