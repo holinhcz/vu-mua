@@ -216,7 +216,10 @@ func Hd(i: int) -> bool:   # Hd: chất thùng i lên ghe
 	return true
 
 # ------------------------------------------------------------------ mỗi bước (aT bản BUON)
+var test_hold := false   # (bản 515) lệnh thử ghet: giữ ghe đứng yên (không có bến vẫn mở được bảng)
 func step(dt: float) -> void:
+	if test_hold:
+		return
 	var A = gh()
 	var At := _now()
 	if Ae.st == 0:
