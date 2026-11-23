@@ -811,11 +811,15 @@ func tc() -> Dictionary:   # Tc
 		G.g.erase("dua")
 	return t
 
+# (Link 11-23 "nối hết") câu cũ đã bỏ: danh hiệu Tay câu tính 16 loài của minigame Câu Cá Bờ Kênh (cc_data.KHO, món Kho vườn),
+# câu được con nào thì ui_cc "caught" ghi sổ làng (tc().seen)
+const CC_WF := ["ca_ro", "ca_sac", "ca_linh", "ca_mevinh", "ca_chot", "ca_tre", "tom", "ca_loc", "ca_he", "luon", "ca_thatlat", "ca_bong",
+	"ca_locbong", "ca_chinh", "ca_ho", "ca_tradau"]
 # danh hiệu (Bs): [id, tên, mô tả, max, thưởng]; cur theo id ở bs_cur
 const BS := [["nong", "Nhà nông chính hiệu", "Thu được 12 loại nông sản", 12, 2000],
 	["vuon", "Nhà vườn miệt thứ", "Có 8 loại trái cây, sản vật vườn sông", 8, 3000],
 	["kheo", "Thợ khéo tay", "Làm ra 20 món chế biến, sản phẩm", 20, 5000],
-	["cau", "Tay câu cự phách", "Câu đủ mọi loại cá", -1, 8000],
+	["cau", "Tay câu cự phách", "Câu đủ 16 loài cá ở Câu Cá Bờ Kênh", -1, 8000],
 	["dung", "Người dựng làng", "Xây, đặt 25 loại công trình và đồ vật", 25, 6000],
 	["than", "Con cháu của làng", "3 gia đình thân thiết đủ 5 ♥", 3, 8000],
 	["lao", "Lão nông tri điền", "Đạt cấp 100, mở tượng Lão nông trong Xây dựng", 100, 20000],
@@ -824,7 +828,7 @@ const BS := [["nong", "Nhà nông chính hiệu", "Thu được 12 loại nông 
 func bs_list() -> Array:   # Bs: [{id, n, d, max, xu}]
 	var out := []
 	for b in BS:
-		out.append({"id": b[0], "n": b[1], "d": b[2], "max": Wf.size() if int(b[3]) < 0 else int(b[3]), "xu": int(b[4])})
+		out.append({"id": b[0], "n": b[1], "d": b[2], "max": CC_WF.size() if int(b[3]) < 0 else int(b[3]), "xu": int(b[4])})
 	return out
 
 func book_ns() -> Array:   # xo: nông sản
@@ -861,7 +865,7 @@ func bs_cur(id: String) -> int:
 		"nong": return cx(book_ns())
 		"vuon": return cx(book_tc())
 		"kheo": return cx(book_mon())
-		"cau": return cx(Wf)
+		"cau": return cx(CC_WF)
 		"dung":
 			var t := tc()
 			var a := 0

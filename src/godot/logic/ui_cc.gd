@@ -63,6 +63,17 @@ func open() -> void:
 			G.mark()
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
+		# mồi chung Kho (cc_data.KHO_BAIT: tép sống = tép trong Kho vườn)
+		"bait": func(id: String): return int(G.g.barn.get(id, 0)),
+		"bait_add": func(id: String, d: int):
+			G.g.barn[id] = maxi(0, int(G.g.barn.get(id, 0)) + d)
+			G.mark(),
+		# cá quý (3 sao trở lên) dễ cắn hơn: bùa "Tay câu đỏ" x1.5, nâng "n_cau" của hệ thống (như câu cũ w_ca.mx)
+		"rare": func() -> float:
+			var m := 1.5 if G.bh() == "cau" else 1.0
+			if G.w_all != null:
+				m *= 1.0 + float(G.w_all.WCA._htv("n_cau"))
+			return m,
 		"save": func(): G.save_game(),
 		# câu được 1 con (không tính rác): đếm cho vườn như câu cũ: g.fish.total (w_ca.ry -> nhiệm vụ / thành tựu Tay câu),
 		# EXP nhân vật 3, cá vườn có món thì ghi sổ làng (đã gặp) + sổ cá vườn

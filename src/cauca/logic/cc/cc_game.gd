@@ -22,6 +22,7 @@ var embed := true
 #  save: Callable lưu vườn (lên mạng)}. null = bản chơi riêng, lưu file user://cauca.json, xu riêng.
 var host = null
 var _xu_last := 0
+var _bait_last := {}   # mồi chung Kho vườn: số lần trước, để cộng / trừ phần chênh
 var _host_t := -99.0
 var L := {}
 var S := {}
@@ -56,6 +57,8 @@ func _ready() -> void:
 	shs.resize(32)
 	_load()
 	_xu_last = int(S.xu)
+	for k in D.KHO_BAIT:
+		_bait_last[k] = int(S.baits.get(k, 0))
 	_reset_state()
 	tod = D.tod_at(S.hour)
 	var vs0 := get_viewport_rect().size
@@ -119,6 +122,9 @@ func _load() -> void:
 			S.merge(d, true)
 	if host != null:
 		S.xu = int(host.coins.call())
+		if host.has("bait"):
+			for k in D.KHO_BAIT:
+				S.baits[k] = int(host.bait.call(D.KHO_BAIT[k]))
 	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut"]:
 		S[k] = int(S[k])
 	S.luck = float(S.luck)
@@ -148,6 +154,13 @@ func _xu_sync() -> void:
 	if x != _xu_last:
 		host.add.call(x - _xu_last)
 		_xu_last = x
+	if host.has("bait_add"):
+		for k in D.KHO_BAIT:
+			var n := int(S.baits.get(k, 0))
+			var o := int(_bait_last.get(k, n))
+			if n != o:
+				host.bait_add.call(D.KHO_BAIT[k], n - o)
+			_bait_last[k] = n
 
 func save(now := false) -> void:
 	if not now and clock - _save_t < 1.5:
@@ -513,6 +526,8 @@ func bite_table(x: float, z: float, hour: float, bait: String) -> Array:
 			w *= 1.25
 		if f.rar >= 3:
 			w *= 1 + S.luck * .04
+			if host != null and host.has("rare"):
+				w *= float(host.rare.call())   # vườn: bùa "Tay câu đỏ" (dễ câu cá quý) + nâng câu của hệ thống
 		if w > 0.0005:
 			out.append([f, w])
 	return out

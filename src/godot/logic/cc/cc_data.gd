@@ -86,6 +86,8 @@ const CAGE := [
 const KHO := {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_mevinh", "chot": "ca_chot", "tre": "ca_tre", "tom": "tom",
 	"loc": "ca_loc", "he": "ca_he", "luon": "luon", "thatlat": "ca_thatlat", "bong": "ca_bong", "locbong": "ca_locbong", "chinh": "ca_chinh",
 	"ho": "ca_ho", "tradau": "ca_tradau"}
+# mồi xài chung số lượng với Kho vườn (bản gắn trong vườn): mã mồi câu cá -> món Kho
+const KHO_BAIT := {"tep": "tep"}
 const GEAR_KEYS := ["rod", "line", "flo", "cage"]
 const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "cage": "Giỏ đựng"}
 
