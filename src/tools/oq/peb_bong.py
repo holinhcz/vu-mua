@@ -29,14 +29,14 @@ for f in sorted(glob.glob(os.path.join(D, "[pq]*.webp"))):
 	c = np.zeros((w4 + 2 * P, w4 + 2 * P), np.float32)
 	c[P:P + w4, P:P + w4] = a
 	u = w4 * 0.75  # cỡ thân viên
-	cont = blur(shift(c, u * 0.02, u * 0.026), u * 0.018) * 0.85
+	cont = blur(shift(c, u * 0.02, u * 0.026), u * 0.018) * 0.6
 	acc = np.zeros_like(c)
 	n = 8
 	for k in range(n + 1):
 		t = k / n * 0.11 * u
 		acc = np.maximum(acc, shift(c, SUN[0] * t, SUN[1] * t))
-	castv = blur(acc, u * 0.04) * 0.5
-	amb = blur(c, u * 0.09) * 0.16
+	castv = blur(acc, u * 0.04) * 0.34
+	amb = blur(c, u * 0.09) * 0.1
 	s = 1 - (1 - cont) * (1 - castv) * (1 - amb)
 	save(s, os.path.join(D, "s" + b[1:] + ".webp" if b[0] == "p" else "t" + b[1:] + ".webp"), (30, 17, 5))
 	# lớp tối trên thân: 1/2
@@ -45,7 +45,7 @@ for f in sorted(glob.glob(os.path.join(D, "[pq]*.webp"))):
 	u2 = w2 * 0.75
 	d = u2 * 0.075
 	out = 1 - blur(shift(a2, -SUN[0] * d, -SUN[1] * d), u2 * 0.035)
-	ao = a2 * np.clip(out, 0, 1) ** 1.2 * 0.55
+	ao = a2 * np.clip(out, 0, 1) ** 1.2 * 0.36
 	save(ao, os.path.join(D, ("a" if b[0] == "p" else "b") + b[1:] + ".webp"), (24, 14, 6))
 	print(b, end=" ", flush=True)
 print()
