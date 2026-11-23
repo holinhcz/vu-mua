@@ -6,6 +6,7 @@ extends RefCounted
 
 const REW := [20, 50, 120, 250]
 const MAXD := 5
+const MG := preload("res://logic/mg_pack.gd")
 const GAME := preload("res://logic/cg/cg_game.gd")
 
 var ui
@@ -30,6 +31,9 @@ static func _s_close() -> void:
 
 func open() -> void:
 	if on and is_instance_valid(_layer):
+		return
+	if not MG.ready():   # (bản 533) hình mini game nằm gói riêng: tải lần đầu rồi mới mở
+		MG.need(ui, open)
 		return
 	on = true
 	var tree: SceneTree = ui.get_tree()

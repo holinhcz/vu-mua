@@ -4,6 +4,7 @@ extends RefCounted
 # Thắng máy được xu: w_duong.caro_end (Bé Út 20, Thằng Tí 50, Chị Hai 120, Ông Sáu 250, 5 ván thắng đầu mỗi ngày, g.caro).
 # Lúc đang chơi: làng ẩn đi (không vẽ), bản đồ không nhận lướt / zoom; "Về vườn" trả lại.
 
+const MG := preload("res://logic/mg_pack.gd")
 const GAME := preload("res://logic/caro/caro_game.gd")
 
 var ui
@@ -28,6 +29,9 @@ static func _s_close() -> void:
 
 func open() -> void:
 	if on and is_instance_valid(_layer):
+		return
+	if not MG.ready():   # (bản 533) hình mini game nằm gói riêng: tải lần đầu rồi mới mở
+		MG.need(ui, open)
 		return
 	on = true
 	var tree: SceneTree = ui.get_tree()

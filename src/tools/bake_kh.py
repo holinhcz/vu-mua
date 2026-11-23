@@ -11,7 +11,8 @@ for f in sorted(glob.glob(os.path.join(G, 'ui/svg/kh/*.svg'))):
     m = re.search(r'data:image/(\w+);base64,([^"]+)"', s)
     if not m:
         continue
-    im = Image.open(io.BytesIO(base64.b64decode(m.group(2)))).convert('RGBA')
+    org = os.path.join(G, '..', 'art', 'kh_512', os.path.basename(f)[:-4] + '.' + m.group(1))   # (bản 533) gốc 512 để ngoài gói, svg chỉ còn 256
+    im = Image.open(org if os.path.exists(org) else io.BytesIO(base64.b64decode(m.group(2)))).convert('RGBA')
     pm = im.convert('RGBa')
     for z, suf in ((128, ''), (64, '_64')):
         pm.resize((z, z), Image.LANCZOS).convert('RGBA').save(os.path.join(out, os.path.basename(f)[:-4] + suf + '.webp'), 'WEBP', quality=92, method=4)
