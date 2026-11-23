@@ -439,7 +439,7 @@ func _layout() -> void:
 	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
 	var hsx: float = L.get("hs", 1.0)
 	L.huds = []
-	for kk in ["u_tools", "u_opp", "u_me", "u_tip"]:
+	for kk in ["u_tools", "u_opp", "u_me"]:
 		if L.has(kk): L.huds.append(Rect2(L[kk].position * hsx, L[kk].size * hsx).grow(4 * hsx))
 	L.face = Rect2(fx, fy, face, face)
 	# ô lưới trên màn (css)
@@ -653,20 +653,25 @@ func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 		if side == 1:
 			name = "Bạn"
 			av = "me"
-			sub = ("Chạm 2 lần để đặt X" if int(S.tap2) else "Chạm 1 ô để đặt X") if on else "cầm X phấn xanh"
+			sub = "Cầm"
 		else:
 			var o: Dictionary = OPP[int(Gm.level)]
 			name = o.name
 			av = o.k
-			sub = ("Đang nghĩ" + ".".repeat(1 + int(_clock * 3) % 3)) if Gm.think else "Mức " + str(o.lvl).to_lower() + " · cầm O"
+			sub = ("Đang nghĩ" + ".".repeat(1 + int(_clock * 3) % 3)) if Gm.think else "Cầm"
 	else:
 		name = "Người " + str(side)
 		av = "me" if side == 1 else "p2"
-		sub = ("Tới lượt · đặt " + ("X" if side == 1 else "O")) if on else "cầm " + ("X phấn xanh" if side == 1 else "O phấn hồng")
+		sub = "Cầm"
 	_avatar(ci, Vector2(r.position.x + 30, r.position.y + r.size.y / 2), av, 19, ring)
 	_mini_piece(ci, Vector2(r.position.x + 44, r.position.y + r.size.y / 2 + 13), side, 7)
 	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 - 10), name, 16, INK, 800)
 	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 + 11), sub, 11.5, INK2, 600)
+	if sub == "Cầm":
+		# Link 11-23: "Cầm" + đúng hình quân trên bàn cờ (X phấn xanh / O phấn hồng)
+		var sx0: float = r.position.x + 58 + A.tw(sub, 600, _fs3(11.5)) + 4
+		var qs := 22.0
+		ci.draw_texture_rect(img("x1" if side == 1 else "o2"), Rect2(sx0, r.position.y + r.size.y / 2 + 11 - qs / 2, qs, qs), false)
 	var sx := r.end.x - 32
 	ci.draw_line(Vector2(sx - 26, r.position.y + 10), Vector2(sx - 26, r.end.y - 10), LINE, 1.0)
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 - 6), str(Gm.score[side - 1]), 22, PCOL[side - 1], 800, HORIZONTAL_ALIGNMENT_CENTER)
@@ -709,17 +714,7 @@ func _draw_hud() -> void:
 		hits.append([Rect2(r.position * K, r.size * K), items[j][0]])
 	_card(ci, L.u_opp, 2)
 	_card(ci, L.u_me, 1)
-	var tp: Rect2 = L.u_tip
-	_box(ci, tp, Color(DARK, 0.93), 12, Color(0, 0, 0, 0), 0)
-	var t1 := "5 con liền là thắng"
-	var t2 := "ngang, dọc hay chéo đều được"
-	if int(Gm.block2):
-		t2 = "bị chặn 2 đầu thì không tính"
-	if Gm.over:
-		t1 = "Hết ván"
-		t2 = "Chạm Menu để chơi ván mới"
-	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 15), t1, 12.5, Color8(255, 214, 92), 800)
-	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 32), t2, 11, Color8(240, 228, 210), 600)
+	# Link 11-23: bỏ chip "5 con liền là thắng"
 	K = k_save
 	if ov != "":
 		hits = []
