@@ -220,6 +220,7 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"paddyt": _paddyt(a)
 			"ctdump": _ctdump()
 			"hdnx": var WH9 = G.w_all.WH; if a[1] == "open": WH9.hdn_open_hoi()
 			"hdng": var cu8 = G.w_all.WH.hdn_s().get("cur"); if cu8 is Dictionary: cu8.g = {"de": {"rd": 2, "st": "xong", "rank": 1}, "do": {"rd": 0, "st": "xong", "rank": 0}}; G.mark()   # thử: đá dế nhất, đố vui trượt
@@ -367,6 +368,26 @@ func _ctdump() -> void:   # (bản 498) công cụ: xuất hình công trình (�
 		for id in out:
 			JavaScriptBridge.eval("window.__ctx[" + JSON.stringify(String(id)) + "]=" + JSON.stringify(out[id]))
 		JavaScriptBridge.eval("window.__ctd=window.__ctx")
+
+func _paddyt(a: Array) -> void:   # (bản 513) thử: tìm ô ruộng hoang khu đã mua, đưa camera tới; paddyt:clr gặt 3x3 ô đó
+	var L = G.lang
+	for x in range(-10, 90):
+		for y in range(-10, 90):
+			if L.il(x, y) == "paddy" and L.fo(x, y) != "" and not L.kc(x, y) and not L.n2(x, y):
+				if not L.ci(L.fo(x, y)):   # thử: coi như đã mua khu này
+					G.g.land[String(ui.F.PC.tg.get(L.fo(x, y), L.fo(x, y)))] = 1
+					G.mark()
+				var F = ui.F
+				var vp: Vector2 = ui.get_viewport().get_visible_rect().size
+				ui.main.cam = Vector2(F.en(x + 1.5, y + 1.5), F.nn(x + 1.5, y + 1.5)) - Vector2(vp.x * 0.5, vp.y * 0.5) / ui.main.zoom
+				if a.size() > 1:
+					for i in range(-4, 8):
+						for j in range(-4, 8):
+							if L.il(x + i, y + j) == "paddy":
+								G.g.clr[str(x + i) + "," + str(y + j)] = 1
+					G.mark()
+				print("PADDY ", x, ",", y)
+				return
 
 func _gptree() -> void:   # (bản 493) test Gia phả: nhân bản 12 nhà, chia 3 họ, nối cha con thành cây, tim / việc khác nhau
 	var F0: Dictionary = G.w_all.WL._r0().fam

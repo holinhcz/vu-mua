@@ -241,6 +241,7 @@ func _make_ground() -> void:
 		img.generate_mipmaps()
 		var mat := ShaderMaterial.new()
 		mat.shader = load("res://ground.gdshader")
+		_tc_mats.append(mat)
 		_nm(mat)
 		codai_tex = ImageTexture.create_from_image(img)   # hill top still reads it
 		_load_lots(mat)
@@ -2272,6 +2273,7 @@ func _build_pondwater() -> void:
 	m.set_shader_parameter("uKH", Vector2(pond_G.ki, pond_G.hi))
 	m.set_shader_parameter("uN", wtex["noise.png"])
 	m.set_shader_parameter("uTC", ImageTexture.create_from_image(tile_img))
+	_tc_mats.append(m)
 	var N0: Array = info["N"]
 	m.set_shader_parameter("uT0", Vector2(N0[0], N0[2]))
 	for nm in ["mid", "mudS", "dpc", "sky", "band"]:
@@ -2596,8 +2598,50 @@ func _on_http(res, code, _headers, body: PackedByteArray, h: HTTPRequest) -> voi
 	b["st"] = 2
 
 # ---------------------------------------------------------------- per frame
+# (bản 513) ruộng lúa hoang đã gặt (g.clr "x,y"): nền tile.png chụp sẵn vẫn ghi loại đất ruộng -> shader vẫn vẽ hàng lúa.
+# Gặt xong thì đổi ô đó về cỏ (kind 0) trong ảnh nền rồi nạp lại cho shader; mở game thì áp hết các ô đã gặt.
+var _clr_n := -1
+var _uTC: ImageTexture = null
+var _tc_mats := []   # các vật liệu đọc uTC (nền, nước ao)
+func _paddy_sync() -> void:
+	if tile_img == null or _tc_mats.is_empty():
+		return
+	var bt = get_node_or_null("/root/Boot")
+	if bt == null or not ("G" in bt) or bt.G == null or bt.G.g.is_empty():
+		return
+	var clr = bt.G.g.get("clr")
+	if not (clr is Dictionary) or clr.size() == _clr_n:
+		return
+	_clr_n = clr.size()
+	var N: Array = info["N"]
+	var ch := false
+	for k in clr:
+		var p := String(k).split(",")
+		if p.size() != 2 or not p[0].is_valid_int() or not p[1].is_valid_int():
+			continue
+		var i := int(p[0]) - int(N[0])
+		var j := int(p[1]) - int(N[2])
+		if i < 0 or j < 0 or i >= tile_img.get_width() or j >= tile_img.get_height():
+			continue
+		var c := tile_img.get_pixel(i, j)
+		var a8 := c.a8
+		if a8 / 16 != 1:   # chỉ ô ruộng
+			continue
+		c.a8 = a8 % 16   # loại 0 (cỏ), giữ cờ
+		tile_img.set_pixel(i, j, c)
+		ch = true
+	if ch:
+		if _uTC == null:
+			_uTC = ImageTexture.create_from_image(tile_img)
+		else:
+			_uTC.update(tile_img)
+		for m in _tc_mats:
+			m.set_shader_parameter("uTC", _uTC)
+
 func _process(_dt: float) -> void:
 	frame_no += 1
+	if frame_no % 30 == 0:
+		_paddy_sync()
 	var tq := Time.get_ticks_usec()
 	var tq0 := tq
 	if jsw != null and frame_no % 10 == 0:
