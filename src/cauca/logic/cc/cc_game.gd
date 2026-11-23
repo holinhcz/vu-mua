@@ -203,13 +203,13 @@ func world_init() -> void:
 		p.x = rnd(-1, 1) * half_x(p.z) * .6
 		W.props.append(p)
 	# bụi sen (ảnh thủy sinh của nông trại): mọc tại chỗ ven 2 bên kênh, không trôi (Link 11-22)
-	var sz := [11.5, 14.5, 17.5, 20.5]     # sen xa không đứng sát bờ, khỏi lá đè lên bờ (Link 11-23)
+	var sz := [8.5, 11.5, 15.0, 19.0]     # gần xa so le; sen xa không đứng sát bờ, khỏi lá đè lên bờ (Link 11-23)
 	for i in 4:
-		var z: float = sz[i] + rnd(-1.5, 1.5)
+		var z: float = sz[i] + rnd(-.8, .8)
 		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ.
 		# Mỗi bụi 1 cột riêng, sen gần lệch vào trong, sen xa ra ngoài: không đứng thẳng hàng nhau
 		# (Link 11-22: sen đỏ trùng hàng sen tím). 0 đỏ (trái, gần), 1 trắng (phải), 2 tím (trái, xa), 3 vàng (phải, xa)
-		var fx: float = [-.12, .3, -.58, .6][i] + rnd(-.02, .02)
+		var fx: float = [-.38, .46, -.7, .7][i] + rnd(-.02, .02)     # Link 11-23 "gom ra chính giữa 1 cục": rải ra 2 bên
 		W.props.append({"z": z, "x": fx * half_x(z), "fx": fx, "v": 0.0, "k": i, "s": rnd(.9, 1.15), "ph": rnd(TAU), "sen": true})
 	W.spots = []
 	for i in 2:
