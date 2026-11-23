@@ -232,7 +232,7 @@ func step(dt: float) -> void:
 		if st == "fight" or (st == "wait" and _bite_hot) or _coinpop < .4:
 			hk = "anim%d" % _frame
 		else:
-			hk = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%d|%d" % [S.xu, S.lv, S.xp, fmt_h(S.hour), game.W.rain > .4,
+			hk = "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%d|%d" % [S.xu, S.lv, S.xp, fmt_h(S.hour, game.host != null), game.W.rain > .4,
 				st, S.bait, S.baits.get(S.bait, 0), S.basket.size(), S.cage, modal.visible,
 				hud.press.get("id") if hud.press != null else "", int(L.W), int(L.H)]
 		if hk != _hud_key or _hud_dirty:
@@ -328,8 +328,10 @@ static func fmt_w(w: float) -> String:
 		return str(int(round(w * 1000))) + " g"
 	return (("%.2f" % w) if w < 10 else ("%.1f" % w)) + " kg"
 
-static func fmt_h(h: float) -> String:
+static func fmt_h(h: float, farm := false) -> String:
 	var hh := int(floor(h))
+	if farm:   # trong vườn: y như đồng hồ vườn (ui._clock)
+		return "%02d:%02d" % [hh, int(floor((h - hh) * 60.0))]
 	var mm := int(floor((h - hh) * 60 / 10)) * 10
 	return "%d:%02d" % [hh, mm]
 
@@ -403,7 +405,7 @@ func _draw_hud(ci: Box) -> void:
 	var h: float = S.hour
 	var rain: bool = game.W.rain > .4
 	var ic := "rain" if rain else ("sun" if h >= 5.6 and h < 18.8 else "moon")
-	var ts := fmt_h(h)
+	var ts := fmt_h(h, game.host != null)
 	var sm := "" if n else ("Mưa" if rain else D.phase_name(h))
 	var cw = 4 + ics + 6 + A.tw(ts, fs) + (6 + A.tw(sm, 13, 600) if sm != "" else 0) + 12
 	var cr := Rect2(sr.position.x - 8 - cw, top, cw, ph)

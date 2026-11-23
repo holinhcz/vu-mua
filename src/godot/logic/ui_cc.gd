@@ -75,6 +75,10 @@ func open() -> void:
 				m *= 1.0 + float(G.w_all.WCA._htv("n_cau"))
 			return m,
 		"save": func(): G.save_game(),
+		# (Link 11-23 "làm theo giờ của game nông trại"): giờ trong ngày + mưa ở bờ kênh = đồng hồ, thời tiết của vườn
+		# (troi.hour = nv.hour, có đè giờ trong Cài đặt; troi.rain: mưa rào 1, mưa dầm .55, nắng / hạn 0)
+		"hour": func() -> float: return float(G.troi.hour()) if G.troi != null else 9.0,
+		"rain": func() -> float: return float(G.troi.rain()) if G.troi != null else 0.0,
 		# câu được 1 con (không tính rác): đếm cho vườn như câu cũ: g.fish.total (w_ca.ry -> nhiệm vụ / thành tựu Tay câu),
 		# EXP nhân vật 3, cá vườn có món thì ghi sổ làng (đã gặp) + sổ cá vườn
 		"caught": func(kid: String):
