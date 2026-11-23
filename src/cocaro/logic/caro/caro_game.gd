@@ -587,7 +587,15 @@ func _draw_pieces() -> void:
 func _font(w := 700) -> Font:
 	return A.font(w)
 
+# Link 11-23 "chỉ sử dụng 3 size": mọi chữ quy về 3 cỡ — nhỏ 11 (dòng phụ), vừa 13 (nút, chữ thường), lớn 20 (tựa, điểm)
+const FS_S := 11.0
+const FS_M := 13.0
+const FS_L := 20.0
+static func _fs3(fs: float) -> float:
+	return FS_S if fs <= 12.0 else (FS_M if fs <= 16.0 else FS_L)
+
 func _text(ci: CanvasItem, p: Vector2, s: String, fs: float, col: Color, w := 700, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
+	fs = _fs3(fs)
 	# p = điểm giữa dòng theo chiều dọc (css); vẽ ở điểm ảnh thật cho nét chữ sắc
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	var f := _font(w)
@@ -689,7 +697,7 @@ func _draw_hud() -> void:
 	var tfs := 12.5
 	var tws := []; var tsum := 0.0
 	for it in items:
-		var wv: float = A.tw(it[1], 700, tfs) + 16.0; tws.append(wv); tsum += wv
+		var wv: float = A.tw(it[1], 700, _fs3(tfs)) + 16.0; tws.append(wv); tsum += wv
 	var cx := tr.position.x
 	for j in items.size():
 		var bw: float = tws[j] / tsum * tr.size.x
@@ -862,6 +870,7 @@ func _ov_rules(ci: CanvasItem) -> void:
 	_btn(ci, Rect2(r.position.x + r.size.x / 2 - 70, r.end.y - 52, 140, 38), "close", "Đóng", GOLD, INK, 14, Color8(200, 150, 40))
 
 func _wrap(s: String, fs: float, w: float, f: Font) -> Array:
+	fs = _fs3(fs)
 	var px := maxi(1, int(round(fs * K)))
 	var out := []
 	var cur := ""
