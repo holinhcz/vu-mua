@@ -8,9 +8,9 @@ extends RefCounted
 # ProjectSettings.load_resource_pack() -> res://ui/img/cc/... đọc được như thường. Lần sau mở máy: đọc file đã lưu, khỏi tải.
 
 const GAME := preload("res://logic/cc/cc_game.gd")
-const CC_V := "fd72fbef"     # crc gói hình (mk_ccpack.py in ra)
-const CC_N := 3        # số miếng l/cc_<i>.wasm
-const CC_SIZE := 17851972     # tổng số byte
+const CC_V := "12ebd89f"     # crc gói hình (mk_ccpack.py in ra)
+const CC_N := 4        # số miếng l/cc_<i>.wasm
+const CC_SIZE := 28578460     # tổng số byte
 static var _packed := false
 static var _ld: CanvasLayer = null
 static var _lab: Label = null
@@ -76,8 +76,6 @@ func open() -> void:
 				m *= 1.0 + float(G.w_all.WS.htv("n_cau"))
 			return m,
 		"save": func(): G.save_game(),
-		# (bản 530) bờ bên kia dùng chung hình vườn (n/op/...): tải từ cùng chỗ vườn
-		"base": func() -> String: return str(ui.main.base_url) if ui.main != null and "base_url" in ui.main else "",
 		# (Link 11-23 "làm theo giờ của game nông trại"): giờ trong ngày + mưa ở bờ kênh = đồng hồ, thời tiết của vườn
 		# (troi.hour = nv.hour, có đè giờ trong Cài đặt; troi.rain: mưa rào 1, mưa dầm .55, nắng / hạn 0)
 		"hour": func() -> float: return float(G.troi.hour()) if G.troi != null else 9.0,

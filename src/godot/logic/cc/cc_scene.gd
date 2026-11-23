@@ -404,7 +404,6 @@ uniform float fol = 0.; uniform float ph = 0.; uniform float foot = 0.;
 void fragment(){ float a=texture(TEXTURE,UV).a*COLOR.a; COLOR=vec4(pow(vec3(ph,fol,foot),vec3(1./2.2)),a); }
 """
 var _bo := {}
-var _opim := {}         # (bản 530) hình vườn dùng chung: tên -> bytes webp đã tải (bo.json "op", tools/cc/op_share.py)
 var _spr_sh: Shader
 var _mats := {}
 
@@ -436,72 +435,11 @@ func _mat(hz: float, fol: float, mode: int, ph := 0.0, foot := 0.0) -> ShaderMat
 	return _mats[k]
 
 func _bo_img(name: String) -> Image:
-	if _opim.has(name):   # hình vườn dùng chung: giải nén lúc cần (giữ bytes nén cho nhẹ RAM), xoá bóng + cắt lề
-		return _op_img(name)
 	var b := FileAccess.get_file_as_bytes(BO + name + ".webp")
 	var im := Image.new()
 	if b.is_empty() or im.load_webp_from_buffer(b) != OK:
 		return null
 	im.convert(Image.FORMAT_RGBA8)
-	return im
-
-# (bản 530) tải hình vườn: n/op/<tên>.webp (vườn: base_url của vườn; bản chơi riêng nằm ở <vườn>/cauca/ nên "../")
-func _op_base() -> String:
-	if game.host != null and game.host.has("base"):
-		return str(game.host.base.call())
-	if OS.has_feature("web"):
-		return str(JavaScriptBridge.eval("new URL('..', location.href).href"))
-	return OS.get_environment("NT_BASE")
-
-func _op_prep(names: Array) -> void:
-	var op: Dictionary = _bo.get("op", {})
-	var q := []
-	for nm in names:
-		if op.has(nm) and not _opim.has(nm) and not q.has(nm):
-			q.append(nm)
-	if q.is_empty():
-		return
-	var base := _op_base()
-	print("QK op0 ", base, " ", q.size())
-	var got := {}
-	var live := [0]
-	var i := 0
-	while got.size() < q.size():
-		while live[0] < 8 and i < q.size():   # 8 file một lúc
-			var nm: String = q[i]
-			i += 1
-			live[0] += 1
-			var h := HTTPRequest.new()
-			h.download_chunk_size = 1 << 20
-			add_child(h)
-			h.request_completed.connect(func(res, code, _hd, body: PackedByteArray):
-				live[0] -= 1
-				got[nm] = body if res == HTTPRequest.RESULT_SUCCESS and code == 200 else PackedByteArray()
-				h.queue_free())
-			if h.request(base + String(op[nm].f)) != OK:
-				live[0] -= 1
-				got[nm] = PackedByteArray()
-				h.queue_free()
-		await get_tree().process_frame
-	for nm in q:
-		if not (got[nm] as PackedByteArray).is_empty():
-			_opim[nm] = got[nm]
-	print("QK op ", base, " ", q.size(), " ", _opim.size(), " ", q[0])
-
-func _op_img(nm: String) -> Image:
-	var im := Image.new()
-	if im.load_webp_from_buffer(_opim[nm]) != OK:
-		return null
-	im.convert(Image.FORMAT_RGBA8)
-	var e: Dictionary = _bo.op[nm]
-	var rr: Array = e.get("r", [])
-	var k := 0
-	while k + 2 < rr.size():   # xoá bóng tròn dưới gốc (vườn nhìn từ trên xuống)
-		im.fill_rect(Rect2i(int(rr[k + 1]), int(rr[k]), int(rr[k + 2]), 1), Color(0, 0, 0, 0))
-		k += 3
-	if e.has("cr"):
-		var c: Array = e.cr
-		im = im.get_region(Rect2i(int(c[0]), int(c[1]), int(c[2]), int(c[3])))
 	return im
 
 func _ground(x: float) -> float:
@@ -526,7 +464,6 @@ func _bank_build() -> void:
 	var key := "%d_%d_%d" % [int(u0), int(u1), th]
 	if key == _bank_key:
 		return
-	print("QK build ", key)
 	_bank_key = key
 	var sub := Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1)
 	if _bank_cached(key, sub):
@@ -572,13 +509,6 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			continue
 		vis.append(p)
 		need[p[1]] = maxf(need.get(p[1], 0.0), sc * f)
-	# hình vườn dùng chung: tải file của Nông trại trước (song song, trình duyệt giữ sẵn nếu vườn đã hiện)
-	var want := ["n2_co", "dg2_dat"]
-	for nm in need:
-		want.append(nm + "_d")
-	await _op_prep(want)
-	if key != _bank_key:
-		return
 	# mỗi chỗ đặt = 1 ảnh thu đúng cỡ trên màn (Lanczos 1 lần từ ảnh trung gian), vẽ 1:1 ở điểm ảnh nguyên -> nét
 	var mid := [{}, {}]
 	for nm in need:
@@ -613,7 +543,6 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			imgs[m][ck] = im
 		p.resize(6)
 		p.append(ck)
-	print("QK mid ", mid[0].size(), " need ", need.size())
 	var grass := _bo_img("n2_co")
 	var dirt := _bo_img("dg2_dat")
 	var tg: Texture2D = null
@@ -748,7 +677,6 @@ func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> 
 		var tl := Vector2(round(float(p[2]) * f - ax), round(float(p[3]) * f - ay))
 		var foot := tl + Vector2(round(ax), round(ay))
 		mk.call(p[6], tl, foot, float(p[5]) > 0.5)
-	print("QK done")
 	_live_apply(atl[0], atl[1], spr)
 	return [atl[0], atl[1], spr]
 
