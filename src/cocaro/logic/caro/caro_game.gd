@@ -411,8 +411,8 @@ func _layout() -> void:
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 		L.u_tools = Rect2((V.position.x + 8) / hs, (V.position.y + 8 + safe) / hs, tw / hs, 36)
-		L.u_opp = Rect2((V.end.x - 8) / hs - cw, (fy - 8) / hs - 58, cw, 58)
-		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 24) / hs, cw, 62)
+		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, (fy - 8) / hs - 58, CARD_W, 58)
+		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 24) / hs, CARD_W, 62)
 		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	else:
@@ -432,8 +432,8 @@ func _layout() -> void:
 		var o := (V.position + Vector2(8, 0)) / hs
 		L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(8, 62, 250, 58); L.me = Rect2(8, 140, 250, 62); L.tip = Rect2(8, 214, 250, 46)   # như cũ (cảnh dùng)
 		L.u_tools = Rect2(o.x, (V.position.y + 8 + safe) / hs, 250, 36)
-		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, 250, 58)
-		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, 250, 62)
+		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, CARD_W, 58)
+		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, CARD_W, 62)
 		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
@@ -642,6 +642,8 @@ func _mini_piece(ci: CanvasItem, c: Vector2, p: int, r: float) -> void:
 	var s := r * 2.6
 	ci.draw_texture_rect(img("x1" if p == 1 else "o2"), Rect2(c - Vector2(s, s) / 2, Vector2(s, s)), false)
 
+const TX := 64.0
+const CARD_W := 214.0
 func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	var on: bool = not Gm.over and int(Gm.turn) == side
 	var ring := GOLD if on else (Color8(236, 170, 182) if side == 2 else Color8(150, 196, 236))
@@ -665,11 +667,12 @@ func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 		sub = "Cầm"
 	_avatar(ci, Vector2(r.position.x + 30, r.position.y + r.size.y / 2), av, 19, ring)
 	_mini_piece(ci, Vector2(r.position.x + 44, r.position.y + r.size.y / 2 + 13), side, 7)
-	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 - 10), name, 16, INK, 800)
-	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 + 11), sub, 11.5, INK2, 600)
+	# Link 11-23: chữ cách avatar xa hơn chút (TX), thẻ hẹp lại vừa nội dung (CARD_W)
+	_text(ci, Vector2(r.position.x + TX, r.position.y + r.size.y / 2 - 10), name, 16, INK, 800)
+	_text(ci, Vector2(r.position.x + TX, r.position.y + r.size.y / 2 + 11), sub, 11.5, INK2, 600)
 	if sub == "Cầm":
 		# Link 11-23: "Cầm" + đúng hình quân trên bàn cờ (X phấn xanh / O phấn hồng)
-		var sx0: float = r.position.x + 58 + A.tw(sub, 600, _fs3(11.5)) + 4
+		var sx0: float = r.position.x + TX + A.tw(sub, 600, _fs3(11.5)) + 4
 		var qs := 22.0
 		ci.draw_texture_rect(img("x1" if side == 1 else "o2"), Rect2(sx0, r.position.y + r.size.y / 2 + 11 - qs / 2, qs, qs), false)
 	var sx := r.end.x - 32
@@ -678,7 +681,7 @@ func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 + 15), "ván", 10, INK2, 600, HORIZONTAL_ALIGNMENT_CENTER)
 	if on:
 		var tw_: float = A.tw("Tới phiên", 700, _fs3(10.5)) + 16.0
-		var tr := Rect2(r.position.x + 58, r.position.y - 11, tw_, 21)
+		var tr := Rect2(r.position.x + TX, r.position.y - 11, tw_, 21)
 		_box(ci, tr, Color8(60, 120, 200), 10, Color(0, 0, 0, 0), 0, false)
 		_text(ci, Vector2(tr.position.x, tr.position.y + 10.5), "Tới phiên", 10.5, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 
