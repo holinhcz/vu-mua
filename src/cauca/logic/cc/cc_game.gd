@@ -78,7 +78,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	resize()
 	world_init()
-	ui.show_title()
+	# (Link 11-23 "xoá cái màn hình này đi load thẳng vô game luôn"): bỏ màn đầu (bảng tên + 3 thẻ hướng dẫn + Ra bờ kênh),
+	# mở là ra bờ kênh câu liền; Về vườn nằm trong bảng cài đặt (nút bánh răng)
+	start_game()
 
 func _reset_state() -> void:
 	W = {"t": 0.0, "rain": 0.0, "rainT": 0.0, "rainTarget": 0, "nextRain": rnd(70, 140), "wind": .35, "windT": .35, "cloud": .6, "cloudBase": .6,
