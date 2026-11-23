@@ -365,11 +365,33 @@ func draw_leaps(ci: CanvasItem) -> void:
 static func dim(c: Color, tod: Dictionary) -> Color:
 	return c.lerp(c.lerp(tod.tint, .8), .6)
 
+# 4 cấp dây (Link 11-23 "dây đổi theo nâng cấp"): cước 0.2 trong mảnh -> 0.35 -> 0.5 xanh lá to -> dây dù bện nâu có vân
+const LINE_W := [1.0, 1.35, 1.75, 2.3]
+const LINE_C := [Color(.95, .95, .9), Color(.88, .94, .97), Color(.72, .9, .74), Color(.52, .36, .2)]
+const LINE_A := [1.0, 1.05, 1.15, 1.5]
+func _li() -> int:
+	return clampi(int(game.S.line), 0, 3)
 func line_color(tod: Dictionary, a := .6) -> Color:
-	return Color(Color(.95, .95, .9).lerp(tod.tint, .35), a)
+	var i := _li()
+	return Color((LINE_C[i] as Color).lerp(tod.tint, .35), minf(1.0, a * LINE_A[i]))
+func line_w() -> float:
+	return LINE_W[_li()] * maxf(1.0, game.L.H / 900.0)
 
 func draw_line_q(ci: CanvasItem, p0: Vector2, p1: Vector2, sag: float, tod: Dictionary, a: float) -> void:
-	ci.draw_polyline(A.quad_pts(p0, Vector2((p0.x + p1.x) / 2, maxf(p0.y, p1.y) + sag), p1, 16), line_color(tod, a), 1, true)
+	var i := _li()
+	var pts := A.quad_pts(p0, Vector2((p0.x + p1.x) / 2, maxf(p0.y, p1.y) + sag), p1, 16 if i < 3 else 40)
+	var c := line_color(tod, a)
+	var w := line_w()
+	ci.draw_polyline(pts, c, w, true)
+	if i == 3:
+		# vân bện: đốm sáng xéo xen kẽ dọc dây
+		var lc := Color(Color(.86, .7, .46).lerp(tod.tint, .35), c.a)
+		var seg := PackedVector2Array()
+		for k in range(0, pts.size() - 1, 2):
+			var d := (pts[k + 1] - pts[k])
+			var n := Vector2(-d.y, d.x).normalized() * w * .3
+			seg.append(pts[k] + n); seg.append(pts[k] + d * .6 - n)
+		ci.draw_multiline(seg, lc, w * .45)
 
 
 # hình phao ở (x,y) = điểm mặt nước, h = phần nổi; chìm sink, nghiêng tilt. Phần dưới nước mờ .22 (cắt theo mặt nước)
@@ -471,7 +493,7 @@ func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
 	var G: Dictionary = game.G
 	var L: Dictionary = game.L
 	var T: float = game.W.t
-	var tip: Vector2 = game.rod_tip_pos()
+	var tip: Vector2 = rod_geom()[2]
 	var st: String = G.state
 	if st == "idle" or st == "card" or st == "land":
 		if st == "idle":
@@ -492,7 +514,7 @@ func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
 		var pts := PackedVector2Array([tip])
 		for i in range(1, 9):
 			pts.append(Vector2(tip.x - i * 14 * (1 + u * 2) + sin(i * 1.7 + G.t * 30) * 8, tip.y + i * 10 * (1 - u * .5)))
-		ci.draw_polyline(pts, line_color(tod, .5 * (1 - u)), 1, true)
+		ci.draw_polyline(pts, line_color(tod, .5 * (1 - u)), line_w(), true)
 		return
 	if st == "fight":
 		var f: Vector2 = game.proj(G.fl.x, G.fl.z)
@@ -510,8 +532,15 @@ func draw_tackle(ci: CanvasItem, tod: Dictionary) -> void:
 	draw_line_q(ci, tip, a, 26 + sin(T) * 3, tod, .55)
 	draw_float_shape(ci, b.x, b.y, h, G.fl.sink, tilt, tod, false)
 
-# ------------------------------------------------------------ cần trúc
-func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
+# dáng cần trong khung này (cán, điểm uốn, ngọn) tính 1 lần: dây (lớp dưới) và cần (lớp trên) dùng chung đúng 1 ngọn,
+# kể cả lúc kéo cá cần cong + rung -> dây luôn dính đúng khoen ngọn (Link 11-23 "dây dù bị lệch không dính đầu cần")
+var _rg_f := -1
+var _rg := []
+func rod_geom() -> Array:
+	var fr := Engine.get_process_frames()
+	if fr == _rg_f and not _rg.is_empty():
+		return _rg
+	_rg_f = fr
 	var G: Dictionary = game.G
 	var L: Dictionary = game.L
 	var b: Vector2 = L.rodButt
@@ -533,6 +562,17 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 		c.y -= ln * .04
 		t += dv / dd * bb
 	G.tipNow = t
+	_rg = [b, c, t]
+	return _rg
+
+# ------------------------------------------------------------ cần trúc
+func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
+	var G: Dictionary = game.G
+	var L: Dictionary = game.L
+	var rg := rod_geom()
+	var b: Vector2 = rg[0]
+	var c: Vector2 = rg[1]
+	var t: Vector2 = rg[2]
 	var k: float = L.H / 900.0 * (.9 if L.portrait else 1.0)
 	var lit: Color = Color.WHITE.lerp(tod.tint, .7)
 	var mc := Color(lit.r, lit.g, lit.b, 1)
