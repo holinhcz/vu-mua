@@ -990,7 +990,7 @@ static func _js(v: float) -> String:   # String(number) của JS
 func kl_kg(g: float, id: String) -> String:   # klKg
 	var d = kld().get(id)
 	if d != null and d[0] == "g":
-		return (_js(round(g * 10.0) / 10.0) if g < 100.0 else str(int(round(g)))) + " g"
+		return (vi_num(round(g * 10.0) / 10.0, 1) if g < 100.0 else str(int(round(g)))) + " g"   # (bản 526) 8,1 g (dấu phẩy như cm, kg)
 	return vi_num(round(g / 10.0) / 100.0) + " kg"
 
 func kl_num(v: float) -> String:   # klNum
