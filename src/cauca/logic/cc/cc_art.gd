@@ -448,20 +448,24 @@ static func fbox(ci: CanvasItem, r: Rect2, rad, g: Array, ring := [], hi := [], 
 				b.shadow_color = d[3]
 				b.shadow_size = maxi(1, int(float(d[2]) * K * .5))
 		_draw_sb(ci, b, Rect2(r.position + Vector2(d[0], d[1]), r.size), xf)
-	# (Link 11-23 "nhoè lem ở các cạnh") vẽ ở toạ độ ĐIỂM ẢNH THẬT: đường viền mịn của Godot nhoè ra 1 đơn vị toạ độ,
-	# vẽ theo css px thì nhoè K điểm ảnh (3 px trên điện thoại) -> thành quầng mờ quanh ô. Giờ nhoè đúng 1 điểm ảnh.
-	var rk := Rect2(r.position * K, r.size * K)
-	var pts := rr4_pts(rk, q * K, 6)
+	# (Link 11-23 "lem viền trắng ra") mép NGOÀI chỉ do StyleBoxFlat vẽ (khử răng cưa đúng mép, cùng chỗ với các vòng viền);
+	# dải màu (polygon, không khử răng cưa) lùi vào 1 điểm ảnh, KHÔNG có đường viền mịn polyline (nó lòi ra ngoài 1 điểm ảnh
+	# màu kem -> vạch trắng quanh ô)
+	var base := _box_sb("fb%s|%s|%s|%s" % [stop_col(g, .5), q, K, r.size])
+	if base.get_meta("ok", false) == false:
+		base.set_meta("ok", true)
+		_sb_rad(base, q)
+		base.anti_aliasing = true
+		base.bg_color = stop_col(g, .5)
+	_draw_sb(ci, base, r, xf)
+	var rk := Rect2(r.position * K, r.size * K).grow(-1.0)
+	var qk := Vector4(maxf(0, q.x * K - 1), maxf(0, q.y * K - 1), maxf(0, q.z * K - 1), maxf(0, q.w * K - 1))
+	var pts := rr4_pts(rk, qk, 6)
 	var cols := PackedColorArray()
 	for p in pts:
 		cols.append(stop_col(g, (p.y - rk.position.y) / maxf(1.0, rk.size.y)))
 	ci.draw_set_transform_matrix(BASE * xf * Transform2D(0, Vector2(1.0 / K, 1.0 / K), 0, Vector2.ZERO))
 	ci.draw_polygon(pts, cols)
-	var cl := pts.duplicate()
-	cl.append(pts[0])
-	var cc := cols.duplicate()
-	cc.append(cols[0])
-	ci.draw_polyline_colors(cl, cc, 1.0, true)   # mép mịn 1 điểm ảnh (polygon không khử răng cưa)
 	ci.draw_set_transform_matrix(BASE)
 	if glow.size() == 2:
 		var gc: Color = glow[1]
