@@ -1,8 +1,8 @@
 extends Control
 # CÂU CÁ BỜ KÊNH: giao diện (09_ui.js + CSS của shell.html), vẽ tay bằng Godot, đo theo css px của web:
 # thanh trên (xu, cấp, đồng hồ, cài đặt), mồi đang móc, Giỏ cá / Chợ / Sổ cá, nút nón lá Quăng / Chờ / Giật / Giữ
-# có vòng căng dây, khung đồng hồ khi kéo cá, lời báo, chữ to giữa màn, lời nhắc, viền đỏ, bảng ghe hàng,
-# hộp thoại (giỏ, chợ mồi + đổi đồ, sổ cá, cài đặt, đơn ghe), thẻ cá câu được, màn đầu, lên cấp, xu bay.
+# có vòng căng dây, khung đồng hồ khi kéo cá, lời báo, chữ to giữa màn, lời nhắc, viền đỏ,
+# hộp thoại (giỏ, chợ mồi + đổi đồ, sổ cá, cài đặt), thẻ cá câu được, màn đầu, lên cấp, xu bay.
 
 const A := preload("res://logic/cc/cc_art.gd")
 const D := preload("res://logic/cc/cc_data.gd")
@@ -112,7 +112,6 @@ class Box extends Control:
 var game
 var hud: Box
 var fxl: Box
-var tag: Box
 var modal: Box
 var body: Box
 var card: Box
@@ -131,8 +130,6 @@ var _bite_hot := false
 var _ring := {"v": 0.0, "col": Color("#7cd04a")}
 var _fight := {"tn": 0.0, "st": 1.0, "ds": 0.0, "on": false}
 var _vig := 0.0
-var _badge = null
-var _badge_frame := -1
 var _frame := 0
 var _mod := {}
 var _card := {}
@@ -154,8 +151,6 @@ func _ready() -> void:
 	fxl = Box.new(_draw_fx)
 	fxl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fxl)
-	tag = Box.new(_draw_tag)
-	add_child(tag)
 	modal = Box.new(_draw_modal)
 	modal.full = true
 	modal.visible = false
@@ -175,7 +170,7 @@ func _ready() -> void:
 
 func relayout() -> void:
 	L = game.L
-	for b in [hud, fxl, tag, modal, card, title]:
+	for b in [hud, fxl, modal, card, title]:
 		b.position = Vector2.ZERO
 		b.size = Vector2(L.W, L.H)
 	if not _mod.is_empty():
@@ -214,8 +209,6 @@ func step(dt: float) -> void:
 		_coinpop = 0.0
 	var want := 1.0 if (st == "fight" and _fight.tn > .95) else 0.0
 	_vig = lerpf(_vig, want, minf(1, dt * 8))
-	if _badge_frame != _frame - 1 and _badge_frame != _frame:
-		_badge = null
 	hud.visible = game.started
 	# thanh trên + nút chỉ vẽ lại khi có gì đổi (vẽ lại mỗi khung tốn ~0.7 ms trên máy bàn, gấp mấy lần trên web điện thoại)
 	if game.started:
@@ -232,8 +225,6 @@ func step(dt: float) -> void:
 			_hud_dirty = false
 			hud.queue_redraw()
 	fxl.queue_redraw()
-	tag.visible = _badge != null and not modal.visible and st != "card" and st != "fight"
-	tag.queue_redraw()
 	if card.visible:
 		card.queue_redraw()
 	if title.visible:
@@ -802,37 +793,6 @@ func _draw_fx(ci: Box) -> void:
 		var s := lerpf(1, .8, k)
 		A.svg(ci, "coin", Rect2(p - Vector2(13, 13) * s, Vector2(26, 26) * s), Color(1, 1, 1, lerpf(1, .6, k)))
 
-# ============================================================ bảng ghe hàng (nổi trên ghe)
-func boat_badge(x: float, y: float) -> void:
-	_badge = Vector2(clampf(x, 90, L.W - 90), maxf(y, 90))
-	_badge_frame = _frame
-
-func on_boat_arrive() -> void:
-	toast("Có ghe hàng ghé ngang!", "info")
-	game.snd.boat()
-
-func on_boat_leave() -> void:
-	_badge = null
-	if _mod.get("kind", "") == "order":
-		close_modal()
-
-func _draw_tag(ci: Box) -> void:
-	ci.items = []
-	if _badge == null:
-		return
-	var lab := "Ghe hàng ghé! Xem đơn"
-	var w := 6 + 22 + 6 + A.tw(lab, 13) + 10
-	var h := 30.0
-	var bob := -5 * (.5 - .5 * cos(_tt / 1.6 * TAU))
-	var r := Rect2(_badge.x - w / 2, _badge.y - h - 8 + bob, w, h)
-	var dn := ci.pressed("tag")
-	A.box(ci, Rect2(r.position + Vector2(0, 3), r.size), Color(120 / 255.0, 80 / 255.0, 20 / 255.0, .6), 12)
-	A.box(ci, r, A.PAPER, 12, 2, A.WOOD)
-	ci.draw_colored_polygon(PackedVector2Array([Vector2(r.get_center().x - 7, r.end.y - 1), Vector2(r.get_center().x + 7, r.end.y - 1), Vector2(r.get_center().x, r.end.y + 7)]), A.WOOD)
-	A.svg(ci, "boat", Rect2(r.position.x + 6, r.get_center().y - 11, 22, 22))
-	A.text(ci, lab, r.position.x + 34, r.get_center().y + (1 if dn else 0), 13, A.INK, 0, 800)
-	ci.items.append({"r": r, "id": "tag", "tap": func(): _ui_tap(); open_order()})
-
 # ============================================================ hộp thoại
 # _mod: {kind, arg, w, title, sub, icon, tabs, body_h, anim}
 func _open(kind: String, arg = null) -> void:
@@ -862,8 +822,6 @@ func _layout_modal() -> void:
 	var pw := 560.0
 	if k == "set":
 		pw = 380.0
-	elif k == "order":
-		pw = 420.0
 	var padt := 54.0 if n else 60.0
 	pw = minf(pw, L.W - 24)
 	_mod.w = pw
@@ -897,7 +855,6 @@ func _sub_of(k: String) -> String:
 				if S.dex.has(f.id):
 					seen += 1
 			return "%d/%d loài · chạm để xem gợi ý" % [seen, D.FISH.size()]
-		"order": return "Cần mua cá tươi, trả giá cao hơn vựa"
 	return ""
 
 func _title_of(k: String) -> Array:
@@ -906,9 +863,6 @@ func _title_of(k: String) -> Array:
 		"shop": return ["shop", "Chợ quê"]
 		"dex": return ["book", "Sổ cá"]
 		"set": return ["cog", "Cài đặt"]
-		"order":
-			var b = game.W.boat
-			return ["boat", b.order.who if b != null else "Ghe hàng"]
 	return ["", ""]
 
 func _draw_modal(ci: Box) -> void:
@@ -1011,7 +965,6 @@ func _body(ci, w: float, draw: bool) -> float:
 		"shop": y = _b_shop(ci, w, y)
 		"dex": y = _b_dex(ci, w, y)
 		"set": y = _b_set(ci, w, y)
-		"order": y = _b_order(ci, w, y)
 	return y - 10
 
 func _sc(ci) -> float:
@@ -1531,54 +1484,6 @@ func _switch(ci: CanvasItem, r: Rect2, on: bool) -> void:
 	var tx := r.position.x + (10 + (r.size.x - 44) / 2 if on else 34 + (r.size.x - 44) / 2)
 	A.text(ci, lab, tx, r.get_center().y, 13, Color.WHITE if on else Color("#6a4a24"), 1, 800)
 
-# ------------------------------------------------------------ đơn ghe hàng
-func _b_order(ci, w: float, y: float) -> float:
-	var S: Dictionary = game.S
-	var b = game.W.boat
-	if b == null:
-		return y
-	var o: Dictionary = b.order
-	var ok := has_fish(o.need)
-	var tx := 14 + 10
-	var cw := w - 20
-	var c1 := _chips(null, tx, 0, cw, _need_chips(o.need))
-	var pay := [["%d xu" % o.xu, true, "", "coin"], ["+%d kinh nghiệm" % o.xp, true, "", ""]]
-	if o.bonus != null:
-		pay.append(["+%d %s" % [D.BAIT[o.bonus].pack, D.BAIT[o.bonus].name], true, "", "", o.bonus])
-	var c2 := _chips(null, tx, 0, cw, pay)
-	var rh := 8 + 13 * 1.3 + 3 + c1 + 6 + 13 * 1.3 + 3 + c2 + 10
-	var r := Rect2(14, y, w, rh)
-	_row(ci, r)
-	var yy := r.position.y + 8 + 13 * .65
-	_t(ci, "Cần:", tx, yy, 13, Color("#7a5a30"), 0, 700)
-	yy += 13 * .65 + 3
-	yy = _chips(ci, tx, yy, cw, _need_chips(o.need)) + 6
-	_t(ci, "Trả:", tx, yy + 13 * .65, 13, Color("#7a5a30"), 0, 700)
-	yy += 13 * 1.3 + 3
-	_chips(ci, tx, yy, cw, pay)
-	y += rh + 6
-	var sr := Rect2(14, y, w, 54)
-	if ci != null:
-		A.box(ci, Rect2(sr.position - Vector2(0, _sc(ci)), sr.size), A.TH, 12, 2, A.ROW_B)
-	_t(ci, "Đủ hàng rồi!" if ok else "Câu thêm cho đủ rồi giao", sr.position.x + 10, sr.get_center().y, 15, A.INK)
-	var bw := btn_w("Giao hàng")
-	_bt(ci, Rect2(sr.end.x - 10 - bw, sr.position.y + 8, bw, 38), "Giao hàng", "", "give", func():
-		if not has_fish(o.need):
-			return
-		take_fish(o.need)
-		S.xu += o.xu
-		S.orders += 1
-		if o.bonus != null:
-			S.baits[o.bonus] = int(S.baits.get(o.bonus, 0)) + D.BAIT[o.bonus].pack
-		fly_coins(8, body.position + Vector2(sr.end.x - 10 - bw / 2, sr.position.y + 8 - body.scroll))
-		game.add_xp(o.xp)
-		game.snd.fanfare(2)
-		toast("Giao hàng xong! " + o.who + " cảm ơn nha", "good")
-		b.mode = "out"
-		_badge = null
-		close_modal(), not ok)
-	return sr.end.y + 4
-
 func open_basket() -> void:
 	_open("basket")
 func open_shop(tab := "bait") -> void:
@@ -1588,10 +1493,6 @@ func open_dex(sel = null) -> void:
 func open_settings() -> void:
 	_sure = false
 	_open("set")
-func open_order() -> void:
-	if game.W.boat == null:
-		return
-	_open("order")
 
 # ============================================================ thẻ cá câu được
 func show_catch(o: Dictionary) -> void:

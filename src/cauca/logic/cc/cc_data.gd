@@ -83,7 +83,6 @@ const CAGE := [
 ]
 const GEAR_KEYS := ["rod", "line", "flo", "cage"]
 const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "cage": "Giỏ đựng"}
-const WHO := ["Cô Ba ghe trái cây", "Chú Tư ghe hàng bông", "Dì Sáu bán bánh", "Anh Hai thương lái"]
 
 static var BY := {}
 
@@ -174,4 +173,4 @@ static func is_dusk_dawn(h: float) -> bool:
 
 static func def_save() -> Dictionary:
 	return {"xu": 60, "xp": 0, "lv": 1, "bait": "trun", "baits": {"trun": 999, "com": 10}, "rod": 0, "line": 0, "flo": 0, "cage": 0,
-		"basket": [], "dex": {}, "luck": 0.0, "hour": 6.4, "sound": 1, "music": 1, "tut": 0, "orders": 0, "stats": {"casts": 0, "catches": 0, "snaps": 0}}
+		"basket": [], "dex": {}, "luck": 0.0, "hour": 6.4, "sound": 1, "music": 1, "tut": 0, "stats": {"casts": 0, "catches": 0, "snaps": 0}}

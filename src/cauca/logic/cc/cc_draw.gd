@@ -1,6 +1,6 @@
 extends Control
 # CÂU CÁ BỜ KÊNH: lớp vẽ 2D trên mặt nước (chép 04_world drawBird/drawProps, 05_fx, 07_tackle, 10_main render):
-# bóng lục bình + ghe dưới nước (lớp riêng có shader pha màu nước), cò bay, lục bình, ghe hàng + mái chèo,
+# bóng lục bình dưới nước (lớp riêng có shader pha màu nước), cò bay, lục bình,
 # hạt nước, cá quẫy, dây + phao, chuồn chuồn, bờ bên này, cần câu, cá bay vô, đom đóm (lớp cộng sáng), mưa.
 
 const A := preload("res://logic/cc/cc_art.gd")
@@ -17,8 +17,6 @@ void fragment(){
  COLOR = vec4(mix(t.rgb * tint, mixc, .55), t.a * vc.a);
 }
 """
-const GHE_OX := 22.0
-const GHE_OY := 51.0
 
 class Lay extends Control:
 	var fn: Callable
@@ -107,8 +105,6 @@ func _draw_refl(ci: CanvasItem) -> void:
 			_refl(ci, "sen" + str(p.k), p.x, p.z, SEN_W * SEN_K[p.k] * p.s, sin(W.t * .8 + p.ph) * .25, .9)
 		else:
 			_refl(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, .9)
-	if W.boat != null:
-		_refl(ci, "ghe", W.boat.x, W.boat.z, 5.2, sin(W.boat.ph * 1.4) * 1.2, .78)
 
 func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: float, base: float) -> void:
 	var L: Dictionary = game.L
@@ -156,8 +152,6 @@ func _draw_main(ci: CanvasItem) -> void:
 				draw_floating(ci, "sen" + str(p.k), p.x, p.z, SEN_W * SEN_K[p.k] * p.s, sin(W.t * .8 + p.ph) * .25, tod, .97)
 			else:
 				draw_floating(ci, "lucbinh" + str(p.k), p.x, p.z, .6 * p.s, sin(W.t * 1.3 + p.ph) * .6, tod, .9)
-	if W.boat != null and not dbg_skip.has("boat"):
-		draw_boat(ci, W.boat, tod)
 	if not dbg_skip.has("fx"): fx_draw(ci, tod)
 	draw_leaps(ci)
 	if game.started and not dbg_skip.has("tackle"):
@@ -236,7 +230,7 @@ func draw_bird(ci: CanvasItem, b: Dictionary, tod: Dictionary) -> void:
 	wing.call(false)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
-# ------------------------------------------------------------ đồ nổi (lục bình, ghe), bóng ở lớp dưới
+# ------------------------------------------------------------ đồ nổi (lục bình, sen), bóng ở lớp dưới
 func draw_floating(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: float, tod: Dictionary, base := .9) -> void:
 	var L: Dictionary = game.L
 	var t: Texture2D = A.img(name)
@@ -257,27 +251,6 @@ func draw_floating(ci: CanvasItem, name: String, x: float, z: float, ww: float, 
 	ci.draw_set_transform(Vector2(s.x, by), 0, Vector2(1, .12))
 	A.radial(ci, Vector2.ZERO, w * .5, [[0.0, Color(wc.lerp(Color.BLACK, .4), .35)], [1.0, Color(wc, 0)]], 20)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-
-func draw_boat(ci: CanvasItem, b: Dictionary, tod: Dictionary) -> void:
-	var L: Dictionary = game.L
-	var bob := sin(b.ph * 1.4) * 1.2
-	draw_floating(ci, "ghe", b.x, b.z, 5.2, bob, tod, .78)
-	var t: Texture2D = A.img("ghe")
-	if t == null:
-		return
-	var s: Vector2 = game.proj(b.x, b.z)
-	var w: float = L.F * 5.2 / b.z
-	var k := w / t.get_size().x
-	var top: float = s.y + bob - t.get_size().y * k * .78
-	var gx: float = s.x - w / 2 + (552 - GHE_OX) * k
-	var gy: float = top + (142 - GHE_OY) * k
-	var swv: float = sin(b.ph * .8) * .15 if b.mode == "stay" else sin(b.ph * 2.6) * .5
-	var ex := gx - cos(.9 + swv) * w * .32
-	var ey: float = s.y + bob + w * .02
-	var oc := Color(.42, .28, .14).lerp(tod.tint, .3)
-	A.stroke(ci, PackedVector2Array([Vector2(gx + w * .03, gy - w * .03), Vector2(ex, ey)]), oc, maxf(1.5, w * .012))
-	if b.mode == "stay":
-		game.ui.boat_badge(s.x, top - 8)
 
 # ------------------------------------------------------------ hạt nước
 func fx_draw(ci: CanvasItem, tod: Dictionary) -> void:

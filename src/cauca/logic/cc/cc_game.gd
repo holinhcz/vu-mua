@@ -1,7 +1,7 @@
 extends Control
 # CÂU CÁ BỜ KÊNH: viết lại bằng Godot từ bản web (cau-ca/src/js). Gốc này phóng to K lần, mọi con số bên trong là
 # css px của web. Đây là phần luật + thế giới: khổ màn và phép chiếu (00_core), đồng hồ / mưa / gió / lục bình /
-# ghe hàng / chim / đom đóm / chỗ sủi tăm (04_world), hạt nước + cá quẫy (05_fx), quăng / chờ / nhấp / giật /
+# chim / đom đóm / chỗ sủi tăm (04_world), hạt nước + cá quẫy (05_fx), quăng / chờ / nhấp / giật /
 # kéo / đứt dây / lên cá (08_game), vòng chính + chạm (10_main). Vẽ ở cc_draw, giao diện ở cc_ui, tiếng ở cc_snd.
 
 signal closed
@@ -72,7 +72,7 @@ func _ready() -> void:
 
 func _reset_state() -> void:
 	W = {"t": 0.0, "rain": 0.0, "rainT": 0.0, "rainTarget": 0, "nextRain": rnd(70, 140), "wind": .35, "windT": .35, "cloud": .6, "cloudBase": .6,
-		"floatGlow": [0.0, 0.0, 0.0], "rips": [], "spots": [], "props": [], "boat": null, "nextBoat": 50.0, "birds": [], "nextBird": 8.0, "flies": [], "nextJump": 6.0}
+		"floatGlow": [0.0, 0.0, 0.0], "rips": [], "spots": [], "props": [], "birds": [], "nextBird": 8.0, "flies": [], "nextJump": 6.0}
 	G = {"state": "idle", "t": 0.0, "fl": {"x": 0.0, "z": 10.0, "sink": 0.0, "tilt": 0.0, "dx": 0.0}, "fish": null, "ev": [], "hold": false,
 		"ten": 0.0, "over": 0.0, "slack": 0.0, "dist": 0.0, "rodA": 0.0, "rodV": 0.0, "shake": 0.0, "lastTarget": null, "shadow": null, "df": null,
 		"anim": null, "biteOpen": 0.0, "biteT": 0.0, "hook": null, "landing": null, "paused": false, "dt": .016, "reelA": 0.0, "tn": 0.0, "tick": 0.0, "idleWait": 0.0}
@@ -106,7 +106,7 @@ func _load() -> void:
 		var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
 		if d is Dictionary:
 			S.merge(d, true)
-	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut", "orders"]:
+	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut"]:
 		S[k] = int(S[k])
 	S.luck = float(S.luck)
 	S.hour = float(S.hour)
@@ -297,72 +297,7 @@ func world_update(dt: float) -> void:
 		if randf() < .6:
 			fx_leap(pick(["linh", "mevinh", "he", "sac"]), x, z, .7)
 		snd.plop(.8, clampf(z / 34, 0, 1))
-	boat_update(dt)
 	life_update(dt)
-
-# ------------------------------------------------------------ ghe hàng
-func make_order() -> Dictionary:
-	var pool := []
-	for f in D.FISH:
-		if not f.has("junk") and f.rar <= (3 if S.lv >= 4 else 2) and (f.bait.get(S.bait, 0) or S.lv > 1):
-			pool.append(f)
-	if pool.is_empty():
-		pool = [D.fish("ro")]
-	var n := 1 + randi() % (3 if S.lv >= 3 else 2)
-	var need := {}
-	for i in n:
-		var cand: Array = pool.filter(func(f): return f.rar <= 2 or i == 0)
-		var f: Dictionary = pick(cand)
-		need[f.id] = need.get(f.id, 0) + ((1 + randi() % 2) if f.rar == 1 else 1)
-	var val := 0
-	for id in need:
-		var f := D.fish(id)
-		val += D.fish_value(f, (f.w[0] + f.w[1]) / 2.0) * need[id]
-	var bonus = null
-	if randf() < .45:
-		var bl := []
-		for b in D.BAIT_ORDER.slice(1):
-			if D.BAIT[b].lv <= S.lv + 1:
-				bl.append(b)
-		if bl.size():
-			bonus = pick(bl)
-	return {"need": need, "xu": int(round(val * 1.7 + 20)), "xp": 12 + need.size() * 6, "bonus": bonus, "who": pick(D.WHO)}
-
-func boat_update(dt: float) -> void:
-	W.nextBoat -= dt
-	if W.boat == null and W.nextBoat < 0 and G.state != "fight":
-		var z := 21.0
-		var hx := half_x(z)
-		W.boat = {"z": z, "x": -hx - 4, "tx": hx * .25 - .5, "stay": 70.0, "ph": 0.0, "mode": "in", "wake": 0.0, "order": make_order()}
-		if started:
-			ui.on_boat_arrive()
-	var b = W.boat
-	if b == null:
-		return
-	b.ph += dt
-	if b.mode == "in":
-		b.x += (b.tx - b.x) * dt * .35 + .35 * dt
-		if b.x >= b.tx:
-			b.x = b.tx
-			b.mode = "stay"
-	elif b.mode == "stay":
-		b.stay -= dt
-		if b.stay < 0:
-			b.mode = "out"
-	else:
-		b.x += 1.1 * dt
-		if b.x > half_x(b.z) + 5:
-			W.boat = null
-			W.nextBoat = rnd(110, 170)
-			ui.on_boat_leave()
-			return
-	b.wake -= dt
-	if b.mode != "stay" and b.wake < 0:
-		b.wake = .35
-		ripple(b.x - 1.2, b.z + .1, .5)
-	if b.mode == "stay" and b.wake < 0:
-		b.wake = 1.6
-		ripple(b.x + rnd(-1, 1), b.z, .25)
 
 # ------------------------------------------------------------ chim, đom đóm
 func life_update(dt: float) -> void:
