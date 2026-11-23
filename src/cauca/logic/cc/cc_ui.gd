@@ -144,6 +144,8 @@ var _card_t := 0.0
 var _title_on := false
 var _title_t := 0.0
 var _sure := false
+var _bsel := -1          # ô cá đang chọn trong giỏ
+var _sell_sure := false  # đã chạm Bán hết 1 lần
 var _xu_rect := Rect2()
 var _tt := 0.0
 
@@ -820,6 +822,9 @@ func _open(kind: String, arg = null) -> void:
 	var was: bool = modal.visible and _mod.get("kind", "") == kind
 	var anim: float = _mod.get("anim", 0.0) if was else 0.0
 	var keep_scroll: float = body.scroll if was else 0.0
+	if not was:
+		_bsel = -1
+		_sell_sure = false
 	_mod = {"kind": kind, "arg": arg, "anim": anim}
 	modal.visible = true
 	game.G.paused = true
@@ -839,38 +844,51 @@ func close_modal() -> void:
 	game.save(true)
 
 func _layout_modal() -> void:
-	# (11-23 đồng bộ Nông trại) bảng như Kho của Nông trại: rộng tối đa 500, nền giấy kem, khung tre, nút X đỏ trên khung,
-	# tên bảng chữ nâu trong lòng bảng (không còn thanh gỗ), thanh tre ngang ngăn đầu bảng với phần thân
-	var n := nar()
+	# (Link 11-23 "lấy chuẩn khung chung của Kho nông trại"): mọi bảng = .pwin của Nông trại trên khuôn 338x610
+	# (#pov đứng giữa màn): rộng 338, cao 524.6, đỉnh cách đỉnh khuôn 85.4, bo 22. Không tên bảng: trên cùng là
+	# thanh sức chứa (.kcbox) và tab (.khseg); "Bán hết" + ô xem cá nằm trong dock cố định ở đáy (.khdock).
+	# Màn thấp hơn khuôn thì thu chiều cao như farm (fp = vh / 610).
 	var k: String = _mod.kind
-	var pw := 500.0
-	if k == "set":
-		pw = 380.0
-	var padt := 54.0 if n else 60.0
-	pw = minf(pw, L.W - 24)
+	var fp := minf(1.0, L.H / KPOV)
+	var pw := minf(KW, L.W)
+	var ph := KH * fp
+	var top: float = (L.H - KPOV * fp) / 2 + KTOP * fp
 	_mod.w = pw
-	var hh := 20.0 + 26.0 + 8.0
-	if _sub_of(k) != "":
-		var sw_max := pw - 22 - (38 if _title_of(k)[0] != "" else 0) - 22
-		hh += 18.0 * A.wrap(_sub_of(k), 14, 600, sw_max).size() - 2.0
-	_mod.hh = hh
-	var tabs_h := 0.0
-	if k == "shop":
-		tabs_h = 34.0
-	_mod.tabs_h = tabs_h
-	_mod.top = hh + tabs_h + Tre.T + Tre.S - 2.0   # phần thân bắt đầu ngay dưới thanh tre
-	var content_h := _body(null, pw - 32, false)
-	var maxh: float = L.H - padt - 12
-	var ph: float = minf(_mod.top + 10 + content_h + 14 + 9, maxh)
-	_mod.ph = ph
-	var top := padt + (maxh - ph) / 2
 	_mod.r = Rect2((L.W - pw) / 2, top, pw, ph)
-	var br := Rect2(_mod.r.position.x + 2, _mod.r.position.y + _mod.top, pw - 4, ph - _mod.top - 9)
+	_mod.top = _head_h(k)
+	_mod.dock = _dock_h(k)
+	var content_h := _body(null, KCW, false)
+	var br := Rect2(_mod.r.position.x + 2.5, top + _mod.top, pw - 5, ph - _mod.top - _mod.dock - (0.0 if _mod.dock > 0 else 6.0))
 	body.position = br.position
 	body.size = br.size
-	body.max_scroll = maxf(0, 10 + content_h + 14 - br.size.y)
+	body.max_scroll = maxf(0, content_h + 12 - br.size.y)
 	mtop.position = Vector2.ZERO
 	mtop.size = Vector2(L.W, L.H)
+
+const KW := 338.0      # .pwin rộng
+const KH := 524.6      # .pwin cao
+const KTOP := 85.4     # .pwin cách đỉnh #pov
+const KPOV := 610.0    # #pov cao
+const KX := 16.5       # .khcard lề trái
+const KCW := 305.0     # .khcard rộng
+const KC_Y := 24.0     # .kcbox cách đỉnh bảng
+const KTAB_Y := 64.5   # tab chọn (.khseg button.on) cách đỉnh bảng
+
+func _head_h(k: String) -> float:   # phần cố định trên đầu bảng (không cuộn)
+	match k:
+		"basket", "dex": return KC_Y + 34.5 + 6.0
+		"shop": return KTAB_Y + 33.0 + Tre.T + Tre.S - 2.0
+	return 0.0
+
+func _dock_h(k: String) -> float:   # .khdock: 58.5 (một nút), ô xem cá thì cao hơn
+	match k:
+		"basket":
+			if game.S.basket.is_empty():
+				return 0.0
+			return 128.5 if _bsel >= 0 and _bsel < game.S.basket.size() else 58.5
+		"dex":
+			return _dex_dock(null, Rect2()) if _mod.get("arg") != null else 0.0
+	return 0.0
 
 func _mxf() -> Array:   # [phép biến hình bảng đang bật lên, độ dịch dọc, độ hiện]
 	var r: Rect2 = _mod.r
@@ -910,66 +928,107 @@ func _draw_modal(ci: Box) -> void:
 	var r: Rect2 = _mod.r
 	var mx := _mxf()
 	var xf: Transform2D = mx[0]
-	body.position = Vector2(r.position.x + 2, r.position.y + _mod.top + mx[1])
+	body.position = Vector2(r.position.x + 2.5, r.position.y + _mod.top + mx[1])
 	body.modulate.a = mx[2]
-	# bảng: bóng (0 -10px 40px như .pwin) + nền giấy kem (một ảnh ghép sẵn); cả hai nằm dưới các ô (tab)
+	# bảng: bóng (0 -10px 40px như .pwin) + nền giấy kem (một ảnh ghép sẵn); cả hai nằm dưới các ô
 	A.fbox(ci, r, Tre.R, [], [], [], [], [[0, -10, 40, Color(0, 0, 0, .3)]], xf)
 	A.under_tex(ci, A.paper(r.size.x, r.size.y, Tre.R), r, xf)
-	# tên bảng
-	var t := _title_of(_mod.kind)
-	var sub := _sub_of(_mod.kind)
-	var ix := r.position.x + 22
-	var ty := r.position.y + 20 + 13
-	if t[0] != "":
-		ci.draw_set_transform_matrix(xf)
-		A.svg(ci, t[0], Rect2(ix, ty - 15 + (8 if sub != "" else 0), 30, 30))
-		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-		ix += 38
-	var maxw := r.end.x - 22 - ix
-	var tt: String = t[1]
-	var tfs := 20.0
-	while A.tw(tt, tfs) > maxw and tfs > 15:
-		tfs -= 1
-	A.text(ci, tt, ix, ty, tfs, A.F_INK, 0, 800, 0.0, A.INK, xf)
-	if sub != "":
-		var sl := A.wrap(sub, 14, 600, maxw)
-		for i in sl.size():
-			A.text(ci, sl[i], ix, ty + 19 + i * 18, 14, A.F_MUTED, 0, 600, 0.0, A.INK, xf)
 	# "panel" phải nằm TRƯỚC nút X: hit() dò từ cuối lên, panel đứng sau thì nuốt luôn cú bấm X (Link 11-23 "X đéo đóng được")
 	ci.items.append({"r": r, "id": "panel"})
 	var xr := _x_rect()
 	ci.items.append({"r": xr.grow(5), "id": "x", "tap": func(): game.snd.ui(); close_modal()})
-	# tab của Chợ (.khseg: tab chọn xanh lá cao hơn, tab kia kem; đứng trên thanh tre)
-	var by: float = r.position.y + _mod.hh + _mod.tabs_h - 2
-	if _mod.kind == "shop":
-		var gx := r.position.x + 16
-		var gw := r.size.x - 32
-		var tw := (gw - 6) / 2
-		_push(ci, xf)
-		for i in 2:
-			var id: String = ["bait", "gear"][i]
-			var on: bool = _mod.arg == id
-			var tr := Rect2(gx + i * (tw + 6), by - (33 if on else 30) + 2, tw, (33 if on else 30))
-			var q := Vector4(14, 14, 0, 0)
-			if on:
-				A.fbox(ci, tr, q, [[0.0, A._c(78, 155, 68)], [.5, A._c(81, 159, 70)], [1.0, A._c(88, 169, 77)]], [[1.0, A.F_GREEN]], [2.0, A._c(150, 215, 130, .45)], [8.0, A._c(10, 55, 10, .24)])
-			else:
-				A.fbox(ci, tr, q, [[0.0, A._c(253, 244, 220)], [1.0, A._c(238, 220, 170)]], [[1.0, A._c(150, 112, 48, .4)]], [2.0, Color(1, 1, 1, .6)], [8.0, A._c(120, 85, 25, .14)])
-			var lab: String = ["Mồi câu", "Đổi đồ nghề"][i]
-			var pk: String = ["trun", D.GEAR_KEYS[0]][i]
-			var lw := 20 + 5 + A.tw(lab, 14)
-			var lx := tr.get_center().x - lw / 2
-			var cy := tr.get_center().y + (1.5 if on else 0.0)
-			A.pic(ci, pk, Rect2(lx, cy - 10, 20, 20))
-			A.text(ci, lab, lx + 25, cy, 14, Color.WHITE if on else A.F_TAB, 0, 800)
-			ci.items.append({"r": tr, "id": "tab" + id, "tap": func(): game.snd.ui(); _open("shop", id)})
-		_pop(ci)
-	# thanh tre ngang dưới đầu bảng
-	var bw := r.size.x - 8
-	ci.draw_set_transform_matrix(xf)
-	ci.draw_texture_rect(Tre.bar(bw), Rect2(r.position.x + 4, by, bw, Tre.T + Tre.S), false)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	var S: Dictionary = game.S
+	var x0 := r.position.x + KX
+	_push(ci, xf)
+	match _mod.kind:
+		"basket":
+			var cap: int = D.CAGE[S.cage].cap
+			var n: int = S.basket.size()
+			var tot := 0
+			for c in S.basket:
+				tot += D.fish_value(D.fish(c.id), c.w)
+			_kcbox(ci, r, float(n) / cap, n >= cap, [["Đáng giá ", A.F_MUTED, 600], [str(tot), A.F_PRICE, 800], ["@coin", null, 0]],
+				"%d/%d" % [n, cap], n >= cap, func(): game.snd.ui(); _open("shop", "gear"))
+			_basket_dock(ci, r)
+		"dex":
+			var seen := 0
+			for f in D.FISH:
+				if S.dex.has(f.id):
+					seen += 1
+			_kcbox(ci, r, float(seen) / D.FISH.size(), false, [["Đã gặp ", A.F_MUTED, 600], [str(seen), A.F_PRICE, 800], [" / %d loài" % D.FISH.size(), A.F_MUTED, 600]],
+				"", false, Callable())
+			if _mod.get("arg") != null:
+				_dex_dock(ci, r)
+		"shop":
+			var need := D.xp_need(S.lv)
+			_kcbox(ci, r, float(S.xp) / need, false, [["Đang có ", A.F_MUTED, 600], [str(S.xu), A.F_PRICE, 800], ["@coin", null, 0]],
+				"Cấp %d" % S.lv, false, Callable())
+			# tab (.khseg: tab chọn xanh lá cao 33, tab kia kem cao 30, chân cùng một đường; đứng trên thanh tre)
+			var by: float = r.position.y + KTAB_Y + 33
+			var tw := (KCW - 6) / 2
+			for i in 2:
+				var id: String = ["bait", "gear"][i]
+				var on: bool = _mod.arg == id
+				var tr := Rect2(x0 + i * (tw + 6), by - (33 if on else 30), tw, (33 if on else 30))
+				var q := Vector4(14, 14, 0, 0)
+				if on:
+					A.fbox(ci, tr, q, [[0.0, A._c(78, 155, 68)], [.5, A._c(81, 159, 70)], [1.0, A._c(88, 169, 77)]], [[1.0, A.F_GREEN]], [2.0, A._c(150, 215, 130, .45)], [8.0, A._c(10, 55, 10, .24)])
+				else:
+					A.fbox(ci, tr, q, [[0.0, A._c(253, 244, 220)], [1.0, A._c(238, 220, 170)]], [[1.0, A._c(150, 112, 48, .4)]], [2.0, Color(1, 1, 1, .6)], [8.0, A._c(120, 85, 25, .14)])
+				var lab: String = ["Mồi câu", "Đổi đồ nghề"][i]
+				var pk: String = ["trun", D.GEAR_KEYS[0]][i]
+				var lw := 20 + 5 + A.tw(lab, 14)
+				var lx := tr.get_center().x - lw / 2
+				var cy := tr.get_center().y + (1.5 if on else 0.0)
+				A.pic(ci, pk, Rect2(lx, cy - 10, 20, 20))
+				A.text(ci, lab, lx + 25, cy, 14, Color.WHITE if on else A.F_TAB, 0, 800)
+				ci.items.append({"r": tr, "id": "tab" + id, "tap": func(): game.snd.ui(); _open("shop", id)})
+			# thanh tre ngang dưới tab
+			var bw := r.size.x - 8
+			ci.draw_texture_rect(Tre.bar(bw), Rect2(r.position.x + 4, by - 2, bw, Tre.T + Tre.S), false)
+	_pop(ci)
 	mtop.queue_redraw()   # nút X đang bấm (lớp trên vẽ X)
+
+# .kcbox của Kho: vạch sức chứa (208 rộng, 9 cao) + dòng "Đáng giá 60 ⊙" bên trái, nút cam .khst bên phải
+# parts: [[chữ, màu, độ đậm]]; "@coin" = đồng xu 11px
+func _kcbox(ci: Box, r: Rect2, frac: float, full: bool, parts: Array, st: String, st_red: bool, st_tap: Callable) -> void:
+	var x0 := r.position.x + KX
+	var y0 := r.position.y + KC_Y
+	var stw := 0.0
+	if st != "":
+		stw = A.tw(st, 14, 800) + 24
+	var bw := KCW - 3 - (stw + 16 if st != "" else 0.0)
+	A.bar_bg(ci, Rect2(x0 + 1.5, y0 + 3.3, bw, 9), frac, A.F_RED if full else Color(1, 204 / 255.0, 51 / 255.0))
+	var tx := x0 + 1.5
+	var ty := y0 + 18.6 + 7.6
+	for p in parts:
+		if p[0] == "@coin":
+			A.svg(ci, "coin", Rect2(tx + 3, ty - 6, 12, 12))
+			tx += 15
+			continue
+		A.text(ci, p[0], tx, ty, 14, p[1], 0, p[2])
+		tx += A.tw(p[0], 14, p[2])
+	if st != "":
+		var sr := Rect2(x0 + KCW - stw, y0 + 4.5, stw, 25.5)
+		var dn := ci.pressed("khst")
+		A.fbtn_bg(ci, sr, "red" if st_red else "gold", dn, false, 11.0)
+		var c := sr.get_center() + Vector2(0, 1.5 if dn else 0.0)
+		A.text(ci, st, c.x, c.y + 1.5, 14, Color(125 / 255.0, 62 / 255.0, 0, .7) if not st_red else Color(90 / 255.0, 15 / 255.0, 5 / 255.0, .5), 1, 800)
+		A.text(ci, st, c.x, c.y, 14, Color.WHITE, 1, 800)
+		if st_tap.is_valid():
+			ci.items.append({"r": sr, "id": "khst", "tap": st_tap})
+
+func _dock_rect(r: Rect2, h: float) -> Rect2:
+	return Rect2(r.position.x, r.end.y - h, r.size.x, h)
+
+func _dock_bg(ci: Box, dr: Rect2) -> void:   # .khdock: nền 247,234,208, bo 2 góc dưới 22
+	A.fbox(ci, dr, Vector4(0, 0, Tre.R, Tre.R), [[0.0, A._c(247, 234, 208)], [1.0, A._c(247, 234, 208)]], [], [])
+	ci.items.append({"r": dr, "id": "dock"})
+
+# nút trong bảng (vẽ trong lớp bảng, không cuộn)
+func _mbt(ci: Box, r: Rect2, lab: String, kind: String, id: String, tap: Callable, ic := "") -> void:
+	btn(ci, r, lab, kind, ci.pressed(id), false, ic)
+	ci.items.append({"r": r, "id": id, "tap": tap})
 
 func _x_rect() -> Rect2:   # nút X đỏ của Nông trại (ibtn 27px) đè lên khung tre trên, cách mép phải 19px
 	var r: Rect2 = _mod.r
@@ -1012,7 +1071,7 @@ func _draw_body(ci: Box) -> void:
 	ci.items = []
 	if _mod.is_empty():
 		return
-	_body(ci, _mod.w - 32, true)
+	_body(ci, KCW, true)
 
 # vẽ (hoặc chỉ đo khi ci == null) phần thân hộp thoại; trả về chiều cao
 func _body(ci, w: float, draw: bool) -> float:
@@ -1100,50 +1159,143 @@ func _need_chips(need: Dictionary) -> Array:
 		out.append(["%s %d/%d" % [D.fish(id).name, mini(hv, n), n], hv >= n, id, ""])
 	return out
 
-# ------------------------------------------------------------ giỏ cá
+# ------------------------------------------------------------ giỏ cá (= tab Hàng hóa của Kho Nông trại)
+# lưới ô .khb 4 ô một hàng (72.9 rộng, khe 4.5); chạm ô = chọn (viền xanh), dock đáy hiện ô xem con cá + nút Bán.
+# "Bán hết" chạm 2 lần mới bán (như Kho: "Chạm lần nữa để bán hết").
+const TILE_W := 72.875
+const TILE_GAP := 4.5
+const TILE_H := 100.8   # .khb 84.7 + 1 dòng tên (tên cá dài xuống 2 dòng)
+
+func _rar_col(r: int) -> Color:
+	match r:
+		2: return Color("#6aa0d8")
+		3: return Color("#b070d8")
+		4: return Color("#e0a020")
+	return Color(0, 0, 0, 0)
+
+# một ô cá: hình, tên (tối đa 2 dòng), dòng dưới (giá / cân nặng); viền màu độ hiếm, đang chọn viền xanh
+func _tile(ci, r: Rect2, fid: String, name: String, low: String, low_col: Color, coin: bool, rar: int, sel: bool, dark: bool, id: String, tap: Callable) -> void:
+	if ci == null:
+		return
+	var dn: bool = ci.pressed(id)
+	var rr := Rect2(r.position - Vector2(0, _sc(ci)) + Vector2(0, 1.5 if dn else 0.0), r.size)
+	var bc := _rar_col(rar)
+	if sel:
+		A.card(ci, rr, true, 12)
+	elif bc.a > 0:
+		A.fbox(ci, rr, 12, [[0.0, A._c(255, 252, 244)], [1.0, A._c(247, 236, 212) if rar < 4 else A._c(252, 238, 196)]], [[2.0, bc]], [2.0, Color(1, 1, 1, .85)], [], [] if dn else [[0, 2, 0, Color(bc, .45)], [0, 3, 5, A._c(90, 60, 20, .1)]])
+	else:
+		A.card(ci, rr, false, 12)
+	var t: Texture2D = A.img(fid)
+	if t != null:
+		A.fit(ci, t, Rect2(rr.position.x + 5, rr.position.y + 6, rr.size.x - 10, 34), Color(0, 0, 0, .28) if dark else Color.WHITE)
+	var lines := A.wrap(name, 14, 500, rr.size.x - 8)
+	if lines.size() > 2:
+		lines = [lines[0], " ".join(lines.slice(1))]
+	var ny := rr.position.y + 50 + (8.0 if lines.size() == 1 else 0.0)
+	for ln in lines:
+		A.text(ci, ln, rr.get_center().x, ny, 14, A.F_BROWN, 1, 500)
+		ny += 16.1
+	var py := rr.end.y - 15.8
+	if coin:
+		var w := A.tw(low, 14, 700) + 13
+		var lx := rr.get_center().x - w / 2
+		A.text(ci, low, lx, py, 14, low_col, 0, 700)
+		A.svg(ci, "coin", Rect2(lx + w - 11, py - 5.5, 11, 11))
+	else:
+		A.text(ci, low, rr.get_center().x, py, 14, low_col, 1, 600)
+	ci.items.append({"r": r, "id": id, "sc": true, "tap": tap})
+
 func _b_basket(ci, w: float, y: float) -> float:
 	var S: Dictionary = game.S
 	if S.basket.is_empty():
 		if ci != null:
-			A.pic(ci, "cage", Rect2(w / 2 + 14 - 48, y + 20 - _sc(ci), 96, 96), Color(1, 1, 1, .85))
-		_t(ci, "Giỏ trống trơn", w / 2 + 14, y + 20 + 96 + 6 + 10, 17, A.F_MUTED, 1)
+			A.pic(ci, "cage", Rect2(w / 2 + 14.0 - 48, y + 20 - _sc(ci), 96, 96), Color(1, 1, 1, .85))
+		_t(ci, "Giỏ trống trơn", w / 2 + 14.0, y + 20 + 96 + 6 + 10, 14, A.F_MUTED, 1)
 		var yy := y + 20 + 96 + 6 + 22
 		for ln in A.wrap("Cá câu được bỏ vô đây: bán lấy xu, hoặc để dành đổi đồ nghề.", 14, 600, w - 20):
-			_t(ci, ln, w / 2 + 14, yy + 9, 14, A.SMALL2, 1, 600)
+			_t(ci, ln, w / 2 + 14.0, yy + 9, 14, A.SMALL2, 1, 600)
 			yy += 18
 		return yy + 20
-	var tot := 0
 	for i in S.basket.size():
 		var c: Dictionary = S.basket[i]
 		var f := D.fish(c.id)
+		var r := Rect2(14.0 + (i % 4) * (TILE_W + TILE_GAP), y + int(i / 4) * (TILE_H + 6), TILE_W, TILE_H)
+		var idx: int = i
+		_tile(ci, r, c.id, f.name, str(D.fish_value(f, c.w)), A.F_RED, true, int(f.rar), i == _bsel, false, "b%d" % i, func():
+			game.snd.ui()
+			_bsel = -1 if _bsel == idx else idx
+			_sell_sure = false
+			_open("basket"))
+	var rows := int(ceil(S.basket.size() / 4.0))
+	return y + rows * (TILE_H + 6)
+
+# cá này đang cần để đổi đồ nghề nào không (nhắc giữ lại, đừng bán)
+func _need_by(fid: String) -> String:
+	var S: Dictionary = game.S
+	for k in D.GEAR_KEYS:
+		var list: Array = D.gear(k)
+		var cur: int = S[k]
+		if cur + 1 < list.size():
+			var nx: Dictionary = list[cur + 1]
+			if nx.has("need") and nx.need.has(fid):
+				return nx.name
+	return ""
+
+func _basket_dock(ci: Box, r: Rect2) -> void:
+	var S: Dictionary = game.S
+	if S.basket.is_empty():
+		return
+	var dh: float = _mod.dock
+	var dr := _dock_rect(r, dh)
+	_dock_bg(ci, dr)
+	var x0 := r.position.x + KX
+	if _bsel >= 0 and _bsel < S.basket.size():
+		var c: Dictionary = S.basket[_bsel]
+		var f := D.fish(c.id)
 		var val := D.fish_value(f, c.w)
-		tot += val
-		var r := Rect2(14, y, w, 58)
-		_row(ci, r)
-		_th(ci, Rect2(r.position.x + 8, r.position.y + 6, 72, 46), c.id)
-		var lab := str(val)
-		var bw := btn_w(lab, "coin")
-		_t(ci, f.name, r.position.x + 90, r.position.y + 21, 15, A.INK)
-		_t(ci, fmt_w(c.w) + " · ", r.position.x + 90, r.position.y + 39, 13, A.SMALL, 0, 600)
-		if ci != null:
-			draw_stars(ci, f.rar, r.position.x + 90 + A.tw(fmt_w(c.w) + " · ", 13, 600), r.position.y + 39 - _sc(ci))
-		var idx = i
-		_bt(ci, Rect2(r.end.x - 8 - bw, r.position.y + 10, bw, 38), lab, "gold", "sell%d" % i, func():
+		var y0 := dr.position.y + 10.5
+		var t: Texture2D = A.img(c.id)
+		if t != null:
+			A.fit(ci, t, Rect2(x0, y0, 56, 34), Color.WHITE)
+		var tx := x0 + 64
+		A.text(ci, f.name, tx, y0 + 8, 14, A.F_INK, 0, 800)
+		var wl := fmt_w(c.w) + " · "
+		A.text(ci, wl, tx, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
+		var sw := draw_stars(ci, f.rar, tx + A.tw(wl, 14, 500), y0 + 26, 13)
+		A.text(ci, " " + D.RAR[f.rar], tx + A.tw(wl, 14, 500) + sw, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
+		# giá + nút Bán (kdsell: xanh, bên phải)
+		var py := dr.position.y + 58
+		A.text(ci, str(val), x0, py, 20, A._c(240, 140, 0), 0, 800)
+		A.svg(ci, "coin", Rect2(x0 + A.tw(str(val), 20, 800) + 4, py - 8, 16, 16))
+		var lab := "Bán · +%d" % val
+		var bw := maxf(152.5, btn_w(lab, "coin"))
+		var br := Rect2(x0 + KCW - bw, py - 15, bw, 30)
+		var idx := _bsel
+		_mbt(ci, br, lab, "", "sell1", func():
 			var cc: Dictionary = S.basket[idx]
-			sell([cc], body.position + Vector2(r.end.x - 8 - bw / 2, r.position.y + 10 - body.scroll))
-			_open("basket"), false, "coin")
-		y += 58 + 7
-	var sr := Rect2(14, y + 6 - 7, w, 54)
-	if ci != null:
-		var rr := Rect2(sr.position - Vector2(0, _sc(ci)), sr.size)
-		A.fbox(ci, rr, 12, [[0.0, A._c(247, 234, 208)], [1.0, A._c(241, 226, 192)]], [[1.0, A._c(150, 112, 48, .3)]], [2.0, Color(1, 1, 1, .6)])
-	_t(ci, "Bán hết cho vựa", sr.position.x + 10, sr.get_center().y, 15, A.INK)
-	var lab2 := str(tot)
-	var bw2 := btn_w(lab2, "coin")
-	_bt(ci, Rect2(sr.end.x - 10 - bw2, sr.position.y + 8, bw2, 38), lab2, "", "sellall", func():
-		sell(S.basket.duplicate(), body.position + Vector2(sr.end.x - 10 - bw2 / 2, sr.position.y + 8 - body.scroll))
-		_open("basket"), false, "coin")
-	return sr.end.y + 4
+			_bsel = -1
+			sell([cc], br.get_center())
+			_open("basket"), "coin")
+		var nb := _need_by(c.id)
+		var hint := ("Đang cần để đổi %s, nên giữ lại" % nb) if nb != "" else ("Cá hiếm: để dành đổi đồ nghề ở Chợ" if int(f.rar) >= 3 else "Chạm ô lần nữa để bỏ chọn")
+		var hl := A.wrap(hint, 14, 500, KCW)
+		A.text(ci, hl[0], x0, dr.position.y + 93, 14, A.F_RED if nb != "" else A._c(122, 114, 98), 0, 500)
+		return
+	var tot := 0
+	for c in S.basket:
+		tot += D.fish_value(D.fish(c.id), c.w)
+	var lab2 := "Chạm lần nữa để bán hết" if _sell_sure else "Bán hết +%d" % tot
+	var bw2 := btn_w(lab2, "" if _sell_sure else "coin")
+	var br2 := Rect2(r.get_center().x - bw2 / 2, dr.position.y + 12, bw2, 30)
+	_mbt(ci, br2, lab2, "", "sellall", func():
+		if _sell_sure:
+			_sell_sure = false
+			_bsel = -1
+			sell(S.basket.duplicate(), br2.get_center())
+		else:
+			_sell_sure = true
+		_open("basket"), "" if _sell_sure else "coin")
 
 func sell(list: Array, from: Vector2) -> void:
 	var S: Dictionary = game.S
@@ -1374,105 +1526,69 @@ func _dash_rect(ci: CanvasItem, r: Rect2, rad: float, col: Color) -> void:
 		acc += L2
 
 # ------------------------------------------------------------ sổ cá
+# ------------------------------------------------------------ sổ cá (lưới ô như Kho; chạm ô = xem trong dock đáy)
 func _b_dex(ci, w: float, y: float) -> float:
 	var S: Dictionary = game.S
 	var sel = _mod.get("arg")
-	if sel != null:
-		var f := D.fish(sel)
-		var d = S.dex.get(sel)
-		var tw := w - 16
-		var iw := minf(220, tw * .46)
-		var tx := 14 + 8 + iw + 12
-		var txw := w - (tx - 14) - 8
-		var lines := []
-		lines.append(["n", f.name if d != null else "???", 18])
-		lines.append(["st", "", 14])
-		lines.append_array(_p_lines(f.desc if d != null else "Chưa câu được.", txw))
-		if not f.has("junk"):
-			var best_t := "d"
-			var bv := -1.0
-			for kk in f.time:
-				if f.time[kk] > bv:
-					bv = f.time[kk]
-					best_t = kk
-			var best_b := ""
-			var bb := -1.0
-			for kk in f.bait:
-				if f.bait[kk] > bb:
-					bb = f.bait[kk]
-					best_b = kk
-			var tm: String = {"d": "ban ngày", "dd": "rạng sáng, chạng vạng", "n": "ban đêm"}[best_t]
-			var zn := "giữa kênh xa" if f.zone[0] > 15 else ("sát mé" if f.zone[1] < 12 else "tầm giữa")
-			var s := "Gợi ý: %s, %s%s%s." % [tm, zn, ", gần lục bình" if f.has("cover") else "", (", mồi " + D.BAIT[best_b].name.to_lower()) if best_b != "" else ""]
-			lines.append_array(_p_lines(s, txw))
-		if d != null:
-			lines.append_array(_p_lines("Đã câu %d lần · con lớn nhất %s" % [int(d.n), fmt_w(float(d.best))], txw))
-		var th := 0.0
-		for ln in lines:
-			th += ln[2] * 1.25 if ln[0] != "p" else 13 * 1.3
-		var t: Texture2D = A.img(sel)
-		var ih := iw * t.get_size().y / t.get_size().x if t != null else 40.0
-		var rh := maxf(th, ih) + 16
-		var r := Rect2(14, y, w, rh)
-		_row(ci, r)
-		if ci != null and t != null:
-			var ir := Rect2(r.position.x + 8, r.get_center().y - ih / 2 - _sc(ci), iw, ih)
-			ci.draw_texture_rect(t, ir, false, Color.WHITE if d != null else Color(0, 0, 0, .3))
-		var yy := r.get_center().y - th / 2
-		for ln in lines:
-			match ln[0]:
-				"n":
-					_t(ci, ln[1], tx, yy + 18 * .62, 18, A.INK)
-					yy += 18 * 1.25
-				"st":
-					if ci != null:
-						var sw := draw_stars(ci, f.rar, tx, yy + 8 - _sc(ci), 12)
-						A.text(ci, " " + D.RAR[f.rar], tx + sw, yy + 8 - _sc(ci), 12, A.SMALL2, 0, 800)
-					yy += 14 * 1.25
-				"p":
-					_t(ci, ln[1], tx, yy + 13 * .62, 13, A.F_BROWN, 0, 600)
-					yy += 13 * 1.3
-		y += rh + 10
-	var cols := maxi(1, int(floor((w + 8) / (112 + 8))))
-	var cw := (w - (cols - 1) * 8) / cols
-	var ch := 6 + 54 + 4 + 13 * 1.1 + 12 + 13 + 6
 	for i in D.FISH.size():
 		var f: Dictionary = D.FISH[i]
 		var d = S.dex.get(f.id)
-		var x := 14 + (i % cols) * (cw + 8)
-		var cy := y + int(i / cols) * (ch + 8)
-		var r := Rect2(x, cy, cw, ch)
-		if ci != null:
-			var rr := Rect2(r.position - Vector2(0, _sc(ci)), r.size)
-			# (11-23) ô = thẻ .khb của Kho Nông trại; cá hiếm viền màu độ hiếm
-			var bc := Color(0, 0, 0, 0)
-			match int(f.rar):
-				2: bc = Color("#6aa0d8")
-				3: bc = Color("#b070d8")
-				4: bc = Color("#e0a020")
-			var dn: bool = ci.pressed("f" + f.id)
-			var cr := Rect2(rr.position + Vector2(0, 1.5 if dn else 0), rr.size)
-			if bc.a > 0:
-				A.fbox(ci, cr, 14, [[0.0, A._c(255, 252, 244)], [1.0, A._c(247, 236, 212) if f.rar < 4 else A._c(252, 238, 196)]], [[2.0, bc]], [2.0, Color(1, 1, 1, .85)], [], [] if dn else [[0, 2, 0, Color(bc, .45)], [0, 3, 5, A._c(90, 60, 20, .1)]])
-			else:
-				A.card(ci, cr)
-			var im := Rect2(cr.position.x + 6, cr.position.y + 6, cw - 12, 54)
-			A.fbox(ci, im, 10, [[0.0, A._c(247, 238, 214)], [1.0, A._c(239, 226, 192)]], [[1.0, A._c(150, 112, 48, .22)]])
-			var t: Texture2D = A.img(f.id)
-			if t != null:
-				A.fit(ci, t, Rect2(im.position.x + 2, im.position.y + 1, im.size.x - 4, 52), Color.WHITE if d != null else Color(0, 0, 0, .28))
-			var nm: String = f.name if d != null else "???"
-			var fs := 13.0
-			while A.tw(nm, fs) > cw - 8 and fs > 10:
-				fs -= .5
-			A.text(ci, nm, rr.get_center().x, im.end.y + 4 + 7, fs, A.F_BROWN, 1, 800)
-			draw_stars(ci, f.rar, rr.get_center().x, im.end.y + 4 + 13 * 1.1 + 6, 11, Color("#e0a020"), 1)
-			if d != null:
-				A.text(ci, fmt_w(float(d.best)), rr.get_center().x, im.end.y + 4 + 13 * 1.1 + 12 + 8, 11, A.SMALL2, 1, 600)
-			var fid: String = f.id
-			ci.items.append({"r": r, "id": "f" + fid, "sc": true, "tap": func(): game.snd.ui(); _open("dex", fid); body.scroll = 0})
-	var rows := int(ceil(D.FISH.size() / float(cols)))
-	return y + rows * (ch + 8)
+		var r := Rect2(14.0 + (i % 4) * (TILE_W + TILE_GAP), y + int(i / 4) * (TILE_H + 6), TILE_W, TILE_H)
+		var fid: String = f.id
+		_tile(ci, r, fid, f.name if d != null else "???", fmt_w(float(d.best)) if d != null else "chưa gặp", A.SMALL2, false, int(f.rar), sel == fid, d == null, "f" + fid, func():
+			game.snd.ui()
+			_open("dex", null if _mod.get("arg") == fid else fid))
+	var rows := int(ceil(D.FISH.size() / 4.0))
+	return y + rows * (TILE_H + 6)
+
+# dock sổ cá: tên, độ hiếm, mô tả, gợi ý chỗ câu. ci == null: chỉ đo, trả về chiều cao dock
+func _dex_dock(ci, r: Rect2) -> float:
+	var S: Dictionary = game.S
+	var sel = _mod.get("arg")
+	if sel == null:
+		return 0.0
+	var f := D.fish(sel)
+	var d = S.dex.get(sel)
+	var lines := []
+	lines.append_array(A.wrap(f.desc if d != null else "Chưa câu được con nào.", 14, 500, KCW))
+	if not f.has("junk"):
+		var best_t := "d"
+		var bv := -1.0
+		for kk in f.time:
+			if f.time[kk] > bv:
+				bv = f.time[kk]
+				best_t = kk
+		var best_b := ""
+		var bb := -1.0
+		for kk in f.bait:
+			if f.bait[kk] > bb:
+				bb = f.bait[kk]
+				best_b = kk
+		var tm: String = {"d": "ban ngày", "dd": "rạng sáng, chạng vạng", "n": "ban đêm"}[best_t]
+		var zn := "giữa kênh xa" if f.zone[0] > 15 else ("sát mé" if f.zone[1] < 12 else "tầm giữa")
+		var s := "Gợi ý: %s, %s%s%s." % [tm, zn, ", gần lục bình" if f.has("cover") else "", (", mồi " + D.BAIT[best_b].name.to_lower()) if best_b != "" else ""]
+		lines.append_array(A.wrap(s, 14, 500, KCW))
+	if d != null:
+		lines.append_array(A.wrap("Đã câu %d lần · con lớn nhất %s" % [int(d.n), fmt_w(float(d.best))], 14, 500, KCW))
+	var h := 10.5 + 34 + 8 + lines.size() * 18 + 14
+	if ci == null:
+		return h
+	var dr := _dock_rect(r, h)
+	_dock_bg(ci, dr)
+	var x0 := r.position.x + KX
+	var y0 := dr.position.y + 10.5
+	var t: Texture2D = A.img(sel)
+	if t != null:
+		A.fit(ci, t, Rect2(x0, y0, 56, 34), Color.WHITE if d != null else Color(0, 0, 0, .3))
+	var tx := x0 + 64
+	A.text(ci, f.name if d != null else "???", tx, y0 + 8, 14, A.F_INK, 0, 800)
+	var sw := draw_stars(ci, f.rar, tx, y0 + 26, 13)
+	A.text(ci, " " + D.RAR[f.rar], tx + sw, y0 + 26, 14, A._c(154, 122, 72), 0, 500)
+	var yy := y0 + 34 + 8 + 9
+	for ln in lines:
+		A.text(ci, ln, x0, yy, 14, A.F_BROWN, 0, 500)
+		yy += 18
+	return h
 
 func _p_lines(s: String, w: float) -> Array:
 	var out := []
@@ -1480,14 +1596,58 @@ func _p_lines(s: String, w: float) -> Array:
 		out.append(["p", ln, 13])
 	return out
 
-# ------------------------------------------------------------ cài đặt
+# ------------------------------------------------------------ cài đặt (= Cài đặt Nông trại: nhóm .qset, nút .seg, "Chơi lại từ đầu" chữ đỏ)
+func _qset(ci, y: float, h: float) -> void:
+	if ci == null:
+		return
+	A.fbox(ci, Rect2(14.0, y - _sc(ci), KCW, h), 14, [[0.0, A._c(255, 252, 244)], [1.0, A._c(247, 236, 212)]], [[1.0, A._c(150, 112, 48, .3)]], [2.0, Color(1, 1, 1, .85)], [], [[0, 2, 0, A._c(170, 135, 70, .32)], [0, 3, 5, A._c(90, 60, 20, .1)]])
+
+func _seg(ci, y: float, labs: Array, on: int, id: String, taps: Array) -> void:   # .seg: các nút chia đều 287 rộng, cao 33, khe 4.6
+	var n := labs.size()
+	var bw := (KCW - 18 - (n - 1) * 4.6) / n
+	for j in n:
+		var r := Rect2(14.0 + 9 + j * (bw + 4.6), y, bw, 33)
+		if j == on:
+			if ci != null:
+				btn(ci, Rect2(r.position - Vector2(0, _sc(ci)), r.size), labs[j], "", false, false, "", 14)
+		else:
+			_bt(ci, r, labs[j], "alt", id + str(j), taps[j])
+
 func _b_set(ci, w: float, y: float) -> float:
 	var S: Dictionary = game.S
-	var rows := [
-		["Âm thanh", "Tiếng nước, chim, côn trùng", "sw", S.sound == 1, func(): game.snd.set_sound(S.sound != 1); _open("set")],
-		["Nhạc đàn tranh", "Vài câu đờn nhẹ nhàng", "sw", S.music == 1, func(): game.snd.set_music(S.music != 1); _open("set")],
-		["Thống kê", "Quăng %d lần · câu được %d · đứt dây %d" % [S.stats.casts, S.stats.catches, S.stats.snaps], "", false, Callable()],
-		["Chơi lại từ đầu", "Xóa hết xu, cá, đồ nghề", "reset", false, func():
+	y += 11.0   # .pn bắt đầu cách đỉnh bảng 21
+	var groups := [
+		["Âm thanh", 1 if S.sound != 1 else 0, func(): game.snd.set_sound(true); _open("set"), func(): game.snd.set_sound(false); _open("set")],
+		["Nhạc đàn tranh", 1 if S.music != 1 else 0, func(): game.snd.set_music(true); _open("set"), func(): game.snd.set_music(false); _open("set")],
+	]
+	for g in groups:
+		_qset(ci, y, 68.1)
+		_t(ci, g[0], 14.0 + 9, y + 7.5 + 7, 14, A.F_BROWN, 0, 800)
+		_seg(ci, y + 26.1, ["Bật", "Tắt"], g[1], "sw" + g[0], [g[2], g[3]])
+		y += 68.1 + 16.5
+	# thống kê
+	var st := "Quăng %d lần · câu được %d · đứt dây %d" % [S.stats.casts, S.stats.catches, S.stats.snaps]
+	var sl := A.wrap(st, 14, 500, KCW - 18)
+	var gh := 7.5 + 16.5 + 4 + sl.size() * 18 + 8
+	_qset(ci, y, gh)
+	_t(ci, "Thống kê", 14.0 + 9, y + 7.5 + 7, 14, A.F_BROWN, 0, 800)
+	var yy := y + 7.5 + 16.5 + 4 + 9
+	for ln in sl:
+		_t(ci, ln, 14.0 + 9, yy, 14, A.F_MUTED, 0, 500)
+		yy += 18
+	y += gh + 16.5
+	if game.embed:
+		_qset(ci, y, 68.1)
+		_t(ci, "Về vườn", 14.0 + 9, y + 7.5 + 7, 14, A.F_BROWN, 0, 800)
+		_bt(ci, Rect2(14.0 + 9, y + 26.1, KCW - 18, 33), "Thôi câu, về lại nông trại", "", "home", func(): close_modal(); game.close_game(), false, "home")
+		y += 68.1 + 16.5
+	# Chơi lại từ đầu: chữ đỏ (button.link), chạm 2 lần
+	var lab := "Chạm lần nữa để xóa hết" if _sure else "Chơi lại từ đầu"
+	var lw := A.tw(lab, 14, 700) + 16
+	var lr := Rect2(14.0 + KCW / 2 - lw / 2, y, lw, 22.5 + 16)
+	_t(ci, lab, lr.get_center().x, lr.get_center().y, 14, A._c(192, 57, 43), 1, 700)
+	if ci != null:
+		ci.items.append({"r": lr, "id": "reset", "sc": true, "tap": func():
 			if _sure:
 				_sure = false
 				game.reset_save()
@@ -1496,48 +1656,8 @@ func _b_set(ci, w: float, y: float) -> float:
 				toast("Chơi lại từ đầu nha", "info")
 			else:
 				_sure = true
-				_open("set")],
-	]
-	if game.embed:
-		rows.append(["Về vườn", "Thôi câu, về lại nông trại", "home", false, func(): close_modal(); game.close_game()])
-	for rw in rows:
-		var aw := 124.0   # Bật | Tắt (.seg của Cài đặt Nông trại)
-		if rw[2] == "reset":
-			aw = btn_w("Chắc chưa?" if _sure else "Xóa")
-		elif rw[2] == "home":
-			aw = btn_w("Về vườn", "home")
-		elif rw[2] == "":
-			aw = 0.0
-		var txw := w - 16 - aw - (10 if aw > 0 else 0)
-		var sl := A.wrap(rw[1], 13, 600, txw)
-		var th := 15 * 1.2 + sl.size() * 13 * 1.2
-		var rh := maxf(52, th + 14)
-		var r := Rect2(14, y, w, rh)
-		_row(ci, r)
-		var yy := r.get_center().y - th / 2 + 15 * .6
-		_t(ci, rw[0], r.position.x + 10, yy, 15, A.INK)
-		yy += 15 * .6 + 13 * .6
-		for ln in sl:
-			_t(ci, ln, r.position.x + 10, yy, 13, A.SMALL, 0, 600)
-			yy += 13 * 1.2
-		var ar := Rect2(r.end.x - 8 - aw, r.get_center().y - 18, aw, 36)
-		match rw[2]:
-			"sw":
-				var hw := (aw - 4) / 2
-				for j in 2:
-					var on: bool = rw[3] == (j == 0)
-					var sr := Rect2(ar.position.x + j * (hw + 4), ar.position.y, hw, 36)
-					if on:
-						if ci != null:
-							btn(ci, Rect2(sr.position - Vector2(0, _sc(ci)), sr.size), ["Bật", "Tắt"][j], "", false, false, "", 14)
-					else:
-						_bt(ci, sr, ["Bật", "Tắt"][j], "alt", "sw%d%s" % [j, rw[0]], rw[4])
-			"reset":
-				_bt(ci, Rect2(ar.position.x, ar.position.y - 1, aw, 38), "Chắc chưa?" if _sure else "Xóa", "alt", "reset", rw[4])
-			"home":
-				_bt(ci, Rect2(ar.position.x, ar.position.y - 1, aw, 38), "Về vườn", "", "home", rw[4], false, "home")
-		y += rh + 7
-	return y
+				_open("set")})
+	return lr.end.y + 8
 
 func open_basket() -> void:
 	_open("basket")
