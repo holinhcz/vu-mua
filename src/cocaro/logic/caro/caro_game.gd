@@ -680,10 +680,35 @@ func _btn(ci: CanvasItem, r: Rect2, id: String, label: String, bg := CARD, fg :=
 	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _avatar(ci: CanvasItem, c: Vector2, k: String, r: float, ring: Color) -> void:
-	ci.draw_circle(c, r + 1.5, ring)
-	ci.draw_circle(c, r, Color8(250, 240, 220))
-	var t := A.svg(A.avatar(k), int(r * 2 * K))
-	ci.draw_texture_rect(t, Rect2(c - Vector2(r, r), Vector2(r, r) * 2), false)
+	# Link 11-23 "ô tròn avatar vỡ nét, đéo phải vector": vòng + nền vẽ bằng SVG ra ảnh đúng số điểm ảnh màn (K * hs), khử răng cưa
+	var dp: float = K * float(L.get("hs", 1.0))
+	var R := r + 1.5
+	var sv := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"#%s\"/><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"#faf0dc\"/></svg>" % [int(R * 20), int(R * 20), R * 10, R * 10, R * 10, ring.to_html(false), R * 10, R * 10, r * 10]
+	var rt := A.svg(sv, int(ceil(R * 2 * dp)))
+	ci.draw_texture_rect(rt, Rect2(c - Vector2(R, R), Vector2(R, R) * 2), false)
+	ci.draw_texture_rect(_av_round(k, int(ceil(r * 2 * dp))), Rect2(c - Vector2(r, r), Vector2(r, r) * 2), false)
+	# vòng viền vẽ ĐÈ lên ảnh (vai áo không che mất vòng, nét liền)
+	var sv2 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"none\" stroke=\"#%s\" stroke-width=\"%f\"/></svg>" % [int(R * 20), int(R * 20), R * 10, R * 10, (R - 0.9) * 10, ring.to_html(false), 18.0]
+	ci.draw_texture_rect(A.svg(sv2, int(ceil(R * 2 * dp))), Rect2(c - Vector2(R, R), Vector2(R, R) * 2), false)
+
+var _avc := {}
+func _av_round(k: String, px: int) -> Texture2D:
+	# ảnh avatar cắt tròn (mép mềm 1 điểm ảnh) — hình vuông gốc lòi vai áo ra ngoài vòng
+	var key := k + ":" + str(px)
+	if _avc.has(key): return _avc[key]
+	var im: Image = A.svg(A.avatar(k), px).get_image()
+	im.convert(Image.FORMAT_RGBA8)
+	var w := im.get_width(); var h := im.get_height()
+	var cx := w / 2.0; var cy := h / 2.0; var rr := minf(w, h) / 2.0 - 0.5
+	for y in h:
+		for x in w:
+			var d := Vector2(x + 0.5 - cx, y + 0.5 - cy).length()
+			var m := clampf(rr - d + 0.5, 0.0, 1.0)
+			if m < 1.0:
+				var col := im.get_pixel(x, y); col.a *= m; im.set_pixel(x, y, col)
+	var t := ImageTexture.create_from_image(im)
+	_avc[key] = t
+	return t
 
 func _mini_piece(ci: CanvasItem, c: Vector2, p: int, r: float) -> void:
 	_box(ci, Rect2(c - Vector2(r, r), Vector2(r, r) * 2), Color8(62, 48, 38), 7, Color8(120, 90, 60), 1.2, false)
