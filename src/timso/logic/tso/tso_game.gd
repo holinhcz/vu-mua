@@ -549,12 +549,12 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var sm := minf(pw, ph)
 	if port:
 		# nhận xét 4: tập ló ra nguyên góc có nhãn (xoay xiên, đẩy ra ngoài), không chỉ một mép mỏng
-		_prop(ci, "tap_hong", Vector2(P.end.x + sm * 0.2, P.position.y + sm * 0.42), sm * 0.62, -0.55, 0.5)
+		_prop(ci, "eke", Vector2(P.end.x + sm * 0.1, P.position.y + sm * 0.62), sm * 0.62, -0.18, 0.3)   # Link 11-23: thay tập hồng = thước tam giác, mũi nhọn ló ra góc trên phải
 		_prop(ci, "tap", Vector2(P.position.x - sm * 0.2, P.end.y - sm * 0.5), sm * 0.62, 0.5, 0.5)
 	else:
 		var cy := _col_y()
 		# nhận xét 6: một cuốn sau cột thẻ, một cuốn nằm góc dưới trái (bút xanh nằm trên) lấp chỗ trống
-		_prop(ci, "tap_hong", Vector2(170, cy + 40), 262, 0.06, 0.6)   # nhãn tập nằm khuất sau ô Tìm số
+		_prop(ci, "eke", Vector2(165, cy - 10), 270, 0.12, 0.3)   # Link 11-23: thay tập hồng = thước tam giác
 		_prop(ci, "tap", Vector2(120, H - 40), 300, 0.32, 0.6)
 	# bóng giấy + giấy (2 khúc: thân cắt ngắn + mép cuối)
 	var nm := "giay" if pport else "giay_ngang"
