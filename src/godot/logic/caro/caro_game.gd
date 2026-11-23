@@ -9,8 +9,10 @@ signal ended(mode: String, level: int, winner: int)
 signal closed
 
 const E := preload("res://logic/caro/caro_engine.gd")
-const A := preload("res://logic/cg/cg_art.gd")
+const A := preload("res://logic/caro/caro_art.gd")   # bản chữ Nunito riêng của caro (cg_art Nông Trại vẫn Baloo cho cờ gánh)
 const SND := preload("res://logic/cg/cg_snd.gd")
+const NEN := preload("res://logic/caro/caro_nen.gd")
+var _nen: Node2D = null
 const DIR := "res://ui/img/caro/"
 const SAVE := "user://cocaro.json"
 const N := 15
@@ -40,13 +42,19 @@ var S := DEF.duplicate()
 var stats := {"w": [0, 0, 0, 0], "l": [0, 0, 0, 0]}
 var Gm := {}
 var ov := "menu"            # "", "menu", "rules", "end"
-var hits := []              # [Rect2, id] nút đang hiện (vẽ xong mới có)
+var hits := []              # [Rect2, id] nút đang hiện (điểm ảnh, tính từ góc khung _off)
+var KU := 1.0
+var WEB := OS.has_feature("web")
+var FS := false            # nút toàn màn hình: chỉ bản chơi riêng trên web bật (main.gd); trong Nông Trại tắt
+var _fs_t := 0.0
+var _fs_last := 0               # cỡ giao diện như cờ gánh: điểm ảnh / css chuẩn (dọc 412x915, ngang 1280x720)
 var snd: Node = null
 var reward_txt := ""
 var _bg: Control
 var _pc: Control
 var _hud: Control
 var _vs := Vector2.ZERO
+var _off := Vector2.ZERO     # góc trái trên khung thiết kế trên màn (điểm ảnh)
 var _anim := 0.0            # còn hiệu ứng thì vẽ lại quân mỗi khung
 var _clock := 0.0
 var _thr: Thread = null
@@ -55,10 +63,35 @@ var _ai_res := -1
 var _ready_ok := false
 var _press := ""            # nút đang nhấn (để nhún)
 
+var K0 := 1.0              # dpr của máy; K = K0 * co cho vừa màn (màn nhỏ / thấp thì co cả game lại)
+
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	K0 = maxf(1.0, k)
+	K = K0
 
 # ------------------------------------------------------------ ảnh
+# ảnh NÉT: thu ảnh gốc (9px) đúng bằng số điểm ảnh trên màn 1 lần (Lanczos), vẽ 1:1 không mipmap → đường phấn sắc
+var _raw := {}
+var _crisp := {}
+func crisp(name: String, n: Vector2i) -> Texture2D:
+	n = Vector2i(maxi(4, n.x), maxi(4, n.y))
+	var key := "%s@%dx%d" % [name, n.x, n.y]
+	if _crisp.has(key):
+		return _crisp[key]
+	if not _raw.has(name):
+		var r := Image.new()
+		r.load_webp_from_buffer(FileAccess.get_file_as_bytes(DIR + name + ".webp"))
+		r.convert(Image.FORMAT_RGBA8)
+		r.fix_alpha_edges()
+		_raw[name] = r
+	var im: Image = _raw[name].duplicate()
+	while im.get_width() >= n.x * 3 and im.get_height() >= n.y * 3:
+		im.shrink_x2()
+	im.resize(n.x, n.y, Image.INTERPOLATE_LANCZOS)
+	var t := ImageTexture.create_from_image(im)
+	_crisp[key] = t
+	return t
+
 func img(name: String) -> Texture2D:
 	if tex.has(name):
 		return tex[name]
@@ -88,6 +121,11 @@ func _ready() -> void:
 		c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		add_child(c)
 		set(n, c)
+	# lớp chỉnh màu nằm giữa quân cờ và thẻ: cảnh + quân tươi ấm hơn, chữ/thẻ giữ nguyên màu
+	var gr := ColorRect.new(); gr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var gm := ShaderMaterial.new(); gm.shader = load("res://logic/caro/grade.gdshader"); gr.material = gm
+	add_child(gr); move_child(gr, _hud.get_index())
 	_bg.draw.connect(_draw_bg)
 	_pc.draw.connect(_draw_pieces)
 	_hud.draw.connect(_draw_hud)
@@ -97,6 +135,10 @@ func _ready() -> void:
 	await get_tree().process_frame
 	_layout()
 	_ready_ok = true
+	if "--demo" in OS.get_cmdline_user_args():          # chỉ để chụp thử quân cờ
+		_new_game("pvp", 1)
+		for i in [112, 113, 97, 128, 127, 98, 142, 82, 96, 111]:
+			play(i)
 
 func _exit_tree() -> void:
 	_ai_tok += 1
@@ -296,13 +338,65 @@ func _maybe_ai() -> void:
 		play(mv)
 
 # ------------------------------------------------------------ bố cục
+func _face_size(w: float, h: float, port: bool) -> float:
+	if port:
+		return maxf(200, minf(w - 18, h - 165 - 126))
+	var colw := _colw(w, h)
+	return minf(h - 24, (w - 2 * (colw + 16)) / (float(BJ.w) / float(BJ.face[2])))
+
+# cột thẻ người chơi (màn ngang): hẹp lại tới 180 để nhường chỗ cho bàn cờ to hết chiều cao
+func _colw(w: float, h: float) -> float:
+	var rw: float = float(BJ.w) / float(BJ.face[2])
+	return clampf((w - (h - 24) * rw) / 2.0 - 16, 160, 250)
+
 func _layout() -> void:
 	var vs := get_viewport_rect().size
 	_vs = vs
-	W = vs.x / K
-	H = vs.y / K
-	var port := H >= W * 1.15
+	# Link 11-21 "3 bố cục cố định": cửa sổ nào cũng lấy 1 trong 3 khung thiết kế (dọc / gần vuông / ngang) gần tỉ lệ nhất,
+	# xếp cảnh trong khung đó rồi co giãn NGUYÊN KHỐI cho vừa cửa sổ, đặt giữa; chỗ dư chỉ lộ thêm sân đất / hiên / mái.
+	var r := vs.x / maxf(vs.y, 1.0)
+	# khung thiết kế = đúng tỉ lệ máy thật (css): máy thật nào cũng khớp khung của nó, cửa sổ kéo tự do lấy khung gần nhất
+	var FR := [
+		[Vector2(360, 860), true],    # Fold gập (màn ngoài hẹp) 0.42
+		[Vector2(412, 915), true],    # Android dài / iPhone (390x844, 430x932) 0.45
+		[Vector2(412, 735), true],    # điện thoại có thanh trình duyệt, máy cũ 0.56
+		[Vector2(474, 696), true],    # iPhone Fold gập (màn ngoài 2088x1422) 0.68
+		[Vector2(640, 904), true],    # iPhone Fold mở dọc (2713x1920) 0.71, iPad Air dọc 0.69
+		[Vector2(768, 1024), true],   # iPad dọc 0.75
+		[Vector2(860, 1000), true],   # Fold mở dọc 0.86
+		[Vector2(1000, 860), false],  # Fold mở ngang 1.16
+		[Vector2(1024, 768), false],  # iPad ngang 1.33
+		[Vector2(904, 640), false],   # iPhone Fold mở ngang 1.41, iPad Air ngang 1.44
+		[Vector2(1440, 900), false],  # laptop 16:10
+		[Vector2(1600, 900), false],  # màn 16:9
+		[Vector2(1980, 900), false]]  # màn rộng 21:9
+	var best := 0; var bd_ := 1e9
+	for i in FR.size():
+		var d := absf(log(r / (FR[i][0].x / FR[i][0].y)))
+		if d < bd_: bd_ = d; best = i
+	var DS: Vector2 = FR[best][0]
+	var port: bool = FR[best][1]
+	K = minf(vs.x / DS.x, vs.y / DS.y)
+	W = DS.x
+	H = DS.y
+	_off = ((vs - DS * K) / 2.0).round()
+	for c in [_bg, _pc, _hud]:
+		c.position = _off
+	# Link 11-23 "luật phóng to như Nông trại, tính theo chiều cao": s = cao css / 810 (máy cảm ứng lấy screen),
+	# làm tròn 0,05, kẹp 0,7..2; S26 Ultra (s 0,9) = cỡ 1, màn khác nhân s / 0,9; không rộng quá màn (338 css)
+	var csw := vs.x / K0
+	var sa := vs.y / K0
+	if WEB and bool(JavaScriptBridge.eval("!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches)")):
+		var ssw := float(JavaScriptBridge.eval("screen.width||0"))
+		var ssh := float(JavaScriptBridge.eval("screen.height||0"))
+		if ssw > 0.0 and ssh > 0.0:
+			sa = minf(ssw, ssh) if vs.x > vs.y else maxf(ssw, ssh)
+	var su := clampf(round(sa / 810.0 * 20.0) / 20.0, 0.7, 2.0)
+	KU = K0 * minf(su / 0.9, csw / 338.0)
+	var V := Rect2(-_off / K, vs / K)       # cả cửa sổ (css khung)
 	L = {"port": port}
+	# Link 11-23 "640x904, 776x914, 768x1024, 860x1000, 1005x920, 1000x860 bỏ gà đi" (776x914 dùng khung 860x1000, 1005x920 dùng 1000x860)
+	L.no_hen = DS in [Vector2(640, 904), Vector2(768, 1024), Vector2(860, 1000), Vector2(1000, 860)]
 	var safe := 6.0
 	L.tools = Rect2(8, 8 + safe, minf(W - 16, 420), 36)
 	var face: float
@@ -310,24 +404,94 @@ func _layout() -> void:
 	var fy: float
 	if port:
 		var top := 54.0 + safe + 66
-		var bot := H - 132
+		var bot := H - 165                     # chừa thẻ "Bạn" + dòng luật dưới phản
+		L.ipad = DS == Vector2(768, 1024) or DS == Vector2(860, 1000) or DS == Vector2(640, 904)
+		if L.ipad:
+			# Link 11-23 "iPad dọc thu phản lại cho hợp lí": chừa đủ chỗ trên/dưới cho thẻ cỡ KU
+			var hu := KU / K
+			top = maxf(top, 8 + safe + (36 + 16 + 58) * hu + 18)   # Link 11-23: thẻ AI + nhãn Tới phiên không chạm Menu
+			bot = H - maxf(165, 34 + 62 * hu + 14)
 		face = minf(W - 18, bot - top)
 		face = maxf(200, face)
 		fx = (W - face) / 2
-		fy = top + maxf(0, (bot - top - face) * 0.22)
+		# cả khối [thẻ đối thủ + phản + thẻ Bạn + luật] nằm GIỮA màn theo chiều dọc (Link: xếp hợp lý mọi màn)
+		fy = top + maxf(0, (bot - top - face) * 0.5)
 		var cw := minf(240, W - 16)
-		L.opp = Rect2(W - 8 - cw, 54 + safe, cw, 58)
+		# cỡ thẻ theo KU (không lớn hơn chỗ chừa sẵn quanh phản), neo mép cửa sổ / mép phản; L.* tính trong hệ đã co (chia hs)
+		# Link 11-23: cỡ theo luật Nông Trại (KU), chỉ co lại khi chỗ trên/dưới phản không đủ chứa thẻ
+		var hs := KU / K
+		hs = minf(hs, (fy - 18 - V.position.y - 8 - safe) / (36 + 16 + 58))
+		hs = minf(hs, (V.end.y - (fy + face + face * 12 / 392 + 34) - 8) / 62)
+		hs = minf(hs, (V.size.x - 16) / CARD_W)
+		hs = maxf(hs, 0.3)
+		L.hs = hs
+		var tw := minf(V.size.x - 16 - (44 * hs if FS else 0.0), 420 * hs)
+		# L.opp/me/tip = chỗ chừa cho cảnh (caro_nen né), giữ như cũ; L.u_* = thẻ thật vẽ ra (hệ đã co hs)
+		L.opp = Rect2(W - 8 - cw, maxf(54 + safe, fy - 66), cw, 58)
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
+		L.u_tools = Rect2((V.position.x + 8) / hs, (V.position.y + 8 + safe) / hs, tw / hs, 36)
+		# Link 11-23 "cách ra bàn cờ 1 chút": khe thẻ - khung phản rộng thêm ~10
+		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, maxf(L.u_tools.end.y + 16, (fy - 18) / hs - 58), CARD_W, 58)
+		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 34) / hs, CARD_W, 62)
+		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
+		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	else:
-		var colw := minf(250, W * 0.34)
-		face = minf(H - 24, W - colw - 40)
-		fx = colw + 20 + (W - colw - 20 - face) / 2
+		var colw := _colw(W, H)
+		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
+		# bàn cờ LUÔN chính giữa màn (Link): 2 bên chừa đều = cột thẻ người chơi bên trái, cột đồ bên phải
+		# cột thẻ đủ rộng cho thẻ cỡ KU (Fold/iPad ngang: thu phản lại chút cho chữ đọc được)
+		var side := maxf(colw, 250.0 * KU / K) + 16
+		face = minf(H - 24, (W - 2 * side) / rw)
+		fx = (W - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
-		L.tools = Rect2(8, 8 + safe, colw, 36)
-		L.opp = Rect2(8, 62, colw, 58)
-		L.me = Rect2(8, 140, colw, 62)
-		L.tip = Rect2(8, 214, colw, 46)
+		# cột thẻ vẽ theo cỡ chuẩn 250, cỡ theo KU (như cờ gánh) nhưng không lấn qua khung phản; neo góc trái trên cửa sổ
+		var frl := fx - (rw - 1.0) * face / 2.0               # mép trái khung gỗ
+		var hs := minf(KU / K, (frl - V.position.x - 16) / 250.0)
+		# Link 11-23 "cột thẻ trái + cột trống phải ăn hết bề ngang, càng lúc càng nhỏ": màn ngang nào xếp
+		# thanh công cụ + 2 thẻ thành 1 hàng trên cùng cho phản to hơn thì dùng kiểu hàng trên
+		var hb := minf(KU / K, (V.size.x - 16) / (250.0 + 12 + CARD_W + 12 + CARD_W))
+		var bh := 8 + safe + (10 + 62) * hb + 14
+		var face_b := minf((H - bh - 14) / (1.0 + 12.0 / 392.0), (W - 24) / rw)
+		var band := face_b > face * 1.05
+		if band:
+			hs = hb
+			face = face_b
+			fx = (W - face) / 2
+			fy = bh + (H - bh - 10 - face - face * 12 / 392) / 2
+		hs = maxf(hs, 0.3)
+		L.hs = hs
+		var o := (V.position + Vector2(8, 0)) / hs
+		L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(8, 62, 250, 58); L.me = Rect2(8, 140, 250, 62); L.tip = Rect2(8, 214, 250, 46)   # như cũ (cảnh dùng)
+		L.u_tools = Rect2(o.x, (V.position.y + 8 + safe) / hs, 250, 36)
+		# Link 11-23 "2 chip cách đều": khe Menu-thẻ trên = khe giữa 2 thẻ = 20
+		L.u_opp = Rect2(o.x, L.u_tools.position.y + 56, CARD_W, 58)
+		L.u_me = Rect2(o.x, L.u_tools.position.y + 134, CARD_W, 62)
+		if not band:
+			# Link 11-23 "màn ngang to vừa đủ chip thì trái dưới phải trên": thẻ AI góc trên phải (dưới nút toàn màn), thẻ Bạn góc dưới trái
+			# Link 11-23 "gần sát mép bàn cờ": thẻ AI kế mép phải khung phản (ngang mép trên), thẻ Bạn kế mép trái (ngang mép dưới)
+			var frr := fx + face + (rw - 1.0) * face / 2.0
+			var fbt := fy + face + face * 12 / 392
+			var g := 18.0
+			var ox := minf((frr + g) / hs, (V.end.x - 8) / hs - CARD_W)
+			var oy := fy / hs + 10
+			if ox + CARD_W > (V.end.x - 8) / hs - 38 - 8:
+				oy = maxf(oy, L.u_tools.position.y + 36 + 16)      # không đè nút toàn màn hình
+			L.u_opp = Rect2(ox, oy, CARD_W, 58)
+			L.u_me = Rect2(maxf((frl - g) / hs - CARD_W, o.x), fbt / hs - 62, CARD_W, 62)
+		if band:
+			# Link 11-23 "ko đều, chip Tới phiên chạm sát mép": 2 thẻ cùng cao 62, hạ 10 cho nhãn có chỗ
+			var y0: float = L.u_tools.position.y + 10
+			L.u_me = Rect2(o.x + 250 + 12, y0, CARD_W, 62)
+			L.u_opp = Rect2(L.u_me.end.x + 12, y0, CARD_W, 62)
+			L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(L.u_opp.position * hs, L.u_opp.size * hs); L.me = Rect2(L.u_me.position * hs, L.u_me.size * hs); L.tip = Rect2(L.me.position.x, L.me.end.y + 4, 1, 1)
+		L.u_tip = Rect2(o.x, L.u_tools.position.y + 208, 250, 46)
+		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
+	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
+	var hsx: float = L.get("hs", 1.0)
+	L.huds = []
+	for kk in ["u_tools", "u_opp", "u_me"]:
+		if L.has(kk): L.huds.append(Rect2(L[kk].position * hsx, L[kk].size * hsx).grow(4 * hsx))
 	L.face = Rect2(fx, fy, face, face)
 	# ô lưới trên màn (css)
 	var kb: float = BJ.kb
@@ -338,7 +502,33 @@ func _layout() -> void:
 	L.gx = fx + (float(BJ.gx0) - float(BJ.face[0])) * px
 	L.gy = fy + (float(BJ.gy0) - float(BJ.face[1])) * px
 	L.cs = float(BJ.cs) * px
+	if _nen == null:
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--q="): NEN.Q = float(a.substr(4)); NEN.Q_fixed = true
+		_nen = NEN.new()
+		_bg.add_child(_nen)
+		if not NEN.has_art():
+			_fetch_art()
+	_nen.scale = Vector2(K, K)
+	_crisp.clear()
+	_nen.ext = Rect2(-_off / K, _vs / K)
+	_nen.build(L, W, H, crisp("board", Vector2i(roundi(L.bimg.size.x * K), roundi(L.bimg.size.y * K))))
 	_redraw_all()
+
+# bản web: cảnh 9px để riêng nen.pck, tải ngầm sau khi vào game (bàn cờ chơi được ngay), xong thì dựng cảnh
+func _fetch_art() -> void:
+	if not OS.has_feature("web"):
+		return
+	var url := str(JavaScriptBridge.eval("new URL('nen.pck?v=' + (window.NENV || ''), location.href).href"))
+	var rq := HTTPRequest.new(); add_child(rq)
+	rq.download_file = "user://nen.pck"
+	rq.download_chunk_size = 4 * 1024 * 1024        # mặc định 64 KB / khung hình: 35 MB mất cả phút
+	rq.request_completed.connect(func(res: int, code: int, _h, _b):
+		rq.queue_free()
+		var ok := res == HTTPRequest.RESULT_SUCCESS and code == 200 and ProjectSettings.load_resource_pack("user://nen.pck")
+		if ok:
+			_layout())
+	var e := rq.request(url)
 
 func _redraw_all() -> void:
 	if _bg == null:
@@ -361,6 +551,13 @@ func _process(dt: float) -> void:
 	_clock += dt
 	if not _ready_ok:
 		return
+	if FS:
+		_fs_t += dt
+		if _fs_t > 0.4:
+			_fs_t = 0.0
+			var f := int(JavaScriptBridge.eval("window.__fs||0", true))
+			if f != _fs_last:
+				_fs_last = f; _hud.queue_redraw()
 	var vs := get_viewport_rect().size
 	if vs != _vs:
 		_layout()
@@ -375,47 +572,7 @@ func _T(ci: CanvasItem, xf := Transform2D.IDENTITY) -> void:
 	ci.draw_set_transform_matrix(Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO) * xf)
 
 func _draw_bg() -> void:
-	if L.is_empty():
-		return
-	var ci := _bg
-	ci.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	var ts := maxf(560.0, maxf(W, H) * 0.62) / 1024.0
-	_T(ci, Transform2D(0.0, Vector2(ts, ts), 0.0, Vector2.ZERO))
-	ci.draw_texture_rect_region(A.img("ground"), Rect2(0, 0, W / ts, H / ts), Rect2(0, 0, W / ts, H / ts))
-	_T(ci)
-	# hiên gạch tàu trên cùng + bậc xi măng
-	var ph := 54.0 if L.port else 30.0
-	var k := minf(W, 520) * 0.6 * 2 / 512.0
-	var ty := ph - 512 * k * 0.5 - 12
-	_T(ci, Transform2D(0.0, Vector2(k, k), 0.0, Vector2(-20, ty)))
-	ci.draw_texture_rect_region(A.img("gach"), Rect2(0, -ty / k, (W + 40) / k, ph / k), Rect2(0, -ty / k, (W + 40) / k, ph / k))
-	_T(ci)
-	_vg(ci, Rect2(0, 0, W, ph), Color8(40, 20, 8, 70), Color8(40, 20, 8, 0))
-	ci.draw_rect(Rect2(0, ph, W, 7), Color8(168, 160, 146))
-	_vg(ci, Rect2(0, ph, W, 7), Color8(255, 255, 255, 30), Color8(0, 0, 0, 50))
-	_vg(ci, Rect2(0, ph + 7, W, 10), Color8(30, 15, 5, 90), Color8(30, 15, 5, 0))
-	# đồ đạc trên sân (cỡ thật theo bàn: 1 ô phản ~ 8 cm)
-	var f: Rect2 = L.face
-	var cm := f.size.x / 392.0 * 2.9
-	if L.port:
-		var y0: float = L.tip.end.y
-		var free := H - y0
-		var lr := clampf(26 * cm, 50, 92)
-		A.on_ground(ci, K, "lu", Rect2i(), Vector2(lr * 0.62, H - lr * 0.55), lr * 2, lr * 2, 0.0, lr * 0.3)
-		var nr := clampf(20 * cm, 44, 70)
-		var ny := clampf(y0 - 30, f.end.y + 30 + nr, H - nr - 10)
-		A.on_ground(ci, K, "non", Rect2i(), Vector2(W - nr * 0.9, ny), nr * 2, nr * 2, 0.0, nr * 0.16)
-		if free > 150:
-			A.on_ground(ci, K, "dep", Rect2i(), Vector2(W * 0.47, H - 30), 66, 66, 0.3, 2.5)
-			A.on_ground(ci, K, "hen", Rect2i(400, 0, 200, 200), Vector2(W * 0.74, H - 66), 92, 92, 0.0, 9)
-	else:
-		var lr := clampf(H * 0.11, 40, 80)
-		A.on_ground(ci, K, "lu", Rect2i(), Vector2(lr * 0.8, H - lr * 0.7), lr * 2, lr * 2, 0.0, lr * 0.3)
-		A.on_ground(ci, K, "non", Rect2i(), Vector2(W - 60, H - 64), 110, 110, 0.0, 9)
-	_T(ci)
-	# tấm phản
-	ci.draw_texture_rect(img("board"), L.bimg, false)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	pass   # nền dựng bằng node (caro_nen.gd), không vẽ lại
 
 func _vg(ci: CanvasItem, r: Rect2, c0: Color, c1: Color) -> void:
 	ci.draw_polygon(PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]),
@@ -426,7 +583,7 @@ func _piece(ci: CanvasItem, p: int, i: int, a: float, sc := 1.0) -> void:
 	var c := cell_center(i)
 	var s: float = L.cs * 1.6 * sc
 	var name := ("x" if p == 1 else "o") + str((i * 7 + 3) % 4)
-	ci.draw_texture_rect(img(name), Rect2(c.x - s / 2, c.y - s / 2, s, s), false, Color(1, 1, 1, a))
+	ci.draw_texture_rect(crisp(name, Vector2i(roundi(s * K), roundi(s * K))), Rect2(c.x - s / 2, c.y - s / 2, s, s), false, Color(1, 1, 1, a))
 
 func _draw_pieces() -> void:
 	if L.is_empty():
@@ -481,7 +638,14 @@ func _draw_pieces() -> void:
 func _font(w := 700) -> Font:
 	return A.font(w)
 
+# Link 11-23 "2 size 14 vs 20": mọi chữ quy về 2 cỡ — 14 (chữ thường, nút, dòng phụ), 20 (tựa, điểm)
+const FS_M := 14.0
+const FS_L := 20.0
+static func _fs3(fs: float) -> float:
+	return FS_M if fs <= 16.0 else FS_L
+
 func _text(ci: CanvasItem, p: Vector2, s: String, fs: float, col: Color, w := 700, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
+	fs = _fs3(fs)
 	# p = điểm giữa dòng theo chiều dọc (css); vẽ ở điểm ảnh thật cho nét chữ sắc
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	var f := _font(w)
@@ -516,23 +680,52 @@ func _btn(ci: CanvasItem, r: Rect2, id: String, label: String, bg := CARD, fg :=
 		rr = Rect2(r.position + r.size * 0.03, r.size * 0.94)
 	_box(ci, rr, bg, minf(12, r.size.y / 2), ring, 1.2)
 	_text(ci, Vector2(rr.position.x, rr.position.y + rr.size.y / 2), label, fs, fg, 800, HORIZONTAL_ALIGNMENT_CENTER, rr.size.x)
-	hits.append([r, id])
+	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _avatar(ci: CanvasItem, c: Vector2, k: String, r: float, ring: Color) -> void:
-	ci.draw_circle(c, r + 1.5, ring)
-	ci.draw_circle(c, r, Color8(250, 240, 220))
-	var t := A.svg(A.avatar(k), int(r * 2 * K))
-	ci.draw_texture_rect(t, Rect2(c - Vector2(r, r), Vector2(r, r) * 2), false)
+	# Link 11-23 "ô tròn avatar vỡ nét, đéo phải vector": vòng + nền vẽ bằng SVG ra ảnh đúng số điểm ảnh màn (K * hs), khử răng cưa
+	var dp: float = K * float(L.get("hs", 1.0))
+	var R := r + 1.5
+	var sv := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"#%s\"/><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"#faf0dc\"/></svg>" % [int(R * 20), int(R * 20), R * 10, R * 10, R * 10, ring.to_html(false), R * 10, R * 10, r * 10]
+	var rt := A.svg(sv, int(ceil(R * 2 * dp)))
+	ci.draw_texture_rect(rt, Rect2(c - Vector2(R, R), Vector2(R, R) * 2), false)
+	ci.draw_texture_rect(_av_round(k, int(ceil(r * 2 * dp))), Rect2(c - Vector2(r, r), Vector2(r, r) * 2), false)
+	# vòng viền vẽ ĐÈ lên ảnh (vai áo không che mất vòng, nét liền)
+	var sv2 := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"><circle cx=\"%f\" cy=\"%f\" r=\"%f\" fill=\"none\" stroke=\"#%s\" stroke-width=\"%f\"/></svg>" % [int(R * 20), int(R * 20), R * 10, R * 10, (R - 0.9) * 10, ring.to_html(false), 18.0]
+	ci.draw_texture_rect(A.svg(sv2, int(ceil(R * 2 * dp))), Rect2(c - Vector2(R, R), Vector2(R, R) * 2), false)
+
+var _avc := {}
+func _av_round(k: String, px: int) -> Texture2D:
+	# ảnh avatar cắt tròn (mép mềm 1 điểm ảnh) — hình vuông gốc lòi vai áo ra ngoài vòng
+	var key := k + ":" + str(px)
+	if _avc.has(key): return _avc[key]
+	var im: Image = A.svg(A.avatar(k), px).get_image()
+	im.convert(Image.FORMAT_RGBA8)
+	var w := im.get_width(); var h := im.get_height()
+	var cx := w / 2.0; var cy := h / 2.0; var rr := minf(w, h) / 2.0 - 0.5
+	for y in h:
+		for x in w:
+			var d := Vector2(x + 0.5 - cx, y + 0.5 - cy).length()
+			var m := clampf(rr - d + 0.5, 0.0, 1.0)
+			if m < 1.0:
+				var col := im.get_pixel(x, y); col.a *= m; im.set_pixel(x, y, col)
+	var t := ImageTexture.create_from_image(im)
+	_avc[key] = t
+	return t
 
 func _mini_piece(ci: CanvasItem, c: Vector2, p: int, r: float) -> void:
 	_box(ci, Rect2(c - Vector2(r, r), Vector2(r, r) * 2), Color8(62, 48, 38), 7, Color8(120, 90, 60), 1.2, false)
 	var s := r * 2.6
 	ci.draw_texture_rect(img("x1" if p == 1 else "o2"), Rect2(c - Vector2(s, s) / 2, Vector2(s, s)), false)
 
+const TX := 64.0
+const CARD_W := 214.0
 func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	var on: bool = not Gm.over and int(Gm.turn) == side
-	var ring := GOLD if on else (Color8(236, 170, 182) if side == 2 else Color8(150, 196, 236))
-	_box(ci, r, CARD, 12, ring, 2.6 if on else 1.6)
+	# Link 11-23 "viền Bạn xanh dương, AI đỏ": viền luôn theo phe, tới phiên thì viền dày hơn
+	# Link 11-23 "2 viền bằng nhau, đỏ chứ không đỏ hồng": cùng dày 2.4, cùng đậm; tới phiên chỉ báo bằng nhãn
+	var ring := Color8(222, 38, 38) if side == 2 else Color8(37, 120, 220)
+	_box(ci, r, CARD, 12, ring, 2.4)
 	var name: String
 	var sub: String
 	var av: String
@@ -540,81 +733,122 @@ func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 		if side == 1:
 			name = "Bạn"
 			av = "me"
-			sub = ("Chạm 2 lần để đặt X" if int(S.tap2) else "Chạm 1 ô để đặt X") if on else "cầm X phấn xanh"
+			sub = "Cầm"
 		else:
 			var o: Dictionary = OPP[int(Gm.level)]
 			name = o.name
 			av = o.k
-			sub = ("Đang nghĩ" + ".".repeat(1 + int(_clock * 3) % 3)) if Gm.think else "Mức " + str(o.lvl).to_lower() + " · cầm O"
+			sub = ("Đang nghĩ" + ".".repeat(1 + int(_clock * 3) % 3)) if Gm.think else "Cầm"
 	else:
 		name = "Người " + str(side)
 		av = "me" if side == 1 else "p2"
-		sub = ("Tới lượt · đặt " + ("X" if side == 1 else "O")) if on else "cầm " + ("X phấn xanh" if side == 1 else "O phấn hồng")
+		sub = "Cầm"
 	_avatar(ci, Vector2(r.position.x + 30, r.position.y + r.size.y / 2), av, 19, ring)
 	_mini_piece(ci, Vector2(r.position.x + 44, r.position.y + r.size.y / 2 + 13), side, 7)
-	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 - 10), name, 16, INK, 800)
-	_text(ci, Vector2(r.position.x + 58, r.position.y + r.size.y / 2 + 11), sub, 11.5, INK2, 600)
+	# Link 11-23: chữ cách avatar xa hơn chút (TX), thẻ hẹp lại vừa nội dung (CARD_W)
+	_text(ci, Vector2(r.position.x + TX, r.position.y + r.size.y / 2 - 10), name, 16, INK, 800)
+	_text(ci, Vector2(r.position.x + TX, r.position.y + r.size.y / 2 + 11), sub, 11.5, INK2, 600)
+	if sub == "Cầm":
+		# Link 11-23: "Cầm" + đúng hình quân trên bàn cờ (X phấn xanh / O phấn hồng)
+		var sx0: float = r.position.x + TX + A.tw(sub, 600, _fs3(11.5)) + 4
+		var qs := 22.0
+		ci.draw_texture_rect(img("x1" if side == 1 else "o2"), Rect2(sx0, r.position.y + r.size.y / 2 + 11 - qs / 2, qs, qs), false)
 	var sx := r.end.x - 32
 	ci.draw_line(Vector2(sx - 26, r.position.y + 10), Vector2(sx - 26, r.end.y - 10), LINE, 1.0)
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 - 6), str(Gm.score[side - 1]), 22, PCOL[side - 1], 800, HORIZONTAL_ALIGNMENT_CENTER)
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 + 15), "ván", 10, INK2, 600, HORIZONTAL_ALIGNMENT_CENTER)
 	if on:
-		var tr := Rect2(r.position.x + 62, r.position.y - 9, 62, 17)
-		_box(ci, tr, Color8(60, 120, 200), 8, Color(0, 0, 0, 0), 0, false)
-		_text(ci, Vector2(tr.position.x, tr.position.y + 8.5), "Tới phiên", 10.5, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+		var tw_: float = A.tw("Tới phiên", 700, _fs3(10.5)) + 16.0
+		var tr := Rect2(r.position.x + TX, r.position.y - 11, tw_, 21)
+		_box(ci, tr, Color8(60, 120, 200), 10, Color(0, 0, 0, 0), 0, false)
+		_text(ci, Vector2(tr.position.x, tr.position.y + 10.5), "Tới phiên", 10.5, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 
 func _draw_hud() -> void:
 	if L.is_empty():
 		return
 	var ci := _hud
 	hits = []
-	_T(ci)
+	var hs: float = L.get("hs", 1.0)
 	if Gm.is_empty():
+		_T(ci)
 		return
+	var k_save := K
+	K = K * hs            # cột thẻ: vẽ theo cỡ chuẩn, co đều bằng cách tạm nhân K
+	_T(ci)
 	# thanh công cụ
-	var tr: Rect2 = L.tools
+	var tr: Rect2 = L.u_tools
 	_box(ci, tr, CARD, 12, Color8(232, 214, 186), 1.2)
 	var items := [["menu", "Menu"], ["undo", "Đi lại" + (" " + str(Gm.undo) if Gm.mode == "ai" else "")], ["rules", "Luật"], ["sound", "Âm thanh" if int(S.sound) else "Tắt tiếng"]]
-	var bw := tr.size.x / items.size()
+	# ô rộng theo độ dài chữ (Nunito rộng hơn Baloo: "Âm thanh" không còn sát vạch)
+	var tfs := 12.5
+	var tws := []; var tsum := 0.0
+	for it in items:
+		var wv: float = A.tw(it[1], 700, _fs3(tfs)) + 16.0; tws.append(wv); tsum += wv
+	var cx := tr.position.x
 	for j in items.size():
-		var r := Rect2(tr.position.x + j * bw, tr.position.y, bw, tr.size.y)
+		var bw: float = tws[j] / tsum * tr.size.x
+		var r := Rect2(cx, tr.position.y, bw, tr.size.y); cx += bw
 		var dim: bool = items[j][0] == "undo" and (Gm.hist.is_empty() or Gm.over or (Gm.mode == "ai" and int(Gm.undo) <= 0))
-		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], 12.5, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], tfs, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if j > 0:
 			ci.draw_line(Vector2(r.position.x, r.position.y + 8), Vector2(r.position.x, r.end.y - 8), LINE, 1.0)
-		hits.append([r, items[j][0]])
-	_card(ci, L.opp, 2)
-	_card(ci, L.me, 1)
-	var tp: Rect2 = L.tip
-	_box(ci, tp, Color(DARK, 0.93), 12, Color(0, 0, 0, 0), 0)
-	var t1 := "5 con liền là thắng"
-	var t2 := "ngang, dọc hay chéo đều được"
-	if int(Gm.block2):
-		t2 = "bị chặn 2 đầu thì không tính"
-	if Gm.over:
-		t1 = "Hết ván"
-		t2 = "Chạm Menu để chơi ván mới"
-	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 15), t1, 12.5, Color8(255, 214, 92), 800)
-	_text(ci, Vector2(tp.position.x + 12, tp.position.y + 32), t2, 11, Color8(240, 228, 210), 600)
+		hits.append([Rect2(r.position * K, r.size * K), items[j][0]])
+	_card(ci, L.u_opp, 2)
+	_card(ci, L.u_me, 1)
+	# Link 11-23: bỏ chip "5 con liền là thắng"
+	K = k_save
 	if ov != "":
 		hits = []
+		# hộp thoại: cỡ KU như cờ gánh, co lại nếu màn thấp (không bị cắt); nằm giữa cả cửa sổ
+		var hp := {"menu": 604.0, "rules": 480.0, "end": 250.0}
+		K = minf(KU, (_vs.y - 24.0) / float(hp.get(ov, 540.0)))
+		var w0 := W; var h0 := H
+		W = _vs.x / K; H = _vs.y / K
+		_ov_o = _off / K; _ks = k_save
+		_T(ci)
 		_draw_ov(ci)
+		W = w0; H = h0; K = k_save; _ov_o = Vector2.ZERO
+	_fs_btn(ci)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
+# nút toàn màn hình góc trên phải (Link 11-23), chỉ bản web (app vốn đã toàn màn); vẽ trên cùng, bấm được cả lúc mở menu
+func _fs_btn(ci: CanvasItem) -> void:
+	if not (FS and L.has("u_fs")):
+		return
+	var k_save := K
+	K = K * float(L.get("hs", 1.0))
+	_T(ci)
+	var fr: Rect2 = L.u_fs
+	var pr := Rect2(fr.position + fr.size * 0.04, fr.size * 0.92) if _press == "fs" else fr
+	_box(ci, pr, CARD, 12, Color8(232, 214, 186), 1.2)
+	var c := pr.get_center(); var a := 7.0; var b := 3.6
+	var fs_on := int(JavaScriptBridge.eval("window.__fs||0", true)) == 1
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			var d := -1.0 if fs_on else 1.0         # đang toàn màn: góc quay ra ngoài (nút thu nhỏ)
+			var q := c + Vector2(sx, sy) * (a - b if fs_on else a)
+			ci.draw_line(q, q + Vector2(-sx * b * d, 0), INK, 1.8)
+			ci.draw_line(q, q + Vector2(0, -sy * b * d), INK, 1.8)
+	hits.append([Rect2(fr.position * K, fr.size * K), "fs"])
+	K = k_save
+
 # ------------------------------------------------------------ hộp thoại
+var _ks := 1.0
+var _ov_o := Vector2.ZERO    # góc khung _off tính trong hệ hộp thoại (hộp thoại canh theo cả cửa sổ)
 func _panel(ci: CanvasItem, h: float, low := false) -> Rect2:
 	var w := minf(364, W - 24)
-	var r := Rect2((W - w) / 2, maxf(12, (H - h) / 2), w, h)
+	var r := Rect2((W - w) / 2 - _ov_o.x, maxf(12, (H - h) / 2) - _ov_o.y, w, h)
 	if low:
 		# hết ván: hộp nằm dưới phản cho còn thấy vệt gạch 5 con
 		var f: Rect2 = L.face
+		f = Rect2(f.position * _ks / K, f.size * _ks / K)      # phản đổi sang hệ hộp thoại
 		if L.port:
-			r.position.y = clampf(f.end.y + 18, 12, H - h - 12)
+			r.position.y = clampf(f.end.y + 18, 12 - _ov_o.y, H - h - 12 - _ov_o.y)
 		else:
-			r.position.x = maxf(12, f.position.x - w - 16)
-		ci.draw_rect(Rect2(0, 0, W, H), Color8(30, 18, 8, 50))
+			r.position.x = maxf(12 - _ov_o.x, f.position.x - w - 16)
+		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 50))
 	else:
-		ci.draw_rect(Rect2(0, 0, W, H), Color8(30, 18, 8, 120))
+		ci.draw_rect(Rect2(-_off / K, _vs / K), Color8(30, 18, 8, 120))
 	_box(ci, r, CARD, 18, Color8(196, 150, 96), 2.4)
 	# khăn rằn trên đầu hộp
 	var sr := Rect2(r.position.x + 18, r.position.y + 12, r.size.x - 36, 9)
@@ -637,7 +871,7 @@ func _draw_ov(ci: CanvasItem) -> void:
 
 func _ov_menu(ci: CanvasItem) -> void:
 	var can_resume: bool = Gm.hist.size() > 0 and not Gm.over
-	var h := 540.0 + (48.0 if can_resume else 0.0)
+	var h := 556.0 + (48.0 if can_resume else 0.0)
 	var r := _panel(ci, h)
 	var x := r.position.x + 16
 	var w := r.size.x - 32
@@ -653,17 +887,17 @@ func _ov_menu(ci: CanvasItem) -> void:
 	y += 20
 	for j in 4:
 		var o: Dictionary = OPP[j]
-		var br := Rect2(x, y, w, 46)
+		var br := Rect2(x, y, w, 50)
 		var id := "ai" + str(j)
 		var rr := br if _press != id else Rect2(br.position + br.size * 0.02, br.size * 0.96)
 		_box(ci, rr, Color8(255, 252, 244), 12, Color8(232, 214, 186), 1.4, false)
-		_avatar(ci, Vector2(rr.position.x + 24, rr.position.y + 23), o.k, 16, Color8(232, 214, 186))
+		_avatar(ci, Vector2(rr.position.x + 24, rr.position.y + 25), o.k, 16, Color8(232, 214, 186))
 		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 15), o.name, 15, INK, 800)
 		var wl := "thắng " + str(int(stats.w[j])) + " · thua " + str(int(stats.l[j]))
-		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 33), str(o.lvl) + " · " + wl, 11, INK2, 600)
-		_text(ci, Vector2(rr.end.x - 12, rr.position.y + 23), "+" + str(o.xu) + " xu", 13, Color8(190, 120, 20), 800, HORIZONTAL_ALIGNMENT_RIGHT)
-		hits.append([br, id])
-		y += 52
+		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 35), str(o.lvl) + " · " + wl, 11, INK2, 600)
+		_text(ci, Vector2(rr.end.x - 12, rr.position.y + 25), "+" + str(o.xu) + " xu", 13, Color8(190, 120, 20), 800, HORIZONTAL_ALIGNMENT_RIGHT)
+		hits.append([Rect2(br.position * K, br.size * K), id])
+		y += 56
 	_btn(ci, Rect2(x, y, w, 40), "pvp", "Hai người chơi chung 1 máy", Color8(255, 252, 244), INK, 14)
 	y += 50
 	# tuỳ chọn
@@ -684,10 +918,10 @@ func _opt(ci: CanvasItem, r: Rect2, id: String, label: String, val: String) -> v
 	var on := val != "Tắt"
 	_box(ci, vr, Color8(250, 226, 160) if on else Color8(236, 226, 210), 13, Color8(214, 184, 120), 1.2, false)
 	_text(ci, Vector2(vr.position.x, vr.position.y + vr.size.y / 2), val, 12, INK, 800, HORIZONTAL_ALIGNMENT_CENTER, vr.size.x)
-	hits.append([r, id])
+	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _ov_rules(ci: CanvasItem) -> void:
-	var r := _panel(ci, 420)
+	var r := _panel(ci, 480)
 	var x := r.position.x + 18
 	var w := r.size.x - 36
 	var y := r.position.y + 42
@@ -703,15 +937,16 @@ func _ov_rules(ci: CanvasItem) -> void:
 	var f := _font(600)
 	for pt in parts:
 		_text(ci, Vector2(x, y), pt[0], 13.5, Color8(160, 90, 30), 800)
-		y += 18
+		y += 20
 		var lines := _wrap(pt[1], 12, w, f)
 		for ln in lines:
 			_text(ci, Vector2(x, y), ln, 12, INK, 600)
-			y += 17
+			y += 19
 		y += 6
 	_btn(ci, Rect2(r.position.x + r.size.x / 2 - 70, r.end.y - 52, 140, 38), "close", "Đóng", GOLD, INK, 14, Color8(200, 150, 40))
 
 func _wrap(s: String, fs: float, w: float, f: Font) -> Array:
+	fs = _fs3(fs)
 	var px := maxi(1, int(round(fs * K)))
 	var out := []
 	var cur := ""
@@ -775,13 +1010,16 @@ func _gui_input(ev: InputEvent) -> void:
 	else:
 		return
 	accept_event()
-	var X := pos / K
+	var X := (pos - _off) / K
+	var XP := pos - _off
 	if down:
-		_press = _hit(X)
+		_press = _hit(XP)
+		if _press == "fs" and FS:
+			JavaScriptBridge.eval("window.__fsw=1")      # trình duyệt chỉ cho bật toàn màn trong lúc nhấc tay (index.html)
 		if _press != "":
 			_hud.queue_redraw()
 		return
-	var id := _hit(X)
+	var id := _hit(XP)
 	var was := _press
 	_press = ""
 	if was != "" or id != "":
@@ -824,6 +1062,8 @@ func _do(id: String) -> void:
 			ov = "rules"
 		"close":
 			ov = "menu" if Gm.hist.is_empty() and not Gm.over and not Gm.get("started", false) else ""
+		"fs":
+			pass                                           # index.html bật/tắt lúc nhấc tay
 		"sound":
 			S.sound = 0 if int(S.sound) else 1
 			snd.on = bool(int(S.sound))

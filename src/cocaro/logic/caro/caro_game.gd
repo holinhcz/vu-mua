@@ -9,7 +9,7 @@ signal ended(mode: String, level: int, winner: int)
 signal closed
 
 const E := preload("res://logic/caro/caro_engine.gd")
-const A := preload("res://logic/cg/cg_art.gd")
+const A := preload("res://logic/caro/caro_art.gd")   # bản chữ Nunito riêng của caro (cg_art Nông Trại vẫn Baloo cho cờ gánh)
 const SND := preload("res://logic/cg/cg_snd.gd")
 const NEN := preload("res://logic/caro/caro_nen.gd")
 var _nen: Node2D = null
@@ -45,6 +45,7 @@ var ov := "menu"            # "", "menu", "rules", "end"
 var hits := []              # [Rect2, id] nút đang hiện (điểm ảnh, tính từ góc khung _off)
 var KU := 1.0
 var WEB := OS.has_feature("web")
+var FS := false            # nút toàn màn hình: chỉ bản chơi riêng trên web bật (main.gd); trong Nông Trại tắt
 var _fs_t := 0.0
 var _fs_last := 0               # cỡ giao diện như cờ gánh: điểm ảnh / css chuẩn (dọc 412x915, ngang 1280x720)
 var snd: Node = null
@@ -424,7 +425,7 @@ func _layout() -> void:
 		hs = minf(hs, (V.size.x - 16) / CARD_W)
 		hs = maxf(hs, 0.3)
 		L.hs = hs
-		var tw := minf(V.size.x - 16 - (44 * hs if WEB else 0.0), 420 * hs)
+		var tw := minf(V.size.x - 16 - (44 * hs if FS else 0.0), 420 * hs)
 		# L.opp/me/tip = chỗ chừa cho cảnh (caro_nen né), giữ như cũ; L.u_* = thẻ thật vẽ ra (hệ đã co hs)
 		L.opp = Rect2(W - 8 - cw, maxf(54 + safe, fy - 66), cw, 58)
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
@@ -550,7 +551,7 @@ func _process(dt: float) -> void:
 	_clock += dt
 	if not _ready_ok:
 		return
-	if WEB:
+	if FS:
 		_fs_t += dt
 		if _fs_t > 0.4:
 			_fs_t = 0.0
@@ -812,7 +813,7 @@ func _draw_hud() -> void:
 
 # nút toàn màn hình góc trên phải (Link 11-23), chỉ bản web (app vốn đã toàn màn); vẽ trên cùng, bấm được cả lúc mở menu
 func _fs_btn(ci: CanvasItem) -> void:
-	if not (WEB and L.has("u_fs")):
+	if not (FS and L.has("u_fs")):
 		return
 	var k_save := K
 	K = K * float(L.get("hs", 1.0))
@@ -1013,7 +1014,7 @@ func _gui_input(ev: InputEvent) -> void:
 	var XP := pos - _off
 	if down:
 		_press = _hit(XP)
-		if _press == "fs" and WEB:
+		if _press == "fs" and FS:
 			JavaScriptBridge.eval("window.__fsw=1")      # trình duyệt chỉ cho bật toàn màn trong lúc nhấc tay (index.html)
 		if _press != "":
 			_hud.queue_redraw()
