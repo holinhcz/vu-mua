@@ -146,6 +146,7 @@ var _title_t := 0.0
 var _sure := false
 var _bsel := -1          # ô cá đang chọn trong giỏ
 var _sell_sure := false  # đã chạm Bán hết 1 lần
+var _kho_err := ""   # Kho vườn đầy: hiện đỏ ở lời nhắc dưới giá (toast nằm dưới bảng, không thấy)
 var _ssel := ""          # ô đang chọn trong Chợ (mã mồi / mã đồ nghề); "" = mặc định
 var _xu_rect := Rect2()
 var _tt := 0.0
@@ -826,6 +827,7 @@ func _open(kind: String, arg = null) -> void:
 	if not was:
 		_bsel = -1
 		_sell_sure = false
+		_kho_err = ""
 		_ssel = ""
 	_mod = {"kind": kind, "arg": arg, "anim": anim}
 	modal.visible = true
@@ -887,7 +889,10 @@ func _dock_h(k: String) -> float:   # .khdock: 58.5 (một nút), ô xem cá th�
 		"basket":
 			if game.S.basket.is_empty():
 				return 0.0
-			return (128.5 + (_bhint().size() - 1) * 18) if _bsel >= 0 and _bsel < game.S.basket.size() else 58.5
+			if _bsel >= 0 and _bsel < game.S.basket.size():
+				var h := 128.5 + (_bhint().size() - 1) * 18
+				return maxf(h, 128.5 + 33) if _kho_id(game.S.basket[_bsel].id) != "" else h
+			return 58.5
 		"dex":
 			return _dex_dock(null, Rect2()) if _mod.get("arg") != null else 0.0
 		"shop":
@@ -1253,11 +1258,15 @@ func _b_basket(ci, w: float, y: float) -> float:
 			game.snd.ui()
 			_bsel = -1 if _bsel == idx else idx
 			_sell_sure = false
+			_kho_err = ""
 			_open("basket"))
 	var rows := int(ceil(S.basket.size() / 4.0))
 	return y + rows * (TILE_H + 6)
 
 # cá này đang cần để đổi đồ nghề nào không (nhắc giữ lại, đừng bán)
+func _kho_id(fid: String) -> String:   # món Kho vườn của loài cá này ("" = bản riêng / vườn chưa có món đó)
+	return str(D.KHO.get(fid, "")) if game.host != null else ""
+
 func _need_by(fid: String) -> String:
 	var S: Dictionary = game.S
 	for k in D.GEAR_KEYS:
@@ -1276,7 +1285,9 @@ func _bhint() -> Array:   # lời nhắc dưới giá (.kdhint, cột trái 143.
 	var c: Dictionary = S.basket[_bsel]
 	var nb := _need_by(c.id)
 	var f := D.fish(c.id)
-	var h := ("Cần để đổi " + nb) if nb != "" else ("Cá hiếm, để dành đổi đồ" if int(f.rar) >= 3 else "Bán lấy xu")
+	if _kho_err != "":
+		return A.wrap(_kho_err, 14, 500, 143.5)
+	var h := ("Cần để đổi " + nb) if nb != "" else ("Cá hiếm, để dành đổi đồ" if int(f.rar) >= 3 else ("Bán lấy xu, hay cất vô Kho xài trong vườn" if _kho_id(c.id) != "" else "Bán lấy xu"))
 	return A.wrap(h, 14, 500, 143.5)
 
 func _basket_dock(ci: Box, r: Rect2) -> void:
@@ -1310,8 +1321,28 @@ func _basket_dock(ci: Box, r: Rect2) -> void:
 			_bsel = -1
 			sell([cc], br.get_center())
 			_open("basket"), "coin")
+		var kid := _kho_id(c.id)
+		if kid != "":
+			# bản trong vườn: cất con cá này vô Kho Nông Trại (món vườn có sẵn), dưới nút Bán
+			var kr := Rect2(rx, y0 + 83.5 + 33, KCW - 152.5, 27)
+			_mbt(ci, kr, "Vô Kho", "alt", "kho1", func():
+				var cc: Dictionary = S.basket[idx]
+				var i: int = S.basket.find(cc)
+				if i < 0:
+					return
+				if not game.host.kho.call(kid, 1):
+					_kho_err = "Kho vườn đầy (" + str(game.host.room.call()) + "), bán bớt đã"
+					game.snd.ui()
+					_open("basket")
+					return
+				S.basket.remove_at(i)
+				_bsel = -1
+				game.snd.ui()
+				toast("Đã cất " + D.fish(cc.id).name + " vô Kho", "info")
+				game.save(true)
+				_open("basket"))
 		for i in _bhint().size():
-			A.text(ci, _bhint()[i], x0, y0 + 97 + i * 18, 14, A.F_RED if _need_by(c.id) != "" else A._c(122, 114, 98), 0, 500)
+			A.text(ci, _bhint()[i], x0, y0 + 97 + i * 18, 14, A.F_RED if _need_by(c.id) != "" or _kho_err != "" else A._c(122, 114, 98), 0, 500)
 		return
 	var tot := 0
 	for c in S.basket:

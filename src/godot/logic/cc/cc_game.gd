@@ -17,6 +17,12 @@ const ZF := 40.0
 
 var K := 1.0
 var embed := true
+# Gắn trong Nông Trại (ui_cc.gd đưa vô, Link 11-23 "nối đồng bộ vô game, câu cá chỉ là minigame"):
+# {sv: Dictionary nằm trong save vườn (g.ccsv), coins: Callable -> xu vườn, add: Callable(delta xu), kho: Callable(món, số),
+#  save: Callable lưu vườn (lên mạng)}. null = bản chơi riêng, lưu file user://cauca.json, xu riêng.
+var host = null
+var _xu_last := 0
+var _host_t := -99.0
 var L := {}
 var S := {}
 var W := {}
@@ -49,6 +55,7 @@ func _ready() -> void:
 	rips.resize(64)
 	shs.resize(32)
 	_load()
+	_xu_last = int(S.xu)
 	_reset_state()
 	tod = D.tod_at(S.hour)
 	var vs0 := get_viewport_rect().size
@@ -102,10 +109,16 @@ func _run_sched() -> void:
 # ============================================================ lưu (localStorage 'cauca-save-v1' của web)
 func _load() -> void:
 	S = D.def_save()
-	if FileAccess.file_exists(SAVE_PATH):
+	var sv = host.sv if host != null else null
+	if sv is Dictionary and not sv.is_empty():
+		S.merge(sv.duplicate(true), true)
+	elif FileAccess.file_exists(SAVE_PATH):
+		# lần đầu trong vườn: lấy tiến trình đã chơi trên máy (cấp, đồ nghề, giỏ, sổ cá), xu thì xài xu vườn
 		var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
 		if d is Dictionary:
 			S.merge(d, true)
+	if host != null:
+		S.xu = int(host.coins.call())
 	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut"]:
 		S[k] = int(S[k])
 	S.luck = float(S.luck)
@@ -127,17 +140,40 @@ func _load() -> void:
 	if not D.BAIT.has(str(S.bait)):
 		S.bait = "trun"
 
+# xu trong vườn: mỗi lần S.xu đổi (bán cá, mua mồi, đổi đồ) cộng / trừ đúng phần chênh vô xu vườn
+func _xu_sync() -> void:
+	if host == null:
+		return
+	var x := int(S.xu)
+	if x != _xu_last:
+		host.add.call(x - _xu_last)
+		_xu_last = x
+
 func save(now := false) -> void:
 	if not now and clock - _save_t < 1.5:
 		return
 	_save_t = clock
+	if host != null:
+		_xu_sync()
+		var d: Dictionary = S.duplicate(true)
+		d.erase("xu")
+		host.sv.clear()
+		host.sv.merge(d, true)
+		# lưu vườn (lên mạng) thưa thôi: lúc bán / mua / đổi / đóng thì lưu liền, còn lại 10 giây một lần
+		if now or clock - _host_t > 10.0:
+			_host_t = clock
+			host.save.call()
+		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(S))
 		f.close()
 
 func reset_save() -> void:
+	var x := int(S.xu)
 	S = D.def_save()
+	if host != null:
+		S.xu = x    # chơi lại từ đầu chỉ xoá tiến trình câu cá, không đụng xu vườn
 	save(true)
 
 # ============================================================ khổ màn + phép chiếu (thế giới: X ngang, z xa, mắt cao 1)
@@ -1010,6 +1046,7 @@ func _process(dt: float) -> void:
 	dt = minf(.05, dt)
 	var t0 := Time.get_ticks_usec()
 	clock += dt
+	_xu_sync()
 	_run_sched()
 	if started:
 		scn.perf(dt)

@@ -81,6 +81,8 @@ const CAGE := [
 	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "price": 300},
 	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "price": 1200, "need": {"luon": 2}},
 ]
+# cá câu được -> món trong Kho Nông Trại (g.barn), chỉ loài vườn đã có (bản gắn trong vườn: nút "Vô Kho")
+const KHO := {"ro": "ca_ro", "tre": "ca_tre", "tom": "tom", "loc": "ca_loc", "linh": "ca_linh", "tradau": "ca_tra"}
 const GEAR_KEYS := ["rod", "line", "flo", "cage"]
 const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "cage": "Giỏ đựng"}
 

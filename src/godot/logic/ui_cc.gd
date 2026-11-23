@@ -45,6 +45,26 @@ func open() -> void:
 	_layer.layer = 100
 	var g := GAME.new()
 	g.setup(float(ui.dpr_v))
+	# (Link 11-23 "nối đồng bộ vô game, câu cá chỉ là minigame"): xài xu vườn, cá cất vô Kho vườn,
+	# tiến trình câu cá (cấp, đồ nghề, mồi, giỏ, sổ cá) lưu chung save vườn ở g.ccsv -> đồng bộ lên mạng như vườn
+	var G = ui.G
+	if not (G.g.get("ccsv") is Dictionary):
+		G.g.ccsv = {}
+	g.host = {
+		"sv": G.g.ccsv,
+		"coins": func(): return int(G.g.coins),
+		"add": func(d: int):
+			G.g.coins = maxi(0, int(G.g.coins) + d)
+			G.mark(),
+		"kho": func(id: String, n: int) -> bool:   # false = Kho vườn đầy
+			if G.kho_room() < n:
+				return false
+			G.g.barn[id] = int(G.g.barn.get(id, 0)) + n
+			G.mark()
+			return true,
+		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
+		"save": func(): G.save_game(),
+	}
 	g.closed.connect(Callable(get_script(), "_s_close"))
 	_layer.add_child(g)
 	tree.root.add_child(_layer)
