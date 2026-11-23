@@ -298,23 +298,32 @@ func fx_draw(ci: CanvasItem, tod: Dictionary) -> void:
 
 # cá cong mình quẫy: cắt dọc 14 dải, đuôi lắc nhiều nhất (đầu bên phải). clip_y: chỉ vẽ phần trên đường đó (toạ độ khung)
 func draw_bent(ci: CanvasItem, t: Texture2D, w: float, hh: float, ph: float, amp: float, mod := Color.WHITE, clip_y := INF) -> void:
-	var n := 14
-	var tw := t.get_size().x
-	var th := t.get_size().y
-	var sw := tw / n
-	var dw := w / n
-	for i in n:
-		var u := float(i) / (n - 1)
+	# Cá vẫy = 1 dải lưới liền (Link 11-23 "vẫy bị đứt nét"): trước là 14 khúc dọc dời lên xuống riêng = bậc thang hở mép.
+	# Giờ mỗi cột đỉnh lưới dời theo sóng, khúc giữa 2 cột kéo giãn theo -> thân uốn cong liền mạch.
+	var n := 28
+	var pts := PackedVector2Array()
+	var uvs := PackedVector2Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	for i in n + 1:
+		var u := float(i) / n
 		var k := pow(1 - u, 1.6)
 		var dy := sin(ph - u * 2.4) * amp * hh * 2.2 * k
 		var top := -hh / 2 + dy
-		var vis := hh
+		var bot := top + hh
+		var vb := 1.0
 		if clip_y < INF:
-			if top >= clip_y:
-				continue
-			vis = minf(hh, clip_y - top)
-		var srcw := minf(sw + .8, tw - i * sw)
-		ci.draw_texture_rect_region(t, Rect2(-w / 2 + i * dw, top, dw + .8, vis), Rect2(i * sw, 0, srcw, th * vis / hh), mod)
+			bot = minf(bot, clip_y)
+			top = minf(top, clip_y)
+			vb = (bot - (-hh / 2 + dy)) / hh
+		var x := -w / 2 + u * w
+		pts.append(Vector2(x, top)); uvs.append(Vector2(u, 0))
+		pts.append(Vector2(x, bot)); uvs.append(Vector2(u, vb))
+		cols.append(mod); cols.append(mod)
+		if i < n:
+			var j := i * 2
+			idx.append_array([j, j + 2, j + 1, j + 1, j + 2, j + 3])
+	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols, uvs, PackedInt32Array(), PackedFloat32Array(), t.get_rid())
 
 func draw_leaps(ci: CanvasItem) -> void:
 	var L: Dictionary = game.L
