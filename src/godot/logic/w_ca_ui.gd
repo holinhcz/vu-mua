@@ -1,30 +1,15 @@
 extends "res://logic/w_ui_base.gd"
-# Giao diện câu cá, lờ lọp, thú cưng, tát ao, thả diều: chép nội dung và nút từ bản web.
-#  - tab Câu cá (#pn-fish): #fishc (khung ao: chỗ trống cho lớp vẽ SX), #fishRes, #fishMsg, #fishGo (Xh + lớp bọc),
-#    thanh mồi .caubait (oA), #fishInfo (yE), .fishrod (#fishRodT, #fishRodD + Q4, #fishRod -> fF), Sổ cá #fishDex.
+# Giao diện lờ lọp, thú cưng, tát ao, thả diều: chép nội dung và nút từ bản web.
+#  - (bản 527) tab Câu cá cũ đã bỏ: câu cá = minigame logic/cc (ui_cc.gd).
 #  - tab Nuôi thêm (QQ + nút data-pet của GV), tab Diều (zh "dieu"), tab Lờ lọp (zh "lo") trong bảng nhân vật.
 #  - thanh chọn chỗ thả .visitbar.pickbar (wg / f6).
 #  - bảng Tát ao bắt cá (y4: #tMsg, #tBag, nút data-trui / data-tve) và Thi diều (dU: #kMsg, nút Kéo dây data-kp / Xong data-kd).
-# Khung canvas (SX, _K, gU) là phần vẽ: ở đây chỉ chừa chỗ (Control) và nhận chạm; lớp vẽ đọc R.fo / R.ai / R.zi.
+# Khung canvas (SX, _K, gU) là phần vẽ: ở đây chỉ chừa chỗ (Control) và nhận chạm; lớp vẽ đọc R.ai / R.zi.
 # Dựng bằng Control thường (bản web không có bản chụp số đo cho mấy bảng này), cỡ theo Css.K như w_cho_ui.gd.
 
 
-const BAIT_IC := {   # c1[k].ic (sau = Ze.sau), sinh từ web_all.js
-	"cam": "<path d=\"M14 30Q32 20 50 30L46 50Q32 58 18 50Z\" fill=\"#c9a46a\" stroke=\"#7a5a2a\" stroke-width=\"1.6\"/><ellipse cx=\"32\" cy=\"30\" rx=\"18\" ry=\"6\" fill=\"#e8c88a\"/><circle cx=\"26\" cy=\"29\" r=\"2\" fill=\"#b8884a\"/><circle cx=\"34\" cy=\"31\" r=\"2\" fill=\"#b8884a\"/><circle cx=\"38\" cy=\"28\" r=\"1.6\" fill=\"#b8884a\"/>",
-	"trun": "<path d=\"M10 42Q16 30 26 38T42 34Q50 30 54 38\" stroke=\"#c46a6a\" stroke-width=\"7\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M10 42Q16 30 26 38T42 34Q50 30 54 38\" stroke=\"#e89a9a\" stroke-width=\"2.4\" fill=\"none\" stroke-linecap=\"round\" stroke-dasharray=\"2 4\"/><path d=\"M6 50Q32 46 58 50\" stroke=\"#7a5434\" stroke-width=\"3\" fill=\"none\"/>",
-	"thom": "<circle cx=\"22\" cy=\"38\" r=\"9\" fill=\"#e8c46a\" stroke=\"#a8843a\" stroke-width=\"1.5\"/><circle cx=\"40\" cy=\"36\" r=\"9\" fill=\"#e2b85a\" stroke=\"#a8843a\" stroke-width=\"1.5\"/><circle cx=\"31\" cy=\"24\" r=\"9\" fill=\"#f2d48a\" stroke=\"#a8843a\" stroke-width=\"1.5\"/><path d=\"M24 12Q22 6 26 2M34 12Q32 4 36 0\" stroke=\"#b8a070\" stroke-width=\"1.6\" fill=\"none\" opacity=\".7\"/>",
-	"sau": "<path d=\"M14 40Q20 30 28 38Q36 46 44 36Q50 28 54 34\" stroke=\"#5aa832\" stroke-width=\"9\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M14 40Q20 30 28 38Q36 46 44 36Q50 28 54 34\" stroke=\"#8ad05a\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\" stroke-dasharray=\"3 4\"/><circle cx=\"55\" cy=\"33\" r=\"5.5\" fill=\"#4a9a2a\"/><circle cx=\"57\" cy=\"31.5\" r=\"1.4\" fill=\"#1a120c\"/><path d=\"M54 27L52 22M58 28L60 23\" stroke=\"#3a6a1a\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>",
-}
-
 var R          # w_ca.gd
 
-# tab Câu cá
-var fish: Control = null
-var _f := {}               # các nút / chữ của tab câu
-var VO := ""               # chữ ký sổ cá
-var _rod_sig := ""         # #fishRodD.dataset.sig
-var _res_sig := ""         # #fishRes data-sig
-var _bait_ic := {}         # hình mồi đã vẽ (vẽ một lần)
 # thanh chọn chỗ
 var pick: Control = null
 # tát ao, thi diều
@@ -83,16 +68,6 @@ func _chip(ic: Control, s: String, ok: bool) -> Control:   # .chip ok|no
 	h.add_child(_lbl(s, Qty.FS, Qty.FW, Qty.color(ok), false))   # (bản 291) chữ có/cần chung (qty.gd)
 	return h
 
-func _q4(t: Dictionary) -> Control:   # Q4: .need (ô xu + pJ từng vật liệu "có/cần")
-	var h := HFlowContainer.new()
-	h.add_theme_constant_override("h_separation", int(_k(6)))
-	if int(t.xu):
-		h.add_child(_chip(_coin(Qty.ICON), G.fmt_n(int(t.xu)), int(G.g.coins) >= int(t.xu)))
-	for a in t.m:
-		var have: int = G.mat_n(String(a[0]))
-		h.add_child(_chip(_ic(String(a[0]), Qty.ICON), Qty.text(have, int(a[1])), have >= int(a[1])))
-	return h
-
 func _overlay(title: String, on_close: Callable) -> Array:   # .raceov > .rbox: [gốc, cột]
 	var ov := Control.new()
 	ov.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -146,267 +121,6 @@ static func _down(e) -> bool:
 static func _up(e) -> bool:
 	return (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed) or (e is InputEventScreenTouch and not e.pressed)
 
-# ------------------------------------------------------------------ tab Câu cá (#pn-fish)
-func fish_panel() -> Control:   # dựng #pn-fish (người ghép đặt vào chỗ tab "fish"; hiện thì gọi R.me_open(), ẩn thì R.zo())
-	if fish != null:
-		return fish
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", int(_k(8)))
-	var wrap := _canvas(4.0, 3.0)   # #fishWrap > canvas#fishc
-	var area: Control = wrap.get_child(0)
-	area.gui_input.connect(func(e) -> void:
-		if _down(e):
-			if R.me():   # mE
-				_bE()
-		elif _up(e):
-			R.e8()
-			_bE())
-	_f.area = area
-	var res := VBoxContainer.new()   # #fishRes
-	res.visible = false
-	var ri := CenterContainer.new()   # #fishResI
-	res.add_child(ri)
-	var rn := _lbl("", 15, 800, Color8(0x3a, 0x2a, 0x1a), false)   # #fishResN
-	res.add_child(rn)
-	var rd := _lbl("", 12, 500, Color8(0x5a, 0x4a, 0x3a))   # #fishResD
-	res.add_child(rd)
-	area.add_child(res)
-	res.set_anchors_preset(Control.PRESET_CENTER)
-	_f.res = res
-	_f.resI = ri
-	_f.resN = rn
-	_f.resD = rd
-	v.add_child(wrap)
-	var msg := _lbl("", 13, 600, Color8(0x3a, 0x2a, 0x1a))   # #fishMsg
-	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(msg)
-	_f.msg = msg
-	var bait := VBoxContainer.new()   # .caubait (oA chèn trước #fishGo)
-	v.add_child(bait)
-	_f.bait = bait
-	var go := _btn("Thả câu", true, true, Callable())   # #fishGo
-	go.button_down.connect(func() -> void:
-		if R.me():   # pointerdown -> mE
-			_bE())
-	go.button_up.connect(func() -> void:
-		R.e8()   # pointerup -> e8
-		_bE())
-	go.pressed.connect(func() -> void:
-		R.go_click()
-		xh())
-	v.add_child(go)
-	_f.go = go
-	var info := _note("")   # #fishInfo
-	v.add_child(info)
-	_f.info = info
-	var rod := HBoxContainer.new()   # .fishrod
-	var rv := VBoxContainer.new()
-	rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var rt := _lbl("Cần câu tre", 13.5, 800, Color8(0x3a, 0x2a, 0x1a), false)   # #fishRodT
-	rv.add_child(rt)
-	var rdd := VBoxContainer.new()   # #fishRodD
-	rv.add_child(rdd)
-	rod.add_child(rv)
-	var rb := _btn("", false, true, func() -> void:   # #fishRod -> fF
-		R.ff()
-		xh())
-	rod.add_child(rb)
-	v.add_child(rod)
-	_f.rodT = rt
-	_f.rodD = rdd
-	_f.rod = rb
-	v.add_child(_lbl("Sổ cá", 15, 800, Color8(0x3a, 0x2a, 0x1a), false))   # h3.fishh
-	var dex := GridContainer.new()   # #fishDex
-	dex.columns = 3
-	dex.add_theme_constant_override("h_separation", int(_k(6)))
-	dex.add_theme_constant_override("v_separation", int(_k(6)))
-	v.add_child(dex)
-	_f.dex = dex
-	fish = v
-	VO = ""
-	_rod_sig = ""
-	_res_sig = ""
-	R.S3 = ""
-	xh()
-	return v
-
-func _bE() -> void:   # bE: #fishGo.hold
-	if fish != null:
-		_f.go.modulate = Color(0.85, 0.95, 0.85) if R.fo.hold else Color.WHITE
-
-func xh() -> void:   # Xh (+ lớp bọc): điền tab câu
-	if fish == null or not is_instance_valid(fish):
-		return
-	var o: Dictionary = R.fo
-	var t := String(o.st)
-	var r: int = R._rod()
-	var n: String
-	if t == "idle" or t == "caught" or t == "lost":
-		n = ("Thả câu" if t == "idle" else "Thả câu tiếp") + " · " + str(R.n8) + " xu"
-	elif t == "cast" or t == "wait":
-		n = "Thu cần về"
-	elif t == "bite":
-		n = "Giật!"
-	else:
-		n = "Giữ để kéo"
-	var dis: bool = (t == "idle" or t == "caught" or t == "lost") and int(G.g.coins) < R.n8
-	var bs: String = R.b9()   # lớp bọc: mồi khác cám
-	if bs != "cam" and (t == "idle" or t == "caught" or t == "lost"):
-		n = ("Thả câu" if t == "idle" else "Thả câu tiếp") + " · " + String(R.c1[bs].n).to_lower() + " (" + str(int(R.lv(bs))) + ")"
-		dis = R.lv(bs) < 1
-	if _f.go.text != n:
-		_f.go.text = n
-	_f.go.disabled = dis
-	var h := String(o.msg)
-	if h == "":
-		if t == "idle":
-			h = "Bấm Thả câu, chờ phao chìm rồi giật thật nhanh."
-		elif t == "cast" or t == "wait":
-			h = "Đang chờ cá cắn câu..."
-		elif t == "bite":
-			h = "Cá cắn câu rồi, giật ngay!"
-	if _f.msg.text != h:
-		_f.msg.text = h
-	var inf: String = R.ye()
-	if _f.info.text != inf:
-		_f.info.text = inf
-	_f.rodT.text = String(R.n3[r]) + " · cấp " + str(r + 1)
-	if r >= 4:
-		if _rod_sig != "max":
-			_rod_sig = "max"
-			_clear(_f.rodD)
-			_f.rodD.add_child(_lbl(String(R.rA[4]), 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-		_f.rod.text = "Tối đa"
-		_f.rod.disabled = true
-	else:
-		var c: Dictionary = R.cf(r + 1)
-		var f: bool = G.lv() < int(c.lv)
-		var ms := []
-		for p in c.m:
-			ms.append(str(G.mat_n(String(p[0]))))
-		var s := str(r) + "|" + ("1" if f else "0") + "|" + str(G.g.coins) + "|" + ",".join(ms)
-		if _rod_sig != s:
-			_rod_sig = s
-			_clear(_f.rodD)
-			_f.rodD.add_child(_lbl("Lên " + String(R.n3[r + 1]).to_lower() + ": " + String(R.rA[r + 1]).to_lower() + ".", 11.5, 500, Color8(0x8a, 0x6a, 0x48)))
-			_f.rodD.add_child(_q4(c))
-			_f.rod.text = ("🔒 Cấp " + str(c.lv)) if f else "Nâng cần"
-			_f.rod.disabled = f
-			_btn_style(_f.rod, G.can_pay(c) and not f)
-	var res = o.res
-	if t == "caught" and res is Dictionary:
-		_f.res.visible = true
-		var k := String(res.id) + "|" + str(res.kg) + "|" + str(res.get("big", 0))
-		if _res_sig != k:
-			_res_sig = k
-			_clear(_f.resI)
-			_f.resI.add_child(_ic(String(res.id), 48))
-			_f.resN.text = G.item_name(String(res.id))
-			_f.resD.text = ("🏆 Cá khủng! " if R._tr(res.get("big")) else "") + R._kgs(res.kg) + " kg · giá chợ " + str(res.price) + " xu · đã vào kho"
-	elif _f.res.visible:
-		_f.res.visible = false
-		_res_sig = ""
-	var fi: Dictionary = R._fi()
-	var sg := []
-	for w in R.Wf:
-		var E = fi.dex.get(w)
-		sg.append((str(E.n) + ":" + str(E.best)) if E is Dictionary else "0")
-	var T := "|".join(sg)
-	if T != VO:
-		VO = T
-		_clear(_f.dex)
-		for w in R.Wf:
-			var E = fi.dex.get(w)
-			var C := int(E.n) if E is Dictionary else 0
-			var cell := VBoxContainer.new()   # .fc / .fc.no
-			cell.modulate = Color.WHITE if C else Color(1, 1, 1, 0.5)
-			var ic := _ic(String(w), 36)
-			ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			cell.add_child(ic)
-			cell.add_child(_lbl(G.item_name(String(w)) if C else "Chưa gặp", 12, 800, Color8(0x3a, 0x2a, 0x1a)))
-			cell.add_child(_lbl((str(C) + " con · nặng nhất " + R._kgs(E.best) + " kg") if C else "Thử câu xem", 10.5, 500, Color8(0x8a, 0x6a, 0x48)))
-			_f.dex.add_child(cell)
-	_oa()
-
-func _bait_tex(k: String) -> Texture2D:   # FY: ốc, tép = Ai(k); còn lại Hi(c1[k].ic) (vẽ một lần)
-	if k == "oc" or k == "tep":
-		return U.item_ic(k, _k(28))
-	if _bait_ic.has(k):
-		return _bait_ic[k]
-	var img := Image.new()
-	var svg := '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' + String(BAIT_IC.get(k, "")) + "</svg>"
-	var px := int(pow(2.0, ceil(log(maxf(16.0, _k(28))) / log(2.0))))
-	var tex: Texture2D = null
-	if Css.svg_load(img, svg, px / 64.0) == OK:
-		tex = ImageTexture.create_from_image(img)
-	_bait_ic[k] = tex
-	return tex
-
-func _oa() -> void:   # oA: thanh chọn mồi
-	if fish == null:
-		return
-	var a: String = R.b9()
-	var lvs := []
-	for k in R.sF:
-		lvs.append(str(R.lv(k)))
-	var n := "|".join([a, ",".join(lvs), str(int(G.g.barn.get("bot", 0))), str(int(G.g.barn.get("trung", 0))), String(R.fo.st)])
-	if n == R.S3:
-		return
-	R.S3 = n
-	var box: VBoxContainer = _f.bait
-	_clear(box)
-	var e: Dictionary = R.c1[a]
-	var row := HBoxContainer.new()   # .cbrow
-	row.add_theme_constant_override("separation", int(_k(4)))
-	for o in R.sF:
-		var l: float = R.lv(o)
-		var c: bool = o == a
-		var b := Button.new()   # .cb (.on, .none)
-		b.toggle_mode = true
-		b.button_pressed = c
-		b.tooltip_text = String(R.c1[o].n) + ": " + String(R.c1[o].src)
-		b.custom_minimum_size = Vector2(_k(48), _k(56))
-		b.modulate = Color(1, 1, 1, 0.5) if l < 1 else Color.WHITE
-		var bv := VBoxContainer.new()
-		bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bv.set_anchors_preset(Control.PRESET_FULL_RECT)
-		var ti := TextureRect.new()
-		ti.texture = _bait_tex(o)
-		ti.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ti.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ti.custom_minimum_size = Vector2(_k(24), _k(24))
-		ti.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bv.add_child(ti)
-		var bl := _lbl("3 xu" if l == INF else str(int(l)), 11, 800, Color8(0x3a, 0x2a, 0x1a), false)
-		bl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		bv.add_child(bl)
-		var bs := _lbl(String(R.c1[o].n), 9.5, 500, Color8(0x8a, 0x6a, 0x48), false)
-		bs.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		bs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		bv.add_child(bs)
-		b.add_child(bv)
-		var key: String = o
-		b.pressed.connect(func() -> void:   # [data-bt]
-			R.pick_bait(key)
-			xh())
-		row.add_child(b)
-	box.add_child(row)
-	var r := []
-	var mu = e.get("mul")
-	if mu is Dictionary:
-		for k in mu:
-			if float(mu[k]) > 1:
-				r.append(G.item_name(String(k)).to_lower() if not G.item(String(k)).is_empty() else String(k))
-	var inf := VBoxContainer.new()   # .cbinfo
-	inf.add_child(_lbl(String(e.n) + " · " + (("dụ " + ", ".join(r)) if r.size() else "mồi thường") + ((" · cá cắn lẹ hơn " + str(R._rnd((1.0 - float(e.wait)) * 100.0)) + "%") if float(e.wait) < 1 else ""), 12, 700, Color8(0x3a, 0x2a, 0x1a)))
-	inf.add_child(_lbl(String(e.src) + ".", 11, 500, Color8(0x8a, 0x6a, 0x48)))
-	if a == "thom" or R.lv("thom") < 1:
-		inf.add_child(_btn("Trộn mồi thơm (1 bột mì + 1 trứng)", false, true, func() -> void:   # [data-mix] -> uF
-			R.uf()
-			xh()))
-	box.add_child(inf)
-
 static func _clear(n: Node) -> void:
 	for c in n.get_children():
 		n.remove_child(c)
@@ -428,13 +142,6 @@ func _ec() -> void:
 
 func tab_body(id: String) -> Control:   # QQ / zh["dieu"].html / zh["lo"].html (+ click)
 	match id:
-		"cau":   # (bản 287) tab Câu cá: bảng câu đã dựng sẵn (#pn-fish), nối vào bảng Nhân vật
-			if fish != null and (not is_instance_valid(fish) or fish.is_queued_for_deletion()):
-				fish = null
-			if fish != null and fish.get_parent() != null:
-				fish.get_parent().remove_child(fish)
-			R.me_open()
-			return fish_panel()
 		"nuoi": return _qq()
 		"dieu": return _dieu()
 		"lo": return _lo()

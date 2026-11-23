@@ -1,7 +1,6 @@
 extends RefCounted
 # Câu cá, lờ lọp, thú cưng (vịt, cá nuôi, mèo, chào mào), tát ao, thả diều: chép 1:1 luật bản web.
-#   câu cá g.fish (JF, P7 + bọc, xB, QO, MX, TX, F4 + bọc, vE + bọc, mE, e8, KO, pE, gE + bọc, ME, ZO, yE + bọc,
-#     fF, cF, c5, B9, lv, IY, uF, DF, B$, N$, rY, TT, MT, nút #fishGo), sổ (iV, Tc, oV),
+#   câu cá g.fish (JF sửa khi tải, rY đếm cho nhiệm vụ): (bản 527) câu cũ đã bỏ, câu cá = minigame logic/cc (ui_cc.gd), sổ (iV, Tc, oV),
 #   lờ lọp giăng câu g.lo (T1, Jd, qk, KU, Bm, Bk, w4, L6, UU, fR, sR, Rk, ZU, Nk, GS, hZ, _U, t_, $U),
 #   thú cưng g.pet (Cc, dN, WQ, Xx, Jx, GQ, jQ, DQ, VQ, uZ, tK, nK, wg + bọc, f6, e6, o6, r6, ZT, _x, _b, w2, CH),
 #   tát ao g.tat (Am, WN, y4, QK, b6 + bọc, KK, DN, yS, UK),
@@ -26,33 +25,20 @@ var ext := {}              # hàm của hệ khác (người ghép gán Callable
 #   "ec": func() -> void                               vẽ lại bảng nhân vật
 
 # ------------------------------------------------------------------ dữ liệu
-var lc := {}               # cá câu
 var Wf := []               # mã cá
-var c1 := {}               # mồi câu
 var ns := {}               # lờ, lọp, giăng câu
-var n3 := []               # tên cần
-var rA := []               # mô tả cần
-var OY := []               # nâng cần
-var HY := []               # cấp nâng cần
 var m6 := []               # cá tát ao
 var k4 := []               # diều
 var Z7 := {}               # tên chức năng
-const n8 := 3              # xu mồi cám
-const sF := ["cam", "trun", "sau", "oc", "tep", "thom"]
 const FS := ["lo", "lop", "giang"]
 const Nh := {"vit": 600, "ca": 240, "meo": 300, "chim": 900}
 const t6 := 8              # đàn vịt tối đa
 const a6 := 300.0          # giây no của vịt mỗi lần rải lúa
 const n6 := 360.0          # giây no của cá
 const Xf := 900.0          # cá lớn đủ
-const D2_FISH := 2.0       # d2.fish: sức mất mỗi lần thả câu
 const Yx := [7.2, 8.8, 4.1, 4.8]
 
 # ------------------------------------------------------------------ trạng thái không lưu
-var fo := {"st": "idle", "t": 0.0, "wait": 3.0, "fish": null, "hold": false, "zc": 0.3, "zv": 0.0, "zh": 0.3, "fp": 0.5, "ft": 0.5, "fn": 0.0, "p": 0.35, "res": null, "msg": "", "W": 0, "H": 0, "loc": null}   # or
-var on_fish := false       # ni === "fish"
-var title := ""            # FO (#pTitle) khi câu
-var S3 := ""               # chữ ký thanh mồi (oA)
 var M3 := -1               # rY
 var yf = null              # Yf: chọn chỗ thả {k, buy, cb, msg, sub, at}
 var ai = null              # tát ao
@@ -64,8 +50,6 @@ var rh_sing := 0.0         # Rh.sing: chim hót (vẽ)
 var XT := {}               # w2
 var _zt_v := -1            # uN
 var _zt = null             # v4
-var _qo_v := -1
-var _qo_n := 0
 var _ul := 0.0             # rY mỗi giây
 var _ds := 0.0             # dS: WQ mỗi giây
 var _ht := 0.0             # hT: iV mỗi 2 giây
@@ -74,14 +58,8 @@ var _wq_t := 0.0
 
 func _init(game) -> void:
 	G = game
-	lc = _jd("cau_ca/ca")
 	Wf = _ja("cau_ca/ds_ca")
-	c1 = _jd("cau_ca/moi")
 	ns = _jd("cau_ca/lo_lop_cau_giang")
-	n3 = _ja("cau_ca/ten_can")
-	rA = _ja("cau_ca/mo_ta_can")
-	OY = _ja("cau_ca/nang_can")
-	HY = _ja("cau_ca/nang_can_cap")
 	m6 = _ja("cau_ca/tat_muong")
 	k4 = _ja("mini_game/dieu")
 	Z7 = _jd("nhan_vat/ten_chuc_nang")
@@ -121,9 +99,6 @@ static func _sv(v) -> String:   # String(number) như JS
 		return str(int(v))
 	return str(v)
 
-static func _kgs(v) -> String:   # String(kg).replace(".", ",")
-	return _sv(v).replace(".", ",")
-
 func _now() -> float:   # Date.now()
 	return G._now_ms()
 
@@ -154,14 +129,8 @@ func _vr() -> int:   # vr
 func _d0() -> float:   # d0
 	return float(G.troi.hour())
 
-func _dh() -> Dictionary:   # dh
-	return G.troi.dh()
-
 func _pc() -> Dictionary:   # fr()
 	return G.g.pc
-
-func _jr() -> int:   # jr
-	return G.lv()
 
 func _qi(k: String) -> void:   # qi
 	G.nv.qi(k)
@@ -201,10 +170,6 @@ func _no(k: String, a: float = 1.0, pos = null) -> void:   # No
 	var f := _x("No")
 	if f.is_valid():
 		f.call(k, a, pos)
-
-func _xh() -> void:   # Xh (vẽ lại bảng câu)
-	if ui != null:
-		ui.xh()
 
 func _ec() -> void:   # ec
 	var f := _x("ec")
@@ -306,471 +271,6 @@ func _fi() -> Dictionary:   # g.fish
 	if not (f.get("dex") is Dictionary):
 		f.dex = {}
 	return f
-
-func _rod() -> int:   # g.fish.rod | 0
-	return int(_fi().get("rod", 0))
-
-# ------------------------------------------------------------------ câu cá: mồi
-func c5() -> Dictionary:   # c5
-	var f := _fi()
-	var t = f.get("bait")
-	if not (t is Dictionary):
-		t = {"trun": 3, "sau": 0, "thom": 0}
-		f.bait = t
-	return t
-
-func b9() -> String:   # B9: mồi đang chọn
-	var f := _fi()
-	var t := String(f.get("bs", "cam")) if _tr(f.get("bs")) else "cam"
-	if t == "tom":
-		t = "tep"
-		f.bs = t
-	return t if c1.has(t) else "cam"
-
-func lv(t: String) -> float:   # lv: số mồi (cám = vô hạn)
-	if t == "cam":
-		return INF
-	if _tr(c1[t].get("barn")):
-		return float(_barn(t))
-	return float(int(c5().get(t, 0)))
-
-func iy(t: String) -> void:   # IY: dùng 1 mồi
-	if _tr(c1[t].get("barn")):
-		G.g.barn[t] = _barn(t) - 1
-	else:
-		var b := c5()
-		b[t] = int(b.get(t, 0)) - 1
-
-func pick_bait(t: String) -> void:   # oA click [data-bt]
-	var s := String(fo.st)
-	if s == "cast" or s == "wait" or s == "bite" or s == "reel":
-		return
-	_fi().bs = t
-	S3 = ""
-	_xh()
-
-func uf() -> void:   # uF: trộn mồi thơm
-	if _barn("bot") < 1 or _barn("trung") < 1:
-		var f := _x("L1")
-		if f.is_valid():
-			f.call({"items": G.missing([["bot", 1], ["trung", 1]]), "why": "Trộn mồi thơm còn thiếu:", "go": uf})
-		else:
-			_ta("Cần 1 bột mì và 1 trứng.")
-		return
-	G.g.barn.bot = _barn("bot") - 1
-	G.g.barn.trung = _barn("trung") - 1
-	c5().thom = int(c5().get("thom", 0)) + 4
-	_ta("Trộn được 4 viên mồi thơm, cá chép, cá bông lau mê lắm.")
-	S3 = ""
-	_ba()
-	_xh()
-
-func _need8() -> Dictionary:   # _8(!0)
-	var f := _x("_8")
-	var v = f.call(true) if f.is_valid() else {}
-	return v if v is Dictionary else {}
-
-func df() -> int:   # DF: số cá các đơn còn thiếu
-	var t := _need8()
-	var a := 0
-	for n in t:
-		if lc.has(n):
-			var e := int(t[n]) - _barn(n)
-			if e > 0:
-				a += e
-	return a
-
-func b_s() -> Array:   # B$: mã cá đơn còn thiếu
-	var t := _need8()
-	var out := []
-	for a in t:
-		if lc.has(a) and int(t[a]) > _barn(a):
-			out.append(a)
-	return out
-
-func n_s() -> void:   # N$: chọn mồi dụ được cá đơn cần
-	var t := b_s()
-	var a := "cam"
-	var n := 1.0
-	for e in c1:
-		if e == "cam" or lv(e) < 1:
-			continue
-		var r := 1.0
-		var mu = c1[e].get("mul")
-		for o in t:
-			var m := float(mu.get(o, 0)) if mu is Dictionary else 0.0
-			r = maxf(r, m if m != 0.0 else 1.0)
-		if r > n:
-			n = r
-			a = e
-	_fi().bs = a
-
-# ------------------------------------------------------------------ câu cá: chọn cá
-func qo() -> int:   # QO: số ô nước trong đất của mình
-	if G.lang == null:
-		return 0
-	if _qo_v == _ver() and _qo_v >= 0:
-		return _qo_n
-	_qo_v = _ver()
-	var B: Array = G.lang.M.B
-	var a := 0
-	for y in range(int(B[2]), int(B[3])):
-		for x in range(int(B[0]), int(B[1])):
-			if _p0(x, y):
-				var e := _fo(x, y)
-				if e != "" and _ci(e):
-					a += 1
-	_qo_n = a
-	return a
-
-func xb(t: String) -> float:   # xB: hệ số chỗ câu
-	var a: Dictionary = fo.loc if fo.loc is Dictionary else {}
-	var n := 1.0
-	if _tr(a.get("riv")):
-		n *= float({"ca_loc": 2, "ca_tre": 1.4, "ca_chep": 0.7, "ca_koi": 0.4}.get(t, 1))
-		if _tr(a.get("boat")):
-			n *= float({"ca_loc": 1.6, "ca_koi": 1.8, "ca_ro": 0.6}.get(t, 1))
-	else:
-		n *= 1.4 if t == "ca_chep" else (1.3 if t == "ca_koi" else (0.0 if t == "ca_linh" else 1.0))
-	if t == "ca_loc" or t == "ca_koi":
-		n *= (1.0 + _htv("n_cau")) * (1.5 if _kx() else 1.0)
-	return n
-
-func p7() -> Dictionary:   # P7 (+ lớp bọc cá lăng, cá bông lau, hệ số mồi)
-	var t := qo()
-	var a := _dh()
-	var n := String(a.phase)
-	var e := bool(a.night)
-	var r := _rod()
-	var o := {}
-	var loc: Dictionary = fo.loc if fo.loc is Dictionary else {}
-	for l in lc:
-		var c: Dictionary = lc[l]
-		if t < float(c.min):
-			continue
-		var f := float(c.w)
-		if l == "ca_linh":
-			if not (_qs() and _o0() > 0 and _tr(loc.get("riv"))):
-				continue
-			f = 48.0
-		f *= xb(l)
-		if l == "ca_tre":
-			f *= 2.0 if e else 0.6
-		if l == "ca_loc":
-			f *= 3.0 if e else 0.3
-		if l == "tom":
-			f *= 2.4 if (n == "dawn" or n == "dusk") else (0.5 if e else 1.0)
-		if l == "ca_koi":
-			f *= 4.0 if (n == "dawn" or n == "dusk") else (0.5 if e else 1.0)
-		if l == "ca_loc" or l == "ca_koi":
-			f *= 1.0 + 0.35 * r
-		o[l] = f
-	# lớp bọc
-	o.erase("ca_lang")
-	o.erase("ca_bong_lau")
-	if _tr(loc.get("riv")) and r >= 2:
-		o["ca_lang"] = (7.0 if G.night else 4.0) * (1.0 + 0.2 * (r - 2))
-	if _tr(loc.get("riv")) and _tr(loc.get("boat")) and r >= 3:
-		o["ca_bong_lau"] = (3.5 if (n == "dawn" or n == "dusk") else 1.6) * (1.0 + 0.3 * (r - 3))
-	var rr = c1.get(b9())
-	if rr is Dictionary and rr.get("mul") is Dictionary:
-		for k in o:
-			var m := float(rr.mul.get(k, 0))
-			o[k] = float(o[k]) * (m if m != 0.0 else 1.0)
-	return o
-
-func mx() -> String:   # MX: rút cá
-	var t := p7()
-	var n := 0.0
-	for a in t:
-		n += float(t[a])
-	var e := randf() * n
-	for a in t:
-		e -= float(t[a])
-		if e <= 0.0:
-			return a
-	return "ca_ro"
-
-func tx(t: String) -> float:   # TX: bề rộng vùng kéo
-	return minf(0.5, 0.36 - 0.055 * float(lc[t].dif) + 0.04 * _rod())
-
-# ------------------------------------------------------------------ câu cá: lượt câu
-func set_loc(riv: bool, boat: bool) -> void:   # or.loc = {riv, boat} (TT run)
-	fo.loc = {"riv": riv, "boat": 1 if boat else 0}
-
-func tt(t: int, a: int) -> bool:   # TT: chạm mặt nước để đi câu
-	var n = mt(t, a)
-	if n == null:
-		_ta("Không có bờ để đứng câu chỗ này.")
-		return false
-	var gl := _x("Gl")
-	var run := func() -> bool:
-		fo.loc = {"riv": _yh(t, a), "boat": n.boat}
-		title = "Câu cá · " + ((("giữa sông Vàm" if _tr(n.boat) else "bờ sông Vàm")) if fo.loc.riv else "bờ ao")
-		var z := _x("zc")
-		if z.is_valid():
-			z.call("fish")
-		return true
-	if gl.is_valid():
-		# aa.fishing = {wx, wy}, aa.fface: lớp nhân vật đọc job.fishing
-		gl.call({"key": "fish", "kind": "gofish", "pos": n.stand, "dur": 0.2, "fishing": {"wx": n.w[0], "wy": n.w[1]}, "run": run})
-	return true
-
-func me_open() -> void:   # ME (mở tab câu): dừng lượt dở
-	on_fish = true
-	var s := String(fo.st)
-	if s == "cast" or s == "wait" or s == "bite" or s == "reel":
-		fo.st = "idle"
-	fo.hold = false
-	fo.msg = ""
-	fo.W = 0
-	_xh()
-
-func zo() -> void:   # ZO (rời tab câu)
-	on_fish = false
-	fo.hold = false
-	fo.st = "idle"
-	fo.msg = ""
-
-func _cast(w: float) -> void:   # phần chung F4: thả câu
-	fo.st = "cast"
-	fo.t = 0.0
-	fo.fish = null
-	fo.res = null
-	fo.hold = false
-	fo.wait = _nn(2.0, 6.5) * (1.0 - 0.07 * _rod()) * w
-	fo.msg = ""
-	_gr(10)
-	_ba()
-
-func _f4_0() -> void:   # F4 gốc: mua mồi cám
-	if int(G.g.coins) < n8:
-		_ta("Cần " + str(n8) + " xu để mua mồi.")
-		return
-	var t := maxi(1, n8 - _rnd(_htv("n_cau") * 4.0))
-	if int(G.g.coins) < t:
-		_ta("Cần " + str(t) + " xu để mua mồi.")
-		return
-	G.g.coins = int(G.g.coins) - t
-	G.use_en(D2_FISH)   # qh(d2.fish)
-	_cast(1.0)
-
-func f4() -> void:   # F4 (+ lớp bọc mồi)
-	var a := b9()
-	if a == "cam":
-		_f4_0()
-		return
-	if lv(a) < 1:
-		_ta("Hết " + String(c1[a].n).to_lower() + ". " + String(c1[a].src) + ".")
-		_fi().bs = "cam"
-		S3 = ""
-		_xh()
-		return
-	iy(a)
-	G.use_en(D2_FISH)   # qh(d2.fish)
-	_cast(float(c1[a].wait))
-
-func go_click() -> void:   # #fishGo click
-	var t := String(fo.st)
-	if t == "idle" or t == "caught" or t == "lost":
-		f4()
-	elif t == "cast" or t == "wait":
-		fo.st = "idle"
-		fo.msg = "Bạn thu cần về, mồi đã mất."
-		_xh()
-
-func ko() -> void:   # KO: giật, vào kéo
-	fo.st = "reel"
-	fo.t = 0.0
-	fo.zh = tx(String(fo.fish))
-	fo.zc = float(fo.zh) / 2.0 + 0.02
-	fo.zv = 0.0
-	fo.fp = 0.5
-	fo.ft = 0.5
-	fo.fn = 0.3
-	fo.p = 0.35
-	fo.msg = "Giữ tay để kéo vùng xanh theo con cá!"
-	_gr(18)
-	_xh()
-
-func pe(t: String) -> void:   # pE: sổng cá
-	fo.st = "lost"
-	fo.t = 0.0
-	fo.hold = false
-	fo.msg = t
-	fo.fish = null
-	_gr([30, 40, 30])
-	_xh()
-
-func me() -> bool:   # mE: nhấn nút / ao
-	if fo.st == "bite":
-		ko()
-		fo.hold = true
-		return true
-	if fo.st == "reel":
-		fo.hold = true
-		return true
-	return false
-
-func e8() -> void:   # e8: buông tay
-	if fo.hold:
-		fo.hold = false
-
-func ge() -> void:   # gE (+ lớp bọc cá khủng, No("fish"))
-	var t := String(fo.fish)
-	var a: Dictionary = lc[t]
-	var n := _rnd((float(a.kg[0]) + (float(a.kg[1]) - float(a.kg[0])) * pow(randf(), 1.7)) * 100.0) / 100.0
-	var f := _fi()
-	G.g.barn[t] = _barn(t) + 1
-	f.total = int(f.total) + 1
-	_w1(3, "fish")
-	if not (f.dex.get(t) is Dictionary):
-		f.dex[t] = {"n": 0, "best": 0}
-	var e: Dictionary = f.dex[t]
-	e.n = int(e.n) + 1
-	if n > float(e.best):
-		e.best = n
-	fo.res = {"id": t, "kg": n, "price": G.price(t)}
-	fo.st = "caught"
-	fo.t = 0.0
-	fo.hold = false
-	fo.msg = ""
-	_gr([20, 40, 20])
-	_ba()
-	# lớp bọc
-	var r: Dictionary = fo.res
-	var o: Dictionary = lc[r.id]
-	var l := float(o.kg[0]) + (float(o.kg[1]) - float(o.kg[0])) * 0.85
-	if float(r.kg) >= l:
-		var c := _v0(_rnd(float(r.price) * 1.5))
-		G.g.coins = int(G.g.coins) + c
-		r.big = 1
-		_ta("Cá khủng! " + _kgs(r.kg) + " kg, được thưởng thêm " + _sa(c) + " xu.")
-	_no("fish")
-
-func ve(t: float) -> void:   # vE (+ lớp bọc tự chơi): mỗi khung hình khi tab câu mở (_O)
-	var a := fo
-	a.t = float(a.t) + t
-	if a.st == "cast":
-		if a.t >= 0.7:
-			a.st = "wait"
-			a.t = 0.0
-	elif a.st == "wait":
-		if a.t >= float(a.wait):
-			a.fish = mx()
-			a.st = "bite"
-			a.t = 0.0
-			_gr([30, 40, 30])
-			_xh()
-	elif a.st == "bite":
-		if a.t >= 1.25:
-			pe("Cá thoát mất rồi. Lần sau giật nhanh hơn nhé.")
-	elif a.st == "reel":
-		var n: Dictionary = lc[a.fish]
-		var dif := float(n.dif)
-		a.zv = float(a.zv) + (3.3 if a.hold else -2.5) * t
-		a.zv = maxf(-1.5, minf(1.5, float(a.zv)))
-		a.zc = float(a.zc) + float(a.zv) * t
-		var e := float(a.zh) / 2.0
-		var r := 1.0 - float(a.zh) / 2.0
-		if a.zc < e:
-			a.zc = e
-			a.zv = absf(float(a.zv)) * 0.2
-		if a.zc > r:
-			a.zc = r
-			a.zv = -absf(float(a.zv)) * 0.2
-		a.fn = float(a.fn) - t
-		if a.fn <= 0.0:
-			a.ft = 0.08 + randf() * 0.84
-			a.fn = _nn(0.5, 1.5) / dif
-		a.fp = float(a.fp) + (float(a.ft) - float(a.fp)) * minf(1.0, t * (0.9 + 0.9 * dif))
-		var o := absf(float(a.fp) - float(a.zc)) <= float(a.zh) / 2.0
-		a.p = float(a.p) + t * (0.32 if o else -0.2 * sqrt(dif))
-		if a.p >= 1.0:
-			ge()
-		elif a.p <= 0.0:
-			pe("Cá giằng đứt dây mất rồi.")
-		elif a.t > 28.0:
-			pe("Cá quá khỏe, đành thả nó đi.")
-	# lớp bọc: tự chơi đang câu
-	var uf_ := _x("Ur")
-	var ur = uf_.call() if uf_.is_valid() else null
-	if not (ur is Dictionary) or not _tr(ur.get("on")) or ur.get("fs") != "fishing":
-		return
-	if a.st == "bite":
-		ur.rx = float(ur.get("rx", 0)) - t
-		if ur.rx <= 0.0:
-			ko()
-			a.hold = true
-	elif a.st == "reel":
-		var e2 := float(a.fp) - float(a.zc) - float(a.zv) * 0.32
-		var r2 := e2 > 0.01
-		if randf() < 0.04:
-			r2 = not r2
-		a.hold = r2
-	else:
-		ur.rx = _nn(0.22, 0.55)
-
-func ye() -> String:   # yE (+ lớp bọc): chữ #fishInfo
-	var t := _dh()
-	var a := qo()
-	var n: String
-	if t.night:
-		n = "Ban đêm cá trê và cá lóc dễ cắn câu."
-	elif t.phase == "dawn" or t.phase == "dusk":
-		n = "Lúc sáng sớm và chiều tối hay có tôm và cá chép vàng."
-	else:
-		n = "Ban ngày cá rô và cá chép cắn câu nhiều."
-	var s := "Ao của bạn có " + str(a) + " ô nước. " + n + " Ao từ 4 ô có cá chép và tôm, từ 10 ô có cá lóc, từ 15 ô có cá chép vàng."
-	if _rod() >= 2:
-		s += " Cần trúc trở lên: cá lăng ở sông Vàm."
-	if _rod() >= 3:
-		s += " Cần mây ngồi xuồng giữa sông: cá bông lau."
-	if _qs():
-		s += " Mùa nước nổi: cá linh về, ốc bò lên ruộng."
-	return s
-
-func cf(t: int) -> Variant:   # cF: đồ nâng cần lên cấp t
-	if t < 0 or t >= OY.size() or OY[t] == null:
-		return null
-	var a: Dictionary = OY[t]
-	return {"xu": int(a.xu), "m": (a.m as Array).duplicate(true), "lv": int(HY[t])}
-
-func _l9(t: Array) -> Array:   # l9
-	var out := []
-	for a in t:
-		var n: int = int(a[1]) - int(G.mat_n(String(a[0])))
-		if n > 0:
-			out.append([a[0], n])
-	return out
-
-func _zh(t: Dictionary) -> void:   # zH
-	G.g.coins = int(G.g.coins) - int(t.xu)
-	for a in t.m:
-		G.mat_add(String(a[0]), -int(a[1]))
-
-func ff() -> void:   # fF: nâng cần câu
-	var t := _rod()
-	if t >= 4:
-		return
-	var a: Dictionary = cf(t + 1)
-	if _jr() < int(a.lv):
-		_ta("Lên cấp " + str(a.lv) + " mới nâng được " + String(n3[t + 1]).to_lower() + ".")
-		return
-	if not G.can_pay(a):
-		var f := _x("L1")
-		if f.is_valid():
-			f.call({"mats": _l9(a.m), "xu": maxi(0, int(a.xu) - int(G.g.coins)), "why": "Nâng cần câu còn thiếu:", "go": ff})
-		else:
-			_ta("Chưa đủ vật liệu.")
-		return
-	_zh(a)
-	_fi().rod = t + 1
-	_ta(String(n3[t + 1]) + ": " + String(rA[t + 1]).to_lower() + ".")
-	_gr(15)
-	S3 = ""
-	_ba()
-	_xh()
 
 func ry() -> void:   # rY: đếm cá câu cho sổ nhiệm vụ (mỗi giây)
 	var f = G.g.get("fish")
@@ -2208,10 +1708,6 @@ func step(t: float, offline: bool) -> void:
 	if _ht <= 0.0:   # hT (fV): mỗi 2 giây
 		_ht = 2.0
 		iv()
-	if on_fish:   # _O: rAF khi tab câu mở
-		ve(minf(0.05, maxf(0.001, t)))
-		if ui != null:
-			ui.xh()
 	if ai != null:   # DN
 		dn_tat(t)
 	if zi != null:   # ZN

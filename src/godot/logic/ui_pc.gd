@@ -12,7 +12,7 @@ extends "res://logic/ui_ls.gd"
 const KDD := "kdd"
 # (Link 11-23 "bỏ câu cũ đi"): tab Câu cá cũ bỏ, câu cá giờ là minigame Câu Cá Bờ Kênh (Menu > Giải trí, ui_cc.gd)
 const TABS := [["nv", "Nhân vật"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
-const WTABS := ["cau", "nuoi", "dieu", "lo"]
+const WTABS := ["nuoi", "dieu", "lo"]
 const LEFT := ["non", "ao", "quan", "dep"]
 const RIGHT := ["binh", "liem", "cuoc", "gui"]
 const BOT := ["xe", "xuong", "bua", "xp"]
@@ -42,8 +42,6 @@ func open(t := "") -> void:
 	_build()
 
 func close() -> void:
-	if tab == "cau" and G.w_all != null:
-		G.w_all.WCA.zo()   # rời tab câu: dừng lượt câu
 	if wc != null and is_instance_valid(wc) and wc.get_parent() != null:
 		wc.get_parent().remove_child(wc)   # bảng câu dùng lại lần sau, không để khung cũ xoá mất
 	wc = null   # hình nhân vật (pic) giữ theo bảng cất
@@ -65,8 +63,6 @@ func _sig() -> String:
 		int(G.nv.Fu() / 60000.0), G.g.coins, G.mat_n("gach"), p.get("n")]) if tab == "nv" else tab
 
 func _tab_go(k: String) -> void:
-	if tab == "cau" and k != "cau" and G.w_all != null:
-		G.w_all.WCA.zo()
 	if tab != k:
 		tab = k
 		scroll = 0.0
