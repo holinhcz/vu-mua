@@ -136,7 +136,7 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 
 # ============================================================ lớp chính
 var dbg_skip := {}
-const BG_NEAR := [["bg_tim", .07, 332.0 / 645.0, 487.0 / 592.0, 0.0], ["bg_do", .93, 288.0 / 587.0, 448.0 / 563.0, 2.1]]   # tên, x/màn, neo x, neo y, pha
+const BG_NEAR := [["bg_tim", .05, 332.0 / 645.0, 487.0 / 592.0, 0.0, 1.25], ["bg_do", .95, 288.0 / 587.0, 448.0 / 563.0, 2.1, 1.8]]   # tên, x/màn, neo x, neo y, pha, cao (lệch nhau cho đỡ đối xứng)
 const SEN_K := [1.0, .7, 1.0, .9]     # sen trắng (1) to quá so với chỗ đứng (Link 11-22) -> nhỏ lại
 const SEN_W := .85     # bụi sen rộng (đơn vị kênh), lục bình .6
 func _draw_main(ci: CanvasItem) -> void:
@@ -763,7 +763,7 @@ func draw_near_trees(ci: CanvasItem, tod: Dictionary) -> void:
 			var nm := "gan/h_van_tho_dh_van_tho%d" % i
 			var it = _gan.get("items", {}).get("h_van_tho_dh_van_tho%d" % i)
 			if it != null:
-				list.append([nm, .69 + i * .055, float(it.ax) / float(it.w), float(it.ay) / float(it.h), i * 1.7, .78 - (i % 2) * .12, i == 1])
+				list.append([nm, .62 + i * .055, float(it.ax) / float(it.w), float(it.ay) / float(it.h), i * 1.7, .78 - (i % 2) * .12, i == 1])
 	for q in list:
 		var bt: Texture2D = A.img(q[0])
 		if bt == null:

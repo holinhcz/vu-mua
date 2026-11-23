@@ -132,8 +132,13 @@ for L, key, a, kw in rec9.rec:
         put(L, 'thuysinh/luc_binh', ('dlbf%d' % (n % 3)) if fl else ('dlb%d' % (n % 6)), x, y + 4, 4.2 * s, n % 2 == 1)
     elif key == 'nha':
         x, y, s = a[0], a[1], a[2]
-        if s > 1:   # nhà chính bên kênh + bến ghe
-            put_nha(L, 'nha_lon', x, ground(x) + 7, 3.3)
+        if s > 1:   # nhà chính bên kênh + bến ghe = ĐIỂM NHẤN giữa bờ (Link 11-23 "bố cục"): nhà to hơn,
+            # 2 cây dừa cao thẳng sau nhà, bông giấy đỏ lớn cạnh hiên, xoài chín bên trái (lớp 2 = sau nhà)
+            put_nha(L, 'nha_lon', x, ground(x) + 7, 3.9)
+            put(2, 'caytrai/dua', 'd01', x - 95, ground(x - 95) - 2, 1.2 * 600 / 160.8, False)
+            put(2, 'caytrai/dua', 'd11', x + 120, ground(x + 120) - 2, 1.2 * 540 / 160.8, True)
+            put(2, 'caytrai/xoai', 'dx01', x - 250, ground(x - 250) + 2, 1.2 * 300 / 79.0, False)
+            put(2, 'kieng/bonggiay', 'd0', x + 230, ground(x + 230) + 10, 3.4, True)
         else:
             put_nha(L, 'nha_nho', x, y + 2, 4.3 * s, n % 2 == 1)
     elif key == 'mieu':

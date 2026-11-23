@@ -154,8 +154,10 @@ func layout(w: float, h: float) -> void:
 	L.fgH = h * (0.13 if L.portrait else 0.17)
 	L.zNear = L.F / (h - L.hor)
 	L.zEdge = L.F / (h - L.fgH * 0.45 - L.hor)
-	L.rodButt = Vector2(w * 1.04, h * 1.03) if L.portrait else Vector2(w * 0.9, h * 1.08)
-	L.rodTip = Vector2(w * 0.6, h * 0.56) if L.portrait else Vector2(w * 0.68, h * 0.5)
+	# cán cần ló ra từ mép phải, NGAY TRÊN cụm nút góc dưới (Link 11-23 "bố cục": cán + ống cước không bị nút che);
+	# màn dọc ngọn đưa ra giữa màn để phao rơi giữa chỗ nhìn
+	L.rodButt = Vector2(w * 1.05, h * 0.72) if L.portrait else Vector2(w * 1.04, h * 0.9)
+	L.rodTip = Vector2(w * 0.42, h * 0.46) if L.portrait else Vector2(w * 0.66, h * 0.5)
 
 func proj(X: float, z: float) -> Vector2:
 	return Vector2(L.W / 2 + L.F * X / z, L.hor + L.F / z)
@@ -193,8 +195,15 @@ func world_init() -> void:
 	W.props = []
 	for i in 7:
 		W.props.append(new_prop(true))
+	# 2 bè lục bình gần (giữa màn nước) cho mặt kênh khỏi trống (Link 11-23 "bố cục")
+	for i in 2:
+		var p := new_prop(true)
+		p.z = rnd(9.5, 12.5)
+		p.s = rnd(.75, .95)
+		p.x = rnd(-1, 1) * half_x(p.z) * .6
+		W.props.append(p)
 	# bụi sen (ảnh thủy sinh của nông trại): mọc tại chỗ ven 2 bên kênh, không trôi (Link 11-22)
-	var sz := [15.0, 21.0, 27.0, 33.0]
+	var sz := [11.5, 18.0, 25.0, 32.0]
 	for i in 4:
 		var z: float = sz[i] + rnd(-1.5, 1.5)
 		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ.
@@ -207,7 +216,7 @@ func world_init() -> void:
 		W.spots.append(new_spot())
 
 func new_prop(anywhere: bool) -> Dictionary:
-	var z := rnd(10, 34)
+	var z := lerpf(9.0, 34.0, pow(randf(), .8))
 	var hx := half_x(z) + 2.5
 	return {"z": z, "x": rnd(-hx, hx) if anywhere else -hx - rnd(0, 3), "v": rnd(.05, .12), "k": randi() % 4, "s": rnd(.8, 1.25), "ph": rnd(TAU)}
 
