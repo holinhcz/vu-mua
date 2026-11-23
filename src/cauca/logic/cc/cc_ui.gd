@@ -824,7 +824,8 @@ func _layout_modal() -> void:
 	_mod.w = pw
 	var hh := 20.0 + 26.0 + 8.0
 	if _sub_of(k) != "":
-		hh += 16.0
+		var sw_max := pw - 22 - (38 if _title_of(k)[0] != "" else 0) - 22
+		hh += 18.0 * A.wrap(_sub_of(k), 14, 600, sw_max).size() - 2.0
 	_mod.hh = hh
 	var tabs_h := 0.0
 	if k == "shop":
@@ -904,8 +905,9 @@ func _draw_modal(ci: Box) -> void:
 		tfs -= 1
 	A.text(ci, tt, ix, ty, tfs, A.F_INK, 0, 800, 0.0, A.INK, xf)
 	if sub != "":
-		var sl := A.wrap(sub, 12.5, 600, maxw)
-		A.text(ci, sl[0], ix, ty + 18, 12.5, A.F_MUTED, 0, 600, 0.0, A.INK, xf)
+		var sl := A.wrap(sub, 14, 600, maxw)
+		for i in sl.size():
+			A.text(ci, sl[i], ix, ty + 19 + i * 18, 14, A.F_MUTED, 0, 600, 0.0, A.INK, xf)
 	# "panel" phải nằm TRƯỚC nút X: hit() dò từ cuối lên, panel đứng sau thì nuốt luôn cú bấm X (Link 11-23 "X đéo đóng được")
 	ci.items.append({"r": r, "id": "panel"})
 	var xr := _x_rect()
@@ -1565,7 +1567,7 @@ func _draw_card(ci: Box) -> void:
 		tags.append(["Loài mới!", A.F_RED])
 	if _card.rec and not _card.isNew and not junk:
 		tags.append(["Kỷ lục!", Color("#e09a20")])
-	var h := 16 + 8 + img_h + 2 + 34 * 1.0 + (6 + 20 + 6 if tags.size() else 8) + 46 + 4 + 6 + desc.size() * 14 * 1.3 + 10 + rows_b.size() * 46 + 14
+	var h := 16 + 8 + img_h + 2 + 34 * 1.0 + (6 + 20 + 6 if tags.size() else 8) + 52 + 4 + 6 + desc.size() * 14 * 1.3 + 10 + rows_b.size() * 46 + 14
 	if full and not junk:
 		h += 8 + 14 * 1.3
 	var k := clampf(_card_t / .5, 0, 1)
@@ -1635,7 +1637,7 @@ func _draw_card(ci: Box) -> void:
 		ci.draw_texture_rect(t, Rect2(-iw / 2, -ih / 2, iw, ih), false)
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 	y += img_h + 2
-	A.text(ci, f.name, 0, y + 17, 32 if A.tw(f.name, 32) < cw - 24 else 26, A.F_INK, 1, 800, 0.0, A.INK, xf)
+	A.text(ci, f.name, 0, y + 17, A.FS_L, A.F_INK, 1, 800, 0.0, A.INK, xf)
 	y += 34
 	if tags.size():
 		y += 6
@@ -1660,20 +1662,20 @@ func _draw_card(ci: Box) -> void:
 	var sws := []
 	var tot := 0.0
 	for s in stats:
-		var ww := maxf(A.tw(s[0], 18), A.tw(s[1], 11, 700)) + 24
+		var ww := maxf(A.tw(s[0], 20), A.tw(s[1], 14, 700)) + 24
 		sws.append(ww)
 		tot += ww
 	tot += (stats.size() - 1) * 8
 	var sx := -tot / 2
 	for i in stats.size():
-		var sr := Rect2(sx, y, sws[i], 46)
+		var sr := Rect2(sx, y, sws[i], 52)
 		_push(ci, xf)
 		A.card(ci, sr, false, 12)
 		_pop(ci)
-		A.text(ci, stats[i][0], sr.get_center().x, sr.position.y + 4 + 18 * .6, 18, A.F_BROWN, 1, 800, 0.0, A.INK, xf)
-		A.text(ci, stats[i][1], sr.get_center().x, sr.position.y + 4 + 18 * 1.05 + 11 * .6, 11, A.SMALL2, 1, 700, 0.0, A.INK, xf)
+		A.text(ci, stats[i][0], sr.get_center().x, sr.position.y + 5 + 20 * .6, 20, A.F_BROWN, 1, 800, 0.0, A.INK, xf)
+		A.text(ci, stats[i][1], sr.get_center().x, sr.position.y + 5 + 20 * 1.1 + 14 * .6, 14, A.SMALL2, 1, 700, 0.0, A.INK, xf)
 		sx += sws[i] + 8
-	y += 46 + 4 + 6
+	y += 52 + 4 + 6
 	for ln in desc:
 		A.text(ci, ln, 0, y + 14 * .65, 14, A.F_BROWN, 1, 600, 0.0, A.INK, xf)
 		y += 14 * 1.3
@@ -1737,16 +1739,14 @@ func _draw_title(ci: Box) -> void:
 	var dk := Color(20 / 255.0, 14 / 255.0, 6 / 255.0)
 	A.under_poly(ci, PackedVector2Array([Vector2.ZERO, Vector2(L.W, 0), Vector2(L.W, L.H), Vector2(0, L.H)]), PackedColorArray([Color(dk, .15), Color(dk, .15), Color(dk, .55), Color(dk, .55)]))
 	# bảng hiệu treo
-	var fs := 44.0 if n else clampf(L.W * .1, 44, 92)
-	if low():
-		fs = minf(fs, maxf(40, L.H * .13))
+	var fs := A.FS_L   # Link 11-23: cả game chỉ 2 cỡ chữ 20 + 14
 	var l1 := "Câu Cá"
 	var l2 := "Bờ Kênh"
-	var one = not n and A.tw(l1 + " " + l2, fs, 900) + 68 < L.W - 40
+	var one = A.tw(l1 + " " + l2, fs, 900) + 68 < L.W - 40
 	var lw := (maxf(A.tw(l1, fs, 900), A.tw(l2, fs, 900)) if not one else A.tw(l1 + " " + l2, fs, 900)) + (52 if n else 68)
 	var lh := fs * 1.02 * (1 if one else 2) + 12 + 30 + (30 if n else 34)
 	var sub := "MIỆT VƯỜN · NÔNG TRẠI"
-	var sfs := fs * .32
+	var sfs := A.FS_S
 	var sw := A.tw(sub, sfs, 800) + sub.length() * 3 + 28
 	lw = maxf(lw, sw + (52 if n else 68))
 	var how_n := 3

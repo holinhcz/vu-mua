@@ -84,13 +84,21 @@ static func _set_aa(ff: FontFile) -> void:
 	ff.hinting = TextServer.HINTING_LIGHT
 	ff.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
 
+# Link 11-23 "gom về 2 size cho bố 20 + 14": cả minigame chỉ còn 2 cỡ chữ. Chữ to (tiêu đề, nút lớn, tên cá) = 20, còn lại = 14.
+const FS_S := 14.0
+const FS_L := 20.0
+static func fsz(fs: float) -> float:
+	return FS_L if fs >= 17.0 else FS_S
+
 static func tw(s: String, fs: float, w := 800) -> float:
+	fs = fsz(fs)
 	return font(w).get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(1, int(round(fs * K)))).x / K
 
 # al: 0 trái, 1 giữa, 2 phải; y = giữa dòng
 static func text(ci: CanvasItem, s: String, x: float, y: float, fs: float, col: Color, al := 1, w := 800, ol := 0.0, olc := INK, xf := Transform2D.IDENTITY) -> void:
 	if s == "":
 		return
+	fs = fsz(fs)
 	var f := font(w)
 	var px := maxi(1, int(round(fs * K)))
 	var sw := f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
