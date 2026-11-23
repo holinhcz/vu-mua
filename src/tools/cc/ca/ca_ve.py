@@ -23,7 +23,9 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else '/tmp/claude-0/ca'
 IDS = sys.argv[2:]
 os.makedirs(OUT, exist_ok=True)
 SS = K.SS
-RES = 2                       # ảnh to gấp 2 bản cũ (thẻ cá câu được hiện ~460 css px trên màn dpr 3)
+RES = 3.6   # chuẩn 6px (Link 11-23 "vẽ nét 6px"): cần câu 240 đơn vị x 6px = 1440px phủ ~400 css px = 3.6 điểm ảnh/css px;
+            # thẻ cá câu được rộng 460 css px -> ảnh cá ~1650px. Bản cũ 458px (RES 1).
+
 LIGHT = np.array([-.45, .62, .64]); LIGHT /= np.linalg.norm(LIGHT)   # (x phải, y lên, z ra mặt)
 
 
@@ -126,7 +128,7 @@ EXTRA = {
 
 def render(fid):
     spec = dict(F.FISH[fid]); spec.update(EXTRA.get(fid, {}))
-    sp = K.Sprite(scale=spec.get('scale', .86), cx=spec.get('cx', .07), cy=spec.get('cy', .5), w=K.W * RES, h=K.H * RES)
+    sp = K.Sprite(scale=spec.get('scale', .86), cx=spec.get('cx', .07), cy=spec.get('cy', .5), w=int(K.W * RES), h=int(K.H * RES))
     Hh, Ww = sp.h, sp.w
     px = sp.L                                   # điểm ảnh trong / 1 đơn vị cá
     cols = (np.arange(Ww) + .5); rows = (np.arange(Hh) + .5)
@@ -253,7 +255,7 @@ def render(fid):
     am = (a > .15).astype(np.float32)
     k = int(round(1.6 * RES * SS))
     dil = ndi.grey_dilation(am, size=(2 * k + 1, 2 * k + 1))
-    dil = ndi.gaussian_filter(dil, .6 * SS * RES)
+    dil = ndi.gaussian_filter(dil, 1.0 * SS)                   # mép viền gọn, không nhoè thành quầng
     src = ndi.gaussian_filter(rgb * am[..., None], (3 * SS, 3 * SS, 0)) / np.maximum(ndi.gaussian_filter(am, 3 * SS)[..., None], 1e-3)
     oc = np.clip(src * .32, 0, 1) * .8 + col3(spec.get('outline', '#24170b')) * .2
     fa = dil * (1 - ndi.gaussian_filter(am, .2 * SS * RES))     # viền chỉ ở NGOÀI hình, không lấp vào chỗ vây trong
@@ -265,7 +267,7 @@ def render(fid):
         im = K.bend_warp(im, *spec['bend'])
     im = im.resize((Ww // SS, Hh // SS), Image.LANCZOS)
     bb = im.getchannel('A').point(lambda q: 255 if q > 6 else 0).getbbox()
-    p = 3 * RES
+    p = int(3 * RES)
     im = im.crop((max(0, bb[0] - p), max(0, bb[1] - p), min(im.width, bb[2] + p), min(im.height, bb[3] + p)))
     return im
 

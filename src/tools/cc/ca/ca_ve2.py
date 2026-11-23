@@ -17,14 +17,14 @@ import fish_cu as F
 OUT = sys.argv[1] if len(sys.argv) > 1 else '/tmp/claude-0/ca'
 IDS = sys.argv[2:] or ['tom', 'dep', 'lon', 'non']
 os.makedirs(OUT, exist_ok=True)
-RES = 2
+RES = 3.6   # chuẩn 6px, như ca_ve.py
 LIGHT = np.array([-.45, .62, .64]); LIGHT /= np.linalg.norm(LIGHT)
 PUFF = {'tom': .03, 'dep': .02, 'lon': .04, 'non': .05}      # bán kính phồng (đơn vị cá)
 cur = {'R': .04}
 
 _init = K.Sprite.__init__
 def _init2(self, scale=0.86, cx=0.07, cy=0.5, w=K.W, h=K.H):
-    _init(self, scale, cx, cy, w * RES, h * RES)
+    _init(self, scale, cx, cy, int(w * RES), int(h * RES))
 K.Sprite.__init__ = _init2
 
 _add = K.Sprite.add
@@ -186,7 +186,7 @@ def tom2():
 def crop(im):
     im = im.convert('RGBA')
     bb = im.getchannel('A').point(lambda q: 255 if q > 6 else 0).getbbox()
-    p = 3 * RES
+    p = int(3 * RES)
     return im.crop((max(0, bb[0] - p), max(0, bb[1] - p), min(im.width, bb[2] + p), min(im.height, bb[3] + p)))
 
 
