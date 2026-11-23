@@ -81,8 +81,11 @@ const CAGE := [
 	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "price": 300},
 	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "price": 1200, "need": {"luon": 2}},
 ]
-# cá câu được -> món trong Kho Nông Trại (g.barn), chỉ loài vườn đã có (bản gắn trong vườn: nút "Vô Kho")
-const KHO := {"ro": "ca_ro", "tre": "ca_tre", "tom": "tom", "loc": "ca_loc", "linh": "ca_linh", "tradau": "ca_tra"}
+# cá câu được -> món trong Kho Nông Trại (g.barn) (bản gắn trong vườn: nút "Vô Kho"). Link 11-23 "nối đủ": cả 16 loài,
+# 10 món mới khai trong godot/data/che_bien/vat_pham.json + icon ui/svg/kh/<món>.svg (tools/cc/kho/ca_kho_svg.py). Rác không vô Kho.
+const KHO := {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_mevinh", "chot": "ca_chot", "tre": "ca_tre", "tom": "tom",
+	"loc": "ca_loc", "he": "ca_he", "luon": "luon", "thatlat": "ca_thatlat", "bong": "ca_bong", "locbong": "ca_locbong", "chinh": "ca_chinh",
+	"ho": "ca_ho", "tradau": "ca_tradau"}
 const GEAR_KEYS := ["rod", "line", "flo", "cage"]
 const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "cage": "Giỏ đựng"}
 
