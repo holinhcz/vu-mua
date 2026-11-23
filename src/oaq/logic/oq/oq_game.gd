@@ -422,12 +422,8 @@ static func rand_in(reg: Dictionary, rad: float) -> Vector2:
 	return Vector2((reg.cx + reg.lim) / 2, reg.cy)
 
 static func reg_center(home: String, reg: Dictionary) -> Vector2:
-	var h := 0
-	for ch in home:
-		h = (h * 31 + ch.unicode_at(0)) % 997
-	var j := Vector2(((h * 7) % 13 - 6) / 6.0 * 0.08, ((h * 11) % 13 - 6) / 6.0 * 0.08)
-	if reg.t == "r":
-		return Vector2((reg.x0 + reg.x1) / 2 + j.x, (reg.y0 + reg.y1) / 2 + j.y)
+	if reg.t == "r":   # Link 11-23: đống sỏi ngay giữa vòng phấn, không lệch
+		return Vector2((reg.x0 + reg.x1) / 2, (reg.y0 + reg.y1) / 2)
 	if reg.t == "c":
 		return Vector2(reg.x, reg.y)
 	return cell_center(0 if home == "c0" else 6)
@@ -439,8 +435,18 @@ func spot_in(home: String, rad: float) -> Vector2:
 	var c := reg_center(home, reg)
 	var best := c
 	var bs := -1e9
+	# ô dân: chỉ thử chỗ trong vòng tròn giữa ô (vòng phấn rx .4), đông quá mới nới ra
+	var disk := 0.3 - rad
+	if reg.t == "r":
+		disk = maxf(disk, sqrt(others.size() + 1.0) * rad * 1.05)
 	for k in 36:
 		var p := rand_in(reg, rad)
+		if reg.t == "r":
+			var a := randf() * TAU
+			p = c + Vector2(cos(a), sin(a)) * sqrt(randf()) * disk
+			var q0 := {"x": p.x, "y": p.y}
+			clamp_to(reg, q0, rad)
+			p = Vector2(q0.x, q0.y)
 		var gap := 9.0
 		for o in others:
 			gap = minf(gap, Vector2(o.x - p.x, o.y - p.y).length() - o.r - rad)
