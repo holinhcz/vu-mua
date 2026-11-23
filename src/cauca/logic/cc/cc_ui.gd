@@ -146,6 +146,7 @@ var _title_t := 0.0
 var _sure := false
 var _bsel := -1          # ô cá đang chọn trong giỏ
 var _sell_sure := false  # đã chạm Bán hết 1 lần
+var _ssel := ""          # ô đang chọn trong Chợ (mã mồi / mã đồ nghề); "" = mặc định
 var _xu_rect := Rect2()
 var _tt := 0.0
 
@@ -825,6 +826,7 @@ func _open(kind: String, arg = null) -> void:
 	if not was:
 		_bsel = -1
 		_sell_sure = false
+		_ssel = ""
 	_mod = {"kind": kind, "arg": arg, "anim": anim}
 	modal.visible = true
 	game.G.paused = true
@@ -888,6 +890,8 @@ func _dock_h(k: String) -> float:   # .khdock: 58.5 (một nút), ô xem cá th�
 			return (128.5 + (_bhint().size() - 1) * 18) if _bsel >= 0 and _bsel < game.S.basket.size() else 58.5
 		"dex":
 			return _dex_dock(null, Rect2()) if _mod.get("arg") != null else 0.0
+		"shop":
+			return _shop_dock(null, Rect2())
 	return 0.0
 
 func _mxf() -> Array:   # [phép biến hình bảng đang bật lên, độ dịch dọc, độ hiện]
@@ -960,9 +964,12 @@ func _draw_modal(ci: Box) -> void:
 			if _mod.get("arg") != null:
 				_dex_dock(ci, r)
 		"shop":
+			# vạch = kinh nghiệm tới cấp sau (lên cấp mở mồi mới); nút cam = giỏ cá (đồ nghề đổi bằng cá trong giỏ)
 			var need := D.xp_need(S.lv)
-			_kcbox(ci, r, float(S.xp) / need, false, [["Đang có ", A.F_MUTED, 600], [str(S.xu), A.F_PRICE, 800], ["@coin", null, 0]],
-				"Cấp %d" % S.lv, false, Callable())
+			var cap: int = D.CAGE[S.cage].cap
+			_kcbox(ci, r, float(S.xp) / need, false, [["Cấp %d · còn " % S.lv, A.F_MUTED, 600], [str(need - S.xp), A.F_PRICE, 800], [" kn lên cấp", A.F_MUTED, 600]],
+				"Giỏ %d/%d" % [S.basket.size(), cap], false, func(): game.snd.ui(); _open("basket"))
+			_shop_dock(ci, r)
 			# tab (.khseg: tab chọn xanh lá cao 33, tab kia kem cao 30, chân cùng một đường; đứng trên thanh tre)
 			var by: float = r.position.y + KTAB_Y + 33
 			var tw := (KCW - 6) / 2
@@ -982,7 +989,7 @@ func _draw_modal(ci: Box) -> void:
 				var cy := tr.get_center().y + (1.5 if on else 0.0)
 				A.pic(ci, pk, Rect2(lx, cy - 10, 20, 20))
 				A.text(ci, lab, lx + 25, cy, 14, Color.WHITE if on else A.F_TAB, 0, 800)
-				ci.items.append({"r": tr, "id": "tab" + id, "tap": func(): game.snd.ui(); _open("shop", id)})
+				ci.items.append({"r": tr, "id": "tab" + id, "tap": func(): game.snd.ui(); _ssel = ""; _open("shop", id)})
 			# thanh tre ngang dưới tab
 			var bw := r.size.x - 8
 			ci.draw_texture_rect(Tre.bar(bw), Rect2(r.position.x + 4, by - 2, bw, Tre.T + Tre.S), false)
@@ -1030,6 +1037,9 @@ func _dock_bg(ci: Box, dr: Rect2) -> void:   # .khdock: nền 247,234,208, bo 2 
 # ô hình .khdic của Kho: 30x30 nền trắng bo 10
 func _dic(ci: Box, p: Vector2, fid: String, dark := false) -> void:
 	A.fbox(ci, Rect2(p, Vector2(30, 30)), 10, [[0.0, Color.WHITE], [1.0, Color.WHITE]], [[1.0, A._c(150, 112, 48, .22)]])
+	if fid.begins_with("@"):
+		A.pic(ci, fid.substr(1), Rect2(p + Vector2(3, 3), Vector2(24, 24)), Color(.5, .5, .5, .45) if dark else Color.WHITE)
+		return
 	var t: Texture2D = A.img(fid)
 	if t != null:
 		A.fit(ci, t, Rect2(p + Vector2(2, 3), Vector2(26, 24)), Color(0, 0, 0, .3) if dark else Color.WHITE)
@@ -1183,7 +1193,7 @@ func _rar_col(r: int) -> Color:
 	return Color(0, 0, 0, 0)
 
 # một ô cá: hình, tên (tối đa 2 dòng), dòng dưới (giá / cân nặng); viền màu độ hiếm, đang chọn viền xanh
-func _tile(ci, r: Rect2, fid: String, name: String, low: String, low_col: Color, coin: bool, rar: int, sel: bool, dark: bool, id: String, tap: Callable) -> void:
+func _tile(ci, r: Rect2, fid: String, name: String, low: String, low_col: Color, coin: bool, rar: int, sel: bool, dark: bool, id: String, tap: Callable, badge := false) -> void:
 	if ci == null:
 		return
 	var dn: bool = ci.pressed(id)
@@ -1195,9 +1205,17 @@ func _tile(ci, r: Rect2, fid: String, name: String, low: String, low_col: Color,
 		A.fbox(ci, rr, 12, [[0.0, A._c(255, 252, 244)], [1.0, A._c(247, 236, 212) if rar < 4 else A._c(252, 238, 196)]], [[2.0, bc]], [2.0, Color(1, 1, 1, .85)], [], [] if dn else [[0, 2, 0, Color(bc, .45)], [0, 3, 5, A._c(90, 60, 20, .1)]])
 	else:
 		A.card(ci, rr, false, 12)
-	var t: Texture2D = A.img(fid)
-	if t != null:
-		A.fit(ci, t, Rect2(rr.position.x + 5, rr.position.y + 6, rr.size.x - 10, 34), Color(0, 0, 0, .28) if dark else Color.WHITE)
+	var pr := Rect2(rr.position.x + 5, rr.position.y + 6, rr.size.x - 10, 34)
+	if fid.begins_with("@"):
+		A.pic(ci, fid.substr(1), pr, Color(.5, .5, .5, .45) if dark else Color.WHITE)
+	else:
+		var t: Texture2D = A.img(fid)
+		if t != null:
+			A.fit(ci, t, pr, Color(0, 0, 0, .28) if dark else Color.WHITE)
+	if badge:   # dấu tích xanh góc phải trên (mồi đang móc)
+		var bcen := Vector2(rr.end.x - 9, rr.position.y + 9)
+		ci.draw_circle(bcen, 7, A.F_GREEN)
+		ci.draw_polyline(PackedVector2Array([bcen + Vector2(-3.2, 0), bcen + Vector2(-.8, 2.6), bcen + Vector2(3.4, -2.6)]), Color.WHITE, 1.8, true)
 	var lines := A.wrap(name, 14, 500, rr.size.x - 8)
 	if lines.size() > 2:
 		lines = [lines[0], " ".join(lines.slice(1))]
@@ -1353,173 +1371,179 @@ func take_fish(need: Dictionary) -> void:
 				S.basket.remove_at(best)
 
 # ------------------------------------------------------------ chợ: mồi + đổi đồ
+# ------------------------------------------------------------ chợ (= Kho: lưới ô 4 ô/hàng, chạm ô xem + mua/đổi ở dock đáy)
+func _shop_cur() -> String:   # ô đang chọn; mặc định: mồi đang móc / món đồ nghề đầu tiên
+	if _ssel != "":
+		return _ssel
+	return game.S.bait if _mod.get("arg") == "bait" else D.GEAR_KEYS[0]
+
 func _b_shop(ci, w: float, y: float) -> float:
 	var S: Dictionary = game.S
-	if _mod.arg == "bait":
-		var soon := []
-		for k in D.BAIT_ORDER:
+	var sel := _shop_cur()
+	var keys: Array = D.BAIT_ORDER if _mod.arg == "bait" else D.GEAR_KEYS
+	for i in keys.size():
+		var k: String = keys[i]
+		var r := Rect2(14.0 + (i % 4) * (TILE_W + TILE_GAP), y + int(i / 4) * (TILE_H + 6), TILE_W, TILE_H)
+		var kk := k
+		var tap := func():
+			game.snd.ui()
+			_ssel = kk
+			_open("shop", _mod.arg)
+		if _mod.arg == "bait":
 			var b: Dictionary = D.BAIT[k]
-			if b.lv > S.lv:
-				soon.append(k)
-				continue
-			var cur: bool = S.bait == k
-			var have: String = "∞" if k == "trun" else str(int(S.baits.get(k, 0)))
-			var acts := []   # [lab, kind, id, fn, disabled, ic]  hoặc "hook"
-			if not cur and (k == "trun" or int(S.baits.get(k, 0)) > 0):
-				var kk: String = k
-				acts.append(["Móc mồi", "alt", "use" + k, func():
-					S.bait = kk
+			var lock: bool = b.lv > S.lv
+			var low: String = ("Cấp %d" % b.lv) if lock else ("Vô hạn" if k == "trun" else "Có %d" % int(S.baits.get(k, 0)))
+			_tile(ci, r, "@" + k, b.name, low, A.SMALL2 if lock else A.F_BROWN, false, 0, sel == k, lock, "s" + k, tap, S.bait == k)
+		else:
+			var list: Array = D.gear(k)
+			var cur: int = S[k]
+			var st := "Xịn nhất"
+			var col := A.F_GREEN
+			if cur + 1 < list.size():
+				var nx: Dictionary = list[cur + 1]
+				var ok: bool = S.xu >= nx.price and (not nx.has("need") or has_fish(nx.need))
+				st = "Đổi được" if ok else "Chưa đủ"
+				col = A.F_GREEN if ok else A.SMALL2
+			_tile(ci, r, "@" + k, list[cur].name, st, col, false, 0, sel == k, false, "s" + k, tap)
+	var rows := int(ceil(keys.size() / 4.0))
+	return y + rows * (TILE_H + 6)
+
+# dock Chợ: hàng 1 ô hình 30 + tên; mô tả; hàng chip giá/cá (đồ nghề); hàng cuối lời nhắc trái + nút phải (cỡ .kdsell 27 cao)
+# ci == null: chỉ đo, trả về chiều cao dock
+func _shop_dock(ci, r: Rect2) -> float:
+	var S: Dictionary = game.S
+	var k := _shop_cur()
+	var x0 := r.position.x + KX
+	var title := ""
+	var sub := ""
+	var desc := ""
+	var chips := []
+	var hint := ""
+	var hint_bad := false
+	var btns := []   # [lab, kind, id, tap, disabled, ic]
+	if _mod.get("arg") == "bait":
+		var b: Dictionary = D.BAIT[k]
+		title = b.name
+		desc = b.desc
+		if b.lv > S.lv:
+			hint = "Lên cấp %d mới mở" % b.lv
+			hint_bad = true
+		else:
+			sub = " · " + ("vô hạn" if k == "trun" else "có %d" % int(S.baits.get(k, 0)))
+			hint = ("Đang có %d xu" % S.xu) if b.pack else ""
+			if S.bait == k:
+				btns.append(["Đang móc", "", "hook", Callable(), true, ""])
+			elif k == "trun" or int(S.baits.get(k, 0)) > 0:
+				btns.append(["Móc mồi", "alt", "use" + k, func():
+					S.bait = k
 					game.snd.ui()
 					hud_dirty()
-					close_modal()
-					toast("Móc " + D.BAIT[kk].name, "info"), false, ""])
-			elif cur:
-				acts.append("hook")
+					toast("Móc " + D.BAIT[k].name, "info")
+					_open("shop", "bait"), false, ""])
 			if b.pack:
-				var kk: String = k
-				acts.append(["Mua %d · @%d" % [b.pack, b.price], "gold", "buy" + k, func():
-					var it: Dictionary = D.BAIT[kk]
+				btns.append(["Mua %d · @%d" % [b.pack, b.price], "gold", "buy" + k, func():
+					var it: Dictionary = D.BAIT[k]
 					if S.xu < it.price:
 						return
 					S.xu -= it.price
-					S.baits[kk] = int(S.baits.get(kk, 0)) + it.pack
+					S.baits[k] = int(S.baits.get(k, 0)) + it.pack
 					game.snd.coin(0)
 					if S.bait == "trun":
-						S.bait = kk
+						S.bait = k
 					hud_dirty()
 					_open("shop", "bait"), S.xu < b.price, "coin"])
-			var aw := 0.0
-			for a in acts:
-				aw = maxf(aw, A.tw("Đang móc", 13) + 20 if a is String else btn_w(a[0], a[5]))
-			var tx := 14 + 8 + 72 + 10
-			var txw := w - (tx - 14) - 8 - aw - 10
-			var dl := A.wrap(b.desc, 13, 600, txw)
-			var th := 15 * 1.15 + dl.size() * 13 * 1.2 + 13 * 1.25 + 4
-			var ah := acts.size() * 38 + (acts.size() - 1) * 6
-			var rh := maxf(maxf(58, th + 14), ah + 14)
-			var r := Rect2(14, y, w, rh)
-			_row(ci, r, cur)
-			_th(ci, Rect2(r.position.x + 8, r.get_center().y - 23, 72, 46), "", k)
-			var yy := r.get_center().y - th / 2 + 15 * .58
-			_t(ci, b.name, tx, yy, 15, A.INK)
-			yy += 15 * .6 + 13 * .6 + 2
-			for ln in dl:
-				_t(ci, ln, tx, yy, 13, A.SMALL, 0, 600)
-				yy += 13 * 1.2
-			_t(ci, "Đang có: ", tx, yy, 13, A.SMALL, 0, 600)
-			_t(ci, have, tx + A.tw("Đang có: ", 13, 600), yy, 13, A.INK, 0, 800)
-			var ay := r.get_center().y - ah / 2
-			for a in acts:
-				var ar := Rect2(r.end.x - 8 - aw, ay, aw, 38)
-				if a is String:
-					if ci != null:
-						var rr := Rect2(ar.position - Vector2(0, _sc(ci)), Vector2(aw, 30))
-						rr.position.y += 4
-						A.fbox(ci, rr, 10, [[0.0, A._c(222, 240, 204)], [1.0, A._c(206, 232, 184)]], [[1.0, A._c(63, 116, 41, .5)]], [2.0, Color(1, 1, 1, .6)])
-						A.text(ci, "Đang móc", rr.get_center().x, rr.get_center().y, 13, A.F_GREEN, 1, 800)
-				else:
-					_bt(ci, ar, a[0], a[1], a[2], a[3], a[4], a[5])
-				ay += 44
-			y += rh + 7
-		if soon.size():
-			var cols := maxi(1, int(floor((w - 16 + 6) / (92 + 6))))
-			var cw := (w - 16 - (cols - 1) * 6) / cols
-			var rows := int(ceil(soon.size() / float(cols)))
-			var h := 8 + 13 * 1.3 + 6 + rows * 84 + (rows - 1) * 6 + 8
-			if ci != null:
-				var rr := Rect2(14, y - _sc(ci) + 4, w, h)
-				_dash_rect(ci, rr, 14, A._c(150, 112, 48, .45))
-			_t(ci, "Lên cấp mở thêm mồi", 14 + 10, y + 4 + 8 + 13 * .6, 13, A.SMALL2)
-			for i in soon.size():
-				var k: String = soon[i]
-				var cx := 14 + 8 + (i % cols) * (cw + 6)
-				var cy := y + 4 + 8 + 13 * 1.3 + 6 + int(i / cols) * 90
-				if ci != null:
-					var rr := Rect2(cx, cy - _sc(ci), cw, 84)
-					A.fbox(ci, rr, 12, [[0.0, A._c(250, 243, 226)], [1.0, A._c(243, 233, 208)]], [[1.0, A._c(150, 112, 48, .18)]])
-					A.pic(ci, k, Rect2(rr.get_center().x - 20, rr.position.y + 6, 40, 40), Color(.5, .5, .5, .45))
-				_t(ci, D.BAIT[k].name, cx + cw / 2, cy + 6 + 40 + 9, 12, Color("#6a4a24"), 1)
-				_t(ci, "Cấp %d" % D.BAIT[k].lv, cx + cw / 2, cy + 6 + 40 + 9 + 15, 11, Color("#a08050"), 1)
-			y += h + 8
-		return y
-	# đổi đồ nghề
-	for k in D.GEAR_KEYS:
+	else:
 		var list: Array = D.gear(k)
 		var cur: int = S[k]
-		var tx := 14 + 8 + 72 + 10
-		var txw := w - (tx - 14) - 8
 		if cur + 1 >= list.size():
-			var r := Rect2(14, y, w, 64)
-			_row(ci, r)
-			_th(ci, Rect2(r.position.x + 8, r.get_center().y - 23, 72, 46), "", k)
-			_t(ci, D.GEAR_NAME[k], tx, r.position.y + 14, 13, A.SMALL, 0, 600)
-			_t(ci, list[cur].name, tx, r.position.y + 32, 16, A.INK)
-			_t(ci, "Đồ xịn nhất rồi!", tx, r.position.y + 50, 13, A.SMALL, 0, 600)
-			y += 64 + 7
-			continue
-		var nx: Dictionary = list[cur + 1]
-		var ok_xu: bool = S.xu >= nx.price
-		var ok_f: bool = not nx.has("need") or has_fish(nx.need)
-		var dl := A.wrap(nx.desc, 13, 600, txw)
-		if dl.size() > 2:
-			dl = dl.slice(0, 2)
-			dl[1] = dl[1] + "…"
-		var chips := [[str(nx.price), ok_xu, "", "coin"]]
-		if nx.has("need"):
-			chips.append_array(_need_chips(nx.need))
-		var ch_h := _chips(null, tx, 0, txw, chips)
-		var c1: String = list[cur].name + " "
-		# tên cũ → tên mới: không vừa 1 dòng thì "→ tên mới" xuống dòng 2 (Link 11-23 "Phao lông công tràn mép")
-		var two := A.tw(c1 + "→ " + nx.name, 16) > txw
-		var rh := 6 + 13 * 1.25 + 16 * 1.3 * (2 if two else 1) + dl.size() * 13 * 1.2 + 3 + ch_h + 6 + 38 + 8
-		var r := Rect2(14, y, w, rh)
-		_row(ci, r)
-		_th(ci, Rect2(r.position.x + 8, r.position.y + 8, 72, 46), "", k)
-		var yy := r.position.y + 6 + 13 * .62
-		_t(ci, D.GEAR_NAME[k], tx, yy, 13, A.SMALL, 0, 600)
-		yy += 13 * .62 + 16 * .65
-		_t(ci, c1, tx, yy, 16, A.INK)
-		var ax := tx + A.tw(c1, 16)
-		if two:
-			yy += 16 * 1.3
-			ax = tx
-		_t(ci, "→ ", ax, yy, 16, A.BRICK)
-		ax += A.tw("→ ", 16)
-		_t(ci, nx.name, ax, yy, 16, Color("#2a5a12"))
-		yy += 16 * .65 + 13 * .6
-		for ln in dl:
-			_t(ci, ln, tx, yy, 13, A.SMALL, 0, 600)
-			yy += 13 * 1.2
-		var cy := _chips(ci, tx, yy - 13 * .6 + 3, txw, chips)
-		var ay := cy + 6
-		if ok_xu and ok_f:
-			var kk: String = k
-			_bt(ci, Rect2(tx, ay, btn_w("Đổi"), 38), "Đổi", "", "up" + k, func():
-				var nn: Dictionary = D.gear(kk)[S[kk] + 1]
+			title = list[cur].name
+			desc = list[cur].desc
+			hint = D.GEAR_NAME[k] + " xịn nhất rồi"
+		else:
+			var nx: Dictionary = list[cur + 1]
+			title = list[cur].name + " → " + nx.name
+			desc = nx.desc
+			var ok_xu: bool = S.xu >= nx.price
+			var ok_f: bool = not nx.has("need") or has_fish(nx.need)
+			chips = [[str(nx.price), ok_xu, "", "coin"]]
+			if nx.has("need"):
+				chips.append_array(_need_chips(nx.need))
+			if not ok_xu:
+				hint = "Còn thiếu %d xu" % (nx.price - S.xu)
+				hint_bad = true
+			elif not ok_f:
+				hint = "Câu thêm cá cho đủ"
+				hint_bad = true
+			else:
+				hint = "Đủ rồi, đổi thôi"
+			btns.append(["Đổi", "", "up" + k, func():
+				var nn: Dictionary = D.gear(k)[S[k] + 1]
 				if S.xu < nn.price or (nn.has("need") and not has_fish(nn.need)):
 					return
 				S.xu -= nn.price
 				if nn.has("need"):
 					take_fish(nn.need)
-				S[kk] += 1
+				S[k] += 1
 				game.snd.fanfare(3)
 				toast("Đổi được " + nn.name + "!", "good")
 				hud_dirty()
 				game.save(true)
-				_open("shop", "gear"))
+				_open("shop", "gear"), not (ok_xu and ok_f), ""])
+	# đo
+	var tl := A.wrap(title, 14, 800, KCW - 37.5)
+	var dl := A.wrap(desc, 14, 500, KCW)
+	var ch_h := 0.0
+	if chips.size():
+		ch_h = _chips(null, 0, 0, KCW, chips) + 8
+	var bw := 0.0
+	for bt in btns:
+		bw += btn_w(bt[0], bt[5]) + 6
+	# lời nhắc nằm trái hàng nút; không đủ chỗ (2 nút) thì lên một dòng riêng phía trên
+	var hl := A.wrap(hint, 14, 500, KCW) if hint != "" else []
+	var own := hl.size() > 0 and (hl.size() > 1 or A.tw(hint, 14, 500) > KCW - bw - 8)
+	var head := maxf(30, tl.size() * 18)
+	var h: float = 10.5 + head + 8 + dl.size() * 18 + 4 + ch_h + (hl.size() * 18 + 4 if own else 0.0) + 27 + 24
+	if ci == null:
+		return h
+	var dr := _dock_rect(r, h)
+	_dock_bg(ci, dr)
+	var y := dr.position.y + 10.5
+	_dic(ci, Vector2(x0, y), "@" + k)
+	var ty := y + 15 - (tl.size() - 1) * 9
+	for i in tl.size():
+		A.text(ci, tl[i], x0 + 37.5, ty, 14, A.F_INK, 0, 800)
+		if i == tl.size() - 1 and sub != "":
+			A.text(ci, sub, x0 + 37.5 + A.tw(tl[i], 14, 800), ty, 14, A._c(154, 122, 72), 0, 500)
+		ty += 18
+	y += head + 8
+	for ln in dl:
+		A.text(ci, ln, x0, y + 9, 14, A.F_BROWN, 0, 500)
+		y += 18
+	y += 4
+	if chips.size():
+		# chip nằm trong lớp bảng (không cuộn): vẽ bằng _chip với ci = bảng, cuộn = 0
+		_chips(ci, x0, y, KCW, chips)
+		y += ch_h
+	if own:
+		for i in hl.size():
+			A.text(ci, hl[i], x0, y + 9 + i * 18, 14, A.F_RED if hint_bad else A._c(122, 114, 98), 0, 500)
+		y += hl.size() * 18 + 4
+		hl = []
+	var by := y
+	var bx := x0 + KCW
+	for i in range(btns.size() - 1, -1, -1):
+		var bt: Array = btns[i]
+		var ww := btn_w(bt[0], bt[5])
+		bx -= ww
+		var br := Rect2(bx, by, ww, 27)
+		if bt[4]:
+			btn(ci, br, bt[0], bt[1], false, true, bt[5])
 		else:
-			var lab: String = ("Còn thiếu %d xu" % (nx.price - S.xu)) if not ok_xu else "Câu thêm cá"
-			if ci != null:
-				var lr := Rect2(tx, ay + 4 - _sc(ci), A.tw(lab, 12) + 24, 28)
-				A.box(ci, lr, A._c(245, 232, 200), 10)
-				_dash_rect(ci, lr, 10, A._c(150, 112, 48, .5))
-				A.text(ci, lab, lr.get_center().x, lr.get_center().y, 12, A.SMALL, 1, 800)
-		y += rh + 7
-	var yy := y + 6
-	for ln in A.wrap("Đồ nghề đổi bằng xu cộng cá trong giỏ. Cá hiếm nhớ để dành, đừng bán vội!", 14, 600, w - 12):
-		_t(ci, ln, 14 + w / 2, yy + 9, 14, A.SMALL2, 1, 600)
-		yy += 18
-	return yy + 6
+			_mbt(ci, br, bt[0], bt[1], bt[2], bt[3], bt[5])
+		bx -= 6
+	for i in hl.size():
+		A.text(ci, hl[i], x0, by + 13.5 + i * 18, 14, A.F_RED if hint_bad else A._c(122, 114, 98), 0, 500)
+	return h
 
 func _dash_rect(ci: CanvasItem, r: Rect2, rad: float, col: Color) -> void:
 	var pts := A.rrect_pts(r, rad, 6)
