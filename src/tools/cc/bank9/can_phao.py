@@ -46,130 +46,254 @@ def finish(col, a, name, edge=None):
     im.save(os.path.join(OUT, name + '.png'))
     return im
 
-# ============================================================ CẦN TRÚC
-def rod():
-    LEN, R0, R1 = 240.0, 3.6, 1.0           # dài, bán kính cán, bán kính ngọn (đơn vị)
-    PADY = 1.0
+# ============================================================ 4 CẤP CẦN
+# trúc (ông nội) -> tre già ám khói -> câu lục 3 khúc sơn mài khâu đồng -> cần ông Năm gỗ mun chỉ vàng. To dần theo cấp.
+RODS = [
+    dict(name='can0', R0=3.6, R1=1.0, body='truc', grip='gai', cap='cut', guides=0),
+    dict(name='can1', R0=3.9, R1=1.1, body='tre', grip='may', cap='cut', guides=0),
+    dict(name='can2', R0=4.1, R1=1.05, body='lac', grip='da', cap='brass', guides=5),
+    dict(name='can3', R0=4.4, R1=1.15, body='mun', grip='to', cap='brass', guides=6),
+]
+def band_mask(X, xs, half):
+    m = np.zeros_like(X, bool)
+    for x in xs:
+        m |= np.abs(X - x) < half
+    return m
+
+def rod(cf):
+    LEN, R0, R1 = 240.0, cf['R0'], cf['R1']
+    body = cf['body']
+    PADY = 1.6
     W = int(LEN * PX) * SS; H = int((R0 + .5 + PADY) * 2 * PX) * SS
-    xs = (np.arange(W) + .5) / SS / PX      # đơn vị
+    xs = (np.arange(W) + .5) / SS / PX
     ys = (np.arange(H) + .5) / SS / PX - (R0 + .5 + PADY)
     X, Y = np.meshgrid(xs, ys)
     s = X / LEN
     r = R1 + (R0 - R1) * (1 - np.power(s, .8))
-    # đốt trúc: khoảng cách đốt dài dần về ngọn
-    nodes = []; p = 34.0; seg = 15.0
-    while p < LEN - 6:
-        nodes.append(p); seg *= 1.1; p += seg
-    nodes = np.array(nodes)
-    dn = np.min(np.abs(X[..., None] - nodes[None, None, :]), axis=2)       # khoảng tới đốt gần nhất
-    sn = np.min(np.where(X[..., None] - nodes[None, None, :] >= 0, X[..., None] - nodes[None, None, :], 99), axis=2)  # sau đốt (phía ngọn)
-    bump = np.exp(-(dn / .5) ** 2) * .22 * (r / R0 + .4)
-    GRIP = 30.0
+    GRIP = 30.0 if body != 'mun' else 34.0
+    rr = r.copy()
+    nodes = np.array([])
+    if body in ('truc', 'tre'):
+        nl = []
+        p, seg, gr = (34.0, 15.0, 1.1) if body == 'truc' else (40.0, 22.0, 1.12)
+        while p < LEN - 6:
+            nl.append(p); seg *= gr; p += seg
+        nodes = np.array(nl)
+        dn = np.min(np.abs(X[..., None] - nodes[None, None, :]), axis=2)
+        sn = np.min(np.where(X[..., None] - nodes[None, None, :] >= 0, X[..., None] - nodes[None, None, :], 99), axis=2)
+        bw, bh = (.5, .22) if body == 'truc' else (.75, .36)
+        rr = rr + np.exp(-(dn / bw) ** 2) * bh * (r / R0 + .4)
+    ferr = [86.0, 163.0] if body == 'lac' else []
+    if ferr:
+        fm = band_mask(X, ferr, 1.4)
+        rr = rr + np.where(fm, .32, 0)
+        # mỗi khúc trên nhỏ hơn khúc dưới một nấc
+        for f in ferr:
+            rr = rr - np.where(X > f + 1.4, .12, 0)
+    gu = []
+    if cf['guides']:
+        gu = list(np.linspace(GRIP + 40, LEN - 12, cf['guides']))
     wrap = X < GRIP
-    rr = r + bump + np.where(wrap, .28, 0)
+    rr = rr + np.where(wrap, .3, 0)
+    capw = {'cut': 0.0, 'brass': 2.2 if body == 'lac' else 2.8}[cf['cap']]
+    if capw:
+        rr = np.where(X < capw, rr + .2, rr)
     v = Y / rr
-    a = np.clip((rr - np.abs(Y)) * PX * SS * .5 + .5, 0, 1)   # mép AA
-    # đầu cán cắt bằng, ngọn bo tròn
+    a = np.clip((rr - np.abs(Y)) * PX * SS * .5 + .5, 0, 1)
     a *= np.clip((X - .3) * PX * SS * .5 + .5, 0, 1)
     tipx = LEN - R1 * 1.2
-    a *= np.where(X > tipx, np.clip((R1 * 1.2 - np.hypot(X - tipx, Y) * 1.0) * PX * SS * .5 + .5, 0, 1), 1)
-    nz, vv = shade_cyl(v)
-    n = np.dstack([np.zeros_like(v), vv, nz])
+    a *= np.where(X > tipx, np.clip((R1 * 1.2 - np.hypot(X - tipx, Y)) * PX * SS * .5 + .5, 0, 1), 1)
+    nz = np.sqrt(np.maximum(0, 1 - np.clip(v, -1, 1) ** 2))
+    n = np.dstack([np.zeros_like(v), np.clip(v, -1, 1), nz])
     dif = np.clip(n @ LIGHT, 0, 1)
-    # màu trúc khô: vàng rơm, sẫm dần về ngọn (hơ lửa), đốt nâu, vòng phấn trắng ngay dưới đốt
-    base = hexc('#d9b874'); tipc = hexc('#9a6a34'); nodec = hexc('#8a5a2a'); waxc = hexc('#efe2b8')
-    t_tip = np.clip((s - .62) / .38, 0, 1) ** 1.5
-    col = base * (1 - t_tip[..., None]) + tipc * t_tip[..., None]
-    # thớ dọc mảnh
     fib = rng_noise(H, 3, max(2, SS * 2))[:, None] * .5 + rng_noise(H, 9, SS * 6)[:, None] * .5
     fib = fib * (.7 + .3 * np.sin(X * .37 + Y * 2))
-    col = col * (1 + fib[..., None] * .07)
-    # loang nhẹ theo chiều dài (vết khói, nắng)
     blot = rng_noise(W, 5, SS * 90)[None, :]
-    col = col * (1 + blot[..., None] * .06)
-    wax = np.exp(-((sn - 1.1) / .7) ** 2) * (sn < 3)
-    col = col * (1 - wax[..., None] * .5) + waxc * wax[..., None] * .5
-    node = np.exp(-(dn / .32) ** 2)
-    col = col * (1 - node[..., None] * .75) + nodec * node[..., None] * .75
-    # cán quấn dây gai: từng vòng dây xéo, rãnh giữa các vòng tối
-    pitch = .9
-    ph = (X / pitch + np.arcsin(np.clip(v, -1, 1)) / np.pi * 1.4) % 1.0
-    groove = np.clip(np.abs(ph - .5) * 2, 0, 1) ** 3
-    cord = hexc('#a06a3c') * (1 - .12 * np.sin(X * 1.3)[..., None])
-    cordc = cord * (1 - .45 * groove[..., None])
-    wrap_s = wrap & (X > .8)
-    col = np.where(wrap_s[..., None], cordc, col)
-    # 2 vòng buộc chặn ở 2 đầu cán quấn
-    band = (np.abs(X - GRIP + .6) < .55) | (np.abs(X - 1.4) < .6)
-    col = np.where(band[..., None], hexc('#5a3a1e') * (1 + .15 * np.sin(Y * 9))[..., None], col)
-    # đầu cán: mặt cắt gỗ tối
-    col = np.where((X < 1.0)[..., None], col * .7, col)
-    # khoen ngọn (dây thép nhỏ)
+    spec = np.zeros_like(X)
+    if body == 'truc':
+        base = hexc('#d9b874'); tipc = hexc('#9a6a34'); nodec = hexc('#8a5a2a'); waxc = hexc('#efe2b8')
+        t_tip = np.clip((s - .62) / .38, 0, 1) ** 1.5
+        col = base * (1 - t_tip[..., None]) + tipc * t_tip[..., None]
+        col = col * (1 + fib[..., None] * .07) * (1 + blot[..., None] * .06)
+        wax = np.exp(-((sn - 1.1) / .7) ** 2) * (sn < 3)
+        col = col * (1 - wax[..., None] * .5) + waxc * wax[..., None] * .5
+        node = np.exp(-(dn / .32) ** 2)
+        col = col * (1 - node[..., None] * .75) + nodec * node[..., None] * .75
+    elif body == 'tre':
+        # tre già ám khói: nâu mật, loang khói đậm, vệt cháy xém quanh đốt, đốt to
+        base = hexc('#9a6434'); tipc = hexc('#5e3818'); nodec = hexc('#3e220e')
+        t_tip = np.clip((s - .55) / .45, 0, 1) ** 1.3
+        col = base * (1 - t_tip[..., None]) + tipc * t_tip[..., None]
+        smoke = rng_noise(W, 11, SS * 40)[None, :] * .6 + rng_noise(W, 17, SS * 9)[None, :] * .4
+        col = col * (1 + fib[..., None] * .09) * (1 + smoke[..., None] * .16)
+        scorch = np.exp(-(dn / 2.2) ** 2) * .35
+        col = col * (1 - scorch[..., None])
+        node = np.exp(-(dn / .45) ** 2)
+        col = col * (1 - node[..., None] * .8) + nodec * node[..., None] * .8
+        # sẹo mắt tre lác đác
+        for kx in nodes[1::2]:
+            m = np.hypot((X - kx - 1.6) / 1.1, (Y - rr * .25) / .55) < 1
+            col = np.where(m[..., None], col * .62, col)
+    elif body == 'lac':
+        # sơn mài nâu đỏ, mỗi khúc 1 sắc hơi khác; khâu đồng ở 2 chỗ ráp
+        base = hexc('#8a3020')
+        seg = (X > ferr[0]).astype(np.float32) + (X > ferr[1]).astype(np.float32)
+        col = base * (1 - .06 * seg)[..., None]
+        col = col * (1 + fib[..., None] * .025) * (1 + blot[..., None] * .03)
+        spec = np.exp(-((v + .45) / .18) ** 2) * .22
+        brass = hexc('#c99a42')
+        fmv = band_mask(X, ferr, 1.4)
+        col = np.where(fmv[..., None], brass, col)
+        edge = band_mask(X, [f - 1.25 for f in ferr] + [f + 1.25 for f in ferr], .16)
+        col = np.where(edge[..., None], brass * .55, col)
+        spec = np.where(fmv, np.exp(-((v + .4) / .25) ** 2) * .5, spec)
+        # chỉ quấn mảnh ở chân khâu
+        th = band_mask(X, [f - 2.4 for f in ferr] + [f + 2.4 for f in ferr], .45)
+        col = np.where(th[..., None], hexc('#e8d090') * (1 - .25 * ((X * 7) % 1 < .4))[..., None], col)
+    else:  # mun
+        base = hexc('#2e2622')
+        grain = np.sin(Y * 5 + rng_noise(W, 23, SS * 30)[None, :] * 3) * .5 + .5
+        col = base * (1 + (grain * .22 - .08)[..., None]) * (1 + fib[..., None] * .05)
+        spec = np.exp(-((v + .45) / .2) ** 2) * .16
+        # chỉ vàng quấn từng đoạn: mỗi đoạn 3 vòng mảnh
+        gx = list(np.linspace(GRIP + 14, LEN - 30, 7))
+        gold = hexc('#dcb24a')
+        for g in gx:
+            for o, w in ((-1.0, .28), (0, .55), (1.0, .28)):
+                m = np.abs(X - g - o) < w
+                col = np.where(m[..., None], gold * (1 - .2 * ((X * 9 + v * 2) % 1 < .35))[..., None], col)
+                spec = np.where(m, np.exp(-((v + .4) / .3) ** 2) * .35, spec)
+    # cán
+    if cf['grip'] == 'gai':
+        pitch, cc, gd = .9, hexc('#a06a3c'), .45
+    elif cf['grip'] == 'may':
+        pitch, cc, gd = 1.7, hexc('#d2a45e'), .5
+    elif cf['grip'] == 'da':
+        pitch, cc, gd = 0, hexc('#6e3e22'), 0
+    else:
+        pitch, cc, gd = .7, hexc('#2a1814'), .5
+    wrap_s = wrap & (X > max(.8, capw))
+    if pitch:
+        ph = (X / pitch + np.arcsin(np.clip(v, -1, 1)) / np.pi * 1.4) % 1.0
+        groove = np.clip(np.abs(ph - .5) * 2, 0, 1) ** 3
+        gc = cc * (1 - .12 * np.sin(X * 1.3)[..., None]) * (1 - gd * groove[..., None])
+        if cf['grip'] == 'may':      # mây: nan dẹt bóng nhẹ, mép nan sẫm
+            gc = gc * (1 + .1 * np.cos(ph * np.pi * 2)[..., None])
+    else:                            # da: mịn, nếp nhăn nhẹ, 2 đường chỉ khâu dọc
+        wr = rng_noise(W, 31, SS * 4)[None, :] * rng_noise(H, 37, SS * 3)[:, None]
+        gc = cc * (1 + wr[..., None] * .1)
+        st = (np.abs(v - .05) < .07) & ((X * 1.4) % 1 < .55)
+        gc = np.where(st[..., None], hexc('#e0c890'), gc)
+    col = np.where(wrap_s[..., None], gc, col)
+    bandc = {'gai': '#5a3a1e', 'may': '#7a4a22', 'da': '#c99a42', 'to': '#dcb24a'}[cf['grip']]
+    band = (np.abs(X - GRIP + .6) < .55) | ((np.abs(X - max(1.4, capw + .6)) < .6))
+    col = np.where(band[..., None], hexc(bandc) * (1 + .15 * np.sin(Y * 9))[..., None], col)
+    if cf['grip'] in ('da', 'to'):
+        spec = np.where(band, np.exp(-((v + .4) / .3) ** 2) * .4, spec)
+    if capw:
+        cm = X < capw
+        col = np.where(cm[..., None], hexc('#c99a42'), col)
+        spec = np.where(cm, np.exp(-((v + .4) / .25) ** 2) * .5, spec)
+        col = np.where((np.abs(X - capw + .15) < .15)[..., None], hexc('#7a5a22'), col)
+    else:
+        col = np.where((X < 1.0)[..., None], col * .7, col)
     ring = (np.abs(X - (LEN - 2.2)) < .35)
     col = np.where(ring[..., None], hexc('#3a3a3a'), col)
-    lightk = .34 + .82 * dif
-    lightk = lightk * (1 - .18 * np.clip(-v, 0, 1) ** 2)         # phía khuất tối hơn
-    out = col * lightk[..., None]
-    # viền mảnh = màu vật tối hơn
+    lightk = (.34 + .82 * dif) * (1 - .18 * np.clip(-v, 0, 1) ** 2)
+    out = col * lightk[..., None] + spec[..., None] * 255 * .55
     rpx = rr * PX * SS
     ed = np.clip((np.abs(Y) * PX * SS - (rpx - 1.3 * SS)) / (1.0 * SS), 0, 1)
     out = out * (1 - ed[..., None] * .6)
-    im = finish(out, a, 'can0')
+    # khoen dẫn dây: chân quấn chỉ + vòng thép thò xuống dưới cần
+    for g in gu:
+        rg = R1 + (R0 - R1) * (1 - (g / LEN) ** .8)
+        gr_ = .6 + rg * .1
+        cy = rg + .35 + gr_
+        ringm = np.abs(np.hypot(X - g, Y - cy) - gr_) < .2
+        foot = (np.abs(X - g) < .9) & (np.abs(Y) < rg + .1)
+        legs = (np.abs(X - g) < .16) & (Y > rg - .1) & (Y < cy - gr_ + .1)
+        mc = hexc('#9aa0a4') * (.7 + .5 * np.clip(-(Y - cy) / gr_, 0, 1))[..., None]
+        out = np.where(foot[..., None], (hexc('#e8d090') if body == 'mun' else hexc('#2a1a12')) * lightk[..., None], out)
+        out = np.where((ringm | legs)[..., None], mc, out)
+        a = np.maximum(a, (ringm | legs).astype(np.float32))
+    im = finish(out, a, cf['name'])
     return dict(w=im.width, h=im.height, len=LEN, r0=R0, r1=R1, grip=GRIP)
 
-# ============================================================ ỐNG CƯỚC GỖ (nhìn thẳng)
-def reel():
-    R = 8.0
+# ============================================================ 4 ỐNG CƯỚC (nhìn thẳng)
+REELS = [
+    dict(name='ongcuoc0', R=8.0, mat='wood', c1='#9a6436', c2='#6e4222', holes=4, knob='#5a361a', hub='#c9a24a'),
+    dict(name='ongcuoc1', R=8.4, mat='wood', c1='#6c4220', c2='#40240e', holes=4, knob='#2e1a0c', hub='#b08a3a'),
+    dict(name='ongcuoc2', R=7.2, mat='metal', c1='#b4b8ba', c2='#7c8286', holes=6, knob='#3a2a22', hub='#c9a24a'),
+    dict(name='ongcuoc3', R=9.6, mat='brass', c1='#d0a448', c2='#94702a', holes=5, knob='#33241a', hub='#e8dcc0'),
+]
+def reel(cf):
+    R = cf['R']
     N = int((R + 1) * 2 * PX) * SS
     c = (np.arange(N) + .5) / SS / PX - (R + 1)
     X, Y = np.meshgrid(c, c)
     rad = np.hypot(X, Y); ang = np.arctan2(Y, X)
     a = np.clip((R - rad) * PX * SS * .5 + .5, 0, 1)
-    # 4 lỗ hình hạt đậu giữa 4 nan
+    nh = cf['holes']
     hole = np.zeros_like(rad)
-    for k in range(4):
-        aa = ang - (k * np.pi / 2 + np.pi / 4)
+    for k in range(nh):
+        aa = ang - (k * 2 * np.pi / nh + np.pi / nh)
         aa = (aa + np.pi) % (2 * np.pi) - np.pi
-        hd = np.maximum(np.abs(rad - R * .56) - R * .16, np.abs(aa) * rad - R * .2)
+        if cf['mat'] == 'brass':      # lỗ tròn
+            hd = np.hypot(rad - R * .56, aa * rad) - R * .15
+        else:
+            hw_ = R * (.2 if nh == 4 else .13)
+            hd = np.maximum(np.abs(rad - R * .56) - R * .16, np.abs(aa) * rad - hw_)
         hole = np.maximum(hole, np.clip(-hd * PX * SS * .5 + .5, 0, 1))
     a = a * (1 - hole)
-    wood = hexc('#9a6436'); wood2 = hexc('#6e4222')
-    grain = np.sin(rad * 5.5 + np.sin(ang * 3) * .6) * .5 + .5
-    col = wood * (1 - grain[..., None] * .25) + wood2 * (grain[..., None] * .25)
-    # vành nổi + bậc lõm vào trong; trục đồng ở giữa
+    c1 = hexc(cf['c1']); c2 = hexc(cf['c2'])
+    if cf['mat'] == 'wood':
+        grain = np.sin(rad * 5.5 + np.sin(ang * 3) * .6) * .5 + .5
+        col = c1 * (1 - grain[..., None] * .25) + c2 * (grain[..., None] * .25)
+    else:                         # kim loại: vân xoay mảnh quanh tâm
+        brush = np.sin(rad * 22) * .5 + .5
+        col = c1 * (1 - .08 * brush[..., None])
     rim = np.clip((rad - R * .86) / (R * .14), 0, 1)
+    sr = np.sin(rim * np.pi / 2 * .9)
     nzr = np.where(rad > R * .86, np.cos(rim * np.pi / 2 * .9), 1)
-    nx = np.where(rad > R * .86, X / np.maximum(rad, 1e-3) * np.sin(rim * np.pi / 2 * .9), 0)
-    ny = np.where(rad > R * .86, Y / np.maximum(rad, 1e-3) * np.sin(rim * np.pi / 2 * .9), 0)
-    # thành lỗ: sáng/tối theo hướng
-    hed = np.clip(hole * (1 - hole) * 4, 0, 1)
+    nx = np.where(rad > R * .86, X / np.maximum(rad, 1e-3) * sr, 0)
+    ny = np.where(rad > R * .86, Y / np.maximum(rad, 1e-3) * sr, 0)
     dif = np.clip(nx * LIGHT[0] + ny * LIGHT[1] + nzr * LIGHT[2], 0, 1)
     lk = .5 + .62 * dif
     inner = (rad < R * .84) & (rad > R * .8)
     lk = np.where(inner, lk * .72, lk)
-    hub = rad < R * .2
-    hubc = hexc('#c9a24a') * (.8 + .4 * np.clip(-(X + Y) / (R * .2) * .7 + .3, 0, 1))[..., None]
+    spec = np.zeros_like(rad)
+    if cf['mat'] != 'wood':
+        # ánh mờ chéo trên mặt kim loại
+        spec = np.clip(np.cos((ang + 2.3) * 2), 0, 1) ** 6 * .25 * (rad < R * .84) + np.where(rad > R * .86, np.clip(-(nx + ny), 0, 1) * .35, 0)
+    hr = R * .2
+    hub = rad < hr
+    hubc = hexc(cf['hub']) * (.8 + .4 * np.clip(-(X + Y) / hr * .7 + .3, 0, 1))[..., None]
     col = np.where(hub[..., None], hubc, col)
-    hubr = np.abs(rad - R * .2) < .25
-    col = np.where(hubr[..., None], wood2 * .7, col)
-    # núm quay (góc 0, 0.7R)
+    col = np.where((np.abs(rad - hr) < .25)[..., None], c2 * .7, col)
+    if cf['mat'] == 'brass':     # 5 đinh tán quanh trục
+        for k in range(5):
+            q = k * 2 * np.pi / 5
+            m = np.hypot(X - np.cos(q) * R * .32, Y - np.sin(q) * R * .32) < .45
+            col = np.where(m[..., None], c2 * 1.25, col)
     kx, ky, kr = R * .7, 0.0, R * .17
     kd = np.hypot(X - kx, Y - ky)
     knob = kd < kr
     kn = np.sqrt(np.clip(1 - (kd / kr) ** 2, 0, 1))
     kdif = np.clip(((X - kx) / kr * LIGHT[0] + (Y - ky) / kr * LIGHT[1] + kn * LIGHT[2]), 0, 1)
-    col = np.where(knob[..., None], hexc('#5a361a') * (.55 + .8 * kdif)[..., None], col)
+    kc = hexc(cf['knob'])
+    if cf['mat'] == 'brass':      # núm sừng: vệt sáng hơn chạy dọc
+        kc = kc * (1 + .5 * np.clip(np.sin((X - kx) * 3.0 + (Y - ky) * 1.2), 0, 1))[..., None]
+    col = np.where(knob[..., None], kc * (.55 + .8 * kdif)[..., None], col)
     lk = np.where(knob, 1.0, lk)
-    out = col * lk[..., None]
-    # bóng đổ của núm xuống dưới-phải
+    spec = np.where(knob, 0, spec)
+    out = col * lk[..., None] + spec[..., None] * 255
     ksh = (np.hypot(X - kx - .5, Y - ky - .6) < kr) & ~knob
     out = np.where(ksh[..., None], out * .7, out)
-    # mép lỗ + mép ngoài viền tối
     ed = np.clip((rad * PX * SS - (R * PX * SS - 1.3 * SS)) / SS, 0, 1)
     out = out * (1 - ed[..., None] * .45)
     hedge = (hole > .02) & (hole < .98)
     out = np.where(hedge[..., None], out * .6, out)
-    im = finish(out, a, 'ongcuoc')
+    im = finish(out, a, cf['name'])
     return dict(w=im.width, h=im.height, r=R)
 
 # ============================================================ PHAO
@@ -244,7 +368,11 @@ def float_img(name, bands, bulb):
     im = finish(out, a, name)
     return dict(w=im.width, h=im.height, wl=round((HS + top_pad) * PX, 1), hs=HS * PX, hb=HB * PX, ws=WS * PX)
 
-meta = {'px': PX, 'can0': rod(), 'ongcuoc': reel()}
+meta = {'px': PX}
+for cf in RODS:
+    meta[cf['name']] = rod(cf)
+for cf in REELS:
+    meta[cf['name']] = reel(cf)
 for nm, bands, bulb in FLOATS:
     meta[nm] = float_img(nm, bands, bulb)
 json.dump(meta, open(os.path.join(OUT, 'can.json'), 'w'), indent=1)

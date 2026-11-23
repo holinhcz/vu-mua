@@ -375,13 +375,15 @@ func draw_line_q(ci: CanvasItem, p0: Vector2, p1: Vector2, sag: float, tod: Dict
 # hình phao ở (x,y) = điểm mặt nước, h = phần nổi; chìm sink, nghiêng tilt. Phần dưới nước mờ .22 (cắt theo mặt nước)
 # phao = ảnh 6px (ui/img/cc/can/phao0-2): cọng lông trên mặt nước, thân bấc dưới nước (mờ như thấy qua nước)
 var _can_meta := {}
-func draw_float_shape(ci: CanvasItem, x: float, y: float, h: float, sink: float, tilt: float, tod: Dictionary, flying: bool) -> void:
-	var kind: int = clampi(game.S.flo, 0, 2)
+func _can_m() -> Dictionary:
 	if _can_meta.is_empty():
 		var j = JSON.parse_string(FileAccess.get_file_as_string(A.DIR + "can/can.json"))
 		_can_meta = j if typeof(j) == TYPE_DICTIONARY else {"x": 1}
+	return _can_meta
+func draw_float_shape(ci: CanvasItem, x: float, y: float, h: float, sink: float, tilt: float, tod: Dictionary, flying: bool) -> void:
+	var kind: int = clampi(game.S.flo, 0, 2)
 	var nm := "phao%d" % kind
-	var m: Dictionary = _can_meta.get(nm, {})
+	var m: Dictionary = _can_m().get(nm, {})
 	var tx: Texture2D = A.img("can/" + nm)
 	if tx == null or m.is_empty():
 		return
@@ -545,7 +547,8 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 		P[i] = b * u * u + c * 2 * u * tt + t * tt * tt
 		if i > 0:
 			S += P[i].distance_to(P[i - 1])
-	var tx := _rod_tex(S)
+	var ri: int = clampi(int(game.S.rod), 0, 3)       # 4 cấp cần: trúc, tre già, câu lục, ông Năm
+	var tx := _rod_tex(S, ri)
 	if tx != null:
 		var hw := S * _rod_ar * .5
 		var pts := PackedVector2Array()
@@ -580,36 +583,40 @@ func draw_rod(ci: CanvasItem, tod: Dictionary) -> void:
 	var rc := rp + Vector2(-R * .4, -R * .9)
 	var hold_run: bool = G.state == "fight" and not G.hold and G.hook != null and G.hook.beh == "run"
 	G.reelA += (.35 if G.hold and G.state == "fight" else 0.0) - (.2 if hold_run else 0.0)
-	var rt: Texture2D = A.img("can/ongcuoc")
+	var rt: Texture2D = A.img("can/ongcuoc%d" % ri)
 	if rt != null:
-		var rs := R * 9.0 / 8.0
+		var rm: Dictionary = _can_m().get("ongcuoc%d" % ri, {"r": 8.0, "w": 108})
+		var rs := R * (float(rm.w) / 12.0) / 8.0      # ảnh: 6 px/đơn vị, nửa cạnh = w/2/6; ống cước 0 bán kính 8 = R
 		ci.draw_set_transform(rc, G.reelA)
 		ci.draw_texture_rect(rt, Rect2(-rs, -rs, rs * 2, rs * 2), false, mc)
 		ci.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # ảnh cần thu đúng số điểm ảnh máy theo độ dài trên màn (Lanczos 1 lần mỗi nấc 3%), vẽ 1:1 cho nét
-var _rod_src: Image = null
+var _rod_src := {}
 var _rod_ar := .034
 var _rod_t: Texture2D = null
-var _rod_k := -1
-func _rod_tex(S: float) -> Texture2D:
-	if _rod_src == null:
-		var bb := FileAccess.get_file_as_bytes(A.DIR + "can/can0.webp")
+var _rod_k := ""
+func _rod_tex(S: float, ri: int) -> Texture2D:
+	var nm := "can%d" % ri
+	if not _rod_src.has(nm):
+		var bb := FileAccess.get_file_as_bytes(A.DIR + "can/" + nm + ".webp")
 		var im := Image.new()
 		if bb.is_empty() or im.load_webp_from_buffer(bb) != OK:
 			return null
 		im.convert(Image.FORMAT_RGBA8)
 		im.fix_alpha_edges()
-		_rod_src = im
-		_rod_ar = float(im.get_height()) / float(im.get_width())
+		_rod_src[nm] = im
+	var src: Image = _rod_src[nm]
+	_rod_ar = float(src.get_height()) / float(src.get_width())
 	var K: float = game.K
 	var want := S * K
-	var key := int(round(log(maxf(want, 16.0)) / log(1.03)))
+	var q := int(round(log(maxf(want, 16.0)) / log(1.03)))
+	var key := "%s_%d" % [nm, q]
 	if key != _rod_k:
 		_rod_k = key
-		var w := maxi(16, int(round(pow(1.03, key))))
+		var w := maxi(16, int(round(pow(1.03, q))))
 		var h := maxi(4, int(round(w * _rod_ar)))
-		var im: Image = _rod_src.duplicate()
+		var im: Image = src.duplicate()
 		while im.get_width() > w * 2:
 			im.resize(im.get_width() / 2, im.get_height() / 2, Image.INTERPOLATE_CUBIC)
 		im.resize(w, h, Image.INTERPOLATE_LANCZOS)
