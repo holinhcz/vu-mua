@@ -885,6 +885,15 @@ func _lay_coach() -> void:
 	var body: String = COACH[step][1]
 	var w := minf(340.0, W - 32)
 	var x := (W - w) / 2
+	var c0p: Rect2 = g.L.cards[0]
+	# Link 11-23 (nhận xét 1): màn dọc thẻ nằm dưới cùng, ngang hàng thẻ "Bạn" (chỗ trống bên phải) hoặc đè lên thẻ Bạn, không che đầu quan + rổ
+	if port:
+		if W - c0p.end.x - 24 >= 300:
+			x = c0p.end.x + 12
+			w = minf(420.0, W - x - 12)
+		else:
+			x = 8
+			w = W - 16
 	var tl := wrapt(title, 19, 800, 800, w - 10 - 28)
 	var bl := wrapt(body, 15, 500, 500, w - 10 - 28)
 	var h := 5 + 12 + tl.size() * 19 * 1.15 + 4 + bl.size() * 15 * 1.4 + 12 + 5
@@ -897,10 +906,13 @@ func _lay_coach() -> void:
 	var L: Dictionary = g.L
 	var y := 0.0
 	if port:
-		var c0: Rect2 = L.cards[0]
-		y = c0.position.y - h - 12
+		y = c0p.end.y - h
 	else:
 		y = maxf(60.0, g.board_rect(0).position.y - h - 14)
+		# Link 11-23: rổ trên giờ nằm dưới hiên -> thẻ hướng dẫn né qua trái rổ
+		var b1: Vector3 = L.bx[1]
+		if y < b1.y + b1.z and y + h > b1.y - b1.z:
+			x = maxf(12.0, minf(x, b1.x - b1.z - 12 - w))
 	btn.position.y = y + h - 5 - 12 - btn.size.y
 	_coach.merge({"r": Rect2(x, y, w, h), "tl": tl, "bl": bl, "btn": btn})
 	if step == 2:
@@ -1040,6 +1052,12 @@ func _lay(id: String) -> void:
 		b.clip_contents = true
 	b.position = inner.position * K
 	b.size = inner.size * K
+	# Link 11-23 (nhận xét 9): màn ngang gần vuông (1000x860) bảng menu nhỏ so với màn -> phóng cả bảng lên
+	var ms := 1.0
+	if id == "menu" and not port and H > 1000:
+		ms = clampf(minf((H - 60) / (fr.size.y + 70), (W - 40) / fr.size.x), 1.0, 1.3)
+	o.pivot_offset = o.size / 2
+	o.scale = Vector2(ms, ms)
 	o.queue_redraw()
 	b.queue_redraw()
 

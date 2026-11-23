@@ -162,7 +162,7 @@ func _porch(L: Dictionary) -> void:
 	var W: float = L.W
 	var s: float = L.s
 	var top: float = g.board_rect(0).position.y
-	var ph := float(roundi(maxf(30.0, minf(s * 0.78, (top - 12) * (0.7 if L.port else 0.6)))))
+	var ph := float(roundi(minf(maxf(30.0, minf(s * 0.78, (top - 12) * (0.7 if L.port else 0.6))), L.get("porch_max", 1e9))))
 	L.porch = ph
 	var k := s * 0.6 * 2 / 512.0
 	var tx := -rng() * s
@@ -234,46 +234,21 @@ func _decor(L: Dictionary) -> void:
 		_grass(x, y, 18 + rng() * 26)
 	var CM := s / 33.0
 	# Link 11-23: màn ngang -> tàu dừa nằm góc dưới phải, bẹ ló ra ngoài mép màn, ngọn chĩa vô sân (đặt trước gà, lá khô)
+	# Link 11-23 (nhận xét 4): màn dọc rộng (768x1024, 860x1000) -> tàu dừa nằm sân trái, bẹ ló mép trái, cho sân trái đỡ trống
 	var corner_fr := false
+	var fl0 := minf(maxf(W, H) * 0.4, 95 * CM)
 	if not L.port:
-		var fl0 := minf(maxf(W, H) * 0.4, 95 * CM)
-		var corner_btn := Rect2(W - 190, H - 64, 190, 64)
-		var keep: Array = L.obst.filter(func(o): return o != corner_btn)   # lá nằm dưới đất, chồng dưới chỗ nút góc được
-		var bestc = null
-		var bsc := -1e9
-		for ang in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-			for bx in [0.08, 0.0, 0.16, -0.06]:
-				for by in [0.06, -0.04, 0.14, -0.12]:
-					var b0 := Vector2(W + fl0 * bx, H + fl0 * by)
-					var dir := Vector2(-cos(ang), -sin(ang))
-					var ok := true
-					var on := 0
-					for i in 12:
-						var t := 0.12 + i / 11.0 * 0.88
-						var p := b0 + dir * fl0 * t
-						if p.x > 0 and p.x < W and p.y > 0 and p.y < H:
-							on += 1
-						for o in keep:
-							var q: Rect2 = o
-							if q.grow(fl0 * 0.13).has_point(p):
-								ok = false
-								break
-						if not ok:
-							break
-					if not ok:
-						continue
-					var sc := on * 10.0 - absf(ang - 0.45) * 8 - absf(bx - 0.05) * 20 - absf(by) * 10
-					if sc > bsc:
-						bsc = sc
-						bestc = [b0, dir, ang]
-		if bestc != null:
-			var mid: Vector2 = bestc[0] + bestc[1] * fl0 * 0.5
-			_frond(mid.x, mid.y, fl0, bestc[2], 1)
-			corner_fr = true
-			for i in 8:
-				var p: Vector2 = bestc[0] + bestc[1] * fl0 * (0.1 + i * 0.1)
-				var r := fl0 * (0.17 - i * 0.012)   # lá ngắn dần về ngọn
-				L.obst.append(Rect2(p.x - r, p.y - r, r * 2, r * 2))
+		var bases := []
+		for bx in [0.08, 0.0, 0.16, -0.06]:
+			for by in [0.06, -0.04, 0.14, -0.12]:
+				bases.append([Vector2(W + fl0 * bx, H + fl0 * by), absf(bx - 0.05) * 20 + absf(by) * 10])
+		corner_fr = _corner_frond(L, fl0, bases, [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], 1, 0.45)
+	elif W >= 700:
+		var bases := []
+		for fy in [0.62, 0.55, 0.7, 0.48, 0.78]:
+			for bx in [-0.06, 0.0, -0.12]:
+				bases.append([Vector2(fl0 * bx, H * fy), absf(fy - 0.62) * 20 + absf(bx + 0.06) * 20])
+		corner_fr = _corner_frond(L, fl0, bases, [-0.35, -0.2, -0.5, 0.2, 0.35, -0.65], 0, -0.3)
 	var sp = null
 	# chỗ con gà mái đi dạo: một dải sân trống (đồ khác né ra)
 	g.home_spot = null
@@ -294,7 +269,11 @@ func _decor(L: Dictionary) -> void:
 	var done := false
 	# ưu tiên gà nằm trọn trong màn; hết chỗ mới cho ló ra mép màn (cỡ thật, không thu nhỏ cho vừa: luật v7)
 	# hb = [phần được ló ra mép màn, né dải gợi ý, dải rộng đủ cho gà quay ngang]: thử chỗ rộng trọn trong màn trước
-	for hb in [[0.0, true, true], [0.0, false, true], [0.0, true, false], [0.22, true, false], [0.22, false, false]]:
+	# Link 11-23 (nhận xét 3): điện thoại dọc rất dài (360x860, 412x915) không có khoảng sân cho gà cỡ thật -> bỏ gà (luật v7: không thu nhỏ)
+	var hen_ok: bool = not (L.port and H > W * 2.0)
+	# Link 11-23 (nhận xét 7): màn ngang không cho gà ló ra mép màn (bị cắt nửa thân) -> không có chỗ trọn trong màn thì thôi gà
+	var hbs := [[0.0, true, true], [0.0, false, true], [0.0, true, false]] + ([] if not L.port else [[0.22, true, false], [0.22, false, false]])
+	for hb in (hbs if hen_ok else []):
 		if done:
 			break
 		for f in [40, 36, 32]:
@@ -379,26 +358,52 @@ func _decor(L: Dictionary) -> void:
 		while t <= 0.5:
 			used.call(fb[0] + cos(fb[2]) * fl * t, fb[1] + sin(fb[2]) * fl * t, fl * 0.2)
 			t += 0.125
-	# lá khô (lá bàng, lá xoài) rải rác
+	# lá khô (lá bàng, lá xoài): Link 11-23 (nhận xét 5) bớt còn nửa, gom thành 2-3 cụm nhỏ thay vì rải đều
+	var want := mini(6, roundi(W * H / (s * s * 6.4)))
 	var placed := 0
-	var want := mini(10, roundi(W * H / (s * s * 3.2)))
 	var spots := []
-	for k in 300:
-		if placed >= want:
+	var nclu := 3 if want >= 5 else 2
+	var centres := []
+	if not L.port and W > H * 2.0:
+		# Link 11-23 (nhận xét 8): màn rất dài -> một cụm lá khô ở khoảng sân trống bên phải bàn
+		var br2: Rect2 = g.board_rect(14)
+		for k in 200:
+			var lx := br2.end.x + 30 + rng() * maxf(1.0, W - br2.end.x - 60)
+			var ly := H * (0.3 + rng() * 0.4)
+			if not hits_obst(L, lx, ly, s * 0.25):
+				centres.append(Vector2(lx, ly))
+				break
+	for k in 400:
+		if centres.size() >= nclu:
 			break
-		var x := rng() * W
-		var y := rng() * H
+		var lx := rng() * W
+		var ly := ph + rng() * (H - ph)
+		if hits_obst(L, lx, ly, s * 0.3):
+			continue
+		var far_ok := true
+		for c in centres:
+			if (c as Vector2).distance_to(Vector2(lx, ly)) < minf(W, H) * 0.35:
+				far_ok = false
+				break
+		if far_ok:
+			centres.append(Vector2(lx, ly))
+	for k in 400:
+		if placed >= want or centres.is_empty():
+			break
+		var c: Vector2 = centres[placed % centres.size()] if k < 200 else centres[int(rng() * centres.size())]
+		var a2 := rng() * TAU
+		var rr := s * (0.15 + rng() * 0.45)
+		var x := c.x + cos(a2) * rr
+		var y := c.y + sin(a2) * rr
 		var ln := (15 + rng() * 7) * CM
 		var near := false
 		for p in spots:
-			if Vector2(p.x - x, p.y - y).length() < s * 1.3:
+			if Vector2(p.x - x, p.y - y).length() < ln * 0.55:
 				near = true
 				break
-		if hits_obst(L, x, y, ln * 0.45) or near:
+		if hits_obst(L, x, y, ln * 0.45) or near or x < 0 or x > W or y < ph or y > H:
 			continue
-		if y < ph and rng() < 0.7:
-			continue
-		_leaf(x, y, ln, rng() * 6.28, "bang" if rng() < 0.55 else "xoai")
+		_leaf(x, y, ln, rng() * 6.28, "bang" if rng() < 0.5 else "xoai")
 		placed += 1
 		spots.append(Vector2(x, y))
 		L.obst.append(Rect2(x - ln * 0.35, y - ln * 0.35, ln * 0.7, ln * 0.7))
@@ -431,6 +436,48 @@ func _grass(x: float, y: float, sz: float) -> void:
 		_fill(b[0], b[1])
 	_T()
 
+# tàu dừa đặt theo chỗ chọn sẵn: bases = gốc cuống (có thể ngoài màn), angs = góc xoay, v = ảnh (0 ngọn phải, 1 ngọn trái)
+func _corner_frond(L: Dictionary, fl0: float, bases: Array, angs: Array, v: int, ang0: float) -> bool:
+	var W: float = L.W
+	var H: float = L.H
+	var corner_btn := Rect2(W - 190, H - 64, 190, 64)
+	var keep: Array = L.obst.filter(func(o): return o != corner_btn)   # lá nằm dưới đất, chồng dưới chỗ nút góc được
+	var bestc = null
+	var bsc := -1e9
+	for ang in angs:
+		var dir := Vector2(cos(ang), sin(ang)) * (1.0 if v == 0 else -1.0)
+		for bi in bases.size():
+			var b0: Vector2 = bases[bi][0]
+			var ok := true
+			var on := 0
+			for i in 12:
+				var t := 0.12 + i / 11.0 * 0.88
+				var p := b0 + dir * fl0 * t
+				if p.x > 0 and p.x < W and p.y > 0 and p.y < H:
+					on += 1
+				for o in keep:
+					var q: Rect2 = o
+					if q.grow(fl0 * 0.13).has_point(p):
+						ok = false
+						break
+				if not ok:
+					break
+			if not ok:
+				continue
+			var sc: float = on * 10.0 - absf(ang - ang0) * 8 - bases[bi][1]
+			if sc > bsc:
+				bsc = sc
+				bestc = [b0, dir, ang]
+	if bestc == null:
+		return false
+	var mid: Vector2 = bestc[0] + bestc[1] * fl0 * 0.5
+	_frond(mid.x, mid.y, fl0, bestc[2], v)
+	for i in 8:
+		var p: Vector2 = bestc[0] + bestc[1] * fl0 * (0.1 + i * 0.1)
+		var r := fl0 * (0.17 - i * 0.012)   # lá ngắn dần về ngọn
+		L.obst.append(Rect2(p.x - r, p.y - r, r * 2, r * 2))
+	return true
+
 # tàu dừa = ảnh 6px vẽ sẵn (tools/oq/tau_dua.py, Link 11-23); (x, y) = giữa cuống, ln = dài cuống
 const TAU_IMG := {0: [Vector2(2082, 1146), Vector2(37.5, 632.0), Vector2(2077.5, 703.4)], 1: [Vector2(2082, 1146), Vector2(2043.5, 632.0), Vector2(3.5, 703.4)]}
 func _frond(x: float, y: float, ln: float, ang: float, v: int) -> void:
@@ -452,7 +499,8 @@ func _leaf(x: float, y: float, ln: float, ang: float, kind: String) -> void:
 	_T(base * Transform2D(0.0, so))
 	_fill(a, Color(0.125, 0.07, 0.02, 0.45))
 	_T(base)
-	var pal := [[165, 62, 34], [196, 110, 44], [120, 64, 36]] if kind == "bang" else [[176, 146, 70], [146, 116, 56], [196, 168, 98]]
+	# Link 11-23 (nhận xét 5): lá bàng khô nâu, bớt đỏ cam rực
+	var pal := [[134, 80, 46], [150, 104, 60], [112, 74, 46]] if kind == "bang" else [[176, 146, 70], [146, 116, 56], [196, 168, 98]]
 	var c: Array = pal[int(rng() * pal.size())]
 	var c0 := Color8(c[0] + 18, c[1] + 16, c[2] + 8)
 	var c1 := Color8(c[0] - 22, c[1] - 20, c[2] - 12)

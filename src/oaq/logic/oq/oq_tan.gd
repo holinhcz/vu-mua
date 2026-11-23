@@ -101,12 +101,13 @@ static func choices(ban: Rect2, vis: Rect2) -> Array:
 	return choices_in([ban], vis)
 
 # như choices, nhiều vùng cấm (ô ăn quan: bàn + 2 rổ + thẻ mình)
-static func choices_in(bans: Array, vis: Rect2) -> Array:
+static func choices_in(bans: Array, vis: Rect2, more := false) -> Array:
+	# more: điện thoại dọc hẹp (Link 11-23 nhận xét 2) -> cho đẩy tán ra ngoài mép xa hơn để tán to hơn
 	var out := []
 	var sc := 1.2
 	while sc > 0.299:
-		for dy in [0.0, 0.1, 0.2, 0.3]:
-			for dx in [0.0, 0.1, 0.2, 0.3]:
+		for dy in ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5] if more else [0.0, 0.1, 0.2, 0.3]):
+			for dx in ([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6] if more else [0.0, 0.1, 0.2, 0.3]):
 				var sh := -Vector2(dx * 746.0, dy * 592.0) * sc
 				var ok := true
 				var area := 0.0
