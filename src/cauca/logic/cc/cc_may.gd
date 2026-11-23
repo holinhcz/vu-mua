@@ -5,6 +5,7 @@ extends Node2D
 # nằm sau bờ (đáy mây khuất sau ngọn cây). Màu theo giờ = nhân với màu mây của trời (tod.cloud), mưa thì xám + nhiều mây.
 # 2 bản: trên màn (đúng K điểm ảnh / css) và trong SubViewport của nước (để mặt nước soi bóng mây).
 
+const A := preload("res://logic/cc/cc_art.gd")
 const DIR := "res://ui/img/cc/may/"
 # [ảnh, x (0..1 dọc đường trôi), đáy y (phần của yw), cao (phần của yw), tốc độ (phần của H mỗi giây), lật]
 const SLOT := [
@@ -30,13 +31,18 @@ var _n := 6.0
 func _init(gm) -> void:
 	game = gm
 
-func _load() -> bool:
+func _load() -> bool:   # chỉ may.json; ảnh gốc (_src) đọc lúc cần thu nhỏ (khỏi giải nén khi đã có ảnh lưu sẵn)
 	if not _meta.is_empty():
 		return true
 	var j = JSON.parse_string(FileAccess.get_file_as_string(DIR + "may.json"))
 	if typeof(j) != TYPE_DICTIONARY:
 		return false
 	_meta = j
+	return true
+
+func _load_src() -> bool:
+	if not _src.is_empty():
+		return true
 	for s in SLOT:
 		var b := FileAccess.get_file_as_bytes(DIR + s[0] + ".webp")
 		var im := Image.new()
@@ -58,17 +64,23 @@ func rebuild(unit_: float, px_: float, clip := -1.0) -> void:
 	_tex.clear()
 	for s in SLOT:
 		var m: Dictionary = _meta[s[0]]
-		var im: Image = _src[s[0]].duplicate()
 		var hc: float = minf(L.yw, L.W * .3) * float(s[3])     # màn dọc hẹp: mây theo bề ngang, khỏi to quá
 		var f: float = hc / float(m.h)
 		var tw := maxi(2, int(round(m.w * f * px)))
 		var th := maxi(2, int(round(m.h * f * px)))
-		# nhỏ hơn nửa thì thu 2 bước cho mịn
-		while im.get_width() > tw * 2:
-			im.resize(im.get_width() / 2, im.get_height() / 2, Image.INTERPOLATE_CUBIC)
-		im.resize(tw, th, Image.INTERPOLATE_LANCZOS)
-		if s[5]:
-			im.flip_x()
+		var ck := "may_%s_%d_%d_%d" % [s[0], tw, th, int(s[5])]
+		var im: Image = A.cache_get(ck)
+		if im == null or im.get_width() != tw or im.get_height() != th:
+			if not _load_src():
+				return
+			im = _src[s[0]].duplicate()
+			# nhỏ hơn nửa thì thu 2 bước cho mịn
+			while im.get_width() > tw * 2:
+				im.resize(im.get_width() / 2, im.get_height() / 2, Image.INTERPOLATE_CUBIC)
+			im.resize(tw, th, Image.INTERPOLATE_LANCZOS)
+			if s[5]:
+				im.flip_x()
+			A.cache_put(ck, im)
 		var ax: float = m.ax * f
 		if s[5]:
 			ax = m.w * f - ax

@@ -684,6 +684,12 @@ func _fg_build() -> void:
 	if key == _fg_key:
 		return
 	_fg_key = key
+	var cim: Image = A.cache_get("fg_" + key)       # đã dựng lần trước (cùng cỡ màn): đọc lại, khỏi dựng
+	if cim != null and cim.get_width() == pw and cim.get_height() == ph:
+		_fg_tex = ImageTexture.create_from_image(cim)
+		_fg_rect = Rect2(r.position, Vector2(r.size.x, float(ph) / K))
+		l_fg.queue_redraw()
+		return
 	var s: float = float(pw) / float(_gan.W)        # điểm ảnh máy / đơn vị khung
 	var v := SubViewport.new()
 	v.size = Vector2i(pw, ph)
@@ -738,6 +744,7 @@ func _fg_build() -> void:
 	var out: Image = v.get_texture().get_image()
 	v.queue_free()
 	out.generate_mipmaps()
+	A.cache_put("fg_" + key, out)
 	_fg_tex = ImageTexture.create_from_image(out)
 	_fg_rect = Rect2(r.position, Vector2(r.size.x, float(ph) / K))
 	l_fg.queue_redraw()

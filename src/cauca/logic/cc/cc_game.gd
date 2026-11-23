@@ -48,7 +48,13 @@ var hinted := {}
 func setup(k: float) -> void:
 	K = maxf(1.0, k)
 
+var cache_v := ""     # số gói hình (vườn đặt = ui_cc.CC_V) -> A.CV: lưu ảnh dựng sẵn theo cỡ màn
+
 func _ready() -> void:
+	if cache_v != "":
+		A.CV = cache_v
+	elif FileAccess.file_exists("res://ui/img/cc/ccver.txt"):   # bản chơi riêng: build_web.sh ghi
+		A.CV = FileAccess.get_file_as_string("res://ui/img/cc/ccver.txt").strip_edges()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS

@@ -34,6 +34,78 @@ static var _font := {}
 static var _base: FontFile = null
 static var _sb := {}
 
+# (Link 11-23 "ấn 3s mới vào game"): ảnh dựng theo cỡ màn lúc mở (bờ bên kia ghép từ ~100 ảnh, mây, cỏ góc dưới:
+# giải nén webp + thu Lanczos + chụp SubViewport ~2,5 s) lưu vào user://ccc_<CV>/ (zstd, nguyên điểm ảnh, không nén mất nét).
+# Lần mở sau cùng cỡ màn: đọc lại thẳng, khỏi dựng. CV = số gói hình (vườn: ui_cc.CC_V; bản riêng: ui/img/cc/ccver.txt);
+# đổi hình -> CV khác -> thư mục cũ bị xoá. CREV: tăng khi đổi cách dựng (code) cho khỏi đọc ảnh cũ.
+const CREV := "1"
+static var CV := ""
+static var _cdir_ok := false
+
+static func _cdir() -> String:
+	var d := "user://ccc_" + CV + "/"
+	if not _cdir_ok:
+		_cdir_ok = true
+		var u := DirAccess.open("user://")
+		if u != null:
+			for x in u.get_directories():
+				if x.begins_with("ccc_") and x != "ccc_" + CV:
+					var o := DirAccess.open("user://" + x)
+					if o != null:
+						for f in o.get_files():
+							o.remove(f)
+					u.remove(x)
+		DirAccess.make_dir_recursive_absolute(d)
+	return d
+
+static func _cpath(key: String) -> String:
+	return _cdir() + (CREV + "|" + key).md5_text() + ".bin"
+
+static func cache_get(key: String) -> Image:
+	if CV == "":
+		return null
+	var p := _cpath(key)
+	if not FileAccess.file_exists(p):
+		return null
+	var f := FileAccess.open_compressed(p, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	if f == null:
+		return null
+	var w := f.get_32(); var h := f.get_32(); var mip := f.get_8() == 1; var fmt := f.get_32(); var n := f.get_32()
+	var b := f.get_buffer(n)
+	f.close()
+	if w <= 0 or h <= 0 or w > 16384 or h > 16384 or b.size() != n:
+		return null
+	var im := Image.create_from_data(w, h, mip, fmt, b)
+	return im if im != null and not im.is_empty() else null
+
+static func cache_put(key: String, im: Image) -> void:
+	if CV == "" or im == null or im.is_empty():
+		return
+	var f := FileAccess.open_compressed(_cpath(key), FileAccess.WRITE, FileAccess.COMPRESSION_ZSTD)
+	if f == null:
+		return
+	var b := im.get_data()
+	f.store_32(im.get_width()); f.store_32(im.get_height()); f.store_8(1 if im.has_mipmaps() else 0)
+	f.store_32(im.get_format()); f.store_32(b.size()); f.store_buffer(b)
+	f.close()
+
+static func cache_get_v(key: String):
+	if CV == "":
+		return null
+	var p := _cpath(key)
+	if not FileAccess.file_exists(p):
+		return null
+	var b := FileAccess.get_file_as_bytes(p)
+	return bytes_to_var(b) if b.size() > 0 else null
+
+static func cache_put_v(key: String, v) -> void:
+	if CV == "":
+		return
+	var f := FileAccess.open(_cpath(key), FileAccess.WRITE)
+	if f != null:
+		f.store_buffer(var_to_bytes(v))
+		f.close()
+
 static func img(name: String) -> Texture2D:
 	if _img.has(name):
 		return _img[name]

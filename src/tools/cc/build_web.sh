@@ -16,6 +16,9 @@ for d in ['ui/img', 'ui/font']:
         for f in fn:
             if f == '.gdignore' or f.endswith('.import'): continue
             p = os.path.join(dp, f); F[os.path.relpath(p, root)] = open(p, 'rb').read()
+import hashlib   # số bộ hình -> câu cá lưu ảnh dựng sẵn theo cỡ màn (cc_art.cache_*), đổi hình là dựng lại
+hh = hashlib.md5(b''.join(k.encode() + F[k] for k in sorted(F) if k.startswith('ui/img/cc/'))).hexdigest()[:8]
+F['ui/img/cc/ccver.txt'] = hh.encode()
 open(sys.argv[3], 'wb').write(write_pck(hdr, sorted(F.items(), key=lambda e: (_rank(e[0]), e[0]))))
 PY
 mkdir -p "$MAIN/cauca"; cd "$MAIN/cauca"

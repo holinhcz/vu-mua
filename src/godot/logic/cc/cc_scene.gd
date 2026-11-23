@@ -465,7 +465,32 @@ func _bank_build() -> void:
 	if key == _bank_key:
 		return
 	_bank_key = key
-	_compose(key, u0, u1, f, tw, th, Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1))
+	var sub := Vector4(c0 / L.bankW, 0, (c1 - c0) / L.bankW, 1)
+	if _bank_cached(key, sub):
+		return
+	_compose(key, u0, u1, f, tw, th, sub)
+
+# ảnh bờ đã dựng lần trước (cùng cỡ màn, xem A.cache_get): 2 ảnh cho nước soi + 2 atlas + chỗ từng món
+func _bank_ck(key: String) -> String:
+	return "bank_%s_%.3f_%.3f" % [key, scale_s, K_of()]
+
+func _bank_cached(key: String, sub: Vector4) -> bool:
+	var ck := _bank_ck(key)
+	var spr = A.cache_get_v(ck + "_m")
+	if not (spr is Array):
+		return false
+	var im := []
+	for n in ["_w0", "_w1", "_a0", "_a1"]:
+		var x: Image = A.cache_get(ck + n)
+		if x == null:
+			return false
+		im.append(x)
+	for m in [mat, tmat]:
+		m.set_shader_parameter("uBankTex", ImageTexture.create_from_image(im[0]))
+		m.set_shader_parameter("uBankN", ImageTexture.create_from_image(im[1]))
+		m.set_shader_parameter("uSub", sub)
+	_live_apply(im[2], im[3], spr)
+	return true
 
 func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub: Vector4) -> void:
 	var items: Dictionary = _bo.items
@@ -530,6 +555,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 	# (Link 11-22 "bung ra tới 170MB"): dựng TỪNG SubViewport một rồi bỏ ngay (trước: 6 cái cùng lúc ~40 MB ở máy 4K),
 	# và ảnh ghép 0/1 chỉ để nước soi -> thu về cỡ nước (scale_s px/css) thay vì giữ đủ điểm ảnh máy (~18 MB).
 	var out := []
+	var outi := []
 	var parts := [{}, {}]
 	var wr: float = minf(1.0, scale_s / maxf(K_of(), 0.01))
 	for mode in 6:
@@ -562,6 +588,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			if wr < 0.95:
 				im.resize(maxi(8, int(round(tw * wr))), maxi(8, int(round(th * wr))), Image.INTERPOLATE_LANCZOS)
 			im.generate_mipmaps()
+			outi.append(im)
 			out.append(ImageTexture.create_from_image(im))
 		else:
 			# (đa giác không khử răng cưa: alpha chỉ 0/255, khỏi chia lại alpha)
@@ -574,7 +601,13 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		m.set_shader_parameter("uBankTex", out[0])
 		m.set_shader_parameter("uBankN", out[1])
 		m.set_shader_parameter("uSub", sub)
-	_live_build(vis, imgs, parts, u0, f)
+	var lv: Array = _live_build(vis, imgs, parts, u0, f)
+	var ck := _bank_ck(key)
+	A.cache_put(ck + "_w0", outi[0])
+	A.cache_put(ck + "_w1", outi[1])
+	A.cache_put(ck + "_a0", lv[0])
+	A.cache_put(ck + "_a1", lv[1])
+	A.cache_put_v(ck + "_m", lv[2])     # ghi sau cùng: thiếu file này = chưa lưu đủ, dựng lại
 
 func K_of() -> float:
 	return float(game.K)
@@ -588,11 +621,7 @@ static func _unpremul(im: Image) -> void:
 	im.set_data(im.get_width(), im.get_height(), false, Image.FORMAT_RGBA8, b)
 
 # lớp bờ vẽ trực tiếp: xếp mọi ảnh vào 1 atlas ngày + 1 atlas đêm (cùng chỗ), mỗi món 1 Sprite2D vùng atlas, đúng thứ tự cũ
-func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> void:
-	var L: Dictionary = game.L
-	var K: float = game.K
-	for ch in bnode.get_children():
-		ch.queue_free()
+func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> Array:
 	var keys := []
 	var seen := {}
 	for nm in ["#far", "#bo"]:
@@ -619,29 +648,14 @@ func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> 
 		for k in keys:
 			var im: Image = _li(imgs, parts, k, m)
 			atl[m].blit_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), pos[k])
-	var td := ImageTexture.create_from_image(atl[0])
 	# đèn đêm = quầng mềm -> giữ nửa độ phân giải (bớt ~13 MB ở máy 4K), cùng UV với atlas ngày
 	atl[1].resize(maxi(2, AW / 2), maxi(2, atl[1].get_height() / 2), Image.INTERPOLATE_BILINEAR)
-	var tn := ImageTexture.create_from_image(atl[1])
-	bmat.set_shader_parameter("uN", tn)
 	print("bank atlas ", AW, "x", AH, " items ", keys.size())
-	var btop: float = L.yw - L.bankH * 872.0 / 900.0
-	bnode.position = Vector2(round(L.bankX * K), round(btop * K)) / K
-	bnode.scale = Vector2.ONE / K
 	var items: Dictionary = _bo.items
+	var spr := []      # [vùng atlas, chân, góc trên trái, đung đưa]
 	var mk := func(k: String, tl: Vector2, foot: Vector2, sway: bool) -> void:
 		var im: Image = _li(imgs, parts, k, 0)
-		var s := Sprite2D.new()
-		s.texture = td
-		s.centered = false
-		s.region_enabled = true
-		s.region_rect = Rect2(Vector2(pos[k]), Vector2(im.get_size()))
-		s.position = foot
-		s.offset = tl - foot
-		s.material = bmat
-		if sway:
-			s.self_modulate = Color(1, 1, 1, 254.0 / 255.0)
-		bnode.add_child(s)
+		spr.append([Rect2(Vector2(pos[k]), Vector2(im.get_size())), foot, tl, sway])
 	if parts[0].has("#far"):
 		var r: Rect2i = parts[0]["#far_r"]
 		mk.call("#far", Vector2(r.position) + Vector2(round(u0 * f), 0), Vector2(r.position) + Vector2(round(u0 * f), 0), false)
@@ -663,6 +677,31 @@ func _live_build(vis: Array, imgs: Array, parts: Array, u0: float, f: float) -> 
 		var tl := Vector2(round(float(p[2]) * f - ax), round(float(p[3]) * f - ay))
 		var foot := tl + Vector2(round(ax), round(ay))
 		mk.call(p[6], tl, foot, float(p[5]) > 0.5)
+	_live_apply(atl[0], atl[1], spr)
+	return [atl[0], atl[1], spr]
+
+func _live_apply(a0: Image, a1: Image, spr: Array) -> void:
+	var L: Dictionary = game.L
+	var K: float = game.K
+	for ch in bnode.get_children():
+		ch.queue_free()
+	var td := ImageTexture.create_from_image(a0)
+	bmat.set_shader_parameter("uN", ImageTexture.create_from_image(a1))
+	var btop: float = L.yw - L.bankH * 872.0 / 900.0
+	bnode.position = Vector2(round(L.bankX * K), round(btop * K)) / K
+	bnode.scale = Vector2.ONE / K
+	for e in spr:
+		var s := Sprite2D.new()
+		s.texture = td
+		s.centered = false
+		s.region_enabled = true
+		s.region_rect = e[0]
+		s.position = e[1]
+		s.offset = e[2] - e[1]
+		s.material = bmat
+		if e[3]:
+			s.self_modulate = Color(1, 1, 1, 254.0 / 255.0)
+		bnode.add_child(s)
 
 func _li(imgs: Array, parts: Array, k: String, m: int) -> Image:
 	if k.begins_with("#"):

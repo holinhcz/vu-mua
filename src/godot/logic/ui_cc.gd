@@ -45,6 +45,7 @@ func open() -> void:
 	_layer.layer = 100
 	var g := GAME.new()
 	g.setup(float(ui.dpr_v))
+	g.cache_v = CC_V      # (Link 11-23 "ấn 3s mới vào game"): ảnh dựng theo cỡ màn lưu lại, lần sau mở nhanh
 	# (Link 11-23 "nối đồng bộ vô game, câu cá chỉ là minigame"): xài xu vườn, cá cất vô Kho vườn,
 	# tiến trình câu cá (cấp, đồ nghề, mồi, giỏ, sổ cá) lưu chung save vườn ở g.ccsv -> đồng bộ lên mạng như vườn
 	var G = ui.G
