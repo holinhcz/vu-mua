@@ -62,32 +62,37 @@ func _build() -> void:
 	# dải đầu: ghe + người bán + giờ tan
 	var n: Dictionary = W.s4[a]
 	var o := _left()
-	var tt := "Tan " + str(W.wm()) + " giờ · còn " + ((str(int(floor(o))) + " tiếng") if o >= 1.0 else (str(int(round(fmod(o, 1.0) * 60.0))) + " phút"))
+	var tt := "còn " + ((str(int(floor(o))) + " tiếng") if o >= 1.0 else (str(int(round(fmod(o, 1.0) * 60.0))) + " phút"))
 	var tw: float = Box.text_w(tt, 10.0, 800) + 32.0
-	out.append(_pic(X0 + 2.0, y + 2.0, 56.0, 40.0, "res://ui/img/xt/g_ghe0.webp"))
+	out.append(_pic(X0, y + 2.0, 58.0, 42.0, "res://ui/img/xt/g_ghe1.webp"))
 	out.append(_dt(X0 + 64.0, y + 2.0, XW - 70.0 - tw, 18.0, _fitw(String(n.who), 12.5, 800, XW - 70.0 - tw), 12.5, 800, BROWN, "left"))
 	var tc := _chip(X0 + XW - tw, y + 1.0, tw, 22.0, "sen" if o < 0.4 else "fire_l")
 	tc.kids = [_dic(X0 + XW - tw + 7.0, y + 4.0, 16.0, CLOCK),
 		_dt(X0 + XW - tw + 26.0, y + 1.0, tw - 30.0, 22.0, tt, 10.0, 800, "rgb(180, 60, 40)", "left")]
+	tc.act = _dsay.bind("Chợ nổi họp 5–" + str(W.wm()) + " giờ sáng, " + tt + " nữa là tan.")
 	out.append(tc)
 	var P: Array = _para(X0 + 64.0, y + 22.0, XW - 66.0, String(n.d), 10.0, 600, SUB, 13.0)
 	out.append_array(P[0])
 	y += maxf(46.0, 22.0 + float(P[1])) + GG
-	# được giá
+	# hôm nay được giá: mỗi món một chip (hình + tên + ×)
 	var hl: Array = G.hot()
 	if hl.size():
-		out.append(_dt(X0 + 2.0, y, 60.0, 24.0, "Được giá:", 10.5, 800, BROWN, "left"))
-		var x := X0 + 62.0
-		for h in hl:
-			var id := String(h[0])
-			var s: String = W.h5(float(h[1]))
-			var w: float = 30.0 + Box.text_w(s, 10.5, 800) + 8.0
-			var c := _chip(x, y, w, 24.0, "fire_l")
-			c.kids = [_icx(x + 15.0, y + 12.0, 18.0, id), _dt(x + 26.0, y, w - 28.0, 24.0, s, 10.5, 800, "rgb(190, 80, 20)", "left")]
+		out.append_array(_hd(y, "Hôm nay được giá"))
+		y += 16.0 + 6.0
+		var hg := 6.0
+		var hw := (XW - hg * (hl.size() - 1)) / hl.size()
+		for i in hl.size():
+			var id := String(hl[i][0])
+			var s: String = W.h5(float(hl[i][1]))
+			var x := X0 + i * (hw + hg)
+			var sw: float = Box.text_w(s, 10.5, 800) + 4.0
+			var c := _chip(x, y, hw, 26.0, "fire_l")
+			c.kids = [_icx(x + 14.0, y + 13.0, 18.0, id),
+				_dt(x + 26.0, y, hw - 30.0 - sw, 26.0, _fitw(G.item_name(id), 9.5, 700, hw - 30.0 - sw), 9.5, 700, BROWN, "left"),
+				_dt(x + hw - 4.0 - sw, y, sw, 26.0, s, 10.5, 800, "rgb(190, 80, 20)", "left")]
 			c.act = _dsay.bind(G.item_name(id) + " hôm nay được giá " + s + ". Bán trong Kho hoặc giao đơn có món này được thêm 30%.")
 			out.append(c)
-			x += w + 6.0
-		y += 24.0 + GG
+		y += 26.0 + GG
 	# lưới kèo: chưa xong lên đầu
 	var T: Array = W.jd()[a]
 	var idx := range(T.size())
