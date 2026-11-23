@@ -381,11 +381,17 @@ func _layout() -> void:
 	_off = ((vs - DS * K) / 2.0).round()
 	for c in [_bg, _pc, _hud]:
 		c.position = _off
-	# Link 11-22 "tỉ lệ màn hình như cờ gánh": giao diện (thanh công cụ, thẻ, hộp thoại) co giãn theo khổ chuẩn
-	# dọc 412x915 / ngang 1280x720, màn khác nhân U = min(rộng, cao) so với khổ chuẩn; cảnh + bàn cờ giữ khung đã duyệt
-	KU = clampf(minf(vs.x / 412.0, vs.y / 915.0) if vs.y > vs.x * 1.05 else minf(vs.x / 1280.0, vs.y / 720.0), 0.3, 6.0)
-	# chữ trên thẻ phải đọc được: không co giao diện dưới 0.8 css chuẩn (Link 11-23 nhận xét 15 màn: điện thoại ngang chữ 6px)
-	KU = maxf(KU, 0.8 * K0)
+	# Link 11-23 "luật phóng to như Nông trại, tính theo chiều cao": s = cao css / 810 (máy cảm ứng lấy screen),
+	# làm tròn 0,05, kẹp 0,7..2; S26 Ultra (s 0,9) = cỡ 1, màn khác nhân s / 0,9; không rộng quá màn (338 css)
+	var csw := vs.x / K0
+	var sa := vs.y / K0
+	if WEB and bool(JavaScriptBridge.eval("!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches)")):
+		var ssw := float(JavaScriptBridge.eval("screen.width||0"))
+		var ssh := float(JavaScriptBridge.eval("screen.height||0"))
+		if ssw > 0.0 and ssh > 0.0:
+			sa = minf(ssw, ssh) if vs.x > vs.y else maxf(ssw, ssh)
+	var su := clampf(round(sa / 810.0 * 20.0) / 20.0, 0.7, 2.0)
+	KU = K0 * minf(su / 0.9, csw / 338.0)
 	var V := Rect2(-_off / K, vs / K)       # cả cửa sổ (css khung)
 	L = {"port": port}
 	var safe := 6.0
@@ -403,7 +409,12 @@ func _layout() -> void:
 		fy = top + maxf(0, (bot - top - face) * 0.5)
 		var cw := minf(240, W - 16)
 		# cỡ thẻ theo KU (không lớn hơn chỗ chừa sẵn quanh phản), neo mép cửa sổ / mép phản; L.* tính trong hệ đã co (chia hs)
-		var hs := minf(1.0, KU / K)
+		# Link 11-23: cỡ theo luật Nông Trại (KU), chỉ co lại khi chỗ trên/dưới phản không đủ chứa thẻ
+		var hs := KU / K
+		hs = minf(hs, (fy - 18 - V.position.y - 8 - safe) / (36 + 4 + 58))
+		hs = minf(hs, (V.end.y - (fy + face + face * 12 / 392 + 34) - 8) / 62)
+		hs = minf(hs, (V.size.x - 16) / CARD_W)
+		hs = maxf(hs, 0.3)
 		L.hs = hs
 		var tw := minf(V.size.x - 16 - (44 * hs if WEB else 0.0), 420 * hs)
 		# L.opp/me/tip = chỗ chừa cho cảnh (caro_nen né), giữ như cũ; L.u_* = thẻ thật vẽ ra (hệ đã co hs)
