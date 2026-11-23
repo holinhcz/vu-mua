@@ -1,6 +1,6 @@
 extends RefCounted
 # Ô ĂN QUAN: hình dùng chung (dịch từ game.js + shell.html của bản web /mnt/project-files/o-an-quan/src): chữ Baloo 2,
-# hộp gỗ / bảng con (đá đen) / giấy dó trong khung tre, bóng tròn / bóng sát đất / cát quanh chân sỏi (một tấm ghép chung),
+# hộp gỗ / bảng con (đá đen) / giấy dó trong khung tre, bóng tròn / bóng sát đất (một tấm ghép chung),
 # bóng đổ của hình theo mặt trời, chân dung vẽ phấn màu (SVG), biểu tượng nút.
 # Hình nào giống hệt Cờ gánh (đất, gạch tàu, gà, dép, lu, chổi, tàu dừa) lấy chung ui/img/cg/; hình riêng ở ui/img/oq/.
 
@@ -15,10 +15,9 @@ static var _img := {}
 static var _sb := {}
 static var _sil := {}
 static var _svg := {}
-static var atlas: ImageTexture = null    # [0,0,64,64] bóng mềm, [64,0,64,64] bóng sát, [128,0,128,128] cát
+static var atlas: ImageTexture = null    # [0,0,64,64] bóng mềm, [64,0,64,64] bóng sát
 const R_SOFT := Rect2(0, 0, 64, 64)
 const R_CONT := Rect2(64, 0, 64, 64)
-const R_SAND := Rect2(128, 0, 128, 128)
 const R_GLOW := Rect2(0, 64, 64, 64)    # tròn trắng mờ dần (tô màu lúc vẽ)
 
 # ------------------------------------------------------------ chữ
@@ -78,37 +77,13 @@ const SHC := Color(0.118, 0.067, 0.02)
 static func build_atlas() -> void:
 	if atlas != null:
 		return
-	var im := Image.create(256, 128, false, Image.FORMAT_RGBA8)
+	var im := Image.create(128, 128, false, Image.FORMAT_RGBA8)
 	_radial(im, 0, 0, 64, [[0.0, Color8(40, 24, 8, 158)], [0.45, Color8(40, 24, 8, 97)], [1.0, Color8(40, 24, 8, 0)]])
 	_radial(im, 64, 0, 64, [[0.0, Color8(34, 20, 6, 204)], [0.78, Color8(34, 20, 6, 158)], [0.9, Color8(34, 20, 6, 56)], [1.0, Color8(34, 20, 6, 0)]])
 	_radial(im, 0, 64, 64, [[0.0, Color(1, 1, 1, 1)], [0.07, Color(1, 1, 1, 1)], [1.0, Color(1, 1, 1, 0)]])
-	# cát quanh chân viên sỏi: rãnh tối sát chân, hạt sáng bên ngoài
-	for y in 128:
-		for x in 128:
-			var d := Vector2(x + 0.5 - 64, y + 0.5 - 64).length()
-			var t := clampf((d - 34.0) / 28.0, 0.0, 1.0)
-			var c: Color
-			if d < 34.0:
-				c = Color8(90, 64, 36, 0)
-			else:
-				c = _stops([[0.0, Color8(90, 64, 36, 0)], [0.12, Color8(90, 64, 36, 71)], [0.45, Color8(226, 204, 166, 56)], [1.0, Color8(226, 204, 166, 0)]], t)
-			im.set_pixel(128 + x, y, c)
-	for k in 230:
-		var a := randf() * TAU
-		var rr := 38.0 + pow(randf(), 1.8) * 24.0
-		var cx := 64.0 + cos(a) * rr
-		var cy := 64.0 + sin(a) * rr
-		var z := 0.6 + randf() * 1.3
-		var col: Color
-		if randf() < 0.6:
-			col = Color8(232 + randi() % 20, 212 + randi() % 20, 174 + randi() % 20, int((0.5 + randf() * 0.4) * 255))
-		else:
-			col = Color8(96, 72, 46, int((0.35 + randf() * 0.35) * 255))
-		_dot(im, 128, cx, cy, z, col)
 	im.fix_alpha_edges()
 	if OS.has_environment("OQ_DUMP"):
 		im.save_png(OS.get_environment("OQ_DUMP") + ".atlas.png")
-	# không mipmap: hạt cát nhỏ vẫn lấp lánh như canvas của web (bóng tròn vốn mềm sẵn)
 	atlas = ImageTexture.create_from_image(im)
 
 static func _stops(st: Array, t: float) -> Color:
@@ -126,24 +101,6 @@ static func _radial(im: Image, ox: int, oy: int, n: int, st: Array) -> void:
 			var t := minf(1.0, Vector2(x + 0.5 - h, y + 0.5 - h).length() / (h - 0.5))
 			im.set_pixel(ox + x, oy + y, _stops(st, t))
 
-static func _dot(im: Image, ox: int, cx: float, cy: float, r: float, col: Color) -> void:
-	for y in range(int(cy - r - 1), int(cy + r + 2)):
-		for x in range(int(cx - r - 1), int(cx + r + 2)):
-			if x < 0 or y < 0 or x >= 128 or y >= 128:
-				continue
-			var cov := clampf(r + 0.5 - Vector2(x + 0.5 - cx, y + 0.5 - cy).length(), 0.0, 1.0)
-			if cov <= 0.0:
-				continue
-			var dst := im.get_pixel(ox + x, y)
-			var a := col.a * cov
-			var oa := a + dst.a * (1.0 - a)
-			if oa <= 0.0:
-				continue
-			var rgb := (Color(col.r, col.g, col.b) * a + Color(dst.r, dst.g, dst.b) * dst.a * (1.0 - a)) / oa
-			im.set_pixel(ox + x, y, Color(rgb.r, rgb.g, rgb.b, oa))
-
-# ------------------------------------------------------------ bóng của hình trên đất (onGround)
-# silhouette(): hình mờ đi blur điểm ảnh, chừa lề pad (vẽ ra nhân màu SHC)
 static func _blur(im: Image, blur: float) -> void:
 	# mờ kiểu hộp lặp (thu nhỏ rồi phóng lại bằng Lanczos/bilinear, chạy trong C++)
 	if blur < 0.8:
