@@ -463,6 +463,10 @@ func _layout() -> void:
 		# Link 11-23 "2 chip cách đều": khe Menu-thẻ trên = khe giữa 2 thẻ = 20
 		L.u_opp = Rect2(o.x, L.u_tools.position.y + 56, CARD_W, 58)
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 134, CARD_W, 62)
+		if not band:
+			# Link 11-23 "màn ngang to vừa đủ chip thì trái dưới phải trên": thẻ AI góc trên phải (dưới nút toàn màn), thẻ Bạn góc dưới trái
+			L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, L.u_tools.position.y + 56, CARD_W, 58)
+			L.u_me = Rect2(o.x, (V.end.y - 8) / hs - 62, CARD_W, 62)
 		if band:
 			# Link 11-23 "ko đều, chip Tới phiên chạm sát mép": 2 thẻ cùng cao 62, hạ 10 cho nhãn có chỗ
 			var y0: float = L.u_tools.position.y + 10
