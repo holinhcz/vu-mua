@@ -254,6 +254,11 @@ func _build_toast() -> void:
 func say(s: String) -> void:
 	if _toast_n.is_empty():
 		return
+	# (bản 505) kết quả việc vừa bấm trong bảng: câu ngắn bay lên từ chỗ bấm, câu dài nằm dải đáy khung bảng
+	var res := Time.get_ticks_msec() - _tap_ms < 600 and _panel_top() > 0.0
+	if res and s.length() <= 34:
+		fly(s)
+		return
 	if toast_b != null:
 		toast_b.queue_free()
 	# web (body.u2hud .toast.u2tok): góc trái trên, dưới thanh trên (left 12, top 128), rộng theo chữ
@@ -274,6 +279,13 @@ func say(s: String) -> void:
 	# giữa dòng toast ở y ~148 (1 dòng: top 128, 3 dòng: top 120 như web)
 	n.r = [12.0, roundf(147.5 - h * 0.5), w, h]
 	var pt := _panel_top()
+	if res:   # câu dài của việc vừa bấm: dải ở đáy khung bảng
+		maxw = minf(vw - 40.0, 300.0)
+		w = maxw
+		lines = _nlines(s, fs, fw, maxw - 2.0 * pl - 2.0)
+		h = h0 + (lines - 1) * lh
+		n.r = [roundf((vw - w) * 0.5), roundf(_panel_bot() - h - 14.0), w, h]
+		pt = 0.0
 	if pt > 0.0:   # (bản 504) đang mở bảng: tin nằm trên mép bảng (không che hàng tab), rộng hơn cho ít dòng
 		maxw = minf(vw - 24.0, 330.0)
 		w = minf(maxw, tw + 2.0 * pl + 2.0)
@@ -283,6 +295,34 @@ func say(s: String) -> void:
 	toast_b = _build(n, {})
 	root.add_child(toast_b)
 	_toast_t = 2.3
+
+func _panel_bot() -> float:   # mép dưới khung bảng đang mở (css)
+	for p in _pans() + [ngp, nvp, vlp]:
+		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
+			var w = p.ids.get(".pwin") if "ids" in p else null
+			var c: Control = w if w is Control else p.box
+			return c.get_global_rect().end.y / Css.K
+	return vh
+
+var _tap_ms := 0
+func fly(s: String) -> void:   # (bản 505) chữ bay: kết quả bấm (+1.000 xu...) nổi lên từ chỗ chạm rồi mờ
+	var lb := Label.new()
+	lb.text = s
+	lb.add_theme_font_override("font", Css.font(800))
+	lb.add_theme_font_size_override("font_size", int(round(13.0 * Css.K)))
+	lb.add_theme_color_override("font_color", Color8(40, 120, 50))
+	lb.add_theme_color_override("font_outline_color", Color8(255, 252, 240))
+	lb.add_theme_constant_override("outline_size", int(round(5.0 * Css.K)))
+	lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx_layer().add_child(lb)
+	var sz := lb.get_minimum_size()
+	var vp := get_viewport().get_visible_rect().size
+	var p0 := Vector2(clampf(last_tap.x - sz.x * 0.5, 6.0, vp.x - sz.x - 6.0), last_tap.y - sz.y - 18.0 * Css.K)
+	lb.position = p0
+	var tw := lb.create_tween()
+	tw.tween_property(lb, "position", p0 - Vector2(0, 46.0 * Css.K), 1.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(lb, "modulate:a", 0.0, 0.5).set_delay(0.8)
+	tw.tween_callback(lb.queue_free)
 
 func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (đơn vị css), 0 = không có bảng
 	for p in _pans() + [ngp, nvp, vlp]:
@@ -294,12 +334,19 @@ func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (
 
 # ------------------------------------------------------------------ (bản 504) bong bóng chạm xem: khung nhỏ ngay chỗ chạm (thay toast cho chữ giải thích)
 var last_tap := Vector2.ZERO   # chỗ chạm xuống gần nhất (px)
+var _fx: CanvasLayer = null    # (bản 505) lớp trên cùng cho bong bóng, chữ bay (bảng tự dời lên trước mỗi khung nên không bỏ chung root được)
+func fx_layer() -> CanvasLayer:
+	if _fx == null or not is_instance_valid(_fx):
+		_fx = CanvasLayer.new()
+		_fx.layer = 90
+		add_child(_fx)
+	return _fx
 var tip_b: Control = null
 var _tip_t := 0.0
 func tip_show(c: Control, sec := 3.5) -> void:
 	tip_close()
 	tip_b = c
-	root.add_child(c)
+	fx_layer().add_child(c)
 	_tip_t = sec
 
 func tip_close() -> void:
@@ -3874,6 +3921,7 @@ func _input(e: InputEvent) -> void:
 	# (bản 289) một luật: đang mở bất cứ bảng / popup / vòng nút nào (any_open) thì làng đứng yên; chạm xuống lúc đang mở
 	# thì giữ đứng yên tới khi nhấc hết ngón (bảng tự đóng khi chạm ra ngoài, kéo tiếp cũng không lướt làng)
 	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
+		_tap_ms = Time.get_ticks_msec()
 		if e.pressed:
 			last_tap = e.position
 			if tip_b != null:   # chạm chỗ khác: tắt bong bóng
