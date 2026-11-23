@@ -27,6 +27,7 @@ class Box extends Control:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 	static var T := {}
 	func _draw() -> void:
+		A.begin(self)   # ô vẽ bằng bộ vẽ Nông trại = canvas item con: xoá lượt trước
 		if fn.is_valid():
 			var t0 := Time.get_ticks_usec()
 			fn.call(self)
@@ -862,17 +863,15 @@ func _draw_modal(ci: Box) -> void:
 	if _mod.is_empty():
 		return
 	var a := clampf(_mod.anim / .2, 0, 1)
-	ci.draw_rect(Rect2(0, 0, L.W, L.H), Color(10 / 255.0, 24 / 255.0, 12 / 255.0, .45 * a))   # .pbk
+	A.under_rect(ci, Rect2(0, 0, L.W, L.H), Color(10 / 255.0, 24 / 255.0, 12 / 255.0, .45 * a))   # .pbk
 	var r: Rect2 = _mod.r
 	var mx := _mxf()
 	var xf: Transform2D = mx[0]
 	body.position = Vector2(r.position.x + 2, r.position.y + _mod.top + mx[1])
 	body.modulate.a = mx[2]
-	# bảng: bóng + nền giấy kem (một ảnh ghép sẵn)
-	A.box(ci, r.grow(-4), Color(0, 0, 0, 0), Tre.R, 0, Color(0, 0, 0, 0), [[0, -6, 40, Color(0, 0, 0, .3)]], xf)
-	ci.draw_set_transform_matrix(xf)
-	ci.draw_texture_rect(A.paper(r.size.x, r.size.y, Tre.R), r, false)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	# bảng: bóng (0 -10px 40px như .pwin) + nền giấy kem (một ảnh ghép sẵn); cả hai nằm dưới các ô (tab)
+	A.fbox(ci, r, Tre.R, [], [], [], [], [[0, -10, 40, Color(0, 0, 0, .3)]], xf)
+	A.under_tex(ci, A.paper(r.size.x, r.size.y, Tre.R), r, xf)
 	# tên bảng
 	var t := _title_of(_mod.kind)
 	var sub := _sub_of(_mod.kind)
@@ -1523,7 +1522,7 @@ func _draw_card(ci: Box) -> void:
 	var junk := f.has("junk")
 	var cap: int = D.CAGE[S.cage].cap
 	var full: bool = S.basket.size() >= cap
-	ci.draw_rect(Rect2(0, 0, L.W, L.H), Color(10 / 255.0, 24 / 255.0, 12 / 255.0, .45))
+	A.under_rect(ci, Rect2(0, 0, L.W, L.H), Color(10 / 255.0, 24 / 255.0, 12 / 255.0, .45))
 	var cw := minf(400, L.W - 32)
 	var short := low()
 	var img_h := 120.0 if short else 170.0
@@ -1579,12 +1578,12 @@ func _draw_card(ci: Box) -> void:
 			var a := lerpf(a0, a1, j / 4.0)
 			mid.append(rays_c + Vector2(cos(a), sin(a)) * 280 * .25)
 			mcols.append(Color(1, 220 / 255.0, 120 / 255.0, .5 * ra))
-		ci.draw_polygon(pts, cols)
+		A.under_poly(ci, pts, cols, xf)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-	# (11-23) thẻ = bảng Nông trại: bóng, nền giấy kem, khung tre
-	A.box(ci, r.grow(-4), Color(0, 0, 0, 0), Tre.R, 0, Color(0, 0, 0, 0), [[0, 6, 30, Color(0, 0, 0, .3)]], xf)
+	# (11-23) thẻ = bảng Nông trại: bóng, nền giấy kem (dưới các ô số đo), khung tre
+	A.fbox(ci, r, Tre.R, [], [], [], [], [[0, 6, 30, Color(0, 0, 0, .3)]], xf)
+	A.under_tex(ci, A.paper(r.size.x, r.size.y, Tre.R), r, xf)
 	ci.draw_set_transform_matrix(xf)
-	ci.draw_texture_rect(A.paper(r.size.x, r.size.y, Tre.R), r, false)
 	var fr := r.grow(1.5)
 	ci.draw_texture_rect(Tre.texture(fr.size.x, fr.size.y), fr, false)
 	# băng độ hiếm
@@ -1720,7 +1719,8 @@ func hide_title() -> void:
 func _draw_title(ci: Box) -> void:
 	ci.items = []
 	var n := nar()
-	A.grad_poly(ci, PackedVector2Array([Vector2.ZERO, Vector2(L.W, 0), Vector2(L.W, L.H), Vector2(0, L.H)]), Vector2.ZERO, Vector2(0, L.H), [[0.0, Color(20 / 255.0, 14 / 255.0, 6 / 255.0, .15)], [1.0, Color(20 / 255.0, 14 / 255.0, 6 / 255.0, .55)]])
+	var dk := Color(20 / 255.0, 14 / 255.0, 6 / 255.0)
+	A.under_poly(ci, PackedVector2Array([Vector2.ZERO, Vector2(L.W, 0), Vector2(L.W, L.H), Vector2(0, L.H)]), PackedColorArray([Color(dk, .15), Color(dk, .15), Color(dk, .55), Color(dk, .55)]))
 	# bảng hiệu treo
 	var fs := 44.0 if n else clampf(L.W * .1, 44, 92)
 	if low():

@@ -423,110 +423,135 @@ static var FA := 1.0   # độ hiện chung của fbox (hộp đang mờ dần: 
 static func _fa(c: Color) -> Color:
 	return Color(c, c.a * FA)
 
+# (Link 11-23 "Nông trại làm như nào thì làm như đó") ô vẽ bằng ĐÚNG bộ vẽ ô của Nông trại: cc_box.gdshader = ui/box.gdshader
+# (khoảng cách có dấu tới mép, khử răng cưa đúng 1 điểm ảnh, box-shadow trong/ngoài như css). Mỗi ô = một canvas item con
+# (RenderingServer) của khung đang vẽ, nằm SAU nội dung của khung (draw_behind_parent): chữ, hình vẽ sau luôn nằm trên ô.
+# Thứ gì phải nằm DƯỚI ô (nền tối, nền giấy, tia nắng) thì vẽ qua under_*() cũng vào hàng con này, đúng thứ tự.
+const BOX_SH := preload("res://logic/cc/cc_box.gdshader")
+static var _pool := {}
+
+static func begin(ci: CanvasItem) -> void:   # đầu mỗi lần vẽ một khung: xoá các ô cũ
+	var p = _pool.get(ci.get_instance_id())
+	if p == null:
+		return
+	for i in p.n:
+		RenderingServer.canvas_item_clear(p.it[i])
+	p.n = 0
+
+static func _slot(ci: CanvasItem, shaded: bool) -> RID:
+	var id := ci.get_instance_id()
+	var p = _pool.get(id)
+	if p == null:
+		p = {"it": [], "mat": [], "n": 0}
+		_pool[id] = p
+	if p.n >= p.it.size():
+		var it := RenderingServer.canvas_item_create()
+		RenderingServer.canvas_item_set_parent(it, ci.get_canvas_item())
+		RenderingServer.canvas_item_set_draw_behind_parent(it, true)
+		# thứ tự vẽ giữa các ô con: phải đặt rõ, không thì máy tự xếp (sắp xếp không ổn định) -> ô vẽ sau bị chìm dưới ô trước
+		RenderingServer.canvas_item_set_draw_index(it, p.it.size())
+		p.it.append(it)
+	if p.n >= p.mat.size():
+		var m := ShaderMaterial.new()
+		m.shader = BOX_SH
+		p.mat.append(m)
+	var rid: RID = p.it[p.n]
+	RenderingServer.canvas_item_set_material(rid, (p.mat[p.n] as ShaderMaterial).get_rid() if shaded else RID())
+	p.n += 1
+	return rid
+
+static func _mat_of(ci: CanvasItem) -> ShaderMaterial:
+	var p = _pool[ci.get_instance_id()]
+	return p.mat[p.n - 1]
+
+static func under_rect(ci: CanvasItem, r: Rect2, col: Color, xf := Transform2D.IDENTITY) -> void:
+	var it := _slot(ci, false)
+	RenderingServer.canvas_item_set_transform(it, BASE * xf)
+	RenderingServer.canvas_item_add_rect(it, r, col)
+
+static func under_tex(ci: CanvasItem, t: Texture2D, r: Rect2, xf := Transform2D.IDENTITY, mod := Color.WHITE) -> void:
+	if t == null:
+		return
+	var it := _slot(ci, false)
+	RenderingServer.canvas_item_set_transform(it, BASE * xf)
+	RenderingServer.canvas_item_add_texture_rect(it, r, t.get_rid(), false, mod)
+
+static func under_poly(ci: CanvasItem, pts: PackedVector2Array, cols: PackedColorArray, xf := Transform2D.IDENTITY) -> void:
+	var it := _slot(ci, false)
+	RenderingServer.canvas_item_set_transform(it, BASE * xf)
+	RenderingServer.canvas_item_add_polygon(it, pts, cols)
+
+# rad: số hoặc Vector4 (trên trái, trên phải, dưới phải, dưới trái); g: [[t, màu]] gradient trên xuống (linear-gradient 180deg);
+# ring [[dày, màu]] = inset 0 0 0 N; hi [cao, màu] hoặc [cao, màu, spread] = inset 0 N 0 spread; glow [_, màu] = inset 0 0 8px 3px;
+# drop [[dx, dy, mờ, màu]] = bóng ngoài. Thứ tự như css của Nông trại: ring, hi, glow, drop (cái đầu nằm trên).
 static func fbox(ci: CanvasItem, r: Rect2, rad, g: Array, ring := [], hi := [], glow := [], drop := [], xf := Transform2D.IDENTITY) -> void:
-	if FA < 1.0:
-		g = g.map(func(e): return [e[0], _fa(e[1])])
-		ring = ring.map(func(e): return [e[0], _fa(e[1])])
-		if hi.size() == 2:
-			hi = [hi[0], _fa(hi[1])]
-		if glow.size() == 2:
-			glow = [glow[0], _fa(glow[1])]
-		drop = drop.map(func(e): return [e[0], e[1], e[2], _fa(e[3])])
 	var q: Vector4 = rad if rad is Vector4 else Vector4(rad, rad, rad, rad)
-	var m := minf(r.size.x, r.size.y) * .5
-	q = Vector4(minf(q.x, m), minf(q.y, m), minf(q.z, m), minf(q.w, m))
-	for d in drop:
-		var b := _box_sb("fd%s|%s|%s|%s" % [str(d), q, K, r.size])
-		if b.get_meta("ok", false) == false:
-			b.set_meta("ok", true)
-			_sb_rad(b, q)
-			b.anti_aliasing = true
-			if float(d[2]) <= 0.0:
-				b.bg_color = d[3]
-			else:
-				b.bg_color = Color(0, 0, 0, 0)
-				b.shadow_color = d[3]
-				b.shadow_size = maxi(1, int(float(d[2]) * K * .5))
-		_draw_sb(ci, b, Rect2(r.position + Vector2(d[0], d[1]), r.size), xf)
-	# (Link 11-23 "lem viền trắng ra") mép NGOÀI chỉ do StyleBoxFlat vẽ (khử răng cưa đúng mép, cùng chỗ với các vòng viền);
-	# dải màu (polygon, không khử răng cưa) lùi vào 1 điểm ảnh, KHÔNG có đường viền mịn polyline (nó lòi ra ngoài 1 điểm ảnh
-	# màu kem -> vạch trắng quanh ô)
-	var base := _box_sb("fb%s|%s|%s|%s" % [stop_col(g, .5), q, K, r.size])
-	if base.get_meta("ok", false) == false:
-		base.set_meta("ok", true)
-		_sb_rad(base, q)
-		base.anti_aliasing = true
-		base.bg_color = stop_col(g, .5)
-	_draw_sb(ci, base, r, xf)
-	var rk := Rect2(r.position * K, r.size * K).grow(-1.0)
-	var qk := Vector4(maxf(0, q.x * K - 1), maxf(0, q.y * K - 1), maxf(0, q.z * K - 1), maxf(0, q.w * K - 1))
-	var pts := rr4_pts(rk, qk, 6)
-	var cols := PackedColorArray()
-	for p in pts:
-		cols.append(stop_col(g, (p.y - rk.position.y) / maxf(1.0, rk.size.y)))
-	ci.draw_set_transform_matrix(BASE * xf * Transform2D(0, Vector2(1.0 / K, 1.0 / K), 0, Vector2.ZERO))
-	ci.draw_polygon(pts, cols)
-	ci.draw_set_transform_matrix(BASE)
+	var sh := []   # [ox, oy, blur, spread, màu, trong]
+	for e in ring:
+		sh.append([0.0, 0.0, 0.0, float(e[0]), e[1], true])
+	if hi.size() >= 2:
+		sh.append([0.0, float(hi[0]), 0.0, float(hi[2]) if hi.size() > 2 else 0.0, hi[1], true])
 	if glow.size() == 2:
-		var gc: Color = glow[1]
-		for j in 5:   # quầng mờ dần vào trong: 5 lớp mỏng chồng nhau (không thành bậc)
-			_ring(ci, r, q, float(glow[0]) * (1.0 - j * .19), Color(gc, gc.a * .28), xf)
-	if hi.size() == 2:
-		var b2 := _box_sb("fh%s|%s|%s|%s" % [hi, q, K, r.size])
-		if b2.get_meta("ok", false) == false:
-			b2.set_meta("ok", true)
-			_sb_rad(b2, q)
-			b2.draw_center = false
-			b2.anti_aliasing = true
-			b2.border_width_top = maxi(1, int(round(float(hi[0]) * K)))
-			b2.border_color = hi[1]
-		_draw_sb(ci, b2, r, xf)
-	for i in range(ring.size() - 1, -1, -1):
-		_ring(ci, r, q, float(ring[i][0]), ring[i][1], xf)
-
-static func _ring(ci: CanvasItem, r: Rect2, q: Vector4, w: float, col: Color, xf: Transform2D) -> void:
-	var b := _box_sb("fr%s|%s|%s|%s|%s" % [w, col, q, K, r.size])
-	if b.get_meta("ok", false) == false:
-		b.set_meta("ok", true)
-		_sb_rad(b, q)
-		b.draw_center = false
-		b.anti_aliasing = true
-		b.set_border_width_all(maxi(1, int(round(w * K))))
-		b.border_color = col
-	_draw_sb(ci, b, r, xf)
-
-static func _sb_rad(b: StyleBoxFlat, q: Vector4) -> void:
-	b.corner_radius_top_left = int(q.x * K)
-	b.corner_radius_top_right = int(q.y * K)
-	b.corner_radius_bottom_right = int(q.z * K)
-	b.corner_radius_bottom_left = int(q.w * K)
-
-static func rr4_pts(r: Rect2, q: Vector4, n := 6) -> PackedVector2Array:   # hình chữ nhật bo từng góc riêng
-	var out := PackedVector2Array()
-	var cs := [[Vector2(r.end.x - q.y, r.position.y + q.y), q.y, -PI / 2], [Vector2(r.end.x - q.z, r.end.y - q.z), q.z, 0.0], [Vector2(r.position.x + q.w, r.end.y - q.w), q.w, PI / 2], [Vector2(r.position.x + q.x, r.position.y + q.x), q.x, PI]]
-	for c in cs:
-		var rr: float = c[1]
-		if rr <= 0.01:
-			var p0: Vector2 = c[0]
-			if out.size() == 0 or out[out.size() - 1].distance_squared_to(p0) > 0.0004:
-				out.append(p0)
-			continue
-		for k in n + 1:
-			var a: float = c[2] + PI / 2 * k / n
-			var p: Vector2 = c[0] + Vector2(cos(a), sin(a)) * rr
-			if out.size() and out[out.size() - 1].distance_squared_to(p) < 0.0004:
-				continue
-			out.append(p)
-	if out.size() > 2 and out[0].distance_squared_to(out[out.size() - 1]) < 0.0004:
-		out.remove_at(out.size() - 1)
-	return out
+		sh.append([0.0, 0.0, 8.0, 3.0, glow[1], true])
+	for d in drop:
+		sh.append([float(d[0]), float(d[1]), float(d[2]), 0.0, d[3], false])
+	var mg := 0.0
+	for e in sh:
+		if not e[5]:
+			mg = maxf(mg, absf(e[0]) + absf(e[1]) + e[2] * 1.5 + e[3])
+	mg = ceilf(mg + 1.0)
+	var it := _slot(ci, true)
+	var M := _mat_of(ci)
+	var T := BASE * xf
+	RenderingServer.canvas_item_set_transform(it, T)
+	RenderingServer.canvas_item_add_rect(it, Rect2(r.position - Vector2(mg, mg), r.size + Vector2(2 * mg, 2 * mg)), Color(1, 1, 1, FA))
+	M.set_shader_parameter("size", r.size)
+	M.set_shader_parameter("margin", mg)
+	M.set_shader_parameter("px", K * T.get_scale().x)
+	M.set_shader_parameter("radius", q)
+	M.set_shader_parameter("bg_color", Vector4.ZERO)
+	var cc := PackedVector4Array()
+	var pp := PackedFloat32Array()
+	for e in g:
+		var c: Color = e[1]
+		cc.append(Vector4(c.r, c.g, c.b, c.a))
+		pp.append(float(e[0]))
+	while cc.size() < 10:
+		cc.append(Vector4.ZERO)
+		pp.append(1.0)
+	M.set_shader_parameter("ga_kind", 1 if g.size() > 0 else 0)
+	M.set_shader_parameter("ga_n", mini(10, g.size()))
+	M.set_shader_parameter("ga_c", cc)
+	M.set_shader_parameter("ga_p", pp)
+	M.set_shader_parameter("ga_px", 0)
+	M.set_shader_parameter("ga_ang", 180.0)
+	M.set_shader_parameter("ga_rect", Vector4.ZERO)
+	M.set_shader_parameter("ga_clip", 0)
+	M.set_shader_parameter("gb_n", 0)
+	var g4 := PackedVector4Array()
+	var c4 := PackedVector4Array()
+	var inn := PackedFloat32Array()
+	for e in sh:
+		g4.append(Vector4(e[0], e[1], e[2], e[3]))
+		var c: Color = e[4]
+		c4.append(Vector4(c.r, c.g, c.b, c.a))
+		inn.append(1.0 if e[5] else 0.0)
+	while g4.size() < 8:
+		g4.append(Vector4.ZERO)
+		c4.append(Vector4.ZERO)
+		inn.append(0.0)
+	M.set_shader_parameter("sh_n", mini(8, sh.size()))
+	M.set_shader_parameter("sh_g", g4)
+	M.set_shader_parameter("sh_c", c4)
+	M.set_shader_parameter("sh_in", inn)
+	M.set_shader_parameter("bw", Vector4.ZERO)
 
 # --- các kiểu hộp dùng chung (đúng số của css Nông trại)
 const G_PILL := [[0.0, Color(1, 250 / 255.0, 240 / 255.0)], [.45, Color(248 / 255.0, 238 / 255.0, 214 / 255.0)], [1.0, Color(241 / 255.0, 226 / 255.0, 192 / 255.0)]]
 static func pill(ci: CanvasItem, r: Rect2, rad := 12.0, down := false, xf := Transform2D.IDENTITY) -> void:   # .coins / .ibtn / nút dock của HUD
 	var rr := Rect2(r.position + Vector2(0, 1.5 if down else 0.0), r.size)
 	fbox(ci, rr, rad, G_PILL, [[.8, _c(156, 122, 54)], [2.0, _c(224, 202, 146)], [3.0, _c(179, 146, 80)], [3.6, _c(124, 95, 42)]],
-		[4.6, Color(1, 1, 1, .7)], [], [] if down else [[0, 1, 2, Color(60 / 255.0, 40 / 255.0, 10 / 255.0, .18)]], xf)
+		[5.0, Color(1, 1, 1, .7), -1.0], [], [] if down else [[0, 1, 2, Color(60 / 255.0, 40 / 255.0, 10 / 255.0, .18)]], xf)
 
 static func card(ci: CanvasItem, r: Rect2, sel := false, rad := 14.0) -> void:   # ô .khb (thẻ hàng trong Kho)
 	if sel:
