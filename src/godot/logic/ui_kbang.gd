@@ -271,22 +271,28 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 				keep.append(String(part))
 		_TIPN.css["box-shadow"] = ", ".join(PackedStringArray(keep)) if keep.size() else "none"
 	var iw := 38.0 if ic != "" else 0.0
-	var tw0 := TIPW - 20.0 - iw
+	var TW := TIPW
+	var tw0 := TW - 20.0 - iw
 	var L := _wrap(body, 10.5, 600, tw0)
+	var big := L.size() > 6   # (bản 509) giải thích dài: khung rộng 300, đặt giữa thân bảng
+	if big:
+		TW = 300.0
+		tw0 = TW - 24.0 - iw
+		L = _wrap(body, 10.5, 600, tw0)
 	var lw := 0.0
 	for ln in L:
 		lw = maxf(lw, Box.text_w(String(ln), 10.5, 600))
 	if ttl != "":
 		lw = maxf(lw, Box.text_w(ttl, 11.5, 800))
 	var tw := minf(tw0, lw + 4.0)
-	var W0 := clampf(tw + 20.0 + iw, 120.0, TIPW)
+	var W0 := clampf(tw + 20.0 + iw, 120.0, TW)
 	var h := 10.0 + (17.0 if ttl != "" else 0.0) + L.size() * 15.0 + 10.0
 	if ic != "":
 		h = maxf(h, 50.0)
 	# chỗ đặt: theo ô vừa bấm (U.last_btn), không theo điểm ngón tay; không vượt khung bảng
 	var vs: Vector2 = U.vsize()
 	var a := Rect2(U.last_tap / Css.K, Vector2.ZERO)
-	if U.last_btn != null and is_instance_valid(U.last_btn) and U.last_btn.is_visible_in_tree():
+	if U.last_btn != null and is_instance_valid(U.last_btn) and U.last_btn.is_visible_in_tree() and Time.get_ticks_msec() - U.last_btn_ms < 1000:
 		var gr: Rect2 = U.last_btn.get_global_rect()
 		a = Rect2(gr.position / Css.K, gr.size / Css.K)
 	var B: Rect2 = U.panel_rect()
@@ -298,6 +304,9 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 	if y < B.position.y:   # trên ô hết chỗ: xuống dưới ô
 		y = a.end.y + 6.0
 	y = clampf(y, B.position.y, B.end.y - h)
+	if big:
+		x = B.position.x + (B.size.x - W0) * 0.5
+		y = maxf(B.position.y, B.position.y + (B.size.y - h) * 0.4)
 	var c := _cl(_TIPN)
 	c.r = [x, y, W0, h]
 	c.erase("tr")
@@ -314,12 +323,12 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 900, "rgb(58, 42, 16)", "left"))
 		ty += 17.0
 	for i in L.size():
-		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(58, 42, 16)" if ttl == "" else "rgb(63, 138, 52)", "left"))   # dòng quà xanh lá như "Hợp mùa"
+		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(63, 138, 52)" if ic != "" else "rgb(90, 66, 34)", "left"))   # dòng quà (có hình) xanh lá như "Hợp mùa"; chữ giải thích nâu
 	c.kids = ks
 	var wrap := {"z": 1.0, "tag": "div", "id": "", "cls": "", "r": [0.0, 0.0, vs.x, vs.y], "css": {"display": "block", "position": "absolute"}, "kids": [c]}
 	var b: Control = U._build(wrap, {})
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	U.tip_show(b)
+	U.tip_show(b, clampf(2.0 + (body.length() + ttl.length()) / 22.0, 3.5, 14.0))   # đọc lâu theo độ dài chữ; chạm chỗ khác là tắt
 
 # ------------------------------------------------------------------ (bản 453) khối chung dời từ Nhà dân sang (Nhà dân, Nghề dùng chung)
 const HEART := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 21s-7.5-4.6-9.6-9.1C.9 8.6 3 5 6.6 5c2.1 0 3.6 1.1 4.4 2.5h2C13.8 6.1 15.3 5 17.4 5 21 5 23.1 8.6 21.6 11.9 19.5 16.4 12 21 12 21z\" fill=\"rgb(226,64,72)\" stroke=\"rgb(170,36,44)\" stroke-width=\"1.2\"/></svg>"

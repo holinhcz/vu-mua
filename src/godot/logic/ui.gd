@@ -344,6 +344,7 @@ func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (
 # ------------------------------------------------------------------ (bản 504) bong bóng chạm xem: khung nhỏ ngay chỗ chạm (thay toast cho chữ giải thích)
 var last_tap := Vector2.ZERO   # chỗ chạm xuống gần nhất (px)
 var last_btn: Control = null   # (bản 506) ô bảng vừa bấm (ui_bang._on_b)
+var last_btn_ms := 0
 var _fx: CanvasLayer = null    # (bản 505) lớp trên cùng cho bong bóng, chữ bay (bảng tự dời lên trước mỗi khung nên không bỏ chung root được)
 func fx_layer() -> CanvasLayer:
 	if _fx == null or not is_instance_valid(_fx):
@@ -471,66 +472,15 @@ func _build_hud() -> void:
 	_rail_sync()
 
 # ------------------------------------------------------------------ hộp giải thích chung (nút ? khung tre)
-var help_pop: Control = null
-static var HELP_T := {}
 
-func tre_help(title: String, text: String) -> void:   # nút ? (treq): hộp giải thích Re.pop trepop
-	var tx := [title, text]
-	if HELP_T.is_empty():
-		HELP_T = Snap.load_snap("set_pop")[".u2pop"][0]
-	var n: Dictionary = HELP_T.duplicate(true)
-	var pc := Snap.find(n, "u2pc")
-	var hb: Dictionary = Snap.find(n, "u2ph")
-	for c in hb.kids:
-		if c.tag == "b":
-			c.text = tx[0]
-			c.erase("tr")
-	var bx := Snap.find(n, "u2box")
-	var p: Dictionary = bx.kids[0]
-	var lh := Css.px(p.css.get("line-height", "21px"))
-	var fs: float = _fsz(p)
-	var fw := int(p.css.get("font-weight", "500"))
-	var l0 := int(round(float(p.r[3]) / lh))
-	var l1: int = _nlines(tx[1], fs, fw, float(p.r[2]))
-	p.text = tx[1]
-	p.erase("tr")
-	var d := (l1 - l0) * lh
-	p.r = [p.r[0], p.r[1], p.r[2], float(p.r[3]) + d]
-	bx.r = [bx.r[0], bx.r[1], bx.r[2], float(bx.r[3]) + d]
-	pc.r = [pc.r[0], pc.r[1], pc.r[2], float(pc.r[3]) + d]
-	# hộp giữa màn (flex center)
-	var dy := (float(n.r[3]) - float(pc.r[3])) / 2.0 - float(pc.r[1])
-	Snap._move(pc, Vector2(0, dy))
-	# lớp tối thành lớp riêng phủ kín màn thật, hộp nằm giữa
-	var bk: Dictionary = n.duplicate()
-	bk.kids = []
-	bk.css = bk.css.duplicate()
-	bk.css["z-index"] = "auto"
-	bk.css["position"] = "absolute"
-	pc.css["position"] = "relative"   # hộp vẽ sau lớp tối
-	hb.css["border-radius"] = "22px 22px 0px 0px"   # .u2pc overflow hidden bo góc đầu hộp
-	var top := {"tag": "div", "id": "", "cls": "", "z": n.get("z", 1.0), "css": {}, "r": n.r, "kids": [bk, pc]}
-	tre_help_close()
-	var pid := {}
-	help_pop = _build(top, pid)
-	root.add_child(help_pop)
-	anchors.append([help_pop, 0.5, 0.5])
-	_stop(help_pop)
-	var bkb = pid.get(".u2pop")
-	if bkb != null:
-		_stop(bkb)
-		tap_close(bkb, tre_help_close)
-	var pcb = pid.get(".u2pc")
-	if pcb != null:
-		_stop(pcb)
-	_click(pid.get(".u2px"), tre_help_close, "scale")
-	_layout()
+var _tipper = null   # (bản 509) bảng khung Kho ẩn dùng dựng bong bóng (ui_kbang._dtip) cho mọi chỗ gọi tre_help
+func tre_help(title: String, text: String) -> void:   # nút ?: (bản 509) giải thích = bong bóng nhãn ô ruộng ngay trên chỗ chạm (dài thì khung rộng giữa bảng), bỏ hộp nâu giữa màn
+	if _tipper == null:
+		_tipper = load("res://logic/ui_kbang.gd").new(self)
+	_tipper._dtip(text, "", title)
 
-func tre_help_close() -> void:
-	if help_pop != null:
-		anchors.erase(_anchor_of(help_pop))
-		help_pop.queue_free()
-		help_pop = null
+func tre_help_close() -> void:   # tắt bong bóng giải thích
+	tip_close()
 
 # ------------------------------------------------------------------ cột sự kiện bên phải (WY bản web): Điểm danh, Nạp đầu, 7 ngày
 # Dựng lại theo mẫu .evrail trong hud.json mỗi khi số chấm / nút hiện đổi; bỏ Sự kiện, Luyện võ.
@@ -544,7 +494,7 @@ func _pan_on() -> bool:   # đang mở bảng / hộp nào đó (lvov, bảng s�
 	for p in _pans():
 		if p != null and p.on:
 			return true
-	return (lvp != null and lvp.on) or (vlp != null and vlp.on) or (nvp != null and nvp.on) or help_pop != null or (khp != null and khp.get("on") == true)   # (bản 433) nhà dân, Sổ nhiệm vụ đang mở: Điểm danh không tự bật đè lên
+	return (lvp != null and lvp.on) or (vlp != null and vlp.on) or (nvp != null and nvp.on) or (khp != null and khp.get("on") == true)   # (bản 433) nhà dân, Sổ nhiệm vụ đang mở: Điểm danh không tự bật đè lên
 
 func _rail_sync() -> void:
 	var rl = hid.get(".evrail")

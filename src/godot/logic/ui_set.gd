@@ -1,7 +1,7 @@
 extends RefCounted
 # Bảng CÀI ĐẶT chép từ bản web (#pn-set trong #pov, "Cài đặt và hướng dẫn"; nút ? là dt()/K() mở Re.pop trepop).
 # Số đo lấy từ chính bản web: res://ui/snap/set.json (bảng), set_rs.json (nút Chơi lại đã bấm 1 lần),
-# set_pop.json (hộp giải thích). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới.
+# (bản 509) giải thích = bong bóng chung (U.tre_help). Bỏ 3 mục đo/thử của web: Nền card đồ hoạ (thử), Đo độ mượt, Xem thử cây mới.
 # Toàn màn hình: toan_man.gd (cả trang lên toàn màn, không dùng toàn màn của Godot).
 # Giá trị lưu theo máy ở G.cfg (user://caidat.json), như localStorage nong-trai-* của web.
 
@@ -366,7 +366,7 @@ func pop_close() -> void:
 
 # ------------------------------------------------------------------ cuộn, giờ
 func input(e: InputEvent) -> bool:
-	if not on or pn == null or U.help_pop != null:
+	if not on or pn == null:
 		return false
 	var body: Control = ids.get(".pbody")
 	if body != null and sc.area != body:

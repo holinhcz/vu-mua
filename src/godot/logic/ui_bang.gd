@@ -226,8 +226,6 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 		if vb != null:
 			vb._kids.clip_contents = true
 		_wire(box)
-	if U.help_pop != null:   # hộp giải thích (nút ?) luôn nằm trên bảng vừa dựng lại
-		U.root.move_child(U.help_pop, -1)
 	inner = ids.get(".vlin")
 	in0 = _in0(inner)
 	var io := Vector2(float(inn.r[0]), float(inn.r[1]))
@@ -439,6 +437,7 @@ func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bả
 
 func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối dùng lại có việc mới)
 	U.last_btn = b   # (bản 506) ô vừa bấm: bong bóng chạm xem đặt theo ô này
+	U.last_btn_ms = Time.get_ticks_msec()
 	var n: Dictionary = b.get_meta("snap", {})
 	if n.get("act") is Callable:
 		_on(n.act)

@@ -104,8 +104,6 @@ func _init(ui) -> void:
 	T.li_open = Snap.find(T.pov_cay, "khgrid").kids[0]
 	for nm in ["bdf", "bdm", "bds", "bdp", "bpl", "bpl_bad", "bpl_mv", "bsel", "bsel_f", "broad", "bnen", "bmini", "bpen"]:
 		T[nm] = Snap.load_snap(nm)["#buildSheet"][0]
-	var hp = Snap.load_snap("bdhelp")
-	T.help = hp[".u2pop"][0] if hp is Dictionary and hp.has(".u2pop") and hp[".u2pop"].size() > 0 else Snap.load_snap("set_pop")[".u2pop"][0]
 	T.tier = Snap.load_snap("btier")[".u2pop"][0]
 	for key in T:
 		if T[key] is Dictionary:
@@ -859,7 +857,7 @@ func _cat_name(c: String) -> String:
 	return ""
 
 func _help() -> void:   # l(): Re.pop "Cách xây: <mục>"
-	_pop(T.help.duplicate(true), "Cách xây: " + _cat_name(cat).to_lower(), String(HELP.get(cat, HELP.def)))
+	U.tre_help("Cách xây: " + _cat_name(cat).to_lower(), String(HELP.get(cat, HELP.def)))   # (bản 509) bong bóng giải thích chung
 
 func _tier_pop() -> void:   # c(): Hạng làng
 	var n: Dictionary = T.tier.duplicate(true)
