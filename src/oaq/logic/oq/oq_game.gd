@@ -217,7 +217,11 @@ func _place(f: float, W: float, H: float, c0: Rect2, c1: Rect2, ch: float, vis: 
 		var top: float = board_rect(0).position.y
 		L.porch_max = maxf(30.0, top - 16 - 2 * br)
 		var ph0 := float(roundi(minf(maxf(30.0, minf(L.s * 0.78, (top - 12) * 0.6)), L.porch_max)))
-		L.bx = [Vector3(c0.end.x + 14 + br, minf(H - 8 - br, c0.position.y + c0.size.y / 2), br), Vector3(c1.position.x - 14 - br, maxf(maxf(8 + br, ph0 + 4 + br), c1.position.y + c1.size.y / 2), br)]
+		# Link 11-23 "rổ dính vào bàn cờ?": rổ không bao giờ chạm bàn (cách mép bàn >= 8), thà ló ra mép màn / đè hiên
+		var bot: float = board_rect(0).end.y
+		var y0 := maxf(minf(H - 8 - br, c0.position.y + c0.size.y / 2), bot + 8 + L.s * 0.1 + br)
+		var y1 := minf(maxf(maxf(8 + br, ph0 + 4 + br), c1.position.y + c1.size.y / 2), top - 8 - L.s * 0.1 - br)
+		L.bx = [Vector3(c0.end.x + 14 + br, y0, br), Vector3(c1.position.x - 14 - br, y1, br)]
 	else:
 		L.erase("porch_max")
 		L.s = minf(minf((W - 2 * maxf(62.0, W * 0.16)) / 2, (H - 2 * (ch + 16)) / (BW + 0.05)), 215.0) * f
