@@ -174,12 +174,13 @@ static func on_ground(ci: CanvasItem, K: float, name: String, cell: Rect2i, at: 
 	var base := Transform2D(rot, Vector2(-1 if flip else 1, 1), 0.0, at)
 	var S := Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO)
 	# bóng sát đất: tối, gọn, ngay chỗ chạm đất
-	var cs := contact(name, cell, maxi(1, roundi(sw * 0.014)))
-	var cp: int = cs.pad
-	var co := ht * 0.05 + maxf(w, h) * 0.006
-	ci.draw_set_transform_matrix(S * Transform2D(0.0, SUN * co) * base)
-	ci.draw_texture_rect(cs.tex, Rect2(oxf - cp * kx, oyf - cp * ky, (sw + cp * 2) * kx, (shh + cp * 2) * ky), false, Color(SHC, 0.42 * alpha * shk))
-	if ht > maxf(w, h) * 0.04:
+	if shk > 0.0:
+		var cs := contact(name, cell, maxi(1, roundi(sw * 0.014)))
+		var cp: int = cs.pad
+		var co := ht * 0.05 + maxf(w, h) * 0.006
+		ci.draw_set_transform_matrix(S * Transform2D(0.0, SUN * co) * base)
+		ci.draw_texture_rect(cs.tex, Rect2(oxf - cp * kx, oyf - cp * ky, (sw + cp * 2) * kx, (shh + cp * 2) * ky), false, Color(SHC, 0.42 * alpha * shk))
+	if shk > 0.0 and ht > maxf(w, h) * 0.04:
 		var r := -rot
 		var lx := (SUN.x * cos(r) - SUN.y * sin(r)) * (-1.0 if flip else 1.0)
 		var ly := SUN.x * sin(r) + SUN.y * cos(r)

@@ -1288,7 +1288,7 @@ void fragment(){
   d=mat2(vec2(cos(a),sin(a)),vec2(-sin(a),cos(a)))*d;
   d+=vec2(sin(t*1.9+p.y*9.),cos(t*1.7+p.x*8.))*.004*dist;
   vec2 q=vec2(1.)+d/.8;   // Link 11-23: bóng tàu lá góc phải nhỏ lại, mờ + nhạt
-  float fsh=frond(q,2.6+1.6*dist)*.5;
+  float fsh=0.;   // Link 11-23 "xóa bóng luôn đi": bỏ bóng tàu dừa trên cao
   vec2 w=vec2(sin(t*.45+p.y*3.)+sin(t*.23+p.x*1.7),cos(t*.37+p.x*2.6)+sin(t*.19+p.y*2.))*.006;
   float big=fbm((p+w)*2.4+vec2(3.1,1.3)),fine=fbm((p+w*1.8)*8.+vec2(7.,2.)),vf=fbm((p+w*2.2)*22.+vec2(4.,8.));
   float dd=length((p-tree)*vec2(1.,1.12));

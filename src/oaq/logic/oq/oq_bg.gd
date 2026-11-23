@@ -486,7 +486,7 @@ func _frond(x: float, y: float, ln: float, ang: float, v: int) -> void:
 	var k: float = ln / (d[2] - d[1]).length()
 	var mid: Vector2 = (d[1] + d[2]) * 0.5 * k
 	# Link 11-23 "đụ má lá dừa": tàu nằm bẹp sát đất -> không bóng đổ lệch (thành cái bóng thứ hai), chỉ bóng sát nhạt
-	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, ln * 0.008, false, -mid.x, -mid.y, 0.35)
+	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, 0.0, false, -mid.x, -mid.y, 0.0)   # Link 11-23 "xóa bóng luôn đi": tàu dừa không bóng
 
 func _leaf(x: float, y: float, ln: float, ang: float, kind: String) -> void:
 	var w := ln * 0.5 if kind == "bang" else ln * 0.2
