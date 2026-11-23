@@ -486,7 +486,12 @@ func _frond(x: float, y: float, ln: float, ang: float, v: int) -> void:
 	var k: float = ln / (d[2] - d[1]).length()
 	var mid: Vector2 = (d[1] + d[2]) * 0.5 * k
 	# Link 11-23 "đụ má lá dừa": tàu nằm bẹp sát đất -> không bóng đổ lệch (thành cái bóng thứ hai), chỉ bóng sát nhạt
-	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, 0.0, false, -mid.x, -mid.y, 0.0)   # Link 11-23 "xóa bóng luôn đi": tàu dừa không bóng
+	# Link 11-23 "làm bóng mờ lại": 1 ảnh bóng đã blur sẵn (tools/oq/tau_bong.py), mịn, nhạt, lệch nhẹ theo nắng, không đốm
+	var sp := 60.0 * k
+	var so: Vector2 = A.SUN * ln * 0.035
+	draw_set_transform_matrix(Transform2D(0.0, Vector2(K, K), 0.0, Vector2.ZERO) * Transform2D(0.0, so) * Transform2D(ang, Vector2(x, y)))
+	draw_texture_rect(A.img("tau_s%d" % v), Rect2(-mid.x - sp, -mid.y - sp, d[0].x * k + sp * 2, d[0].y * k + sp * 2), false, Color(A.SHC, 0.36))
+	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, 0.0, false, -mid.x, -mid.y, 0.0)
 
 func _leaf(x: float, y: float, ln: float, ang: float, kind: String) -> void:
 	var w := ln * 0.5 if kind == "bang" else ln * 0.2

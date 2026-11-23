@@ -4,7 +4,7 @@ extends RefCounted
 # bóng đổ của hình theo mặt trời, chân dung vẽ phấn màu (SVG), biểu tượng nút.
 # Hình nào giống hệt Cờ gánh (đất, gạch tàu, gà, dép, lu, chổi, tàu dừa) lấy chung ui/img/cg/; hình riêng ở ui/img/oq/.
 
-const OWN := ["tau0", "tau1", "uiwood", "uislate", "uipaper", "peb/"]
+const OWN := ["tau0", "tau1", "tau_s0", "tau_s1", "uiwood", "uislate", "uipaper", "peb/"]
 const PEB_N := 40   # sỏi dân 9px (Link 11-22 "vẽ lại sỏi 4k 9px"): mỗi viên 1 file peb/p0..39, quan peb/q0, q1 (tools/oq/oq9.py)
 static func path(name: String) -> String:
 	return ("res://ui/img/oq/" if OWN.has(name) or name.begins_with("peb/") else "res://ui/img/cg/") + name + ".webp"
