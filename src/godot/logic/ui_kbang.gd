@@ -292,7 +292,9 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 	# chỗ đặt: theo ô vừa bấm (U.last_btn), không theo điểm ngón tay; không vượt khung bảng
 	var vs: Vector2 = U.vsize()
 	var a := Rect2(U.last_tap / Css.K, Vector2.ZERO)
-	if U.last_btn != null and is_instance_valid(U.last_btn) and U.last_btn.is_visible_in_tree() and Time.get_ticks_msec() - U.last_btn_ms < 1000:
+	if Time.get_ticks_msec() - U.tap_anchor_ms < 1000 and U.last_btn == null:
+		a = U.tap_anchor
+	elif U.last_btn != null and is_instance_valid(U.last_btn) and U.last_btn.is_visible_in_tree() and Time.get_ticks_msec() - U.last_btn_ms < 1000:
 		var gr: Rect2 = U.last_btn.get_global_rect()
 		a = Rect2(gr.position / Css.K, gr.size / Css.K)
 	var B: Rect2 = U.panel_rect()

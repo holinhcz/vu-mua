@@ -445,7 +445,9 @@ func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối 
 func _on(cb: Callable) -> void:
 	if sc.moved():
 		return
+	U.tap_on += 1   # (bản 511) câu báo phát trong lúc này = kết quả cú bấm
 	cb.call()
+	U.tap_on -= 1
 	_redo()
 
 func _act(n: Dictionary, cb: Callable, ok := true) -> Dictionary:

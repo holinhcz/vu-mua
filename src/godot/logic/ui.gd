@@ -163,7 +163,13 @@ func _click(b: Control, cb: Callable, fx := "down") -> void:
 	if b == null:
 		return
 	b.clickable(fx)
-	b.pressed.connect(cb)
+	b.pressed.connect(func() -> void:   # (bản 511) mọi nút: đánh dấu đang xử lý cú bấm, bong bóng đặt trên nút này
+		tap_on += 1
+		last_btn = b
+		last_btn_ms = Time.get_ticks_msec()
+		if not _warn_tap(b):   # nút có "!": chạm lần này hiện lý do, chạm lần sau mới làm việc
+			cb.call()
+		tap_on -= 1)
 
 func _stop(b: Control) -> void:
 	# a panel: swallow taps so they do not reach the village under it
@@ -248,7 +254,7 @@ static var _numr: RegEx = null
 func say(s: String) -> void:
 	if s.strip_edges() == "":
 		return
-	if Time.get_ticks_msec() - _tap_ms < 1500:   # phản hồi việc vừa bấm
+	if tap_on > 0:   # (bản 511) phản hồi việc đang xử lý cú bấm (nút bảng, nút màn, chạm làng): không đoán theo giờ
 		if _numr == null:
 			_numr = RegEx.create_from_string(NUMR)
 		var parts := []
@@ -259,7 +265,64 @@ func say(s: String) -> void:
 			return
 		tip_text(s)
 		return
+	var wk := _warn_key(s)
+	if wk != "":   # lỗi chặn việc lúc không bấm (kho đầy khi tự thu...): dấu "!" trên đúng nút liên quan, chạm nút đó hiện lý do
+		warns[wk] = s
+		_warn_sync()
 	call_deferred("_news_log", s)   # tin làng: ghi Chuyện làng (sau clg_cap để khỏi ghi trùng)
+
+var tap_on := 0                # (bản 511) > 0: đang chạy việc của một cú bấm
+var tap_anchor := Rect2()      # chỗ đặt bong bóng khi bấm không phải nút bảng (làng: trên vật vừa chạm, nút màn: trên nút)
+var tap_anchor_ms := 0
+var warns := {}                # "kho" / "suc" -> câu lỗi chờ người chơi chạm xem
+const WARN_AT := {"kho": "#dockBtn", "suc": "#pcAv"}
+static func _warn_key(s: String) -> String:
+	var t := s.to_lower()
+	if t.contains("kho đầy"):
+		return "kho"
+	if t.contains("mệt") or t.contains("hết sức") or t.contains("đuối sức"):
+		return "suc"
+	return ""
+
+func _warn_sync() -> void:   # vẽ / gỡ chấm "!" đỏ góc trên phải nút HUD
+	for k in WARN_AT:
+		var b = hid.get(WARN_AT[k])
+		if not (b is Control):
+			continue
+		var d: Control = b.get_node_or_null("warn")
+		if warns.has(k) and d == null:
+			var lb := Label.new()
+			lb.name = "warn"
+			lb.text = "!"
+			lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			lb.add_theme_font_override("font", Css.font(900))
+			lb.add_theme_font_size_override("font_size", int(round(12.0 * Css.K)))
+			lb.add_theme_color_override("font_color", Color.WHITE)
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = Color8(226, 64, 56)
+			sb.set_corner_radius_all(int(9.0 * Css.K))
+			sb.border_color = Color.WHITE
+			sb.set_border_width_all(int(round(1.5 * Css.K)))
+			lb.add_theme_stylebox_override("normal", sb)
+			lb.size = Vector2(18, 18) * Css.K
+			lb.position = Vector2((b as Control).size.x - 13.0 * Css.K, -5.0 * Css.K)
+			lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(lb)
+		elif not warns.has(k) and d != null:
+			d.queue_free()
+
+func _warn_tap(b: Control) -> bool:   # chạm nút đang có "!": hiện lý do (bong bóng trên nút), gỡ dấu; true = đã hiện
+	for k in warns:
+		if hid.get(WARN_AT[k]) == b:
+			var s: String = warns[k]
+			warns.erase(k)
+			_warn_sync()
+			if k == "kho" and G.kho_n() < G.kho_cap():   # đã hết đầy thì thôi
+				return false
+			tip_text(s)
+			return true
+	return false
 
 static func _is_err(s: String) -> bool:   # câu lỗi / cảnh báo
 	var t := s.to_lower()
@@ -283,7 +346,6 @@ func _news_log(s: String) -> void:
 			return
 	G.w_all.WL.clg_add("nha", t)
 
-var _tap_ms := 0
 func fly(s: String) -> void:   # (bản 505) chữ bay: kết quả bấm (+1.000 xu...) nổi lên từ chỗ chạm rồi mờ
 	var lb := Label.new()
 	lb.text = s
@@ -3846,7 +3908,6 @@ func _input(e: InputEvent) -> void:
 	# (bản 289) một luật: đang mở bất cứ bảng / popup / vòng nút nào (any_open) thì làng đứng yên; chạm xuống lúc đang mở
 	# thì giữ đứng yên tới khi nhấc hết ngón (bảng tự đóng khi chạm ra ngoài, kéo tiếp cũng không lướt làng)
 	if e is InputEventScreenTouch or (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT):
-		_tap_ms = Time.get_ticks_msec()
 		if e.pressed:
 			last_tap = e.position
 			if tip_b != null:   # chạm chỗ khác: tắt bong bóng

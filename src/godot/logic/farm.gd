@@ -1018,7 +1018,16 @@ func goto(p: Vector2) -> void:   # FR: bỏ việc "goto" cũ, đi tới ô (x, 
 		st = 0
 	q.append({"key": "goto", "kind": "walk", "i": -1, "seed": "", "pos": p})
 
-func tap(sp: Vector2) -> void:
+func tap(sp: Vector2) -> void:   # (bản 511) bọc: câu báo trong lúc xử lý chạm làng = kết quả, bong bóng đặt trên vật vừa chạm
+	ui.tap_on += 1
+	ui.last_btn = null
+	var c: Vector2 = sp / Css.K
+	ui.tap_anchor = Rect2(c - Vector2(20.0, 34.0), Vector2(40.0, 30.0))   # vật nằm ngay trên ngón tay
+	ui.tap_anchor_ms = Time.get_ticks_msec()
+	_tap_do(sp)
+	ui.tap_on -= 1
+
+func _tap_do(sp: Vector2) -> void:
 	var w := screen_to_world(sp)
 	if ui.bdp != null and ui.bdp.active():
 		ui.bdp.world_tap(w)
