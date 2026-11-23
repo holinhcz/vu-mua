@@ -108,7 +108,7 @@ i.addEventListener('keyup',function(e){e.stopPropagation()});
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
-var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 79438660, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=77,WASM=38034280,PCK=79438660,B='5055ca77',EV='dfd3ae5f';
+var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 79438660, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=77,WASM=38034280,PCK=79438660,B='1530ac50',EV='dfd3ae5f';
 var msg=document.getElementById('msg'),fill=document.getElementById('fill'),st=document.getElementById('st');
 // The engine asks for index.wasm and index.pck. They are published as engine.wasm (gzip) and pck_<n>.wasm (slices),
 // so those two requests are answered here from the published pieces. Every file of a build carries ?v=<crc> so a
@@ -123,9 +123,14 @@ function joined(urls,type){var i=0,rd=null;return new Response(new ReadableStrea
 // from there afterwards; a background job installs the whole village after the engine starts, coarse levels first,
 // then the sharp ones nearest the start view. A new build changes ?v= only for the bundles that changed.
 var CSN='nt-godot-lang',CS=null;
-var csP=(window.caches&&caches.open?caches.open(CSN).then(function(c){CS=c;return c},function(){return null}):Promise.resolve(null));
+// (bản 532) bộ nhớ trình duyệt (Cache Storage) mà treo (Brave Shields: không trả lời, không báo lỗi -> đứng 0%) thì bỏ qua:
+// mỗi lệnh cất / đọc chờ tối đa vài giây, quá là coi như không có bộ nhớ, tải thẳng
+function TO(p,ms,v){return Promise.race([p,new Promise(function(r){setTimeout(function(){r(v)},ms)})])}
+var csP=(window.caches&&caches.open?TO(caches.open(CSN).then(function(c){CS=c;return c},function(){return null}),3000,null).then(function(c){if(!c)return null;
+  // thử 1 lệnh đọc: treo thì cũng bỏ bộ nhớ
+  return TO(c.match(location.href+'__probe').then(function(){return c},function(){return null}),3000,null)}):Promise.resolve(null));
 function stored(s){return csP.then(function(c){if(!c)return F0(s);var abs=new URL(s,location.href).href;
-  return c.match(abs).then(function(hit){if(hit)return hit;return F0(s).then(function(r){if(r.ok)c.put(abs,r.clone()).catch(function(){});return r})})},function(){return F0(s)})}
+  return TO(c.match(abs),4000,null).then(function(hit){if(hit)return hit;return F0(s).then(function(r){if(r.ok)c.put(abs,r.clone()).catch(function(){});return r})})},function(){return F0(s)})}
 window.__gdpre='';
 function install(){F0('info.json?v='+B).then(function(r){return r.json()}).then(function(I){var bh=I.bh||{},X0=I.X0,Y0=I.Y0,sx=I.start[0],sy=I.start[1];
   var L=Object.keys(bh).map(function(n){var m=/^([go])(\d)(?:_(\d+)_(\d+))?$/.exec(n),l=m?+m[2]:9,d=0;
@@ -149,8 +154,8 @@ function kept(p){return mfP.then(function(){var h=MF[p];if(!h)return F0(p);var q
 function rawKey(){return 'engine.raw?h='+MF['engine.wasm']}
 function pckKey(){var h=[];for(var q=0;q<NP;q++)h.push(MF['pck_'+q+'.wasm']||'');return 'index.pck?h='+h.join('')}
 function made(k,mk){return csP.then(function(c){if(!c)return mk();var abs=new URL(k,location.href).href;
-  return c.match(abs).then(function(hit){if(hit)return hit;return mk().then(function(r){return r.blob().then(function(b){var t=r.headers.get('Content-Type');
-    return c.put(abs,new Response(b,{status:200,headers:{'Content-Type':t}})).then(function(){return c.match(abs)},function(){return null})
+  return TO(c.match(abs),4000,null).then(function(hit){if(hit)return hit;return mk().then(function(r){return r.blob().then(function(b){var t=r.headers.get('Content-Type');
+    return TO(c.put(abs,new Response(b,{status:200,headers:{'Content-Type':t}})).then(function(){return TO(c.match(abs),4000,null)},function(){return null}),8000,null)
       .then(function(m){return m||new Response(b,{status:200,headers:{'Content-Type':t}})})})})})},function(){return mk()})}
 var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){csP.then(function(c){if(!c)return;var keep={};
   Object.keys(MF).forEach(function(p){keep[new URL(p+'?h='+MF[p],location.href).href]=1});
