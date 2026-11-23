@@ -112,7 +112,6 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	bdi.set_script(load("res://logic/ui_bd_in.gd"))
 	bdi.bd = bdp
 	add_child(bdi)
-	_build_toast()
 	G.changed.connect(func(): _sync_hud())
 	G.toast.connect(say)
 	G.level_up.connect(func(_n, _g): if lvp != null: lvp.lvT = 2.5)
@@ -238,71 +237,51 @@ func cz() -> float:
 	# độ phóng của bản web (ba.z): css px cho mỗi đơn vị làng
 	return main.zoom / Css.K
 
-# ------------------------------------------------------------------ toast (ta)
-var toast_b: Control = null
-var _toast_t := 0.0
-var _toast_n: Dictionary = {}
-
-func _build_toast() -> void:
-	var d: Dictionary = Snap.load_snap("toast")
-	for sel in d:
-		for n in d[sel]:
-			_toast_n = n
-	if _toast_n.is_empty():
-		return
+# ------------------------------------------------------------------ (bản 510) câu báo G.toast: không còn hộp báo trên đầu màn
+# Chia theo lúc phát:
+#  - ngay sau khi chạm (vừa bấm việc gì): có số "+N xu / được N xu…" -> chỉ số bay ở chỗ bấm; lỗi / cảnh báo / câu khác -> bong bóng
+#    thông tin ngay trên nút vừa bấm (ui_kbang._dtip, kiểu nhãn ô ruộng);
+#  - game tự phát (tin làng: thư, sét, xưởng xong, radio...): không hiện, ghi vào Chuyện làng (nút có chấm đỏ báo chuyện mới).
+const NUMR := "(?:\\+\\s?|(?:nhận|được|thêm|thưởng|:)\\s)([\\d.]+)\\s?(xu|sen đỏ|kinh nghiệm|EXP|uy tín|♥|điểm|viên gạch|gạch)"
+static var _numr: RegEx = null
 
 func say(s: String) -> void:
-	if _toast_n.is_empty():
+	if s.strip_edges() == "":
 		return
-	# (bản 505) kết quả việc vừa bấm trong bảng: câu ngắn bay lên từ chỗ bấm, câu dài nằm dải đáy khung bảng
-	var res := Time.get_ticks_msec() - _tap_ms < 600 and _panel_top() > 0.0
-	if res and s.length() <= 34:
-		fly(s)
+	if Time.get_ticks_msec() - _tap_ms < 1500:   # phản hồi việc vừa bấm
+		if _numr == null:
+			_numr = RegEx.create_from_string(NUMR)
+		var parts := []
+		for m in _numr.search_all(s):
+			parts.append("+" + m.get_string(1) + " " + m.get_string(2))
+		if parts.size() and not _is_err(s):
+			fly("   ".join(PackedStringArray(parts.slice(0, 3))))
+			return
+		tip_text(s)
 		return
-	if toast_b != null:
-		toast_b.queue_free()
-	# web (body.u2hud .toast.u2tok): góc trái trên, dưới thanh trên (left 12, top 128), rộng theo chữ
-	var n: Dictionary = _toast_n.duplicate(true)
-	var fs := Css.px(n.css.get("font-size", "14px")) * float(n.get("z", 1.0))
-	var fw := int(n.css.get("font-weight", "600"))
-	var pl := Css.px(n.css.get("padding-left", "14px"))
-	var tw: float = Box.text_w(s, fs, fw)
-	var maxw := minf(vw - 24.0, 254.0)
-	var w := minf(maxw, tw + 2.0 * pl + 2.0)
-	var lines := _nlines(s, fs, fw, maxw - 2.0 * pl - 2.0)
-	var lh := fs * 1.35
-	var h0: float = n.r[3]
-	var h := h0 + (lines - 1) * lh
-	n.text = s
-	n.erase("tr")
-	n.css.erase("transform")
-	# giữa dòng toast ở y ~148 (1 dòng: top 128, 3 dòng: top 120 như web)
-	n.r = [12.0, roundf(147.5 - h * 0.5), w, h]
-	var pt := _panel_top()
-	if res:   # câu dài của việc vừa bấm: dải ở đáy khung bảng
-		maxw = minf(vw - 40.0, 300.0)
-		w = maxw
-		lines = _nlines(s, fs, fw, maxw - 2.0 * pl - 2.0)
-		h = h0 + (lines - 1) * lh
-		n.r = [roundf((vw - w) * 0.5), roundf(_panel_bot() - h - 14.0), w, h]
-		pt = 0.0
-	if pt > 0.0:   # (bản 504) đang mở bảng: tin nằm trên mép bảng (không che hàng tab), rộng hơn cho ít dòng
-		maxw = minf(vw - 24.0, 330.0)
-		w = minf(maxw, tw + 2.0 * pl + 2.0)
-		lines = _nlines(s, fs, fw, maxw - 2.0 * pl - 2.0)
-		h = h0 + (lines - 1) * lh
-		n.r = [roundf((vw - w) * 0.5), maxf(4.0, roundf(pt - h - 18.0)), w, h]   # chừa nút × của bảng
-	toast_b = _build(n, {})
-	root.add_child(toast_b)
-	_toast_t = 2.3
+	call_deferred("_news_log", s)   # tin làng: ghi Chuyện làng (sau clg_cap để khỏi ghi trùng)
 
-func _panel_bot() -> float:   # mép dưới khung bảng đang mở (css)
-	for p in _pans() + [ngp, nvp, vlp]:
-		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
-			var w = p.ids.get(".pwin") if "ids" in p else null
-			var c: Control = w if w is Control else p.box
-			return c.get_global_rect().end.y / Css.K
-	return vh
+static func _is_err(s: String) -> bool:   # câu lỗi / cảnh báo
+	var t := s.to_lower()
+	for k in ["chưa đủ", "không đủ", "thiếu", "đầy", "chưa tới cấp", "chưa mở", "chưa có", "hết lượt", "không được", "không thể", "phải "]:
+		if t.contains(k):
+			return true
+	return false
+
+func tip_text(s: String) -> void:   # bong bóng thông tin chữ trơn ngay trên nút vừa bấm
+	if _tipper == null:
+		_tipper = load("res://logic/ui_kbang.gd").new(self)
+	_tipper._dtip(s)
+
+func _news_log(s: String) -> void:
+	if G == null or G.w_all == null or G.w_all.WL == null:
+		return
+	var o: Dictionary = G.w_all.WL.clg_s()
+	var t := s.strip_edges()
+	for r in (o.l as Array).slice(0, 30):
+		if String(r.get("t", "")) == t:
+			return
+	G.w_all.WL.clg_add("nha", t)
 
 var _tap_ms := 0
 func fly(s: String) -> void:   # (bản 505) chữ bay: kết quả bấm (+1.000 xu...) nổi lên từ chỗ chạm rồi mờ
@@ -332,14 +311,6 @@ func panel_rect() -> Rect2:   # (bản 506) thân bảng đang mở (vùng nội
 			var r := c.get_global_rect()
 			return Rect2(r.position / Css.K, r.size / Css.K)
 	return Rect2()
-
-func _panel_top() -> float:   # (bản 504) mép trên khung bảng đang mở (đơn vị css), 0 = không có bảng
-	for p in _pans() + [ngp, nvp, vlp]:
-		if p != null and "on" in p and p.on and "box" in p and p.box != null and is_instance_valid(p.box) and p.box.visible:
-			var w = p.ids.get(".pwin") if "ids" in p else null
-			var c: Control = w if w is Control else p.box
-			return c.get_global_rect().position.y / Css.K
-	return 0.0
 
 # ------------------------------------------------------------------ (bản 504) bong bóng chạm xem: khung nhỏ ngay chỗ chạm (thay toast cho chữ giải thích)
 var last_tap := Vector2.ZERO   # chỗ chạm xuống gần nhất (px)
@@ -3868,12 +3839,6 @@ func _process(dt: float) -> void:
 			tip_b.modulate.a = clampf(_tip_t / 0.25, 0.0, 1.0)
 		if _tip_t <= 0.0:
 			tip_close()
-	if toast_b != null:
-		_toast_t -= dt
-		toast_b.modulate.a = clampf(_toast_t / 0.25, 0.0, 1.0)
-		if _toast_t <= 0.0:
-			toast_b.queue_free()
-			toast_b = null
 
 func _input(e: InputEvent) -> void:
 	# bảng che cả màn đang mở (Cài đặt, Kho, Nhiệm vụ, Lên cấp, cửa hàng Xây dựng): bản đồ không được lướt/zoom theo ngón tay (như web: .pbk chặn).

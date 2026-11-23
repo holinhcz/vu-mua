@@ -200,7 +200,7 @@ func _test_hook() -> void:
 			"sellall": ui._kho_sell_all()
 			"nv": ui.nvp.open(a[1] if a.size() > 1 else "")
 			"dd": ui.dd_open(a[1] if a.size() > 1 else "")
-			"toast": G.toast.emit(":".join(a.slice(1))); ui._toast_t = 6.0   # (bản 504) thử câu báo (giữ 6 giây để chụp)
+			"toast": G.toast.emit(":".join(a.slice(1)))   # thử câu báo
 			"vl": var H: Array = G.w_all.WL.bl(); if H.size(): ui.vl_open(int(H[0].u))
 			"xw2": for k in ["ruong", "mill"]: G.g.work[k] = {"b": 1, "q": [], "r": {}}   # test: có Ruộng muối, Cối xay
 			"ng": ui.ng_open(a[1] if a.size() > 1 else "")
