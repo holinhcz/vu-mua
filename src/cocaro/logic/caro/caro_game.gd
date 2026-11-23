@@ -381,6 +381,8 @@ func _layout() -> void:
 	# Link 11-22 "tỉ lệ màn hình như cờ gánh": giao diện (thanh công cụ, thẻ, hộp thoại) co giãn theo khổ chuẩn
 	# dọc 412x915 / ngang 1280x720, màn khác nhân U = min(rộng, cao) so với khổ chuẩn; cảnh + bàn cờ giữ khung đã duyệt
 	KU = clampf(minf(vs.x / 412.0, vs.y / 915.0) if vs.y > vs.x * 1.05 else minf(vs.x / 1280.0, vs.y / 720.0), 0.3, 6.0)
+	# chữ trên thẻ phải đọc được: không co giao diện dưới 0.8 css chuẩn (Link 11-23 nhận xét 15 màn: điện thoại ngang chữ 6px)
+	KU = maxf(KU, 0.8 * K0)
 	var V := Rect2(-_off / K, vs / K)       # cả cửa sổ (css khung)
 	L = {"port": port}
 	var safe := 6.0
@@ -413,7 +415,8 @@ func _layout() -> void:
 		var colw := _colw(W, H)
 		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
 		# bàn cờ LUÔN chính giữa màn (Link): 2 bên chừa đều = cột thẻ người chơi bên trái, cột đồ bên phải
-		var side := colw + 16
+		# cột thẻ đủ rộng cho thẻ cỡ KU (Fold/iPad ngang: thu phản lại chút cho chữ đọc được)
+		var side := maxf(colw, 250.0 * KU / K) + 16
 		face = minf(H - 24, (W - 2 * side) / rw)
 		fx = (W - face) / 2
 		fy = (H - face - face * 12 / 392) / 2
@@ -428,6 +431,11 @@ func _layout() -> void:
 		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, 250, 58)
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, 250, 62)
 		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
+	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
+	var hsx: float = L.get("hs", 1.0)
+	L.huds = []
+	for kk in ["u_tools", "u_opp", "u_me", "u_tip"]:
+		if L.has(kk): L.huds.append(Rect2(L[kk].position * hsx, L[kk].size * hsx).grow(4 * hsx))
 	L.face = Rect2(fx, fy, face, face)
 	# ô lưới trên màn (css)
 	var kb: float = BJ.kb

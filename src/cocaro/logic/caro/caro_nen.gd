@@ -323,7 +323,18 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			var rr: float = maxf(ur.size.x, ur.size.y) * s * 0.5
 			hen = {"sp": spr, "sd": sdw, "off": Vector2(sh[0], sh[1]) * s, "home": Vector2(it[1], it[2]), "pos": Vector2(it[1], it[2]),
 				"r": rr, "roam": rr * 1.1, "head": 2.6, "tgt": Vector2(it[1], it[2]), "wait": 1.0, "peck": 0.0,
-				"frm": Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)), "scr": Rect2(0, 0, W, H), "sp0": spr.position}
+				"frm": Rect2(f.position, Vector2(f.size.x, f.size.y * 1.037)), "scr": Rect2(0, 0, W, H), "sp0": spr.position, "huds": L.get("huds", [])}
+			# chỗ đứng ban đầu dính thẻ / phản -> dời ra chỗ trống gần nhất (vòng tròn nở dần)
+			if not _hen_ok(hen.home):
+				var h0: Vector2 = hen.home; var found := false
+				for ring in range(1, 40):
+					for j in 24:
+						var q: Vector2 = h0 + Vector2.from_angle(TAU * j / 24.0) * rr * 0.4 * ring
+						if _hen_ok(q): hen.home = q; found = true; break
+					if found: break
+				var dd: Vector2 = hen.home - h0
+				hen.pos = hen.home; hen.tgt = hen.home; spr.position += dd; sdw.position += dd; hen.sp0 = spr.position
+				for k in chicks.size(): chicks[k] = Vector3(chicks[k].x + dd.x, chicks[k].y + dd.y, chicks[k].z)
 	var ck := tex("gacon")
 	hen_chicks = []
 	for c in chicks:
@@ -522,6 +533,8 @@ func _hen_ok(p: Vector2) -> bool:
 	var r: float = hen.r
 	var fr: Rect2 = hen.frm.grow(r * 0.85)
 	if fr.has_point(p): return false
+	for c in hen.huds:
+		if (c as Rect2).grow(r * 0.7).has_point(p): return false
 	var sc: Rect2 = hen.scr.grow(-r * 0.6)
 	return sc.has_point(p)
 
