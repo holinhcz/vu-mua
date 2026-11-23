@@ -252,11 +252,18 @@ func _dsay(s: String) -> void:   # (bản 504) chạm xem: bong bóng tại ch�
 	_dtip(s)
 
 const TIPW := 230.0   # rộng tối đa; bong bóng rộng theo chữ, tối thiểu 120
-static var _TIPN := {}   # (bản 506) nền bong bóng = khung khay món xưởng (xf2_pd .xbar): tối trong mờ, bo 18, viền sáng
+static var _TIPN := {}   # (bản 507) nền bong bóng = nhãn ô ruộng (gv.json .gvlab): kem sáng, viền nâu, bo 10 (bỏ mũi nhọn ::after)
 func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] tên đậm + chữ; ic "gift:<loại>" hình quà, "<svg…" hình svg, còn lại mã _icx
 	if _TIPN.is_empty():
-		_TIPN = Snap.find(Snap.load_snap("xf2_pd")[".xf"][0], "xbar").duplicate(false)
+		var G0: Dictionary = Snap.load_snap("gv")
+		for sel in G0:
+			var f: Dictionary = Snap.find(G0[sel][0], "gvlab")
+			if not f.is_empty():
+				_TIPN = f.duplicate(false)
+				break
 		_TIPN.kids = []
+		_TIPN.erase("::after")
+		_TIPN.erase("text")
 	var iw := 38.0 if ic != "" else 0.0
 	var tw0 := TIPW - 20.0 - iw
 	var L := _wrap(body, 10.5, 600, tw0)
@@ -298,10 +305,10 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 		tx += iw
 	var ty := y + 10.0
 	if ttl != "":
-		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 800, "rgb(255, 255, 255)", "left"))
+		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 900, "rgb(58, 42, 16)", "left"))
 		ty += 17.0
 	for i in L.size():
-		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(255, 255, 255)" if ttl == "" else "rgb(236, 228, 206)", "left"))
+		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(58, 42, 16)" if ttl == "" else "rgb(63, 138, 52)", "left"))   # dòng quà xanh lá như "Hợp mùa"
 	c.kids = ks
 	var wrap := {"z": 1.0, "tag": "div", "id": "", "cls": "", "r": [0.0, 0.0, vs.x, vs.y], "css": {"display": "block", "position": "absolute"}, "kids": [c]}
 	var b: Control = U._build(wrap, {})
