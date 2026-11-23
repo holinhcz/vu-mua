@@ -694,7 +694,9 @@ const TX := 64.0
 const CARD_W := 214.0
 func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	var on: bool = not Gm.over and int(Gm.turn) == side
-	var ring := GOLD if on else (Color8(236, 170, 182) if side == 2 else Color8(150, 196, 236))
+	# Link 11-23 "viền Bạn xanh dương, AI đỏ": viền luôn theo phe, tới phiên thì viền dày hơn
+	var ring := Color8(214, 72, 84) if side == 2 else Color8(52, 132, 214)
+	if not on: ring = ring.lerp(Color(1, 1, 1), 0.25)
 	_box(ci, r, CARD, 12, ring, 2.6 if on else 1.6)
 	var name: String
 	var sub: String
