@@ -654,6 +654,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 			return
 		var im: Image = v.get_texture().get_image()
 		v.queue_free()
+		print("QK mode ", mode, " ", Time.get_ticks_msec())
 		if mode < 2:
 			tex[mode] = {}              # ảnh từng món trên GPU chỉ cần cho ảnh ghép này -> bỏ ngay
 			if wr < 0.95:
@@ -673,6 +674,7 @@ func _compose(key: String, u0: float, u1: float, f: float, tw: int, th: int, sub
 		m.set_shader_parameter("uBankN", out[1])
 		m.set_shader_parameter("uSub", sub)
 	var lv: Array = _live_build(vis, imgs, parts, u0, f)
+	print("QK done ", Time.get_ticks_msec())
 	var ck := _bank_ck(key)
 	A.cache_put(ck + "_w0", outi[0])
 	A.cache_put(ck + "_w1", outi[1])
