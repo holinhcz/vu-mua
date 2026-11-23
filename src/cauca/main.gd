@@ -1,6 +1,6 @@
 extends Control
 # CÂU CÁ BỜ KÊNH — bản chơi riêng (tách khỏi Nông Trại để sửa cho xong, rồi gắn lại vào Giải trí).
-# logic/cc/ là BẢN CHÉP của src/godot/logic/cc: sửa ở đây trước, Link OK thì chép ngược vào godot/.
+# logic/cc/ = link tới src/godot/logic/cc (bản 529: một bản code duy nhất, sửa một chỗ là vườn + bản chơi riêng cùng đổi).
 # Ở đây không có xu thưởng, không có nút "Về vườn" (embed = false, như bản web gốc).
 const GAME := preload("res://logic/cc/cc_game.gd")
 var g: Control = null

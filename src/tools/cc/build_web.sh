@@ -3,7 +3,7 @@
 # dùng: build_web.sh <godot> <thư mục làm việc> <thư mục main>
 set -e
 GD=$1; W=$2; MAIN=$3; SRC=$(cd "$(dirname "$0")/../.." && pwd); mkdir -p "$MAIN/cauca"
-rm -rf "$W/ccs"; cp -r "$SRC/cauca" "$W/ccs"
+rm -rf "$W/ccs"; cp -rL "$SRC/cauca" "$W/ccs"   # -L: logic/cc là link tới godot/logic/cc
 cd "$W/ccs"; "$GD" --headless --path . --import > imp.log 2>&1 || true
 "$GD" --headless --path . --export-pack Web "$W/cc.pck" > exp.log 2>&1
 grep -iE "SCRIPT ERROR|Parse Error" exp.log && exit 1

@@ -72,8 +72,8 @@ func open() -> void:
 		# cá quý (3 sao trở lên) dễ cắn hơn: bùa "Tay câu đỏ" x1.5, nâng "n_cau" của hệ thống (như câu cũ w_ca.mx)
 		"rare": func() -> float:
 			var m := 1.5 if G.bh() == "cau" else 1.0
-			if G.w_all != null:
-				m *= 1.0 + float(G.w_all.WCA._htv("n_cau"))
+			if G.w_all != null and G.w_all.WS != null:
+				m *= 1.0 + float(G.w_all.WS.htv("n_cau"))
 			return m,
 		"save": func(): G.save_game(),
 		# (Link 11-23 "làm theo giờ của game nông trại"): giờ trong ngày + mưa ở bờ kênh = đồng hồ, thời tiết của vườn
@@ -82,7 +82,7 @@ func open() -> void:
 		"rain": func() -> float: return float(G.troi.rain()) if G.troi != null else 0.0,
 		# câu được 1 con (không tính rác): đếm cho vườn như câu cũ: g.fish.total (w_ca.ry -> nhiệm vụ / thành tựu Tay câu),
 		# EXP nhân vật 3, cá vườn có món thì ghi sổ làng (đã gặp) + sổ cá vườn
-		"caught": func(kid: String):
+		"caught": func(kid: String, kg := 0.0):   # kg: cân con vừa câu (ghi "con lớn nhất" sổ cá vườn)
 			if not (G.g.get("fish") is Dictionary):
 				G.g.fish = {"rod": 0, "total": 0, "dex": {}}
 			var f: Dictionary = G.g.fish
@@ -94,6 +94,7 @@ func open() -> void:
 				if not (f.dex.get(kid) is Dictionary):
 					f.dex[kid] = {"n": 0, "best": 0}
 				f.dex[kid].n = int(f.dex[kid].n) + 1
+				f.dex[kid].best = maxf(float(f.dex[kid].get("best", 0)), kg)
 				if G.w_all != null:
 					G.w_all.WCA.tc().seen[kid] = 1
 			G.mark(),
@@ -125,6 +126,17 @@ func close() -> void:
 # ------------------------------------------------------------ gói hình câu cá (tải 1 lần, lưu máy)
 func _pack_path() -> String:
 	return "user://cc_" + CC_V + ".pck"
+
+func _part_path(i: int) -> String:
+	return "user://cc_part_%d.tmp" % i
+
+static func _fsize(p: String) -> int:
+	var f := FileAccess.open(p, FileAccess.READ)
+	if f == null:
+		return 0
+	var n := f.get_length()
+	f.close()
+	return n
 
 func _pack_load() -> bool:
 	var p := _pack_path()
@@ -186,14 +198,15 @@ func _pack_get() -> void:
 		var h := HTTPRequest.new()
 		h.accept_gzip = false
 		h.download_chunk_size = 1 << 20
+		h.download_file = _part_path(i)   # ghi thẳng ra file, khỏi giữ 28 MB trong RAM (rồi ghép thêm bản nữa)
 		_ld.add_child(h)
 		_reqs.append(h)
 		var ii := i
-		h.request_completed.connect(func(res, code, _hd, body: PackedByteArray):
+		h.request_completed.connect(func(res, code, _hd, _body):
 			if res != HTTPRequest.RESULT_SUCCESS or code != 200:
 				_fail = true
 				return
-			_parts[ii] = body
+			_parts[ii] = true
 			_pack_done())
 		if h.request(base + "l/cc_%d.wasm?v=%s" % [i, CC_V]) != OK:
 			_fail = true
@@ -214,10 +227,10 @@ func _pack_done() -> void:
 	for b in _parts:
 		if b == null:
 			return
-	var all := PackedByteArray()
-	for b in _parts:
-		all.append_array(b)
-	if all.size() != CC_SIZE:
+	var tot := 0
+	for i in CC_N:
+		tot += _fsize(_part_path(i))
+	if tot != CC_SIZE:
 		_fail = true
 		return
 	# xoá gói cũ (bản khác) cho đỡ chật máy
@@ -227,8 +240,15 @@ func _pack_done() -> void:
 			if f.begins_with("cc_") and f.ends_with(".pck") and f != _pack_path().get_file():
 				d.remove(f)
 	var fo := FileAccess.open(_pack_path(), FileAccess.WRITE)
-	if fo != null:
-		fo.store_buffer(all)
+	if fo != null:   # ghép từng miếng, đọc 1 MB một lần
+		for i in CC_N:
+			var fi := FileAccess.open(_part_path(i), FileAccess.READ)
+			if fi == null:
+				continue
+			while fi.get_position() < fi.get_length():
+				fo.store_buffer(fi.get_buffer(1 << 20))
+			fi.close()
+			DirAccess.remove_absolute(_part_path(i))
 		fo.close()
 	_pack_free()
 	if not _pack_load():

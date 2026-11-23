@@ -164,10 +164,13 @@ func _load() -> void:
 func _xu_sync() -> void:
 	if host == null:
 		return
-	var x := int(S.xu)
-	if x != _xu_last:
-		host.add.call(x - _xu_last)
-		_xu_last = x
+	# hai chiều: game đổi S.xu (bán, mua) và vườn đổi xu (lương làm thuê, đơn tự giao) trong lúc câu -> cộng cả hai phần chênh
+	var c := int(host.coins.call())
+	var x := maxi(0, int(S.xu) + c - _xu_last)
+	if x != c:
+		host.add.call(x - c)
+	S.xu = x
+	_xu_last = x
 	if host.has("bait_add"):
 		for k in D.KHO_BAIT:
 			var n := int(S.baits.get(k, 0))
@@ -920,7 +923,7 @@ func caught(f: Dictionary, w: float) -> void:
 	if f.has("junk"):
 		S.luck = minf(10, S.luck + 1)
 	elif host != null and host.has("caught"):
-		host.caught.call(str(D.KHO.get(f.id, "")))   # vườn đếm cá câu (nhiệm vụ, thành tựu, sổ làng)
+		host.caught.call(str(D.KHO.get(f.id, "")), w)   # vườn đếm cá câu (nhiệm vụ, thành tựu, sổ làng)
 	if S.tut < 3:
 		S.tut = 3
 	save(true)

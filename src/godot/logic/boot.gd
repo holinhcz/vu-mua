@@ -222,6 +222,7 @@ func _test_hook() -> void:
 			"gptree": _gptree()
 			"chox": G.troi.hh = 7.0; G.w_all.WC.Ui.al = 1.0; G.w_all.WCU.open_cho(int(a[1]) if a.size() > 1 else 0)   # (bản 517) thử bảng Chợ nổi: chox[:ghe]
 			"kllua": G.w_all.WCA.klq.append({"id": "lua", "g": 8.1, "h": 1, "s": 33.1, "t": 0, "d": G.day(), "sea": 2, "day": 1, "wx": "mua", "st": 1, "who": "", "c": 45, "rec": false}); G.w_all.WCA.klq.append({"id": "bap", "g": 900.0, "h": 3, "s": 22.0, "br": 13.0, "t": 0, "d": G.day(), "sea": 0, "day": 3, "wx": "nang", "st": 2, "who": "", "c": 80, "rec": true}); ui.kl_show()   # (bản 526) thử thẻ trái khủng: bông lúa rồi trái bắp kỷ lục
+			"ccx": ui.ccp.open()   # (bản 529) thử mở Câu cá (tải gói hình ghi thẳng ra file)
 			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)
 			"paddyt": _paddyt(a)

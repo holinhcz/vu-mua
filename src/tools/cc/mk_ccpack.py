@@ -1,7 +1,7 @@
 # Gói hình Câu cá cho Nông Trại: l/cc.wasm = pck Godot chỉ chứa ui/img/cc/** (lấy từ src/cauca/ui/img/cc).
 # Farm KHÔNG để hình câu cá trong pck chính (đỡ ~25 MB lúc mở vườn): ui_cc.gd tải gói này lần đầu bấm "Câu cá",
 # lưu user://cc_<crc>.pck, ProjectSettings.load_resource_pack() rồi code cc đọc res://ui/img/cc/... như thường.
-# python3 mk_ccpack.py <main checkout> [ui_cc.gd] -> ghi <main>/l/cc_<i>.wasm (miếng 8 MB), điền CC_V/CC_N/CC_SIZE vào ui_cc.gd
+# python3 mk_ccpack.py <main checkout> [ui_cc.gd, mặc định src/godot/logic/ui_cc.gd] -> ghi <main>/l/cc_<i>.wasm (miếng 8 MB), điền CC_V/CC_N/CC_SIZE vào ui_cc.gd
 import sys, os, zlib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from merge_logic import write_pck
@@ -22,10 +22,11 @@ n = 0
 for i in range(0, len(pk), SL):
     open(os.path.join(site, 'l', 'cc_%d.wasm' % n), 'wb').write(pk[i:i + SL]); n += 1
 crc = '%08x' % (zlib.crc32(pk) & 0xffffffff)
-if len(sys.argv) > 2:
-    u = open(sys.argv[2], encoding='utf8').read()
+UC = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'godot', 'logic', 'ui_cc.gd')   # mặc định điền thẳng vô ui_cc.gd, khỏi quên
+if os.path.exists(UC):
+    u = open(UC, encoding='utf8').read()
     u = re.sub(r'const CC_V := "[^"]*"', 'const CC_V := "%s"' % crc, u)
     u = re.sub(r'const CC_N := \S+', 'const CC_N := %d' % n, u)
     u = re.sub(r'const CC_SIZE := \S+', 'const CC_SIZE := %d' % len(pk), u)
-    open(sys.argv[2], 'w', encoding='utf8').write(u)
+    open(UC, 'w', encoding='utf8').write(u)
 print('files', len(files), 'bytes', len(pk), 'slices', n, 'crc', crc)
