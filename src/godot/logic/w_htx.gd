@@ -3,7 +3,7 @@ extends RefCounted
 #   hợp tác xã g.hx (Io, AL, I2, Rf, m9, Ru, sI, uI, ed, Nu, F2, PL, b9, _J, pI, JJ, w8, v9, tY (đếm), nvHasHx, _l);
 #     phần mạng (_i.mem, _i.xas, _i.loaded, dr.uid, Ll) để trong I / ext: chưa nối mạng thì xã trống, _l() = false.
 #   hội đình g.hdn / g.hc (hdnS, hdnToday, hdnAtt, hdnPillTxt, hdnFill, hdnStart, Zb, Fm, ER, CR, L2),
-#   lễ hội g.fest / g.festn / g.festh (Mm, Jb, WT, x2, xQ, kQ, h4, eN, Tm, p4, DT, Dx, jT, VT, yQ; nút viên bQ ở UI),
+#   lịch lễ g.festh (Mm, Jb, WT, x2, xQ, kQ, Tm, p4, yQ báo ngày lễ; bản 517 bỏ góp lễ vật / nhận lộc / bảng lễ hội),
 #   quán g.quan (Yd, Dk), cơm g.com (n5), y tế g.yte (cC), chợ phiên g.cp (Lf), du lịch g.dl (R6), g.vm (Wm),
 #   hội thi g.thi (Jm), sen đỏ g.ng ($0), sổ khách g.gb (iS), thưởng xếp hạng g.rkw (bR), rầy g.ray (rc),
 #   vật liệu g.mat (PH), sao chuồng g.penst (u3).
@@ -12,21 +12,20 @@ extends RefCounted
 
 const NV = preload("res://logic/nv.gd")
 
-signal render              # kn(): bảng đang mở dựng lại (w_htx_ui.gd nghe)
+signal render              # kn(): bảng đang mở dựng lại
 
 var G
 var WL = null              # w_lang.gd (bộ ráp gán): _r0, ut_houses, htv
 var WC = null              # w_cho.gd (bộ ráp gán): yu, s2, v1, ho
 var WS = null              # w_sys.gd (bộ ráp gán): mR, j5
 var WX = null              # w_xuong.gd (bộ ráp gán): UJ
-var ui = null              # w_htx_ui.gd (tự gán khi tạo)
 # ext: việc của hệ khác (bộ ráp gán Callable theo tên web)
 #   Ll() -> bool            (Ll: dr.st == "ok" && dr.db && !Cr; thiếu = chưa nối mạng)
 #   Nu() -> String          (Nu: dr.uid)
 #   fI(), k3(), Zl()        (đồng bộ xã trên mạng trong bước "htx")
 #   z6() -> Dictionary      (z6: đình làng đã xây trên bản đồ {gx, gy, fw, fd, ...}; null = chưa có)
 #   Cr() -> bool, Mt_mode() -> String, qc() -> String
-#   ui_x4()                 (Ih && x4(): bảng hụi đang mở thì dựng lại; w_htx_ui tự nghe render nên không bắt buộc)
+#   ui_x4()                 (Ih && x4(): không bắt buộc)
 var ext := {}
 
 # _i của bản web (xã trên mạng): mem = thành viên các xã, xas = danh sách xã, loaded, dirty (Rf)
@@ -945,7 +944,7 @@ func l2() -> bool:   # L2: hội chợ sân đình đang mở
 		return _tr(hc) and _eqn(hc.get("sp"), _vr())
 	return e_r() and t >= 18.5 and t < 22.5
 
-# ================================================================== LỄ HỘI (g.fest, g.festn, g.festh)
+# ================================================================== LỊCH LỄ (g.festh)
 func mm(t: int) -> Variant:   # Mm: lễ của ngày t (null = không có)
 	var a := posmod(t, 28)
 	var n := int(floor(a / 7.0))
@@ -978,57 +977,6 @@ func k_q():   # kQ: lễ sắp tới (chưa phải hôm nay)
 	var t = x2()
 	return t.f if t != null and int(t.k) > 0 else null
 
-func _yu(t: int):   # yu
-	return WC.yu(t)
-
-func _s2() -> Array:   # s2
-	return WC.s2() if WC != null else []
-
-func h4() -> Variant:   # h4: lễ vật làng nhờ góp cho lễ sắp tới
-	var t = x2()
-	if t == null:
-		return null
-	var a: String = String(t.f.id) + ":" + str(t.d)
-	var n = G.g.get("fest")
-	if not _tr(n) or not (n is Dictionary) or n.get("key") != a:
-		var e := _v1()
-		var r := _s2()
-		var o = _yu(int(t.d) * 31 + 7)
-		var l := []
-		for d in t.f.cand:
-			if not _ae(d).is_empty() and (r.has(d) or _barn(d) > 0):
-				l.append(d)
-		if l.size() < 3:
-			for d in t.f.cand:
-				if not _ae(d).is_empty() and ["gao", "trung", "lua", "qua_chuoi", "bot"].has(d):
-					l.append(d)
-		if l.size() < 3:
-			l += ["lua", "trung", "gao"]
-		var uniq := {}
-		for d in l:
-			uniq[d] = 1
-		var c := []
-		var f := {}
-		while c.size() < 4 and c.size() < l.size():
-			var s: String = l[int(floor(o.next() * l.size()))]
-			if f.has(s):
-				if f.size() >= uniq.size():
-					break
-				continue
-			f[s] = 1
-			var h: float = float(_ae(s).get("sell", 0)) if _tr(_ae(s).get("sell")) else 10.0
-			var p := maxi(2, mini(60, _rnd((320 + o.next() * 280) * (1 + 0.6 * e) / h)))
-			c.append([s, p])
-		n = {"key": a, "id": t.f.id, "d": t.d, "need": c, "got": {}, "done": 0, "claim": 0}
-		G.g.fest = n
-	return n
-
-func e_n(t: Dictionary) -> int:   # eN: số lễ vật còn thiếu
-	var a := 0
-	for n in t.need:
-		a += maxi(0, int(n[1]) - _i(t.got.get(n[0])))
-	return a
-
 func tm(t: Dictionary) -> Dictionary:   # Tm: lễ theo id
 	for a in XU:
 		if a.id == t.get("id"):
@@ -1041,105 +989,17 @@ func p4(t: String) -> String:   # p4: tên ngắn của lễ
 			return String(a.get("sh", "")) if _tr(a.get("sh")) else String(a.n)
 	return "lễ"
 
-func d_t() -> int:   # DT: lộc lễ hội
-	return _v0(1500 * (1 + 0.8 * _v1()))
-
-func dx() -> float:   # Dx: hôm nay nhận lộc rồi thì cây lớn nhanh (1,2)
-	var t = G.g.get("fest")
-	return 1.2 if _tr(t) and _tr(t.get("done")) and int(t.d) == _vr() else 1.0
-
-func j_t(t: String) -> bool:   # jT: góp lễ vật t
-	var a = h4()
-	if a == null or _tr(a.get("done")):
-		return false
-	var n = null
-	for l in a.need:
-		if l[0] == t:
-			n = l
-	if n == null:
-		return false
-	var e: int = int(n[1]) - _i(a.got.get(t))
-	var r := _barn(t)
-	var o := mini(e, r)
-	if o <= 0:
-		_ta("Kho chưa có " + String(_ae(t).get("name", t)).to_lower() + ".")
-		return false
-	G.g.barn[t] = _barn(t) - o
-	a.got[t] = _i(a.got.get(t)) + o
-	G.add_xp(mini(6, 1 + int(floor(o / 5.0))), "fest")   # w1
-	_ta("Góp " + _ho(t, o) + " cho lễ " + String(tm(a).sh) + ".")
-	_gr(8)
-	if e_n(a) <= 0:
-		a.done = 1
-		var nm := String(tm(a).n)
-		_later(0.7, func(): _ta("Làng đã đủ lễ vật cho " + nm + "! Tới ngày hội nhớ ghé nhận lộc nha."))
-	_kn()
-	_ba()
-	return true
-
-func v_t() -> bool:   # VT: nhận lộc lễ hội
-	var t = h4()
-	if t == null or not _tr(t.get("done")) or _tr(t.get("claim")) or _vr() != int(t.d):
-		return false
-	t.claim = 1
-	var a := d_t()
-	var n = _lang()
-	var e := 0
-	G.g.coins = _n(G.g.coins) + a
-	if n != null and _tr(n.get("fam")):
-		for r in _okeys(n.fam):
-			var o: Dictionary = n.fam[r]
-			if _n(o.get("tim")) < 5:
-				o.tim = _n(o.get("tim")) + 1
-				e += 1
-	if n != null:
-		n.gach = _n(n.get("gach")) + 8
-	G.g.festn = _n(G.g.get("festn")) + 1
-	G.nv.qi("fest")
-	_ta("Lộc " + String(tm(t).sh) + ": " + _sa(a) + " xu, 8 viên gạch" + (", " + str(e) + " nhà thân thêm 1 ♥" if e else "") + ". Hôm nay cây trái trong làng lớn nhanh hơn 4%!")
-	_gr([12, 30, 18])
-	_kn()
-	_ba()
-	return true
-
-func y_q(t: float) -> void:   # yQ: báo lễ sắp tới (mỗi giây; bQ ở w_htx_ui.gd pill_sync)
+func y_q(t: float) -> void:   # yQ: (bản 517) ngày lễ thì báo một câu (bỏ góp lễ vật / nhận lộc)
 	KT -= t
 	if KT > 0:
 		return
 	KT = 1
-	var a = x2()
-	if a == null:
-		return
-	var n = h4()
+	var w = wt()
 	var e := _vr()
-	if n != null and G.g.get("festh") != str(e) + ":" + String(n.id) and _mode() == "off":
-		G.g.festh = str(e) + ":" + String(n.id)
-		var r := tm(n)
-		var o: int = int(n.d) - e
-		var msg := ("Sắp tới " + String(r.n) + " (" + str(o) + " ngày nữa)! Bà con trong làng nhờ góp lễ vật. Chạm nút lễ hội ở trên để xem.") if o > 0 else ("Hôm nay " + String(r.n) + "! " + String(r.d))
+	if w != null and G.g.get("festh") != str(e) + ":" + String(w.id) and _mode() == "off":
+		G.g.festh = str(e) + ":" + String(w.id)
+		var msg := "Hôm nay " + String(w.n) + "! " + String(w.d)
 		_later(2.4, func(): _ta(msg))
-		_ba()
-
-func fest_pill() -> Dictionary:   # bQ (phần chữ): {} = ẩn; {text, hurry}
-	var t = x2()
-	var qc := _x("qc")
-	var a: bool = t != null and _mode() == "off" and (String(qc.call()) if qc.is_valid() else "") != "map"
-	if not a:
-		return {}
-	var n = h4()
-	if n == null:
-		return {}
-	var e := tm(n)
-	var r: int = int(n.d) - _vr()
-	var o := ""
-	if r > 0:
-		var tot := 0
-		for c in n.need:
-			tot += int(c[1])
-		o = String(e.sh) + " còn " + str(r) + " ngày · góp lễ " + ("đủ rồi" if _tr(n.get("done")) else str(_rnd(100 * (1 - float(e_n(n)) / tot))) + "%")
-	else:
-		o = (("Hôm nay " + String(e.sh) + " · làng đang vui hội") if _tr(n.get("claim")) else ("Hôm nay " + String(e.sh) + " · nhận lộc")) if _tr(n.get("done")) else ("Hôm nay " + String(e.sh) + " · còn thiếu lễ vật")
-	return {"text": o, "hurry": r == 0 and not _tr(n.get("done"))}
 
 # ================================================================== QUÁN, CƠM, Y TẾ, CHỢ PHIÊN, DU LỊCH, CÁC HỆ NHỎ
 func yd() -> Dictionary:   # Yd: g.quan

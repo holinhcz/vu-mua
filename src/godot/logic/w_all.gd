@@ -33,7 +33,6 @@ var WRU = null  # w_ruong_ui.gd
 var WKU = null  # w_kho_ui.gd
 var WCU = null  # w_cho_ui.gd
 var WSU = null  # w_sys_ui.gd
-var WHU = null  # w_htx_ui.gd
 var WCAU = null # w_ca_ui.gd
 const PILL = preload("res://logic/pill.gd")
 var pills: VBoxContainer = null   # hàng nút viên HUD (Hs())
@@ -199,7 +198,7 @@ func frame(dt: float) -> void:   # mỗi khung, chỉ lúc đang mở game
 
 # ------------------------------------------------------------------ móc vào luật game.gd
 func boost_add() -> float:   # tw: jH() + (gB() - 1) + (Dx() > 1 ? .04 : 0)
-	return WS.jH() + WS.htv("n_cay") + (0.04 if WH.dx() > 1.0 else 0.0)
+	return WS.jH() + WS.htv("n_cay")
 
 func um_add() -> float:   # vw: um() > 1 ? .04 : 0
 	return 0.04 if _ok() and WR.um() > 1.0 else 0.0
@@ -270,7 +269,6 @@ func ui_setup(ui) -> void:
 	WKU = load("res://logic/w_kho_ui.gd").new(U, WK)
 	WCU = load("res://logic/w_cho_ui.gd").new(U, WC)
 	WSU = load("res://logic/w_sys_ui.gd").new(U, WS)
-	WHU = load("res://logic/w_htx_ui.gd").new(U, WH)
 	WCAU = load("res://logic/w_ca_ui.gd").new(U, WCA)
 	TIP = load("res://logic/w_tip.gd").new(G, U)   # NTWEB sH/fp: chữ khi trỏ chuột lên bản đồ
 	TIP.name = "WebTip"
@@ -332,8 +330,7 @@ func ui_setup(ui) -> void:
 	WCAU.ext["g2"] = g2
 	WCA.ext["L1"] = func(o: Dictionary) -> void:
 		U._lack_open(o.get("items", []), String(o.get("why", "")), o.get("go", Callable()), int(o.get("xu", 0)), o.get("mats", []))
-	WHU.ext["Ai"] = func(id: String) -> Texture2D: return U.item_ic(id, 64.0)
-	WSU.ext["Ai"] = WHU.ext["Ai"]
+	WSU.ext["Ai"] = func(id: String) -> Texture2D: return U.item_ic(id, 64.0)
 
 func _job(key: String, pos, dur: float, run) -> void:   # Gl / Ns / Px: xếp việc đi tới pos rồi chạy run
 	var F = U.F if U != null else null
@@ -357,8 +354,6 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	WCU.pill_sync(pills)
 	WCU.ghe_pill_sync(pills)
 	WCU.sync_ghe()
-	WHU.sync_fest()
-	WHU.pill_sync(pills)
 	_ray_pill()
 	_tn_pill()
 	_hdn_pill()
@@ -473,7 +468,7 @@ func _ray_pill() -> void:   # l_
 func any_on() -> bool:   # (bản 287) bảng cây, hạn mặn, chợ nổi, radio, lễ hội đang mở
 	if WRU == null:
 		return false
-	return WRU.man != null or (U.chop != null and U.chop.on) or WCU.rd != null or WHU.fest != null
+	return WRU.man != null or (U.chop != null and U.chop.on) or WCU.rd != null
 
 func close_all() -> void:   # ui.close_all
 	if WRU == null:
@@ -481,4 +476,3 @@ func close_all() -> void:   # ui.close_all
 	WRU.close_man()
 	WCU.close_cho()
 	WCU.close_rd()
-	WHU.close_fest()

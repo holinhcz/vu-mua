@@ -330,7 +330,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
 			var when := String(G.SEA_N[int(d.sea)]) + " ngày " + str(int(d.day))
-			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else ["Mùa " + String(G.SEA_N[int(d.sea)]).to_lower(), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), ["Góp lễ", _go(W.WHU.open_fest)] if r <= 2 else null]])
+			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else ["Mùa " + String(G.SEA_N[int(d.sea)]).to_lower(), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), null]])
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur

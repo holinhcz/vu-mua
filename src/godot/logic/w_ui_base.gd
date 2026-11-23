@@ -1,5 +1,5 @@
 extends RefCounted
-# KHUNG CHUNG các bảng dựng bằng khối Godot (bản 287): hợp tác xã / lễ hội (w_htx_ui), hệ thống (w_sys_ui), chợ nổi / ghe /
+# KHUNG CHUNG các bảng dựng bằng khối Godot (bản 287): hệ thống (w_sys_ui), chợ nổi / ghe /
 # radio (w_cho_ui), câu cá (w_ca_ui). Trước mỗi file tự chép một bộ hàm y hệt nhau (_panel, _lbl, _btn, _ic, _x, _k);
 # giờ chung một chỗ. Thân bảng cuộn bằng vscroll.gd như Kho (không dùng ScrollContainer nữa).
 const Css = preload("res://ui/css.gd")
