@@ -402,10 +402,10 @@ func _layout() -> void:
 	if port:
 		var top := 54.0 + safe + 66
 		var bot := H - 165                     # chừa thẻ "Bạn" + dòng luật dưới phản
-		if DS == Vector2(768, 1024) or DS == Vector2(860, 1000):
+		if DS == Vector2(768, 1024) or DS == Vector2(860, 1000) or DS == Vector2(640, 904):
 			# Link 11-23 "iPad dọc thu phản lại cho hợp lí": chừa đủ chỗ trên/dưới cho thẻ cỡ KU
 			var hu := KU / K
-			top = maxf(top, 8 + safe + (36 + 4 + 58) * hu + 18)
+			top = maxf(top, 8 + safe + (36 + 16 + 58) * hu + 18)   # Link 11-23: thẻ AI + nhãn Tới phiên không chạm Menu
 			bot = H - maxf(165, 34 + 62 * hu + 14)
 		face = minf(W - 18, bot - top)
 		face = maxf(200, face)
@@ -416,7 +416,7 @@ func _layout() -> void:
 		# cỡ thẻ theo KU (không lớn hơn chỗ chừa sẵn quanh phản), neo mép cửa sổ / mép phản; L.* tính trong hệ đã co (chia hs)
 		# Link 11-23: cỡ theo luật Nông Trại (KU), chỉ co lại khi chỗ trên/dưới phản không đủ chứa thẻ
 		var hs := KU / K
-		hs = minf(hs, (fy - 18 - V.position.y - 8 - safe) / (36 + 4 + 58))
+		hs = minf(hs, (fy - 18 - V.position.y - 8 - safe) / (36 + 16 + 58))
 		hs = minf(hs, (V.end.y - (fy + face + face * 12 / 392 + 34) - 8) / 62)
 		hs = minf(hs, (V.size.x - 16) / CARD_W)
 		hs = maxf(hs, 0.3)
@@ -428,7 +428,7 @@ func _layout() -> void:
 		L.tip = Rect2(8, L.me.end.y + 10, cw, 46)
 		L.u_tools = Rect2((V.position.x + 8) / hs, (V.position.y + 8 + safe) / hs, tw / hs, 36)
 		# Link 11-23 "cách ra bàn cờ 1 chút": khe thẻ - khung phản rộng thêm ~10
-		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, maxf(L.u_tools.end.y + 4, (fy - 18) / hs - 58), CARD_W, 58)
+		L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, maxf(L.u_tools.end.y + 16, (fy - 18) / hs - 58), CARD_W, 58)
 		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 34) / hs, CARD_W, 62)
 		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)

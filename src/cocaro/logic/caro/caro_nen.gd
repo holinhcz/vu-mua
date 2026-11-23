@@ -164,6 +164,7 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 	var canopy := {}
 	var gl := []
 	var cs_ := u
+	var hen_q := Vector2.ZERO
 	if not port:
 		var rxd: float = float(LJ.roof[0])
 		roof_x = maxf(P.call(rxd, 0).x, W - 202.0 * u)
@@ -176,15 +177,18 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 			if p[0] == "lu": q.x = minf(q.x + shift, roof_x - 58.0 * u)
 			if p[0] in ["ro", "bong"]: q.x = (f.end.x + roof_x) * 0.5          # Link 11-22: nia xoài + chậu bông cân giữa khe phản - mái
 			if p[0] == "ga": q = P.call(Lx.call(470.0), 520.0)     # Link 11-22 bỏ nia lúa + nón: gà mẹ ra giữa sân trái
+			if p[0] == "ga" and W >= 1900.0 and roof_x - f.end.x > 230.0 * u:
+				# Link 11-23 "1980x900 chuyển con gà qua phải": gà mẹ ra khe giữa phản và mái
+				q = Vector2((f.end.x + roof_x) * 0.5, f.position.y + 560.0 * u)
+			if p[0] == "ga": hen_q = q
 			var sc_: float = u
 			if p[0] == "ro" and roof_x - f.end.x > 230.0 * u:
 				# Link 11-22 "màn lớn nhất nia xoài trống trải": khe rộng thì nia to hơn, dời sát bụi tre (lá tre phủ 1 góc nia)
 				sc_ = 1.3 * u; q = Vector2(roof_x - 60.0 * u, f.position.y + 200.0 * u)
 			items.append([p[0], q.x, q.y, sc_, p[4]])
 		var hx0: float = float(LJ.props.filter(func(e): return e[0] == "ga")[0][1])
-		var hdx: float = Lx.call(470.0) - hx0                 # gà con đi theo gà mẹ
-		for c in LJ.chicks:
-			var q: Vector2 = P.call(float(c[0]) + hdx, float(c[1]) + 148.0)
+		for c in LJ.chicks:      # gà con đi theo gà mẹ
+			var q: Vector2 = hen_q + Vector2(float(c[0]) - hx0, float(c[1]) + 148.0 - 520.0) * u
 			chicks.append(Vector3(q.x, q.y, c[2]))
 		var bq: Vector2 = P.call(Lx.call(float(LJ.chuoi[0])), float(LJ.chuoi[1]))
 		bc = Vector3(bq.x, bq.y, 1.35 * u)     # Link 11-22: chuối màn ngang to lên
