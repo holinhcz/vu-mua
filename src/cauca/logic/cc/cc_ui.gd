@@ -430,16 +430,30 @@ func _draw_hud(ci: Box) -> void:
 		tw = maxf(tw, A.tw(ln, bfs))
 	tw = maxf(tw, A.tw(sub, sfs, 700))
 	var bw := 6 + icb + 8 + tw + 12
+	# (Link 11-23 "chip mồi đè nút Quăng"): chip dài quá mép trái vòng nút Quăng thì thu ảnh mồi + xuống dòng từng chữ cho vừa
+	var lim: float = L.W / 2 - _act_d2() / 2 - 9 - 4
+	var ipad := 6.0
+	if 12 + bw > lim:
+		# tên mồi tối đa 2 dòng (chữ dài nhất "Trái sung" ~62): ảnh mồi nhỏ lại cho vừa chỗ
+		ipad = 4.0
+		var cap: float = lim - 12
+		icb = clampf(cap - (ipad + 5 + 6) - 62, 22, 30)
+		var room: float = cap - (ipad + icb + 5 + 6)
+		lines = A.wrap(nm, bfs, 800, room)
+		tw = A.tw(sub, sfs, 700)
+		for ln in lines:
+			tw = maxf(tw, A.tw(ln, bfs))
+		bw = minf(ipad + icb + 5 + tw + 6, cap)
 	var bhh := maxf(bh, lines.size() * bfs * 1.05 + sfs * 1.1 + 10)
 	var bb := Rect2(12, L.H - 12 - bhh - 4, bw, bhh)
 	var fa := 0.0 if fighting else 1.0
 	if not fighting:
 		var dn := ci.pressed("bait")
 		met(ci, bb, 16, dn)
-		var ir := Rect2(bb.position.x + 6, bb.get_center().y - icb / 2 + (2 if dn else 0) - 2, icb, icb)
+		var ir := Rect2(bb.position.x + ipad, bb.get_center().y - icb / 2 + (2 if dn else 0) - 2, icb, icb)
 		A.fbox(ci, ir, 10, [[0.0, A._c(247, 238, 214)], [1.0, A._c(239, 226, 192)]], [[1.0, A._c(150, 112, 48, .3)]])
 		A.pic(ci, S.bait, ir.grow(-3))
-		var tx := ir.end.x + 8
+		var tx := ir.end.x + (5 if ipad < 6 else 8)
 		var yy := bb.get_center().y - (lines.size() * bfs * 1.05 + sfs * 1.1) / 2 + bfs * .52 + (2 if dn else 0) - 2
 		for ln in lines:
 			A.text(ci, ln, tx, yy, bfs, A.F_BROWN, 0, 800)
@@ -471,6 +485,14 @@ func _draw_hud(ci: Box) -> void:
 				var cnt := str(S.basket.size())
 				A.badge(ci, Vector2(r.end.x - 4, r.position.y + 4), cnt, 12.0)
 	_draw_act(ci)
+
+func _act_d2() -> float:   # cỡ nút Quăng, cùng luật với _draw_act
+	var d := 84.0 if nar() else 92.0
+	if low():
+		d = 76.0
+	if big():
+		d = 116.0
+	return d
 
 func _draw_act(ci: Box) -> void:
 	var n := nar()
