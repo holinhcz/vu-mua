@@ -83,7 +83,7 @@ var inp: Control
 
 # trạng thái ván
 var G := {"mode": "ai", "level": 1, "names": ["Bạn", "Thằng Tí"], "av": ["me", "ti"], "nums": [], "owner": [], "cur": 1,
-	"score": [0, 0], "turn": 0, "started": false, "over": false, "ai_t": 0.0, "turn_t": 10.0, "lock": 0.0, "count": 100, "lay_port": true}
+	"score": [0, 0], "turn": 0, "started": false, "over": false, "ai_t": 0.0, "turn_t": 10.0, "lock": 0.0, "count": 100, "lay_ar": 0.0}
 var paper := Rect2()      # khung giấy (css), xoay quanh tâm
 var prot := -0.012
 var ink_anim := {}        # số -> [t0]
@@ -99,8 +99,14 @@ var S := {"sound": 1}
 var _saved = null         # ván dở trong file lưu
 var _press := ""
 
+var DPR := 1.0
+var pport := true          # tờ giấy dựng dọc (màn dọc, hoặc màn ngang gần vuông)
+var ptex := Vector2(1400, 1900)   # phần ảnh giấy đang dùng (px ảnh, đã cắt)
+var hud_r := []            # khung HUD (css) để đồ trên bàn né
+
 func setup(k: float) -> void:
-	K = maxf(1.0, k)
+	DPR = maxf(1.0, k)
+	K = DPR
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -129,9 +135,10 @@ func _ready() -> void:
 	# tờ giấy phía sau bảng chọn: số mới rải sẵn, chưa chơi
 	if _saved is Dictionary:
 		_restore(_saved, false)
+		resize()
 	else:
 		G.nums = gen(100, randi())
-		G.lay_port = port
+		G.lay_ar = paper.size.x / paper.size.y
 		G.owner = []
 		G.owner.resize(101)
 		G.owner.fill(-1)
@@ -166,40 +173,60 @@ func img(name: String) -> ImageTexture:
 # ------------------------------------------------------------ bố cục
 func resize() -> void:
 	var vs := get_viewport_rect().size
+	# Link 11-23 "fix" (như cờ gánh): cả cảnh + giao diện co giãn theo màn. Khổ chuẩn dọc 412x915, ngang 1280x720;
+	# màn khác nhân U = min(rộng, cao) so với khổ chuẩn.
+	var wc := vs.x / DPR
+	var hc := vs.y / DPR
+	var U := minf(wc / 412.0, hc / 915.0) if hc > wc * 1.05 else minf(wc / 1280.0, hc / 720.0)
+	K = DPR * clampf(U, 0.4, 3.0)
 	W = vs.x / K
 	H = vs.y / K
-	port = H >= W
-	var top := 58.0
-	var bot := 70.0
+	port = H > W * 1.05
+	var area := Rect2()
 	if port:
-		paper = Rect2(8, top, W - 16, H - top - bot)
-		var asp := 1400.0 / 1900.0
-		if paper.size.x / paper.size.y > asp:
-			var w := paper.size.y * asp
-			paper.position.x += (paper.size.x - w) / 2
-			paper.size.x = w
-		else:
-			var h := paper.size.x / asp
-			paper.position.y += (paper.size.y - h) / 2
-			paper.size.y = h
+		area = Rect2(30, 90, W - 60, H - 90 - 106)
 	else:
-		var side := minf(270.0, W * 0.24)
-		paper = Rect2(side, 12, W - side * 2, H - 24)
-		var asp := 1900.0 / 1400.0
-		if paper.size.x / paper.size.y > asp:
-			var w := paper.size.y * asp
-			paper.position.x += (paper.size.x - w) / 2
-			paper.size.x = w
-		else:
-			var h := paper.size.x / asp
-			paper.position.y += (paper.size.y - h) / 2
-			paper.size.y = h
-	if G.nums.size() and bool(G.lay_port) != port:
-		G.nums = gen(int(G.count), randi())   # máy xoay dọc / ngang: viết lại số cho vừa tờ giấy mới, số đã khoanh giữ nguyên
+		var side := 300.0
+		area = Rect2(side + 20, 20, W - side - 20 - 30, H - 40)
+	_fit_paper(area)
+	var ar := paper.size.x / paper.size.y
+	if G.nums.size() and absf(float(G.lay_ar) - ar) > 0.03 * ar:
+		G.nums = gen(int(G.count), randi())   # khổ giấy đổi (xoay máy / đổi cỡ cửa sổ): viết lại số cho vừa, số đã khoanh giữ nguyên
+		G.lay_ar = ar
 		_save()
-	G.lay_port = port
+	G.lay_ar = ar
 	for l in [l_bg, l_num, l_ink, l_hud]:
 		l.queue_redraw()
+
+# Giấy ảnh gốc dài (dọc 1400x3400, ngang 3400x1400): cắt bớt chiều dài cho vừa chỗ, chỗ cắt là bội số ô li (56 px)
+# để kẻ dòng liền nhau; mép cuối giữ nguyên (vẽ thành 2 khúc).
+const PMIN := 1650.0      # chiều dài ngắn nhất được cắt (px ảnh)
+func _fit_paper(area: Rect2) -> void:
+	pport = area.size.x / area.size.y < 1.0
+	var L := 3400.0
+	var Sx := 1400.0
+	if pport:
+		var w := area.size.x
+		var h := area.size.y
+		var lt := clampf(h / w * Sx, PMIN, L)          # chiều dài ảnh cần
+		lt = L - roundf((L - lt) / 56.0) * 56.0
+		var sc := w / Sx
+		if lt * sc > h:                                # chỗ thấp hơn tờ ngắn nhất: thu nhỏ giấy theo chiều cao
+			sc = h / lt
+		ptex = Vector2(Sx, lt)
+		var sz := ptex * sc
+		paper = Rect2(area.position + (area.size - sz) / 2, sz)
+	else:
+		var w := area.size.x
+		var h := area.size.y
+		var lt := clampf(w / h * Sx, PMIN, L)
+		lt = L - roundf((L - lt) / 56.0) * 56.0
+		var sc := h / Sx
+		if lt * sc > w:
+			sc = w / lt
+		ptex = Vector2(lt, Sx)
+		var sz := ptex * sc
+		paper = Rect2(area.position + (area.size - sz) / 2, sz)
 
 # giấy (u,v trong 0..1) -> màn hình css
 func p2s(u: float, v: float) -> Vector2:
@@ -218,11 +245,14 @@ func gen(count: int, seed: int) -> Array:
 	# và thu nhỏ số đó cho vừa (không bao giờ thiếu số nào).
 	var r := RandomNumberGenerator.new()
 	r.seed = seed
-	var u0 := 0.165 if port else 0.12
+	var u0 := (228.0 / ptex.x) if true else 0.0     # bên phải lề đỏ (lề ở x 188 px ảnh)
 	var ar := paper.size.x / maxf(1.0, paper.size.y)
-	var sw := 1.0 if port else ar          # toạ độ theo cạnh ngắn của giấy
-	var sh := (1.0 / ar) if port else 1.0
+	var sw := 1.0 if pport else ar          # toạ độ theo cạnh ngắn của giấy
+	var sh := (1.0 / ar) if pport else 1.0
+	var vb := (48.0 / paper.size.y) if port else 0.03   # màn dọc: chừa dải dưới đáy giấy cho chữ báo
 	var sc := clampf(sqrt(100.0 / float(count)), 1.0, 1.3)
+	# giấy dài hơn khổ vở thường (1.36): số to ra theo diện tích, không theo cạnh ngắn
+	sc *= clampf(sqrt(maxf(ar, 1.0 / ar) / 1.357), 1.0, 1.5)
 	var items := []
 	for n in range(1, count + 1):
 		items.append({"n": n, "fs": r.randf_range(0.055, 0.086) * sc, "rot": r.randf_range(-0.7, 0.7)})
@@ -238,7 +268,7 @@ func gen(count: int, seed: int) -> Array:
 		var placed := false
 		for a in 400:
 			var x := r.randf_range(u0 * sw + rad, sw - 0.03 - rad)
-			var y := r.randf_range(0.03 * sh + rad, sh - 0.03 - rad)
+			var y := r.randf_range(0.03 * sh + rad, sh - vb * sh - rad)
 			var clear := 1e9
 			for o in out:
 				clear = minf(clear, Vector2(x - o.x, y - o.y).length() - o.rad - GAP)
@@ -266,7 +296,7 @@ func new_game(mode: String, level: int, count := 100) -> void:
 	G.names = ["Bạn", OPP[level].name] if mode == "ai" else ["Người 1", "Người 2"]
 	G.av = ["me", OPP[level].k] if mode == "ai" else ["me", "p2"]
 	G.nums = gen(count, randi())
-	G.lay_port = port
+	G.lay_ar = paper.size.x / paper.size.y
 	G.owner = []
 	G.owner.resize(count + 1)
 	G.owner.fill(-1)
@@ -473,31 +503,56 @@ func _draw_bg(ci: CanvasItem) -> void:
 	var ts := t.get_size()
 	var s := maxf(vs.x / ts.x, vs.y / ts.y)
 	ci.draw_texture_rect(t, Rect2((vs - ts * s) / 2, ts * s), false)
-	# bút + tẩy nằm trên bàn
+	# đồ trên bàn (Link 11-23 "bàn học thì có thước kẻ, tập..."): tập + thước nằm dưới tờ giấy, lòi ra ngoài mép;
+	# bút chì, gọt chì, vỏ bào nằm trên lề đỏ của giấy (lề không có số)
+	var P := paper
+	var pw := P.size.x
+	var ph := P.size.y
+	var sm := minf(pw, ph)
 	if port:
-		_prop(ci, "but_do", Vector2(W - 70, 30), 150, -0.18)
+		_prop(ci, "tap_hong", Vector2(P.position.x + 30, P.end.y - ph * 0.2), sm * 0.46, -0.16)
+		_prop(ci, "tap", Vector2(P.end.x - 26, P.position.y + ph * 0.24), sm * 0.46, 0.2)
+		_prop(ci, "thuoc", Vector2(P.end.x - sm * 0.2, P.end.y - 6), sm * 0.8, -0.5)
+		_prop(ci, "tay", Vector2(P.position.x + 6, P.position.y + 10), 54, 0.5)
+		_prop(ci, "but_do", Vector2(W * 0.5, P.position.y - 6), 170, 0.05)
 	else:
-		_prop(ci, "but_do", Vector2(W - 140, H * 0.62), 190, -0.5)
-	if port:
-		_prop(ci, "tay", Vector2(46, 34), 44, 0.25)
-	else:
-		_prop(ci, "tay", Vector2(120, H * 0.45), 60, 0.3)
-	# bóng giấy + giấy
-	var nm := "giay" if port else "giay_ngang"
+		_prop(ci, "tap", Vector2(P.end.x - sm * 0.04, P.position.y + sm * 0.2), sm * 0.42, 0.28)
+		_prop(ci, "tap_hong", Vector2(P.end.x + sm * 0.06, P.position.y + sm * 0.62), sm * 0.4, -0.12)
+		_prop(ci, "thuoc", Vector2(P.position.x + pw * 0.62, P.end.y + 4), sm * 0.85, 0.05)
+		_prop(ci, "tay", Vector2(P.position.x + 4, P.end.y - 16), 64, -0.4)
+		_prop(ci, "but_do", Vector2(P.end.x - 30, P.position.y - 2), 200, -0.35)
+	# bóng giấy + giấy (2 khúc: thân cắt ngắn + mép cuối)
+	var nm := "giay" if pport else "giay_ngang"
 	var pt := img(nm)
 	var sht := img(nm + "_bong")
-	var c := paper.get_center() * K
-	var sz := paper.size * K
-	var pad := 60.0 * sz.x / pt.get_size().x
+	var c := P.get_center() * K
+	var sz := P.size * K
+	var f := sz.x / ptex.x
+	var pad := 60.0 * f
 	ci.draw_set_transform(c + Vector2(2.5, 5) * K, prot, Vector2.ONE)
 	ci.draw_texture_rect(sht, Rect2(-sz / 2 - Vector2(pad, pad), sz + Vector2(pad, pad) * 2), false)
 	ci.draw_set_transform(c, prot, Vector2.ONE)
-	ci.draw_texture_rect(pt, Rect2(-sz / 2, sz), false)
-	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
-	if port:
-		_prop(ci, "but_xanh", Vector2(W - 64, H - 26), 150, 0.12)
+	var full := pt.get_size()
+	const B := 160.0
+	if pport:
+		var a0 := ptex.y - B
+		ci.draw_texture_rect_region(pt, Rect2(-sz / 2, Vector2(sz.x, a0 * f)), Rect2(0, 0, full.x, a0))
+		ci.draw_texture_rect_region(pt, Rect2(-sz / 2 + Vector2(0, a0 * f), Vector2(sz.x, B * f)), Rect2(0, full.y - B, full.x, B))
 	else:
-		_prop(ci, "but_xanh", Vector2(140, H * 0.78), 190, 0.35)
+		var a1 := ptex.x - B
+		ci.draw_texture_rect_region(pt, Rect2(-sz / 2, Vector2(a1 * f, sz.y)), Rect2(0, 0, a1, full.y))
+		ci.draw_texture_rect_region(pt, Rect2(-sz / 2 + Vector2(a1 * f, 0), Vector2(B * f, sz.y)), Rect2(full.x - B, 0, B, full.y))
+	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+	# trên lề giấy: bút chì dọc theo lề, gọt chì + vỏ bào gần đầu lề
+	var mu := 0.5 * 188.0 / ptex.x
+	var pl := minf(ph * 0.42, 260.0)
+	_prop(ci, "butchi", p2s(mu, 0.6), pl, prot + PI / 2 - 0.05)
+	_prop(ci, "gotchi", p2s(mu, 0.18), minf(pw * mu * 1.6, 46.0), prot + 0.3)
+	_prop(ci, "vobao", p2s(mu * 1.05, 0.26), minf(pw * mu * 1.4, 40.0), 1.1)
+	if port:
+		_prop(ci, "but_xanh", Vector2(W * 0.5, P.end.y + 8), 170, -0.04)
+	else:
+		_prop(ci, "but_xanh", Vector2(150, H - 40), 220, 0.3)
 
 func _prop(ci: CanvasItem, name: String, at: Vector2, w: float, rot: float) -> void:
 	var t := img(name)
@@ -599,35 +654,47 @@ func icon(ci: CanvasItem, k: String, col: Color, r: Rect2) -> void:
 	if t != null:
 		ci.draw_texture_rect(t, Rect2(r.position * K, r.size * K), false)
 
+const TB_W := 40.0
+func tools_rect() -> Rect2:
+	return Rect2(12, 12, 4 + 4 * TB_W + 4, 50)
+
 func card_rect(p: int) -> Rect2:
 	if port:
-		var cw := minf(214.0, W - 20 - 104)
-		var ow := minf(220.0, W - 10 - 158)
-		return Rect2(10, H - 62, cw, 54) if p == 0 else Rect2(W - 10 - ow, 7, ow, 46)
-	var cw2 := minf(248.0, paper.position.x - 24)
-	return Rect2(12, H - 12 - 70, cw2, 70) if p == 0 else Rect2(W - 12 - cw2, 12, cw2, 70)
+		var tr := tools_rect()
+		var ow := minf(260.0, W - 12 - tr.end.x - 12)
+		var cw := minf(270.0, (W - 24) * 0.6)
+		return Rect2(12, H - 12 - 78, cw, 78) if p == 0 else Rect2(W - 12 - ow, 12, ow, 64)
+	var y0 := _col_y()
+	return Rect2(16, y0 + 92 + 170 + 16, 284, 80) if p == 0 else Rect2(16, y0, 284, 80)
+
+func _col_y() -> float:   # màn ngang: cột trái (thẻ máy, ô Tìm số, thẻ Bạn) canh giữa phần dưới thanh nút
+	var h := 80 + 12 + 170 + 16 + 80 + 56.0
+	return maxf(78.0, 78 + (H - 78 - h) / 2)
 
 func target_rect() -> Rect2:
 	if port:
 		var c0 := card_rect(0)
-		return Rect2(c0.end.x + 8, H - 66, W - 10 - c0.end.x - 8, 58)
-	var cw2 := minf(248.0, paper.position.x - 24)
-	return Rect2(12, H * 0.5 - 60, cw2, 120)
+		var tw_ := minf(W - 12 - c0.end.x - 10, 230.0)
+		return Rect2(W - 12 - tw_, H - 12 - 82, tw_, 82)
+	return Rect2(16, _col_y() + 92, 284, 170)
+
+func toast_pos(ww: float) -> Rect2:
+	if port:
+		return Rect2((W - ww) / 2, paper.end.y - 44, ww, 34)
+	var c0 := card_rect(0)
+	return Rect2(c0.position.x + (c0.size.x - ww) / 2, c0.end.y + 16, ww, 34)
 
 func _draw_hud(ci: CanvasItem) -> void:
 	btns = []
 	# thanh nút trên cùng (Về vườn, Menu, Luật, Âm thanh)
-	var ids := [["home", "home"], ["menu", "menu"], ["rules", "rules"], ["snd", "snd"]]
-	var bw := 36.0
-	var tr := Rect2(8, 8, 4 + ids.size() * (bw + 2) + 2, 42)
-	if port:
-		tr = Rect2(8, 9, 4 + ids.size() * (bw - 2) + 2, 40)
-		bw = 34.0
-	box(ci, tr, CREAM, 16, [3, Color("#e2cfa6")], SH)
-	var x := tr.position.x + 3
+	var ids := [["home", "home"], ["menu", "menu"], ["rules", "rules"], ["snd", "snd" if int(S.sound) else "mute"]]
+	var bw := TB_W
+	var tr := tools_rect()
+	box(ci, tr, CREAM, 18, [3, Color("#e2cfa6")], SH)
+	var x := tr.position.x + 4
 	for b in ids:
 		var br := Rect2(x, tr.position.y + 2, bw, tr.size.y - 7)
-		icon(ci, b[1], LEAF2 if b[0] == "home" else INK, Rect2(br.get_center() - Vector2(10, 10), Vector2(20, 20)))
+		icon(ci, b[1], LEAF2 if b[0] == "home" else INK, Rect2(br.get_center() - Vector2(12, 12), Vector2(24, 24)))
 		btns.append({"r": br, "id": b[0]})
 		x += bw
 	for p in [0, 1]:
@@ -637,11 +704,12 @@ func _draw_hud(ci: CanvasItem) -> void:
 	var age: float = clock - toast.t
 	if age < 1.8 and toast.s != "":
 		var a := clampf(minf(age / 0.15, (1.8 - age) / 0.3), 0.0, 1.0)
-		var fs := 15.0
-		var ww := tw(toast.s, fs, 700) + 28
-		var r := Rect2((W - ww) / 2, paper.position.y + 14 - (1.0 - a) * 6, ww, 32)
-		box(ci, r, Color(0.16, 0.1, 0.05, 0.86 * a), 16)
-		text(ci, toast.s, r.position.x, r.position.y, fs, 700, Color(1, 0.97, 0.9, a), 32.0 / fs, "center", ww)
+		var fs := 16.0
+		var ww := minf(tw(toast.s, fs, 700) + 30, W - 24)
+		var r := toast_pos(ww)
+		r.position.y += (1.0 - a) * 6
+		box(ci, r, Color(0.16, 0.1, 0.05, 0.86 * a), 17)
+		text(ci, toast.s, r.position.x, r.position.y, fs, 700, Color(1, 0.97, 0.9, a), r.size.y / fs, "center", ww)
 
 	if ov != "":
 		btns = []
@@ -661,8 +729,8 @@ func _card(ci: CanvasItem, p: int) -> void:
 	avatar(ci, G.av[p], ar)
 	# điểm (số đã khoanh)
 	var sc := str(G.score[p])
-	var pts := 24.0
-	var pw := maxf(44.0, tw(sc, pts, 800) + 10)
+	var pts := 28.0
+	var pw := maxf(50.0, tw(sc, pts, 800) + 12)
 	var px := r.end.x - 8 - pw
 	var hh := pts * 0.95 + 2 + 10.0
 	var my := r.position.y + (r.size.y - 4) / 2
@@ -671,32 +739,41 @@ func _card(ci: CanvasItem, p: int) -> void:
 		ci.draw_line(Vector2(px, yy) * K, Vector2(px, minf(yy + 4, my + hh / 2)) * K, LINE, 2 * K)
 		yy += 7
 	text(ci, sc, px + 6, my - hh / 2 - 1, pts, 800, PEN[p], 0.95, "center", pw - 6)
-	text(ci, "số", px + 6, my - hh / 2 + pts * 0.95 + 1, 10.5, 600, INK2, 1.0, "center", pw - 6)
+	text(ci, "số", px + 6, my - hh / 2 + pts * 0.95 + 1, 12, 600, INK2, 1.0, "center", pw - 6)
 	# tên + tình trạng
 	var tx := ar.end.x + 8
 	var nm: String = G.names[p]
-	var fsn := 15.0
-	text(ci, nm, tx, r.position.y + (5.0 if r.size.y < 50 else 8.0), fsn, 800, INK, 1.1)
+	var fsn := 18.0
+	var ty := r.position.y + (r.size.y - 4 - fsn * 1.1 - 1 - 13.5 * 1.2) / 2
+	text(ci, ellip(nm, fsn, 800, px - 6 - tx), tx, ty, fsn, 800, INK, 1.1)
 	var st := ""
 	if G.mode == "ai":
 		st = "Mức " + String(OPP[G.level].lvl).to_lower() if p == 1 else "mực xanh"
 	else:
 		st = ("còn %d giây" % ceili(G.turn_t)) if G.turn == p else ("mực xanh" if p == 0 else "mực đỏ")
-	text(ci, st, tx, r.position.y + (5.0 if r.size.y < 50 else 8.0) + fsn * 1.1 + 1, 11.5, 600, INK2, 1.2)
+	text(ci, ellip(st, 13.5, 600, px - 6 - tx), tx, ty + fsn * 1.1 + 1, 13.5, 600, INK2, 1.2)
+
+func ellip(s: String, fs: float, w: int, maxw: float) -> String:
+	if tw(s, fs, w) <= maxw:
+		return s
+	while s.length() > 1 and tw(s + "…", fs, w) > maxw:
+		s = s.substr(0, s.length() - 1)
+	return s + "…"
 
 func _target(ci: CanvasItem) -> void:
 	var r := target_rect()
 	box(ci, r, Color("#fff6dc"), 16, [4, Color("#e2c88f")], SH)
-	var big := 30.0 if port else 54.0
-	var top := r.position.y + (r.size.y - 14 - big * 1.05 - 6) / 2
-	text(ci, "Tìm số", r.position.x, top, 11.5 if port else 14.0, 700, INK2, 1.2, "center", r.size.x)
+	var big := 42.0 if port else 80.0
+	var lf := 14.0 if port else 18.0
+	var top := r.position.y + (r.size.y - 8 - lf * 1.2 - big * 0.95) / 2
+	text(ci, "Tìm số", r.position.x, top, lf, 700, INK2, 1.2, "center", r.size.x)
 	var n := str(mini(G.cur, G.count)) if not G.over else "✓"
 	var pulse := 1.0 + 0.06 * maxf(0.0, 1.0 - fposmod(clock, 1.6) / 0.35)
 	var fs := big * pulse
 	var f := hand
 	var fpx := roundi(fs * K)
 	var sw := f.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, fpx).x / K
-	ci.draw_string(f, Vector2(r.position.x + (r.size.x - sw) / 2, top + 14 + big * 0.85) * K, n, HORIZONTAL_ALIGNMENT_LEFT, -1, fpx, Color(0.2, 0.2, 0.24))
+	ci.draw_string(f, Vector2(r.position.x + (r.size.x - sw) / 2, top + lf * 1.2 + big * 0.82) * K, n, HORIZONTAL_ALIGNMENT_LEFT, -1, fpx, Color(0.2, 0.2, 0.24))
 	# tiến độ: chấm nhỏ dưới đáy
 	var done := float(G.cur - 1) / float(G.count)
 	var br := Rect2(r.position.x + 10, r.end.y - 9, r.size.x - 20, 3)
@@ -719,7 +796,7 @@ func _save() -> void:
 	var d := {"set": S}
 	if playing():
 		d["g"] = {"mode": G.mode, "level": G.level, "count": G.count, "nums": G.nums, "owner": G.owner, "cur": G.cur,
-			"score": G.score, "turn": G.turn, "port": G.lay_port}
+			"score": G.score, "turn": G.turn, "ar": G.lay_ar}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(d))
@@ -737,7 +814,7 @@ func _restore(g: Dictionary, start: bool) -> void:
 	G.nums = []
 	for o in g.nums:
 		G.nums.append({"n": int(o.n), "x": float(o.x), "y": float(o.y), "rad": float(o.rad), "fs": float(o.fs), "rot": float(o.rot), "u": float(o.u), "v": float(o.v)})
-	G.lay_port = bool(g.get("port", true))
+	G.lay_ar = float(g.get("ar", 0.0))
 	G.owner = []
 	for v in g.owner:
 		G.owner.append(int(v))
@@ -792,7 +869,7 @@ func _draw_ov(ci: CanvasItem) -> void:
 	ci.draw_rect(Rect2(Vector2.ZERO, Vector2(W, H) * K), Color(0.12, 0.07, 0.02, 0.45 * a))
 	var pw := minf(380.0, W - 24)
 	var ph := _ov_h(pw)
-	_ovs = minf(1.0, (H - 24) / ph)
+	_ovs = minf(1.0 if port else 1.3, (H - 24) / ph)
 	_ovo = Vector2((W - pw * _ovs) / 2, (H - ph * _ovs) / 2 + (1.0 - a) * 10)
 	var K0 := K
 	K = K0 * _ovs
