@@ -159,7 +159,7 @@ static func cast(name: String, cell: Rect2i, blur: int, dx: int, dy: int) -> Dic
 
 const SUN := Vector2(0.64, 0.77)
 # hình trên đất có bóng sát và bóng đổ (onGround). ox oy: góc của hình so với điểm đặt (mặc định giữa)
-static func on_ground(ci: CanvasItem, K: float, name: String, cell: Rect2i, at: Vector2, w: float, h: float, rot: float, ht: float, flip := false, ox = null, oy = null, alpha := 1.0) -> void:
+static func on_ground(ci: CanvasItem, K: float, name: String, cell: Rect2i, at: Vector2, w: float, h: float, rot: float, ht: float, flip := false, ox = null, oy = null, alpha := 1.0, shk := 1.0) -> void:
 	var tex := img(name)
 	if cell.size == Vector2i.ZERO:
 		cell = Rect2i(0, 0, tex.get_width(), tex.get_height())
@@ -176,7 +176,7 @@ static func on_ground(ci: CanvasItem, K: float, name: String, cell: Rect2i, at: 
 	var cp: int = cs.pad
 	var co := ht * 0.05 + maxf(w, h) * 0.006
 	ci.draw_set_transform_matrix(S * Transform2D(0.0, SUN * co) * base)
-	ci.draw_texture_rect(cs.tex, Rect2(oxf - cp * kx, oyf - cp * ky, (sw + cp * 2) * kx, (shh + cp * 2) * ky), false, Color(SHC, 0.42 * alpha))
+	ci.draw_texture_rect(cs.tex, Rect2(oxf - cp * kx, oyf - cp * ky, (sw + cp * 2) * kx, (shh + cp * 2) * ky), false, Color(SHC, 0.42 * alpha * shk))
 	if ht > maxf(w, h) * 0.04:
 		var r := -rot
 		var lx := (SUN.x * cos(r) - SUN.y * sin(r)) * (-1.0 if flip else 1.0)
@@ -186,7 +186,7 @@ static func on_ground(ci: CanvasItem, K: float, name: String, cell: Rect2i, at: 
 		var c := cast(name, cell, maxi(1, roundi(sw * 0.03)), dx, dy)
 		var ct: ImageTexture = c.tex
 		ci.draw_set_transform_matrix(S * base)
-		ci.draw_texture_rect(ct, Rect2(oxf - c.ox * kx, oyf - c.oy * ky, ct.get_width() * kx, ct.get_height() * ky), false, Color(SHC, 0.27 * alpha))
+		ci.draw_texture_rect(ct, Rect2(oxf - c.ox * kx, oyf - c.oy * ky, ct.get_width() * kx, ct.get_height() * ky), false, Color(SHC, 0.27 * alpha * shk))
 	ci.draw_set_transform_matrix(S * base)
 	ci.draw_texture_rect_region(tex, Rect2(oxf, oyf, w, h), Rect2(cell), Color(1, 1, 1, alpha))
 	ci.draw_set_transform_matrix(S)

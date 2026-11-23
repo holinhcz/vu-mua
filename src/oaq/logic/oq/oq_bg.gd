@@ -183,8 +183,8 @@ func _porch(L: Dictionary) -> void:
 		x += 6
 	vgrad(Rect2(0, ph, W, s * 0.2), [[0.0, Color8(40, 22, 8, 107)], [1.0, Color8(40, 22, 8, 0)]])
 
-func on_ground(name: String, cell: Rect2i, at: Vector2, w: float, h: float, rot: float, ht: float, flip := false, ox = null, oy = null) -> void:
-	A.on_ground(self, K, name, cell, at, w, h, rot, ht, flip, ox, oy)
+func on_ground(name: String, cell: Rect2i, at: Vector2, w: float, h: float, rot: float, ht: float, flip := false, ox = null, oy = null, shk := 1.0) -> void:
+	A.on_ground(self, K, name, cell, at, w, h, rot, ht, flip, ox, oy, 1.0, shk)
 
 # --- đồ trang trí
 func _find_spot(L: Dictionary, r: float, inside: bool, pref: Callable):
@@ -485,7 +485,8 @@ func _frond(x: float, y: float, ln: float, ang: float, v: int) -> void:
 	var d: Array = TAU_IMG[v]
 	var k: float = ln / (d[2] - d[1]).length()
 	var mid: Vector2 = (d[1] + d[2]) * 0.5 * k
-	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, ln * 0.05, false, -mid.x, -mid.y)
+	# Link 11-23 "đụ má lá dừa": tàu nằm bẹp sát đất -> không bóng đổ lệch (thành cái bóng thứ hai), chỉ bóng sát nhạt
+	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, ln * 0.008, false, -mid.x, -mid.y, 0.5)
 
 func _leaf(x: float, y: float, ln: float, ang: float, kind: String) -> void:
 	var w := ln * 0.5 if kind == "bang" else ln * 0.2
