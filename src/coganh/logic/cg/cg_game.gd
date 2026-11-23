@@ -148,7 +148,7 @@ func _layout() -> void:
 	L.W = W
 	L.H = H
 	L.port = H > W * 1.05
-	L.wide = not L.port and W > H * 2.0     # màn ngang dài (1980x900): Link 11-23 chỉ sửa màn này
+	L.wide = not L.port and W > H * 1.85    # màn ngang dài (1980x900, cửa sổ máy tính ~1760x920): Link 11-23 chỉ sửa mấy màn này
 	hud.layout(W, H, L.port)
 	var c0: Rect2 = hud.card_rect(0)
 	var c1: Rect2 = hud.card_rect(1)
