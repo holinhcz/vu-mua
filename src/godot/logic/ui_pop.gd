@@ -1,5 +1,5 @@
 extends "res://logic/ui_bang.gd"
-# BẢNG KHUNG TRE (Người làm thuê, Hụi làng, Trời đất, ...): dùng đúng khung bảng của Kho / Xây dựng (ui_bang.gd), vừa màn,
+# BẢNG KHUNG TRE (Người làm thuê, Trời đất, ...): dùng đúng khung bảng của Kho / Xây dựng (ui_bang.gd), vừa màn,
 # nút × góc trên, bấm nền tối thì đóng, thân cuộn được.
 # Khối trong thân xếp dọc, lề trái 25 so với khung lớn; "gap" của khối là khoảng cách phía trên nó (khối đầu: lề trên thân).
 # Mẫu: ui/snap/hr.json (hộp trống), hui_tab.json (thẻ .tt, .vl-sec, p.note, ul.kh-gb dùng chung).

@@ -30,7 +30,7 @@ const SLC := {   # nền chip riêng Sổ làng: nhóm thẻ tab Làng, loại b
 func _ck(kind: String) -> Array:
 	return SLC[kind] if SLC.has(kind) else super(kind)
 
-const LIC := {"gp": "pic:res://ui/img/vlface/m0.webp", "kh": "svg:res://ui/svg/mat/khach_sg.svg", "hr": "pic:res://ui/img/vlface/m3.webp", "hui": "xu",
+const LIC := {"gp": "pic:res://ui/img/vlface/m0.webp", "kh": "svg:res://ui/svg/mat/khach_sg.svg", "hr": "pic:res://ui/img/vlface/m3.webp",
 	"ut": "svg:res://ui/svg/mat/huychuong.svg", "tn": "sky:giong", "hdn": "svg:res://ui/svg/mat/dinh_lang.svg", "st": "svg:res://ui/svg/mat/thu.svg",
 	"gd": "svg:res://ui/svg/mat/la.svg", "rk": "svg:res://ui/svg/mat/huychuong.svg", "kl": "qua_saurieng", "cp": "pic:res://ui/img/xt/g_quan1.webp",
 	"dl": "svg:res://ui/svg/mat/khach_tay.svg"}   # hình màu từng thẻ tab Làng
@@ -89,19 +89,18 @@ func _links() -> Array:
 	var hlk: bool = hs == "Chưa mở được"
 	var hshort := "Cần có chức" if hw.begins_with("Có chức") else ("Cần có đình" if hw.contains("đình") else hs)
 	var tn_sub: String = W.tn_bk_sub()
-	return [["Bà con lối xóm", "g_ng", [["gp", "Gia phả", (str(nf) + " nhà") if nf else "Dòng họ, bà con", 0, false],
+	return [["Bà con lối xóm", "g_ng", [["gp", "Gia phả", (str(nf) + " nhà") if nf else "Dòng họ, bà con", 0, false],   # (bản 500) bỏ Hụi làng: 3 nhóm, mỗi nhóm 4 thẻ
 			["kh", "Khách thăm", "Thăm làng bạn bè", 0, false],
 			["hr", "Làm thuê", "Thuê người phụ việc", 0, false],
-			["hui", "Hụi làng", W.hui_bk_sub(), 0, false]]],
+			["st", "Chuyện làng", W.clg_bk_sub(), W.clg_red(), false]]],
 		["Việc làng", "g_vl", [["ut", "Uy tín làng", W._sv(ut.p) + " điểm", W.ut_red(), false],
 			["tn", "Thiên tai", tn_sub, maxi(int(W.tn_red()), nn), not W.tn_ok()],
 			["hdn", "Hội đình", hshort if hlk else hs, W.WH.hdn_red() if W.WH != null else 0, hlk],
-			["st", "Chuyện làng", W.clg_bk_sub(), W.clg_red(), false]]],
-		["Vui chơi, sự kiện", "g_vc", [["kl", "Kỷ lục", (str(nk) + " loại trái khủng") if nk else "Trái khủng, hội thi", 0, false],
+			["rk", "Xếp hạng", "Bảng tuần này", 0, false]]],
+		["Vui chơi, hướng dẫn", "g_vc", [["kl", "Kỷ lục", (str(nk) + " loại trái khủng") if nk else "Trái khủng, hội thi", 0, false],
 			["cp", "Sạp quê", ("Đang bày " + str(cp) + " món") if cp else "Mua bán với bạn bè", 0, false],
 			["dl", "Du lịch", G.w_all.WDL.bk_sub(), 0, false],
-			["rk", "Xếp hạng", "Bảng tuần này", 0, false]]],
-		["Hướng dẫn", "g_tt", [["gd", "Sổ tay", "Cách chơi, mẹo hay", 0, false]]]]
+			["gd", "Sổ tay", "Cách chơi, mẹo hay", 0, false]]]]
 
 func _cols() -> Array:   # c(): [khóa, tên, danh sách, là công trình, hình chip]
 	return [["ns", "Nông sản", WCA.book_ns(), false, "lua"], ["tc", "Trái cây", WCA.book_tc(), false, "qua_xoai"],
@@ -201,8 +200,6 @@ func _go(k: String) -> void:   # data-gp / data-kh / data-hr / data-ut / ...
 			U.ut_open()
 		"hr":
 			U.hr_open()
-		"hui":
-			U.hui_open()
 		"gp":
 			U.gp_open()
 		"tn":

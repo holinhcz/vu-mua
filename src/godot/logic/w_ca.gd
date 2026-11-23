@@ -1866,8 +1866,6 @@ func ch() -> void:   # CH: ghi chức năng đã dùng từ bản cũ (g.cdOld, 
 		t.quan = 1
 	if g.get("dl") is Dictionary and float(g.dl.get("n", 0)) > 0:
 		t.dulich = 1
-	if _tr(g.get("hui")):
-		t.hui = 1
 	if g.get("lai") is Dictionary and g.lai.get("d") is Dictionary and g.lai.d.size():
 		t.lai = 1
 	if g.get("lang") is Dictionary and g.lang.get("fam") is Dictionary:

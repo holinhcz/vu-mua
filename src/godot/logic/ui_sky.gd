@@ -3,7 +3,7 @@ extends "res://logic/ui_kbang.gd"
 #  - "Thời tiết": chip đỏ mùa + ngày trong mùa (thanh 7 ngày), chip bây giờ, dự báo 6 buổi (3 × 2), cảnh báo: thiên tai ngày mai,
 #    hạn mặn, gió chướng, radio (bản tin ngày mai).
 #  - "Lịch làng": hôm nay trong làng theo giờ (chợ nổi, hội chợ sân đình, đám), lễ hội 4 lễ gần nhất + hội đình.
-# Bỏ khỏi bảng (bản 396): nhạc đờn ca (bản Godot chưa có nhạc), chỉnh giờ / mùa (Cài đặt có), hụi (Sổ làng), rầy nâu (cột việc;
+# Bỏ khỏi bảng (bản 396): nhạc đờn ca (bản Godot chưa có nhạc), chỉnh giờ / mùa (Cài đặt có), hụi (đã bỏ, bản 500), rầy nâu (cột việc;
 # phun hết thuốc tự mua), tát ao (chạm ao), hội thi làng + nồi cơm trưa (chơi mạng, chưa có). Hình thời tiết: ui/snap/sky.json.
 
 var SK := {}

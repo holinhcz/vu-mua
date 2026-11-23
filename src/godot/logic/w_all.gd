@@ -108,9 +108,6 @@ func _init(game) -> void:
 	WC.ext["Jb"] = jb
 	WK.ext["Jb"] = jb
 	WL.ext["Jb"] = jb
-	WL.ext["y6"] = Callable(WH, "y6")
-	WL.ext["Pm"] = Callable(WH, "pm")
-	WL.ext["vk"] = Callable(WH, "vk")
 	WL.ext["R6"] = Callable(WH, "r6")
 	WL.ext["Bf"] = Callable(G, "bf")
 	WH.ext["z6"] = Callable(WD, "d4")

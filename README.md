@@ -22,6 +22,6 @@ Dữ liệu đã đóng gói mà game tải lúc chạy (n/, d/, l/) nằm ở n
 - **Làm thuê lag khi nhiều nhà (ui_hr.gd):** 41 nhà dựng ~105ms trên máy test (bản 475 đã gộp tim/sao, nhớ kiểu chip). Còn khựng thì chỉ dựng những nhà đang nằm trên màn (dựng theo vùng cuộn), các nhà ngoài màn chỉ chừa chỗ.
 - **Làm thuê dựng theo vùng cuộn:** Sổ làng › Bộ sưu tập đã làm cách này (bản 497, ui_sl.gd _vb / VB): chỉ dựng ô quanh màn ± 300, cuộn tới đâu dựng tới đó. Đem qua Làm thuê, Gia phả khi làng đông.
 - **Hình công trình nướng sẵn (ui/img/ct, bản 498):** còn 14 công trình chưa xuất được hình (lao_nong, raotre, congngo, gianbau, caynieu, raogoc1, bunhin, thungong, thulo, denbay, noibanhtet, hoadang, denongsao, cohoi), đang vẽ lúc chạy (chậm). Đổi hình công trình / hình món thì chạy lại: lệnh thử ctdump + src/tools/ctdump.py, src/tools/bake_ct.py; hình món src/tools/bake_kh.py.
-- **Sổ làng (bản 496):** hình Sổ tay đang tạm là chiếc lá; Uy tín và Xếp hạng chung một huy chương (cần hình riêng); dải đầu danh hiệu nền vàng giống chip đang chọn; tab Làng dài hơn khung (nhóm Sổ tay phải cuộn).
+- **Sổ làng (bản 496):** hình Sổ tay đang tạm là chiếc lá; Uy tín và Xếp hạng chung một huy chương (cần hình riêng); dải đầu danh hiệu nền vàng giống chip đang chọn.
 - **Thư nhà:** nút "Mua ở chợ phiên ›" khi thiếu hàng (chưa rõ chợ có bán từng món lẻ); dấu ✓ trên bong bóng hộp thư hơi nhỏ.
 - **Gia phả:** chưa thử dòng "+n nhà nữa" (nhà trên 5 con); làng trên 10 họ thì màu họ lặp lại.

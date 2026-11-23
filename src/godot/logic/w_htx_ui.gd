@@ -1,6 +1,5 @@
 extends "res://logic/w_ui_base.gd"
 # HỤI, LỄ HỘI (giao diện): phần bảng bản web còn thiếu ở bản Godot. Luật ở w_htx.gd.
-#  - bảng "Hụi làng" dựng từ mẫu chụp ở ui_hui.gd.
 #  - QT: bảng lễ hội ($r.mode === "hoi": #vlName = tên lễ, #vlBody): ghi chú, danh sách lễ vật (.ws-rec li.rec + .tbar, nút Góp),
 #    nút "Nhận lộc lễ hội" (data-fest = claim). Dựng lại khi chữ ký $r.sig đổi (JSON [h4, số trong kho, ngày còn]).
 #  - bQ: nút viên lễ hội (.ghepill.festpill, .hurry), chạm -> gu("hoi") = open_fest().

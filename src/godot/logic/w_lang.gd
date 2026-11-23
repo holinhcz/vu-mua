@@ -11,7 +11,7 @@ extends RefCounted
 #   thiên tai g.tn (tnS, tnOk, tnOn, tnEvOf, tnFest, tnSea), chuyện làng g.clg (clgS, clgAdd, clgGen, clgFill, clgWho, clgTick),
 #   thư g.thu (Eg), g.lg (lgS), đám tiệc g.dam (Tg, zm, qm, Sg, bk, YK, $K), cưới hỏi g.cuoi (nR, BS, NS, Sk, Ck, zU, NU, RU),
 #   người làm thuê (lm, qq, Bq, ED, Nq, $5, om, LD, Rq, eC, Tu, rC, Zk, kS, $C, eY, yI, x9, DI),
-#   hụi KN, du lịch trả phòng BR, báo khi xây xong Kq, chữ khi rê chuột Vq, ma trơi g.ma (k6, iU, ES).
+#   du lịch trả phòng BR, báo khi xây xong Kq, chữ khi rê chuột Vq, ma trơi g.ma (k6, iU, ES).
 # Vẽ người đi lại (vD, ID, FD, M_, qU, PU), chạm trúng (DD, BU, Dq), dân đi chơi (k_, oC, Jk, h_), đoàn khách (U_),
 #   hạt bay, âm thanh: không chép (xem danh sách bỏ qua của đợt).
 
@@ -27,7 +27,6 @@ var WS = null              # NTWEB w_sys.gd (bộ ráp gán): htv dùng chung
 #   E2(u) -> Dictionary      (E2[u]: người nhà u đang đi chơi {st: "home" | "go" | ...}; null = chưa có)
 #   Bf(id) -> int            (Bf: cấp mở món)
 #   Jb() -> Dictionary       (lễ gần nhất trong 29 ngày {f: {id, sh}, d, k})
-#   y6() -> int, Pm(s), vk(t, a) -> int        (hụi: kỳ tới, ghi sổ, tiền hốt)
 #   R6() -> Dictionary       (g.dl du lịch)
 #   mg() -> Array, Ae() -> Dictionary          (bến ghe sông Vàm, ghe thương hồ)
 #   BN(t) -> String, NN_T(kd) -> String, hr() -> Dictionary   (chữ rê chuột của hệ khác, điên điển, xe chè)
@@ -42,7 +41,6 @@ const NGNGAY := 15
 const NGCHINH := 3
 const CLGMAX := 100
 const TNLV := 15
-const _D := 6              # _d: số kỳ hụi
 
 var TINH := {}
 var TINHK := []
@@ -2182,13 +2180,6 @@ func gp_bk_sub() -> String:   # gpBkSub
 	var n: int = L.fam.size() if L is Dictionary and L.get("fam") is Dictionary else 0
 	return str(n) + " nhà · dòng họ, bà con" if n else "Dòng họ, bà con"
 
-func hui_bk_sub() -> String:
-	var E = G.g.get("hui")
-	if E is Dictionary and not _tr(E.get("done")):
-		var k: int = ext["y6"].call() if ext.has("y6") else 0
-		return "Đang chơi · kỳ " + str(k) + "/" + str(_D)
-	return "Chưa tham gia"
-
 func hdn_bk_sub() -> String:   # hdnBkSub
 	return WH.hdn_bk_sub() if WH != null else "Chưa mở được"
 
@@ -2745,11 +2736,6 @@ func rq(t: float, a: bool) -> void:   # Rq: mỗi khung (a = đang chạy bù / 
 	if a:
 		a_d(t)
 
-func k_s(t) -> float:   # kS: tỉ lệ bể hụi theo thân chủ hụi
-	var a = _fam_of(t)
-	var n := _n(a.get("tim")) if a != null else 0.0
-	return maxf(0.006, 0.05 - 0.009 * n)
-
 func c_count(t: int) -> int:   # $C: số nhà thân từ t ♥
 	var a = _lang()
 	var n := 0
@@ -2808,60 +2794,6 @@ func di() -> void:   # DI: nhà thân nhất thành thợ giỏi 3★
 		if v is Dictionary:
 			v.tal3 = 1
 		_ta("Khi có hàng xóm, người đầu tiên sẽ là thợ giỏi 3★.")
-
-# ------------------------------------------------------------------ hụi (KN), du lịch trả phòng (BR)
-func hui_ky(t: bool) -> void:   # KN: tới kỳ góp hụi (t = im lặng khi chạy bù)
-	var a = G.g.get("hui")
-	if not _tr(a) or _tr(a.get("done")):
-		return
-	var fy6 := _x("y6")
-	var fpm := _x("Pm")
-	var fvk := _x("vk")
-	if not fy6.is_valid() or not fpm.is_valid() or not fvk.is_valid():
-		return
-	var n := int(fy6.call())
-	while _n(a.paid) < n and not _tr(a.get("done")):
-		var e := int(a.paid) + 1
-		if e > 1 and not _tr(a.get("be")) and randf() < k_s(a.u):
-			a.be = 1
-			a.done = 1
-			var r = _fam_of(a.u)
-			if r != null:
-				r.tim = maxf(0, _n(r.get("tim")) - 2)
-			var o := _n(a.paid) * _n(a.c) - _n(a.got)
-			fpm.call("Kỳ " + str(e) + ": " + String(a.n) + " bể hụi, ôm tiền trốn lên Sài Gòn!")
-			_ta("Bể hụi! " + String(a.n) + " ôm tiền trốn rồi. May mà bạn hốt trước, khỏi góp nữa." if _tr(a.get("hot")) else "Bể hụi! " + String(a.n) + " ôm tiền trốn, bạn mất trắng " + _sa(o) + " xu đã góp.")
-			_gr(60)
-			break
-		if _n(G.g.coins) >= _n(a.c):
-			G.g.coins = _n(G.g.coins) - _n(a.c)
-			fpm.call("Kỳ " + str(e) + ": góp " + _sa(a.c) + " xu.")
-		else:
-			a.no = _n(a.get("no")) + _n(a.c)
-			var l = _fam_of(a.u)
-			if l != null:
-				l.tim = maxf(0, _n(l.get("tim")) - 1)
-			fpm.call("Kỳ " + str(e) + ": không đủ tiền góp, ghi nợ " + _sa(a.c) + " xu.")
-			if not t:
-				_ta("Tới kỳ góp hụi mà không đủ xu, " + String(a.n) + " ghi nợ và buồn bạn (−1 ♥).")
-		a.paid = e
-		if e == _D:
-			if not _tr(a.get("hot")):
-				var c := float(fvk.call(_D, a.c)) - _n(a.get("no"))
-				a.no = 0
-				G.g.coins = _n(G.g.coins) + maxf(0, c)
-				a.got = _n(a.get("got")) + c
-				a.hot = _D
-				fpm.call("Kỳ chót: hốt hụi chót, nhận " + _sa(c) + " xu.")
-				if not t:
-					_ta("Mãn hụi! Bạn hốt chót, nhận " + _sa(c) + " xu (lời so với tiền góp).")
-			a.done = 1
-			fpm.call("Mãn hụi.")
-			var f = _fam_of(a.u)
-			if f != null and not _tr(a.get("be")):
-				f.tim = minf(5, _n(f.get("tim")) + 1)
-	if not t:
-		_ba()
 
 # ------------------------------------------------------------------ báo khi xây xong (Kq), chữ rê chuột (Vq)
 func kq(t: String) -> void:   # Kq

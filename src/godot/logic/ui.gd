@@ -39,7 +39,6 @@ var ngp = null               # bảng NGHỀ THỦ CÔNG (ui_ng.gd)
 var slp = null               # bảng SỔ LÀNG (ui_sl.gd)
 var utp = null               # bảng UY TÍN LÀNG (ui_ut.gd)
 var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
-var huip = null              # bảng HỤI LÀNG (ui_hui.gd)
 var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
 var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
 var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
@@ -3567,7 +3566,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, huip, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
+	return [slp, utp, hrp, gpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3636,15 +3635,6 @@ func gp_open(u = null) -> void:   # gpOpen: Sổ làng › Gia phả
 	close_all()
 	kho_close()
 	gpp.open(u)
-
-func hui_open() -> void:   # x6: Sổ làng › Hụi làng (Jg("hui"): chưa tới cấp thì báo)
-	if G.w_all == null or not G.w_all.WL._jg("hui"):
-		return
-	if huip == null:
-		huip = load("res://logic/ui_hui.gd").new(self, G.w_all.WH)
-	close_all()
-	kho_close()
-	huip.open()
 
 func hr_open() -> void:   # ZD: Sổ làng › Làm thuê
 	if G.w_all == null:

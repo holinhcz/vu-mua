@@ -10,7 +10,7 @@ var q := ""                 # chữ tìm
 var tab := "Chung"
 const TABS := [["Chung", "Chung"], ["Ruộng vườn", "Ruộng vườn"], ["Sông nước", "Sông nước"], ["Làm ăn", "Làm ăn"], ["Làng xóm", "Làng xóm"]]   # (bản 485) mỗi tab một nhóm trong so_tay.json
 const SECC := {"Chung": "rgb(200, 150, 40)", "Ruộng vườn": "rgb(76, 150, 48)", "Sông nước": "rgb(60, 130, 180)", "Làm ăn": "rgb(222, 130, 40)", "Làng xóm": "rgb(200, 80, 90)"}
-const ICO := {"nhanvat": "svg:res://ui/svg/mat/suckhoe.svg", "thoitiet": "sky:nang", "giong": "sky:giong", "nuoc": "sky:mua", "thu": "svg:res://ui/svg/mat/thu.svg", "dieu": "svg:res://ui/svg/mat/dieu.svg", "hui": "xu", "menuo": "pic:res://ui/img/xt/b_cuoc.webp", "lai": "lua_thom", "hoithi": "svg:res://ui/svg/mat/huychuong.svg", "ray": "svg:res://ui/svg/mat/ray.svg",
+const ICO := {"nhanvat": "svg:res://ui/svg/mat/suckhoe.svg", "thoitiet": "sky:nang", "giong": "sky:giong", "nuoc": "sky:mua", "thu": "svg:res://ui/svg/mat/thu.svg", "dieu": "svg:res://ui/svg/mat/dieu.svg", "menuo": "pic:res://ui/img/xt/b_cuoc.webp", "lai": "lua_thom", "hoithi": "svg:res://ui/svg/mat/huychuong.svg", "ray": "svg:res://ui/svg/mat/ray.svg",
 	"quan": "pic:res://ui/img/xt/g_quan1.webp", "ghe": "pic:res://ui/img/xt/g_ghe1.webp", "khaihoang": "pic:res://ui/img/xt/b_cuoc.webp", "yte": "svg:res://ui/svg/mat/yte.svg",
 	"xay": "svg:res://ui/svg/mat/gach.svg", "xephang": "svg:res://ui/svg/mat/huychuong.svg", "lang": "pic:res://ui/img/vlface/0.webp", "thue": "pic:res://ui/img/vlface/3.webp",
 	"dulich": "svg:res://ui/svg/mat/khach_tay.svg", "dulich2": "svg:res://ui/svg/mat/khach_sg.svg", "hoi": "svg:res://ui/svg/mat/dinh_lang.svg", "cuoi": "banh_pt", "capdo": "svg:res://ui/svg/mat/huychuong.svg"}   # hình riêng từng mục (còn lại: hình món trong data)

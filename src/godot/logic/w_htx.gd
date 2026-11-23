@@ -3,7 +3,6 @@ extends RefCounted
 #   hợp tác xã g.hx (Io, AL, I2, Rf, m9, Ru, sI, uI, ed, Nu, F2, PL, b9, _J, pI, JJ, w8, v9, tY (đếm), nvHasHx, _l);
 #     phần mạng (_i.mem, _i.xas, _i.loaded, dr.uid, Ll) để trong I / ext: chưa nối mạng thì xã trống, _l() = false.
 #   hội đình g.hdn / g.hc (hdnS, hdnToday, hdnAtt, hdnPillTxt, hdnFill, hdnStart, Zb, Fm, ER, CR, L2),
-#   hụi g.hui (y6, Pm, JK, mk, vk, QN, UN; KN ở w_lang.gd hui_ky; bảng x6 / x4 ở w_htx_ui.gd),
 #   lễ hội g.fest / g.festn / g.festh (Mm, Jb, WT, x2, xQ, kQ, h4, eN, Tm, p4, DT, Dx, jT, VT, yQ; nút viên bQ ở UI),
 #   quán g.quan (Yd, Dk), cơm g.com (n5), y tế g.yte (cC), chợ phiên g.cp (Lf), du lịch g.dl (R6), g.vm (Wm),
 #   hội thi g.thi (Jm), sen đỏ g.ng ($0), sổ khách g.gb (iS), thưởng xếp hạng g.rkw (bR), rầy g.ray (rc),
@@ -16,7 +15,7 @@ const NV = preload("res://logic/nv.gd")
 signal render              # kn(): bảng đang mở dựng lại (w_htx_ui.gd nghe)
 
 var G
-var WL = null              # w_lang.gd (bộ ráp gán): _r0, ut_houses, htv, k_s, hui_ky
+var WL = null              # w_lang.gd (bộ ráp gán): _r0, ut_houses, htv
 var WC = null              # w_cho.gd (bộ ráp gán): yu, s2, v1, ho
 var WS = null              # w_sys.gd (bộ ráp gán): mR, j5
 var WX = null              # w_xuong.gd (bộ ráp gán): UJ
@@ -34,8 +33,6 @@ var ext := {}
 var I := {"mem": [], "xas": [], "loaded": false, "dirty": false}
 
 const D9 := 90             # d9: giây bớt cho mỗi người giúp
-const _D := 6              # _d: số phần một dây hụi
-const VN := 12             # VN: giờ mỗi kỳ hụi
 const GI := [{"ng": 10, "xu": 1000}, {"ng": 6, "xu": 600}, {"ng": 4, "xu": 300}]   # gI (sinh từ web_all.js)
 const LJ := {"ga": 20, "cuu": 40, "bo": 70, "heo": 100, "de": 55}   # lJ (sinh từ web_all.js)
 const CJ := {"ft_chuoi": 7200, "ft_dudu": 9000, "ft_nhan": 10800, "ft_chomchom": 12000, "ft_xoai": 14400, "ft_thanhlong": 13200, "ft_mit": 18000, "ft_buoi": 16800, "ft_mangcut": 19200, "ft_saurieng": 28800, "ft_dua": 12600, "ft_dieu": 11400}   # cJ (sinh từ web_all.js)
@@ -51,7 +48,6 @@ var OL := {}               # ol: giống lai
 var TV := {}               # Tv: thời gian gốc món xưởng
 
 var KT := 0.0              # KT (yQ)
-var TS := 0.0              # TS (bước "hui")
 var ZL := 0.0              # zL (bước "htx")
 var UE := 0.0              # UE (bước "hayday")
 
@@ -949,88 +945,6 @@ func l2() -> bool:   # L2: hội chợ sân đình đang mở
 		return _tr(hc) and _eqn(hc.get("sp"), _vr())
 	return e_r() and t >= 18.5 and t < 22.5
 
-# ================================================================== HỤI (g.hui)
-func q_n() -> int:   # QN: số kỳ (12 giờ) tính từ đầu
-	return int(floor((_vr() * 24 + _d0()) / VN))
-
-func y6() -> int:   # y6: kỳ hiện tại
-	var t = G.g.get("hui")
-	return 0 if not _tr(t) or _tr(t.get("done")) else mini(_D, q_n() - int(t.k0) + 1)
-
-func pm(t: String) -> void:   # Pm: ghi sổ hụi
-	var a: Dictionary = G.g.hui
-	a.log.push_front(t)
-	a.log = a.log.slice(0, 8)
-
-static func vk(t: int, a: float) -> int:   # vk: tiền hốt kỳ t
-	return _rnd(a * (4.4 + 0.4 * t))
-
-func u_n() -> Array:   # UN: các mức góp
-	var t := _v1()
-	var out := []
-	for a in [300, 1000, 3000]:
-		out.append(_rnd(a * (1 + 0.5 * t) / 100.0) * 100)
-	return out
-
-func jk() -> void:   # JK: bỏ thăm hốt hụi kỳ này
-	var t = G.g.get("hui")
-	if not _tr(t) or _tr(t.get("done")) or _tr(t.get("hot")):
-		return
-	var a := y6()
-	if a < 1:
-		return
-	var n := vk(a, float(t.c)) - _n(t.get("no"))
-	t.no = 0
-	G.g.coins = _n(G.g.coins) + maxf(0.0, n)
-	t.got = _n(t.get("got")) + n
-	t.hot = a
-	pm("Kỳ " + str(a) + ": bỏ thăm hốt hụi, nhận " + _sa(n) + " xu.")
-	_ta("Hốt hụi kỳ " + str(a) + ": nhận " + _sa(n) + " xu. Các kỳ sau vẫn phải góp đủ tới mãn hụi.")
-	_kn()
-	_ba()
-
-func mk(t, a: int) -> void:   # mk: vô hụi của nhà t, mỗi phần a xu
-	if _tr(G.g.get("hui")) and not _tr(G.g.hui.get("done")):
-		_ta("Đang chơi một dây hụi rồi.")
-		return
-	var n = _fam_of(t)
-	if n == null:
-		_ta("Chưa chọn chủ hụi.")
-		return
-	if _n(G.g.coins) < a:
-		_ta("Cần " + _sa(a) + " xu để góp kỳ đầu.")
-		return
-	G.g.hui = {"u": int(_ks(t)) if _ks(t).is_valid_int() else 0, "n": n.n, "c": a, "k0": q_n(), "paid": 0, "hot": 0, "got": 0, "done": 0, "be": 0, "no": 0, "log": []}
-	if WL != null:
-		WL.hui_ky(true)   # KN(!0)
-	_ta("Vô hụi của " + String(n.n) + ": 6 phần, mỗi kỳ 12 tiếng góp " + _sa(a) + " xu.")
-	_ba()
-	_kn()   # x4()
-
-func hui_new() -> void:   # data-hui="new": g.hui = null
-	G.g.hui = null
-	_kn()
-
-func hui_step(t: float) -> void:   # ui({id: "hui"}).step
-	TS -= t
-	if TS > 0:
-		return
-	TS = 2.0
-	if _cr():
-		return
-	var h = G.g.get("hui")
-	var a = h.get("paid") if _tr(h) else null
-	if WL != null:
-		WL.hui_ky(false)
-	h = G.g.get("hui")
-	if _tr(h) and h.get("paid") != a:
-		_kn()
-
-func sky_hui() -> Array:   # sky của "hui": [đang chơi (.got), chữ <small>]
-	var t = G.g.get("hui")
-	var on: bool = _tr(t) and not _tr(t.get("done"))
-	return [on, ("Đang chơi hụi " + String(t.n) + ", kỳ " + str(y6()) + "/" + str(_D) + (", đã hốt" if _tr(t.get("hot")) else ", chưa hốt")) if on else "Chưa chơi dây hụi nào."]
-
 # ================================================================== LỄ HỘI (g.fest, g.festn, g.festh)
 func mm(t: int) -> Variant:   # Mm: lễ của ngày t (null = không có)
 	var a := posmod(t, 28)
@@ -1453,11 +1367,10 @@ func hayday_step(t: float) -> void:   # ui({id: "hayday"}).step
 	s_h()
 
 # ================================================================== bước mỗi khung
-func step(t: float, offline: bool) -> void:   # htx, hui, yQ (trong wK), hayday; bản web không chạy các bước ui() khi bù offline
+func step(t: float, offline: bool) -> void:   # htx, yQ (trong wK), hayday; bản web không chạy các bước ui() khi bù offline
 	if offline:
 		return
 	hayday_step(t)
 	htx_step(t)
 	hdn_tick(t)
-	hui_step(t)
 	y_q(t)
