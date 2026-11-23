@@ -264,6 +264,12 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 		_TIPN.kids = []
 		_TIPN.erase("::after")
 		_TIPN.erase("text")
+		_TIPN.css = _TIPN.css.duplicate()   # (bản 508) bỏ bóng đen mờ dưới nhãn: chỉ giữ các lớp inset (viền, vệt sáng)
+		var keep := []
+		for part in String(_TIPN.css.get("box-shadow", "none")).replace(", rgb", "|rgb").split("|"):
+			if String(part).contains("inset"):
+				keep.append(String(part))
+		_TIPN.css["box-shadow"] = ", ".join(PackedStringArray(keep)) if keep.size() else "none"
 	var iw := 38.0 if ic != "" else 0.0
 	var tw0 := TIPW - 20.0 - iw
 	var L := _wrap(body, 10.5, 600, tw0)
