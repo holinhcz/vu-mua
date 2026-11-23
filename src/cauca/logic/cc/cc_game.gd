@@ -60,6 +60,12 @@ func _ready() -> void:
 	for k in D.KHO_BAIT:
 		_bait_last[k] = int(S.baits.get(k, 0))
 	_reset_state()
+	if host != null and host.has("hour"):
+		S.hour = fposmod(float(host.hour.call()), 24.0)
+		if host.has("rain"):
+			W.rain = float(host.rain.call())
+			W.rainTarget = W.rain
+			W.cloud = W.cloudBase + W.rain * (1 - W.cloudBase)
 	tod = D.tod_at(S.hour)
 	var vs0 := get_viewport_rect().size
 	layout(vs0.x / K, vs0.y / K)
@@ -289,15 +295,23 @@ func near_spot(x: float, z: float):
 
 func world_update(dt: float) -> void:
 	W.t += dt
-	S.hour = fmod(S.hour + dt * D.HOUR_PER_SEC, 24.0)
-	W.nextRain -= dt
+	if host != null and host.has("hour"):   # trong vườn: giờ + mưa theo trời của vườn
+		S.hour = fposmod(float(host.hour.call()), 24.0)
+		var rt: float = float(host.rain.call()) if host.has("rain") else 0.0
+		if rt > .3 and float(W.rainTarget) <= .3 and started:
+			ui.toast("Trời đổ mưa, cá ăn mạnh!", "info")
+		W.rainTarget = rt
+		W.nextRain = 999.0
+	else:
+		S.hour = fmod(S.hour + dt * D.HOUR_PER_SEC, 24.0)
+		W.nextRain -= dt
 	if W.nextRain < 0 and not W.rainTarget:
 		W.rainTarget = 1
 		W.rainT = rnd(35, 70)
 		W.nextRain = rnd(150, 260)
 		if started:
 			ui.toast("Trời đổ mưa, cá ăn mạnh!", "info")
-	if W.rainTarget:
+	if W.rainTarget and (host == null or not host.has("hour")):
 		W.rainT -= dt
 		if W.rainT < 0:
 			W.rainTarget = 0
