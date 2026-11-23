@@ -218,6 +218,8 @@ func _test_hook() -> void:
 			"thumi": var T8: Dictionary = G.w_all.WTH.Eg(); T8.d = -1; T8.un = null; T8.rq = null; G.w_all.WTH.mi.st = 0; G.mark()   # (bản 492) ông đưa thư tới lại (cần giờ 8:30–12)
 			"thuyn": G.w_all.WTH.YN()
 			"gptree": _gptree()
+			"ctdump": _ctdump()
+			"slall": var T6: Dictionary = G.w_all.WCA.tc(); for i6 in G.w_all.WCA.book_ct(): T6.obj[i6] = 1   # (bản 498) thử: coi như đã có mọi công trình
 			"slt": _slt(a)
 			"sl": ui.sl_open(); if a.size() > 1: ui.slp.tab = a[1]; if a.size() > 2: ui.slp.bs = a[2]; ui.slp._build()   # sl[:tab[:loại bst]]
 			"gpt": var t0 := Time.get_ticks_usec(); ui.gpp._tab_go(a[1] if a.size() > 1 else "db"); ui.gpp._build(); if OS.has_feature("web"): JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"gp": (Time.get_ticks_usec() - t0) / 1000.0}))   # (bản 495) đo dựng Gia phả
@@ -313,6 +315,51 @@ func _slt(a: Array) -> void:   # (bản 497) đo Sổ làng: slt:tab[:loại] ->
 	var t_all := (Time.get_ticks_usec() - t0) / 1000.0
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.__ordt=" + JSON.stringify({"open": t_open, "sig": t_sig, "body": t_body, "n": o[0].size(), "build": t_all}))
+
+func _ctdump() -> void:   # (bản 498) công cụ: xuất hình công trình (đúng hình bảng Xây dựng dựng ra) -> window.__ctd {mã: png base64}; src/tools/bake_ct.py thu nhỏ thành ui/img/ct
+	var ids: Array = G.w_all.WCA.book_ct()
+	print("CTD ids ", ids.size(), " bdp ", ui.bdp != null)
+	var cvs := {}
+	for id in ids:
+		var cv := Control.new()
+		cv.size = Vector2(128, 104)
+		ui.root.add_child(cv)
+		cv.visible = false
+		ui.bdp._icon(cv, ["id", String(id)], false)
+		cvs[id] = cv
+	var out := {}
+	for t in 120:   # chờ tải gói hình (tối đa ~30 giây)
+		await get_tree().create_timer(0.25).timeout
+		var left := 0
+		for id in cvs:
+			if out.has(id):
+				continue
+			var cv: Control = cvs[id]
+			var tr = cv.get_child(0) if cv.get_child_count() else null
+			if tr is TextureRect and tr.texture == null and ui.bdp._ic.has(tr):
+				ui.bdp._icon_fill(tr)
+			if tr is TextureRect and tr.texture != null:
+				var im: Image = tr.texture.get_image()
+				if im != null:
+					if im.is_compressed():
+						im.decompress()
+					out[id] = Marshalls.raw_to_base64(im.save_png_to_buffer())
+			elif not (tr is TextureRect):
+				out[id] = ""   # hình vẽ bằng code (đường, nền): để bảng tự vẽ
+			if not out.has(id):
+				left += 1
+		if left == 0:
+			break
+		if t % 20 == 0:
+			print("CTD wait ", left)
+	for id in cvs:
+		cvs[id].queue_free()
+	print("CTD out ", out.size(), " thiếu ", ids.filter(func(i): return not out.has(i)))
+	if OS.has_feature("web"):   # từng hình một (một chuỗi lớn eval không nổi)
+		JavaScriptBridge.eval("window.__ctx={}")
+		for id in out:
+			JavaScriptBridge.eval("window.__ctx[" + JSON.stringify(String(id)) + "]=" + JSON.stringify(out[id]))
+		JavaScriptBridge.eval("window.__ctd=window.__ctx")
 
 func _gptree() -> void:   # (bản 493) test Gia phả: nhân bản 12 nhà, chia 3 họ, nối cha con thành cây, tim / việc khác nhau
 	var F0: Dictionary = G.w_all.WL._r0().fam

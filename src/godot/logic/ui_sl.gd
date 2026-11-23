@@ -373,7 +373,9 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 	var c := _chip(x, y, w, h, kd if seen else "miss")
 	var out := [c]
 	var ic: Dictionary
-	if ct:   # công trình: hình dựng từ bảng Xây dựng (U.bdp._icon)
+	if ct and FileAccess.file_exists("res://ui/img/ct/" + id + ".webp"):   # (bản 498) công trình: ảnh nướng sẵn 128px (src/tools/bake_ct.py)
+		ic = _icx(x + w * 0.5, y + 21.0, 32.0, "pic:res://ui/img/ct/" + id + ".webp")
+	elif ct:   # chưa có ảnh nướng: dựng như bảng Xây dựng (U.bdp._icon)
 		ic = _dbx(x + w * 0.5 - 15.0, y + 6.0, 30.0, 30.0, "rgba(0, 0, 0, 0)", 0.0)
 		ic.th = id
 	else:
