@@ -109,4 +109,4 @@ def share(D, jn, suf, ni, si, grounds):
 
 CC = os.path.join(HERE, '..', '..', 'cauca', 'ui', 'img', 'cc')
 share(os.path.join(CC, 'bo'), 'bo.json', '_d', 1, 4, ['n2_co', 'dg2_dat'])    # bờ bên kia
-share(os.path.join(CC, 'gan'), 'gan.json', '', 0, 3, ['n2_co'])             # bờ bên này (sát người câu)
+# share(os.path.join(CC, 'gan'), 'gan.json', '', 0, 3, ['n2_co'])   # bờ bên này: CHƯA bật (cc_draw._gan_img chưa đọc mục "op")
