@@ -29,6 +29,7 @@ func _open() -> void:
 # Chạm vào đồng hồ để đổi chế độ thử, mỗi chế độ tắt 1 phần để biết phần nào nặng.
 const MODES := ["đủ hết", "tắt lớp trời+bờ nét", "tắt mặt nước mới", "tắt hạt nước/mưa", "tắt cảnh (chỉ giao diện)"]
 var _ml: Label
+var _pc: Control
 var _mode := 0
 var _acc := 0.0
 var _n := 0
@@ -56,6 +57,7 @@ func _meter_make() -> void:
 			_apply_mode()
 			pc.accept_event())
 	cl.add_child(pc)
+	_pc = pc
 	_ml.text = "đo..."
 func _apply_mode() -> void:
 	if g == null or g.scn == null:
@@ -104,6 +106,8 @@ func _rows(a: Array) -> String:
 func _process(dt: float) -> void:
 	if _ml == null:
 		return
+	# mở hộp thoại thì ẩn đồng hồ đo: nó đè lên tab "Mồi câu" + tiêu đề, nuốt mất cú bấm
+	_pc.visible = not (g != null and g.ui != null and g.ui.modal.visible)
 	_acc += dt; _n += 1; _sum += dt; _worst = maxf(_worst, dt)
 	if _acc < 1.0:
 		return
