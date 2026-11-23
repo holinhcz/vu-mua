@@ -272,11 +272,12 @@ func _decor(L: Dictionary) -> void:
 	# Link 11-23 (nhận xét 3): điện thoại dọc rất dài (360x860, 412x915) không có khoảng sân cho gà cỡ thật -> bỏ gà (luật v7: không thu nhỏ)
 	var hen_ok: bool = not (L.port and H > W * 2.0)
 	# Link 11-23 (nhận xét 7): màn ngang không cho gà ló ra mép màn (bị cắt nửa thân) -> không có chỗ trọn trong màn thì thôi gà
-	var hbs := [[0.0, true, true], [0.0, false, true], [0.0, true, false]] + ([] if not L.port else [[0.22, true, false], [0.22, false, false]])
+	# Link 11-23: 1280x720, 1600x900 -> gà cỡ như 1440x900 (f 32) đi dải trống dưới giữa rổ và tàu dừa (dải hẹp, chồng chỗ mũi tên gợi ý)
+	var hbs := [[0.0, true, true], [0.0, false, true], [0.0, true, false]] + ([[0.0, false, false, [32]]] if not L.port else [[0.22, true, false], [0.22, false, false]])
 	for hb in (hbs if hen_ok else []):
 		if done:
 			break
-		for f in [40, 36, 32]:
+		for f in (hb[3] if hb.size() > 3 else [40, 36, 32]):
 			st_band[0] = hb[1]
 			var hl: float = f * CM
 			var jr := hl * 0.06
