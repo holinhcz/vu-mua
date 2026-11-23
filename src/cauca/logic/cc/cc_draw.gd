@@ -137,7 +137,7 @@ func _refl(ci: CanvasItem, name: String, x: float, z: float, ww: float, bob: flo
 # ============================================================ lớp chính
 var dbg_skip := {}
 const BG_NEAR := [["bg_tim", .05, 332.0 / 645.0, 487.0 / 592.0, 0.0, 1.25], ["bg_do", .95, 288.0 / 587.0, 448.0 / 563.0, 2.1, 1.8]]   # tên, x/màn, neo x, neo y, pha, cao (lệch nhau cho đỡ đối xứng)
-const SEN_K := [1.0, .7, 1.0, .9]     # sen trắng (1) to quá so với chỗ đứng (Link 11-22) -> nhỏ lại
+const SEN_K := [1.0, .7, .72, .66]     # sen trắng (1) nhỏ lại (Link 11-22); 2 bụi xa (tím, vàng) nhỏ hơn cho ngọn thấp hơn mép bờ
 const SEN_W := .85     # bụi sen rộng (đơn vị kênh), lục bình .6
 func _draw_main(ci: CanvasItem) -> void:
 	var tod: Dictionary = game.tod

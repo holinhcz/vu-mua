@@ -203,7 +203,7 @@ func world_init() -> void:
 		p.x = rnd(-1, 1) * half_x(p.z) * .6
 		W.props.append(p)
 	# bụi sen (ảnh thủy sinh của nông trại): mọc tại chỗ ven 2 bên kênh, không trôi (Link 11-22)
-	var sz := [11.5, 18.0, 25.0, 32.0]
+	var sz := [11.5, 14.5, 17.5, 20.5]     # sen xa không đứng sát bờ, khỏi lá đè lên bờ (Link 11-23)
 	for i in 4:
 		var z: float = sz[i] + rnd(-1.5, 1.5)
 		# vị trí theo TỈ LỆ bề ngang màn (fx), tính lại mỗi khung: màn nào, xoay ngang dọc gì cũng thấy đủ.
