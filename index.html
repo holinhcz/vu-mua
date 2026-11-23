@@ -108,7 +108,7 @@ i.addEventListener('keyup',function(e){e.stopPropagation()});
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
-var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 79438660, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=77,WASM=38034280,PCK=79438660,B='7bd7412b',EV='dfd3ae5f';
+var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 79438660, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=77,WASM=38034280,PCK=79438660,B='5055ca77',EV='dfd3ae5f';
 var msg=document.getElementById('msg'),fill=document.getElementById('fill'),st=document.getElementById('st');
 // The engine asks for index.wasm and index.pck. They are published as engine.wasm (gzip) and pck_<n>.wasm (slices),
 // so those two requests are answered here from the published pieces. Every file of a build carries ?v=<crc> so a
@@ -159,8 +159,14 @@ var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){cs
 window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
   if(/index\.wasm(\?|$)/.test(s))return mfP.then(function(){return made(rawKey(),function(){return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
     return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),{status:200,headers:{'Content-Type':'application/wasm'}})})})});
-  if(/index\.pck(\?|$)/.test(s))return mfP.then(function(){return made(pckKey(),function(){var ps=[];for(var q=0;q<NP;q++)ps.push(kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}));
-    return Promise.all(ps).then(function(bs){return new Response(new Blob(bs),{status:200,headers:{'Content-Type':'application/octet-stream'}})})})});
+  // (bản 531) gói game: tải 6 miếng một lúc (trước: cả 77 miếng cùng lúc), thanh tải chạy theo từng miếng, mỗi miếng chỉ cất 1 lần
+  // trong bộ nhớ trình duyệt (bỏ bản ghép 79 MB cất thêm: trước đó lúc đỉnh giữ ~3 bản gói trong RAM -> điện thoại đứng im)
+  if(/index\.pck(\?|$)/.test(s))return mfP.then(function(){return new Promise(function(ok,no){var bs=new Array(NP),got=0,done=0,i=0,run=0,dead=false;
+    function nx(){while(!dead&&run<6&&i<NP){(function(q){run++;kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(function(b){
+      bs[q]=b;got+=b.byteLength;done++;run--;var pc=Math.min(99,Math.round(got/PCK*100));fill.style.width=pc+'%';msg.textContent='Đang tải làng… '+pc+'%';
+      if(done==NP){msg.textContent='Đang mở làng…';var bl=new Blob(bs);bs=null;ok(new Response(bl,{status:200,headers:{'Content-Type':'application/octet-stream'}}))}else nx()},
+      function(e){dead=true;no(e)})})(i++)}}
+    nx()})});
   var p=(!o||!o.method||o.method=='GET')?rel(s):null;
   if(p&&p!='info.json'&&p!='files.json'&&!/\.html$/.test(p))return mfP.then(function(){return MF[p]?kept(p):F0(u,o)});
   if(/(^|\/)(info\.json|n\/sc\.json)$/.test(s))return F0(s+'?v='+B,o);
