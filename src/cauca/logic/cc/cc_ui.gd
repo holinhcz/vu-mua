@@ -7,6 +7,7 @@ extends Control
 const A := preload("res://logic/cc/cc_art.gd")
 const D := preload("res://logic/cc/cc_data.gd")
 const Tre := preload("res://logic/cc/cc_tre.gd")
+const TM := preload("res://logic/cc/cc_toanman.gd")
 
 # ------------------------------------------------------------ một khối vẽ + bấm (thay phần tử DOM)
 class Box extends Control:
@@ -380,6 +381,20 @@ func _draw_hud(ci: Box) -> void:
 	met(ci, sr, ib / 2, ci.pressed("set"))
 	A.svg(ci, "cog", Rect2(sr.get_center() - Vector2(13, 13) * (ib / 44), Vector2(26, 26) * (ib / 44)))
 	ci.items.append({"r": sr, "id": "set", "tap": func(): _ui_tap(); open_settings()})
+	# (Link 11-23 "gắn nút toàn màn hình dưới ô cài đặt") cùng kiểu ô, bật/tắt toàn màn như Nông trại (cc_toanman.gd).
+	# Trình duyệt không cho (iPhone Safari, khung nhúng) thì không hiện nút.
+	if TM.co() and st != "fight":   # lúc kéo cá khung kéo nằm ngang chỗ này
+		var fr := Rect2(sr.position.x, sr.end.y + 8, ib, ib)
+		var on := TM.dang_bat()
+		met(ci, fr, ib / 2, ci.pressed("full"))
+		A.svg(ci, "full_off" if on else "full", Rect2(fr.get_center() - Vector2(12, 12) * (ib / 44), Vector2(24, 24) * (ib / 44)))
+		ci.items.append({"r": fr, "id": "full", "tap": func():
+			_ui_tap()
+			if TM.dang_bat():
+				TM.tat()
+			else:
+				TM.bat()
+			game.later(.4, func(): hud_dirty())})
 	# đồng hồ
 	var h: float = S.hour
 	var rain: bool = game.W.rain > .4
