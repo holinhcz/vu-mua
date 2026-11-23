@@ -282,7 +282,17 @@ func _decor(L: Dictionary) -> void:
 							var m := (a0 + a1) / 2
 							var mx: float = x + (0.0 if ax else m)
 							var my: float = y + (m if ax else 0.0)
-							var sc: float = (a1 - a0) - absf(far.call(mx, my) - minf(W, H) * 0.4) * 0.15 - (12 if ax else 0) + rng() * 6
+							# Link 11-23 "gà đi khúc khoảng trống đó": ưu tiên chỗ sân trống rộng nhất (xa đồ vật, bàn, nia nhất)
+							# (khoảng trống đo ở 2 đầu + giữa đường gà đi: cả đường phải nằm trong chỗ trống)
+							var clr := 1e9
+							for tt in [a0, m, a1]:
+								var qx: float = x + (0.0 if ax else tt)
+								var qy: float = y + (tt if ax else 0.0)
+								clr = minf(clr, minf(minf(qx, W - qx), minf(qy - ph, H - qy)))
+								for o in L.obst:
+									var q: Rect2 = o
+									clr = minf(clr, Vector2(clampf(qx, q.position.x, q.end.x) - qx, clampf(qy, q.position.y, q.end.y) - qy).length())
+							var sc: float = minf(a1 - a0, hl * 2.0) - absf(far.call(mx, my) - minf(W, H) * 0.4) * 0.15 - (12 if ax else 0) + rng() * 6 + clr * 1.2 + (80.0 if (not L.port and y + (a0 if ax else 0.0) - hh > H * 0.45 and mx > W * 0.5) else 0.0)   # màn ngang: gà ở khoảng trống dưới phải (Link 11-23)
 							if sc > bs:
 								bs = sc
 								best = {"x": mx, "y": my, "ax": ax, "half": (a1 - a0) / 2, "hw": hw, "hh": hh}

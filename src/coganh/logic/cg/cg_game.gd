@@ -252,7 +252,9 @@ func _place_baskets(blocks0: Array) -> Dictionary:
 						continue
 					var x := r + 6
 					while x <= W - r - 6:
-						if not hit.call(x, y, r + 4, blocks):
+						# Link 11-23 màn ngang: nia trắng bên trái bàn (phía thẻ Bạn), nia gạch bên phải
+						var side_ok: bool = L.port or not own or ((x < L.ox) if p == 0 else (x > L.ox + 4 * L.s))
+						if side_ok and not hit.call(x, y, r + 4, blocks):
 							var ok := true
 							if bx.size():
 								var b0: Vector3 = bx[0]
