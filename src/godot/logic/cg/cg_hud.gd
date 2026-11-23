@@ -256,10 +256,9 @@ func ring_in(ci: CanvasItem, r: Rect2, rad: float, w: float, col: Color) -> void
 	ci.draw_style_box(sb, Rect2(r.position * K, r.size * K))
 
 func pk(ci: CanvasItem, k: int, r: Rect2) -> void:
-	var qt := A.img("quan")
-	var src := Rect2((3 if k else 1) * A.QSZ, k * A.QSZ, A.QSZ, A.QSZ)
-	ci.draw_texture_rect_region(qt, Rect2((r.position + Vector2(0, 1)) * K, r.size * K), src, Color(0.24, 0.12, 0.04, 0.35))
-	ci.draw_texture_rect_region(qt, Rect2(r.position * K, r.size * K), src)
+	var qt := A.quan(k, 3 if k else 1)
+	ci.draw_texture_rect(qt, Rect2((r.position + Vector2(0, 1)) * K, r.size * K), false, Color(0.24, 0.12, 0.04, 0.35))
+	ci.draw_texture_rect(qt, Rect2(r.position * K, r.size * K), false)
 
 func avatar(ci: CanvasItem, k: String, r: Rect2) -> void:
 	var t := A.svg(A.avatar(k), roundi(r.size.x * K))

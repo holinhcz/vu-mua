@@ -199,7 +199,7 @@ func _layout() -> void:
 			break
 	_place(best_f, W, H, c0, c1, ch, vis)
 	L.tan = TAN.rects(L.tan_sc, 2, L.tan_sh)
-	tan.build(L.tan_sc, L.tan_sh, K, 0.3 if L.port else 0.4)
+	tan.build(L.tan_sc, L.tan_sh, K, 0.2 if L.port else 0.25)   # Link 11-23: bóng tán xoài nhạt hơn
 	_resize_shade()
 	_bake_bg()
 
@@ -1297,9 +1297,10 @@ void fragment(){
   float dd=length((p-tree)*vec2(1.,1.12));
   float th=mix(.36,.95,smoothstep(.05,.9,dd));
   float v=big*.5+fine*.3+vf*.2;
-  float cover=smoothstep(th-.03,th+.03,v)*.8;
+  // Link 11-23 "đen loang lổ": vệt bóng tán chỉ quanh gốc cây, mép mềm, nhạt; ngoài sân không còn mảng loang
+  float cover=smoothstep(th-.1,th+.1,v)*.45*(1.-smoothstep(.25,.7,dd));
   float sh=clamp(max(fsh,cover),0.,1.)*str;
-  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.64,.66,.72);
+  vec3 lit=vec3(1.,.99,.955);vec3 shade=vec3(.78,.79,.83);
   vec3 col=mix(lit,shade,sh);
   vec2 qv=(uv-.5)*vec2(res.x/res.y,1.);float vig=smoothstep(1.15,.35,length(qv*vec2(.9,1.15)));
   col*=mix(.88,1.,vig);
@@ -1319,7 +1320,7 @@ func _build_shade() -> void:
 	_shade_mat.shader = sh
 	_shade_mat.set_shader_parameter("fr", A.img("frond"))
 	_shade_mat.set_shader_parameter("tree", Vector2(-0.08, -0.1))
-	_shade_mat.set_shader_parameter("str", 0.9)
+	_shade_mat.set_shader_parameter("str", 0.6)
 	cr.material = _shade_mat
 	_svp.add_child(cr)
 	add_child(_svp)
