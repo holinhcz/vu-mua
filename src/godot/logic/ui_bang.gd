@@ -420,7 +420,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
-			_mv(b, x + w - 11.5, float(c.r[1]) - 3.5)
+			_mv(b, x + w - 13.0, float(c.r[1]) + 2.0)   # (bản 503) chấm đỏ nằm trong góc tab, không đè tab bên cạnh
 			c.kids = [b]
 		out.append(c)
 		x += w + 4.5

@@ -13,6 +13,7 @@ class Box extends Control:
 	var items: Array = []
 	var press = null
 	var full := false
+	var area := false   # nhận chạm trên CẢ khung của nó (khung cuộn): kéo ở chỗ trống giữa các nút cũng cuộn được
 	var on_bg: Callable
 	var scroll := 0.0
 	var max_scroll := 0.0
@@ -46,6 +47,8 @@ class Box extends Control:
 			return false
 		if full:
 			return true
+		if area:
+			return Rect2(Vector2.ZERO, size).has_point(p)
 		return hit(p) != null
 	func _gui_input(e: InputEvent) -> void:
 		var pos := Vector2.ZERO
@@ -158,6 +161,7 @@ func _ready() -> void:
 	add_child(modal)
 	body = Box.new(_draw_body)
 	body.clip_contents = true
+	body.area = true
 	modal.add_child(body)
 	card = Box.new(_draw_card)
 	card.full = true
@@ -924,8 +928,9 @@ func _draw_modal(ci: Box) -> void:
 	var xs := 5.5 * xf.get_scale().x
 	ci.draw_line(xc + Vector2(-xs, -xs), xc + Vector2(xs, xs), Color.WHITE, 3.0 * xf.get_scale().x, true)
 	ci.draw_line(xc + Vector2(xs, -xs), xc + Vector2(-xs, xs), Color.WHITE, 3.0 * xf.get_scale().x, true)
-	ci.items.append({"r": xr, "id": "x", "tap": func(): game.snd.ui(); close_modal()})
+	# "panel" phải nằm TRƯỚC nút X: hit() dò từ cuối lên, panel đứng sau thì nuốt luôn cú bấm X (Link 11-23 "X đéo đóng được")
 	ci.items.append({"r": r, "id": "panel"})
+	ci.items.append({"r": xr, "id": "x", "tap": func(): game.snd.ui(); close_modal()})
 	# tab của Chợ
 	if _mod.kind == "shop":
 		var ty = r.position.y + _mod.hh

@@ -145,7 +145,7 @@ func _draw() -> void:
 	_decor(L)
 	for b in L.bx:
 		var D: float = b.z * 2 / 0.965
-		on_ground("basket", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.5)
+		on_ground("ro", Rect2i(), Vector2(b.x, b.y), D, D, 0.0, b.z * 0.14)   # rổ cờ gánh (Link 11-23)
 	_chalk_board(L)
 
 func hits_obst(L: Dictionary, x: float, y: float, r: float) -> bool:
@@ -233,6 +233,47 @@ func _decor(L: Dictionary) -> void:
 			continue
 		_grass(x, y, 18 + rng() * 26)
 	var CM := s / 33.0
+	# Link 11-23: màn ngang -> tàu dừa nằm góc dưới phải, bẹ ló ra ngoài mép màn, ngọn chĩa vô sân (đặt trước gà, lá khô)
+	var corner_fr := false
+	if not L.port:
+		var fl0 := minf(maxf(W, H) * 0.4, 95 * CM)
+		var corner_btn := Rect2(W - 190, H - 64, 190, 64)
+		var keep: Array = L.obst.filter(func(o): return o != corner_btn)   # lá nằm dưới đất, chồng dưới chỗ nút góc được
+		var bestc = null
+		var bsc := -1e9
+		for ang in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
+			for bx in [0.08, 0.0, 0.16, -0.06]:
+				for by in [0.06, -0.04, 0.14, -0.12]:
+					var b0 := Vector2(W + fl0 * bx, H + fl0 * by)
+					var dir := Vector2(-cos(ang), -sin(ang))
+					var ok := true
+					var on := 0
+					for i in 12:
+						var t := 0.12 + i / 11.0 * 0.88
+						var p := b0 + dir * fl0 * t
+						if p.x > 0 and p.x < W and p.y > 0 and p.y < H:
+							on += 1
+						for o in keep:
+							var q: Rect2 = o
+							if q.grow(fl0 * 0.13).has_point(p):
+								ok = false
+								break
+						if not ok:
+							break
+					if not ok:
+						continue
+					var sc := on * 10.0 - absf(ang - 0.45) * 8 - absf(bx - 0.05) * 20 - absf(by) * 10
+					if sc > bsc:
+						bsc = sc
+						bestc = [b0, dir, ang]
+		if bestc != null:
+			var mid: Vector2 = bestc[0] + bestc[1] * fl0 * 0.5
+			_frond(mid.x, mid.y, fl0, bestc[2], 1)
+			corner_fr = true
+			for i in 8:
+				var p: Vector2 = bestc[0] + bestc[1] * fl0 * (0.1 + i * 0.1)
+				var r := fl0 * (0.17 - i * 0.012)   # lá ngắn dần về ngọn
+				L.obst.append(Rect2(p.x - r, p.y - r, r * 2, r * 2))
 	var sp = null
 	# chỗ con gà mái đi dạo: một dải sân trống (đồ khác né ra)
 	g.home_spot = null
@@ -306,42 +347,15 @@ func _decor(L: Dictionary) -> void:
 				done = true
 				break
 	# Link 11-22: bỏ dép, lu nước, nón lá
-	# chổi chà nằm dọc bậc hiên hoặc mép dưới, cán ló ra ngoài màn
-	var bl := minf(110 * CM, W * 0.5)
-	var bh := bl / 3
-	var cands := []
-	for yy in [ph + bh * 0.62, ph + bh * 0.9, H - bh * 0.55, H - bh * 0.8]:
-		for side in [-1, 1]:
-			cands.append({"y": yy, "side": side})
-	for i in range(cands.size() - 1, 0, -1):
-		var j := int(rng() * (i + 1))
-		var tmp = cands[i]
-		cands[i] = cands[j]
-		cands[j] = tmp
-	for c in cands:
-		var x0: float = -bl * 0.18 if c.side < 0 else W + bl * 0.18
-		var pts := []
-		for t in [0.35, 0.5, 0.65, 0.8, 0.95]:
-			pts.append(Vector2(x0 - c.side * bl * t, c.y))
-		var all_ok := true
-		for p in pts:
-			if not free.call(p.x, p.y, bh * 0.42):
-				all_ok = false
-				break
-		if all_ok:
-			var ra := (rng() - 0.5) * 0.12
-			on_ground("choi", Rect2i(), Vector2(x0, c.y), bl, bh, -ra if c.side > 0 else ra, bh * 0.22, c.side > 0, 0.0, -bh / 2)
-			for p in pts:
-				used.call(p.x, p.y, bh * 0.4)
-			break
+	# Link 11-23: xóa cây chổi
 	# tàu dừa rớt ngang một góc sân trống
 	var fl := minf(maxf(W, H) * 0.4, 95 * CM)
 	var fb = null
 	var fs := -1e9
-	for k in 500:
+	for k in (0 if corner_fr else 500):
 		var x := rng() * W
 		var y := ph + rng() * (H - ph)
-		var ang := rng() * PI
+		var ang := (rng() - 0.5) * 2.2     # ảnh nắng trên-trái: chỉ xoay vừa, ngọn trái/phải bằng 2 ảnh
 		var ok := true
 		var on := 0
 		var t := -0.5
@@ -360,10 +374,10 @@ func _decor(L: Dictionary) -> void:
 			fs = sc
 			fb = [x, y, ang]
 	if fb != null:
-		_frond(fb[0], fb[1], fl, fb[2])
+		_frond(fb[0], fb[1], fl, fb[2], 1 if rng() < 0.5 else 0)
 		var t := -0.5
 		while t <= 0.5:
-			used.call(fb[0] + cos(fb[2]) * fl * t, fb[1] + sin(fb[2]) * fl * t, fl * 0.13)
+			used.call(fb[0] + cos(fb[2]) * fl * t, fb[1] + sin(fb[2]) * fl * t, fl * 0.2)
 			t += 0.125
 	# lá khô (lá bàng, lá xoài) rải rác
 	var placed := 0
@@ -417,51 +431,13 @@ func _grass(x: float, y: float, sz: float) -> void:
 		_fill(b[0], b[1])
 	_T()
 
-func _frond(x: float, y: float, ln: float, ang: float) -> void:
-	var bend := ln * 0.12
-	var P := func(t: float) -> Vector2: return Vector2(-ln / 2 + ln * t, sin(t * PI) * -bend * 0.6 + t * t * bend * 0.4)
-	var so := Vector2(ln * 0.008, ln * 0.011)
-	var base := xf(Vector2(x, y), ang)
-	for i in 46:
-		var t := 0.12 + i / 46.0 * 0.86
-		var p: Vector2 = P.call(t)
-		var side := 1.0 if i & 1 else -1.0
-		var ll := ln * (0.22 * sin(minf(1.0, t * 1.25) * PI) + 0.06) * (0.85 + rng() * 0.3)
-		var la := side * (0.9 + rng() * 0.25) - 0.35
-		var dry := rng() < 0.3 or t > 0.9
-		var col: Color
-		if dry:
-			col = hsl(38 + rng() * 10, 45 + rng() * 15, 46 + rng() * 10)
-		else:
-			col = hsl(70 + rng() * 22, 38 + rng() * 18, 30 + rng() * 12)
-		var w := ln * 0.012
-		var sh := quad(Vector2.ZERO, Vector2(ll * 0.5, -w * 2.2), Vector2(ll, side * ll * 0.08), 8)
-		var b2 := quad(Vector2(ll, side * ll * 0.08), Vector2(ll * 0.5, w * 1.4), Vector2.ZERO, 8)
-		b2.remove_at(0)
-		sh.append_array(b2)
-		var lx := Transform2D(la, p)
-		# bóng lá (shadowBlur nhỏ, lệch xuống phải theo mặt trời)
-		var inv := base.basis_xform_inv(so)
-		_T(base * Transform2D(0.0, inv) * lx)
-		_fill(sh, Color(0.125, 0.07, 0.02, 0.42))
-		_T(base * lx)
-		_fill(sh, col)
-		draw_polyline(quad(Vector2.ZERO, Vector2(ll * 0.5, -w * 0.4), Vector2(ll * 0.95, side * ll * 0.07), 8), Color(1, 0.98, 0.78, 0.22), maxf(0.6, w * 0.25), true)
-	var rib := PackedVector2Array()
-	var rib2 := PackedVector2Array()
-	var t := 0.0
-	while t <= 1.001:
-		var p: Vector2 = P.call(t)
-		rib.append(p)
-		rib2.append(p - Vector2(0, ln * 0.004))
-		t += 0.05
-	var inv2 := base.basis_xform_inv(so)
-	_T(base * Transform2D(0.0, inv2))
-	draw_polyline(rib, Color(0.125, 0.07, 0.02, 0.4), ln * 0.026, true)
-	_T(base)
-	draw_polyline(rib, Color("#8a6a2a"), ln * 0.022, true)
-	draw_polyline(rib2, Color("#c9a85a"), ln * 0.008, true)
-	_T()
+# tàu dừa = ảnh 6px vẽ sẵn (tools/oq/tau_dua.py, Link 11-23); (x, y) = giữa cuống, ln = dài cuống
+const TAU_IMG := {0: [Vector2(2082, 1146), Vector2(37.5, 632.0), Vector2(2077.5, 703.4)], 1: [Vector2(2082, 1146), Vector2(2043.5, 632.0), Vector2(3.5, 703.4)]}
+func _frond(x: float, y: float, ln: float, ang: float, v: int) -> void:
+	var d: Array = TAU_IMG[v]
+	var k: float = ln / (d[2] - d[1]).length()
+	var mid: Vector2 = (d[1] + d[2]) * 0.5 * k
+	on_ground("tau%d" % v, Rect2i(), Vector2(x, y), d[0].x * k, d[0].y * k, ang, ln * 0.05, false, -mid.x, -mid.y)
 
 func _leaf(x: float, y: float, ln: float, ang: float, kind: String) -> void:
 	var w := ln * 0.5 if kind == "bang" else ln * 0.2
