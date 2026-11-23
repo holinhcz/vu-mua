@@ -10,7 +10,8 @@ extends "res://logic/ui_ls.gd"
 #   Tab Nuôi thêm, Diều, Lờ lọp: thân của w_ca_ui (tab_body).
 
 const KDD := "kdd"
-const TABS := [["nv", "Nhân vật"], ["cau", "Câu cá"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
+# (Link 11-23 "bỏ câu cũ đi"): tab Câu cá cũ bỏ, câu cá giờ là minigame Câu Cá Bờ Kênh (Menu > Giải trí, ui_cc.gd)
+const TABS := [["nv", "Nhân vật"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
 const WTABS := ["cau", "nuoi", "dieu", "lo"]
 const LEFT := ["non", "ao", "quan", "dep"]
 const RIGHT := ["binh", "liem", "cuoc", "gui"]
@@ -28,6 +29,9 @@ func _init(ui) -> void:
 	K = Snap.load_snap(KDD)
 
 func open(t := "") -> void:
+	if t == "cau":   # câu cũ đã bỏ: mở minigame câu cá
+		U.ccp.open()
+		return
 	if t != "":
 		tab = t
 	U.close_all()

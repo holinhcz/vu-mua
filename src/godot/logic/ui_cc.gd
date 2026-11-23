@@ -1,7 +1,7 @@
 extends RefCounted
 # CÂU CÁ BỜ KÊNH (nút "Câu cá" trong nhóm Giải trí của Menu). Viết lại hẳn bằng Godot (logic/cc/: dữ liệu cá,
 # nước + trời (shader), vẽ cần / phao / ghe, game, âm thanh, giao diện), không có trang web nào; chạy trên app.
-# Câu cá cũ của vườn vẫn mở được từ chỗ nước / tab Nhân vật (pcp.open("cau")).
+# Câu cá cũ của vườn (tab Câu cá trong Nhân vật) ĐÃ BỎ (Link 11-23 "bỏ câu cũ đi"): nhiệm vụ "Câu được N con cá" mở game này.
 # Lúc đang chơi: làng ẩn đi (không vẽ), bản đồ không nhận lướt / zoom; "Về vườn" trả lại.
 # (11-23) Code logic/cc = bản chơi riêng src/cauca (Link OK "gắn lại vào game nông trại"). Hình câu cá (~25 MB) KHÔNG nằm
 # trong pck vườn: lần đầu bấm "Câu cá" tải gói l/cc_<n>.wasm (tools/cc/mk_ccpack.py), ghép lại, lưu user://cc_<CC_V>.pck,
@@ -64,6 +64,23 @@ func open() -> void:
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
 		"save": func(): G.save_game(),
+		# câu được 1 con (không tính rác): đếm cho vườn như câu cũ: g.fish.total (w_ca.ry -> nhiệm vụ / thành tựu Tay câu),
+		# EXP nhân vật 3, cá vườn có món thì ghi sổ làng (đã gặp) + sổ cá vườn
+		"caught": func(kid: String):
+			if not (G.g.get("fish") is Dictionary):
+				G.g.fish = {"rod": 0, "total": 0, "dex": {}}
+			var f: Dictionary = G.g.fish
+			f.total = int(f.get("total", 0)) + 1
+			G.add_xp(3, "fish")
+			if kid != "":
+				if not (f.get("dex") is Dictionary):
+					f.dex = {}
+				if not (f.dex.get(kid) is Dictionary):
+					f.dex[kid] = {"n": 0, "best": 0}
+				f.dex[kid].n = int(f.dex[kid].n) + 1
+				if G.w_all != null:
+					G.w_all.WCA.tc().seen[kid] = 1
+			G.mark(),
 	}
 	g.closed.connect(Callable(get_script(), "_s_close"))
 	_layer.add_child(g)

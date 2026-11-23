@@ -882,6 +882,8 @@ func caught(f: Dictionary, w: float) -> void:
 	add_xp(xp)
 	if f.has("junk"):
 		S.luck = minf(10, S.luck + 1)
+	elif host != null and host.has("caught"):
+		host.caught.call(str(D.KHO.get(f.id, "")))   # vườn đếm cá câu (nhiệm vụ, thành tựu, sổ làng)
 	if S.tut < 3:
 		S.tut = 3
 	save(true)

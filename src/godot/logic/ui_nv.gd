@@ -566,7 +566,7 @@ func _go(tid: String) -> void:
 			U.ord_open()
 			return
 		"fish":
-			U.pcp.open("cau")
+			U.ccp.open()   # câu cũ đã bỏ (Link 11-23): đi câu = minigame Câu Cá Bờ Kênh
 			return
 		"cho":
 			G.w_all.WCU._pill_go()
