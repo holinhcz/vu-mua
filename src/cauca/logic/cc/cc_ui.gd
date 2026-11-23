@@ -729,7 +729,12 @@ func _draw_fx(ci: Box) -> void:
 	if _hint.t < 2.7 and _hint.txt != "":
 		var a := clampf(_hint.t / .3, 0, 1) * (1 - clampf((_hint.t - 2.4) / .3, 0, 1))
 		var fs := 13.0 if n else 14.0
-		var lines := A.wrap(_hint.txt, fs, 800, L.W * .86 - 36)
+		var hw: float = L.W * .86 - 36
+		if n:
+			# màn hẹp: cột nút Giỏ cá/Chợ/Sổ cá bên phải (rộng 58, cách mép 12); lời nhắc canh giữa mà đụng cột thì bóp hẹp lại cho xuống dòng (Link 11-23 "đè nút Chợ")
+			var col_x: float = L.W - 12 - 58.0 - 8
+			hw = minf(hw, 2 * (col_x - L.W / 2) - 32)
+		var lines := A.wrap(_hint.txt, fs, 800, hw)
 		var tw := 0.0
 		for ln in lines:
 			tw = maxf(tw, A.tw(ln, fs))
@@ -1276,16 +1281,21 @@ func _b_shop(ci, w: float, y: float) -> float:
 		if nx.has("need"):
 			chips.append_array(_need_chips(nx.need))
 		var ch_h := _chips(null, tx, 0, txw, chips)
-		var rh := 6 + 13 * 1.25 + 16 * 1.3 + dl.size() * 13 * 1.2 + 3 + ch_h + 6 + 38 + 8
+		var c1: String = list[cur].name + " "
+		# tên cũ → tên mới: không vừa 1 dòng thì "→ tên mới" xuống dòng 2 (Link 11-23 "Phao lông công tràn mép")
+		var two := A.tw(c1 + "→ " + nx.name, 16) > txw
+		var rh := 6 + 13 * 1.25 + 16 * 1.3 * (2 if two else 1) + dl.size() * 13 * 1.2 + 3 + ch_h + 6 + 38 + 8
 		var r := Rect2(14, y, w, rh)
 		_row(ci, r)
 		_th(ci, Rect2(r.position.x + 8, r.position.y + 8, 72, 46), "", k)
 		var yy := r.position.y + 6 + 13 * .62
 		_t(ci, D.GEAR_NAME[k], tx, yy, 13, A.SMALL, 0, 600)
 		yy += 13 * .62 + 16 * .65
-		var c1: String = list[cur].name + " "
 		_t(ci, c1, tx, yy, 16, A.INK)
 		var ax := tx + A.tw(c1, 16)
+		if two:
+			yy += 16 * 1.3
+			ax = tx
 		_t(ci, "→ ", ax, yy, 16, A.BRICK)
 		ax += A.tw("→ ", 16)
 		_t(ci, nx.name, ax, yy, 16, Color("#2a5a12"))
