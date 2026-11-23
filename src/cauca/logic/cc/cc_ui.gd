@@ -267,7 +267,8 @@ func btn(ci: CanvasItem, r: Rect2, lab: String, kind := "", down := false, disab
 	A.fbtn_bg(ci, r, kind, down, disabled, 12.0)
 	var al := .55 if disabled else 1.0
 	var fg := A.F_CHIP if kind == "alt" else Color.WHITE
-	var shc := Color(125 / 255.0, 62 / 255.0, 0, .7) if kind == "gold" else (Color(10 / 255.0, 55 / 255.0, 10 / 255.0, .45) if kind == "" else (Color(90 / 255.0, 20 / 255.0, 10 / 255.0, .5) if kind == "red" else Color(1, 1, 1, .6)))
+	# bóng chữ chỉ nút cam có (text-shadow của u2sp); nút xanh / kem của Nông trại chữ trơn, không lớp nào phủ
+	var shc := Color(125 / 255.0, 62 / 255.0, 0, .7) if kind == "gold" else Color(0, 0, 0, 0)
 	if disabled:
 		shc.a *= .3
 	var rr := Rect2(r.position + Vector2(0, 1.5 if down and not disabled else 0.0), r.size)
@@ -293,7 +294,8 @@ func btn(ci: CanvasItem, r: Rect2, lab: String, kind := "", down := false, disab
 	var cy := rr.get_center().y
 	for sg in segs:
 		var sx: float = sg[1]
-		A.text(ci, sg[0], sx, cy + 1.5, fs, shc, 0, 800)
+		if shc.a > 0:
+			A.text(ci, sg[0], sx, cy + 1.5, fs, shc, 0, 800)
 		A.text(ci, sg[0], sx, cy, fs, Color(fg, al), 0, 800)
 
 func btn_w(lab: String, ic := "", fs := 14.0) -> float:
@@ -1817,7 +1819,6 @@ func _big_btn(ci: CanvasItem, r: Rect2, lab: String, down: bool) -> void:
 	# (11-23) nút xanh lá của Nông trại (btn primary), cỡ lớn
 	A.fbtn_bg(ci, r, "", down, false, 16)
 	var rr := Rect2(r.position + Vector2(0, 1.5 if down else 0.0), r.size)
-	A.text(ci, lab, rr.get_center().x, rr.get_center().y + 2, 26, Color(10 / 255.0, 55 / 255.0, 10 / 255.0, .45), 1, 800)
 	A.text(ci, lab, rr.get_center().x, rr.get_center().y, 26, Color.WHITE, 1, 800)
 
 func _spaced(ci: CanvasItem, s: String, cx: float, cy: float, fs: float, col: Color, sp: float) -> void:

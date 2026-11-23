@@ -448,17 +448,20 @@ static func fbox(ci: CanvasItem, r: Rect2, rad, g: Array, ring := [], hi := [], 
 				b.shadow_color = d[3]
 				b.shadow_size = maxi(1, int(float(d[2]) * K * .5))
 		_draw_sb(ci, b, Rect2(r.position + Vector2(d[0], d[1]), r.size), xf)
-	var pts := rr4_pts(r, q, 6)
+	# (Link 11-23 "nhoè lem ở các cạnh") vẽ ở toạ độ ĐIỂM ẢNH THẬT: đường viền mịn của Godot nhoè ra 1 đơn vị toạ độ,
+	# vẽ theo css px thì nhoè K điểm ảnh (3 px trên điện thoại) -> thành quầng mờ quanh ô. Giờ nhoè đúng 1 điểm ảnh.
+	var rk := Rect2(r.position * K, r.size * K)
+	var pts := rr4_pts(rk, q * K, 6)
 	var cols := PackedColorArray()
 	for p in pts:
-		cols.append(stop_col(g, (p.y - r.position.y) / maxf(1.0, r.size.y)))
-	ci.draw_set_transform_matrix(BASE * xf)
+		cols.append(stop_col(g, (p.y - rk.position.y) / maxf(1.0, rk.size.y)))
+	ci.draw_set_transform_matrix(BASE * xf * Transform2D(0, Vector2(1.0 / K, 1.0 / K), 0, Vector2.ZERO))
 	ci.draw_polygon(pts, cols)
 	var cl := pts.duplicate()
 	cl.append(pts[0])
 	var cc := cols.duplicate()
 	cc.append(cols[0])
-	ci.draw_polyline_colors(cl, cc, 1.0 / K, true)   # mép mịn (polygon không khử răng cưa)
+	ci.draw_polyline_colors(cl, cc, 1.0, true)   # mép mịn 1 điểm ảnh (polygon không khử răng cưa)
 	ci.draw_set_transform_matrix(BASE)
 	if glow.size() == 2:
 		var gc: Color = glow[1]
