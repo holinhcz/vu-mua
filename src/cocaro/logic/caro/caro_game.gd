@@ -402,6 +402,11 @@ func _layout() -> void:
 	if port:
 		var top := 54.0 + safe + 66
 		var bot := H - 165                     # chừa thẻ "Bạn" + dòng luật dưới phản
+		if DS == Vector2(768, 1024) or DS == Vector2(860, 1000):
+			# Link 11-23 "iPad dọc thu phản lại cho hợp lí": chừa đủ chỗ trên/dưới cho thẻ cỡ KU
+			var hu := KU / K
+			top = maxf(top, 8 + safe + (36 + 4 + 58) * hu + 18)
+			bot = H - maxf(165, 34 + 62 * hu + 14)
 		face = minf(W - 18, bot - top)
 		face = maxf(200, face)
 		fx = (W - face) / 2
@@ -439,6 +444,14 @@ func _layout() -> void:
 		# cột thẻ vẽ theo cỡ chuẩn 250, cỡ theo KU (như cờ gánh) nhưng không lấn qua khung phản; neo góc trái trên cửa sổ
 		var frl := fx - (rw - 1.0) * face / 2.0               # mép trái khung gỗ
 		var hs := minf(KU / K, (frl - V.position.x - 16) / 250.0)
+		var band := DS == Vector2(1024, 768)
+		if band:
+			# Link 11-23 "1024x768 phản nhỏ xíu": thanh công cụ + 2 thẻ xếp 1 hàng trên cùng, phản to ở giữa bên dưới
+			hs = KU / K
+			var bh := 8 + safe + 62 * hs + 14
+			face = minf((H - bh - 14) / (1.0 + 12.0 / 392.0), (W - 24) / rw)
+			fx = (W - face) / 2
+			fy = bh + (H - bh - 10 - face - face * 12 / 392) / 2
 		hs = maxf(hs, 0.3)
 		L.hs = hs
 		var o := (V.position + Vector2(8, 0)) / hs
@@ -446,6 +459,11 @@ func _layout() -> void:
 		L.u_tools = Rect2(o.x, (V.position.y + 8 + safe) / hs, 250, 36)
 		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, CARD_W, 58)
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, CARD_W, 62)
+		if band:
+			var y0: float = L.u_tools.position.y
+			L.u_me = Rect2(o.x + 250 + 12, y0, CARD_W, 62)
+			L.u_opp = Rect2(L.u_me.end.x + 12, y0, CARD_W, 58)
+			L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(L.u_opp.position * hs, L.u_opp.size * hs); L.me = Rect2(L.u_me.position * hs, L.u_me.size * hs); L.tip = Rect2(L.me.position.x, L.me.end.y + 4, 1, 1)
 		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
