@@ -402,7 +402,8 @@ func _layout() -> void:
 	if port:
 		var top := 54.0 + safe + 66
 		var bot := H - 165                     # chừa thẻ "Bạn" + dòng luật dưới phản
-		if DS == Vector2(768, 1024) or DS == Vector2(860, 1000) or DS == Vector2(640, 904):
+		L.ipad = DS == Vector2(768, 1024) or DS == Vector2(860, 1000) or DS == Vector2(640, 904)
+		if L.ipad:
 			# Link 11-23 "iPad dọc thu phản lại cho hợp lí": chừa đủ chỗ trên/dưới cho thẻ cỡ KU
 			var hu := KU / K
 			top = maxf(top, 8 + safe + (36 + 16 + 58) * hu + 18)   # Link 11-23: thẻ AI + nhãn Tới phiên không chạm Menu

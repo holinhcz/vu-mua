@@ -256,6 +256,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		if mL >= 60:
 			var ns := clampf(mL / 160.0, 0.3, 0.5)
 			add.call("non", sd.position.x + maxf(mL * 0.5, 40 * ns + 4), bd.position.y + dF * 0.8, ns, [5, 6, 4, 0.42])
+		var ipad: bool = (mL >= 60 or mR >= 60) and mL < 140 and mR < 140   # Link 11-23: 2 bên phản hẹp (giữa điện thoại và màn rộng) xếp như điện thoại dọc
+		if ipad:
+			# Link 11-23 "tán xoài + chuối như cặc, chuối nhỏ" (iPad/Fold dọc): gà mẹ cỡ thật ở dải dưới, cạnh thẻ "Bạn"
+			hs = 130.0 / 230.0
+			hp = Vector2(cardR + 70.0, clampf((bd.end.y + bot) * 0.5, bd.end.y + 30, bot - 30))
 		add.call("ga", hp.x, hp.y, hs, [4, 6, 3, 0.42])
 		for c in LJ.chicks:
 			var q: Vector2 = P.call(hp.x + (float(c[0]) - 548.0) * hs, hp.y + (float(c[1]) - 372.0) * hs)
@@ -266,7 +271,11 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		var bq: Vector2 = P.call(sd.position.x + 20, minf(meY - 10, bot - 20))
 		bc = Vector3(bq.x, bq.y, clampf(mL * 1.5 / 437.0, 0.3, 0.85) * u)     # lá chuối không lấn lên khung phản
 		canopy = {"pos": P.call(sd.position.x * 0.6, sd.position.y - 40), "sc": u, "flip": false}
-		if mL < 60 and mR < 60:
+		if ipad:
+			# tán xoài góc trên trái (dưới menu, cạnh thẻ đối thủ), chuối to cỡ điện thoại ôm góc dưới phải
+			var bw2: float = 458.0; var bz2: float = bw2 / 437.0
+			short_banana = Rect2(Vector2(sd.end.x + 10.0, bd.end.y - 2.0 + 70.0 * bz2), Vector2(bw2, 0))
+		if (mL < 60 and mR < 60) or ipad:
 			# 2 bên phản không còn chỗ: tán xoài nằm góc trên trái (dưới thanh menu, cạnh thẻ đối thủ), chuối xuống góc dưới phải
 			canopy["top"] = Rect2(0, 0, L.opp.position.x + 30, f.position.y - 6)
 			canopy.flip = false
@@ -412,16 +421,22 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 		# [góc độ, cỡ, tâm tán x, tâm tán y] theo (bề ngang khung, cao dải trên)
 		var TAN := {"360": [0, 1.5, -120, -802.7], "412_235": [0, 1.5, -90, -801.2], "412_145": [0, 1.1, 15, -613.8],
 			"474": [5, 1.1, 75, -635.2], "640": [5, 1.2, 135, -704.2], "768": [10, 1.4, 240, -836.5], "860": [10, 1.5, 270, -905.1]}
-		var key := str(int(W)) + ("_" + str(int(round(tr.size.y))) if int(W) == 412 else "")
-		if TAN.has(key):
-			var tv: Array = TAN[key]
-			var ang: float = deg_to_rad(float(tv[0]))
-			csc = float(tv[1])
-			cpos = Vector2(float(tv[2]), float(tv[3])) - Vector2(40, -150).rotated(ang) * csc
-			canopy["rot"] = ang
-		else:
-			cpos = Vector2(W * 0.45, tr.size.y + 4.0 - 682.0 * csc) - Rc * csc
-			canopy["rot"] = PI / 4.0
+		# Link 11-23 "xếp theo mấy màn gần nó, đéo phải từng khung": lấy số của bề ngang GẦN NHẤT (không cần khớp đúng khung),
+		# tâm y tính theo cao dải trên thật: mép dưới lá (693.5 css tán dưới tâm) chạm mép trên khung phản
+		var key := ""
+		var bd_ := 1e9
+		for k in TAN:
+			var kw := float(String(k).split("_")[0])
+			if kw == 412.0 and k != ("412_235" if tr.size.y > 190.0 else "412_145"): continue
+			if absf(kw - W) < bd_: bd_ = absf(kw - W); key = k
+		var tv: Array = TAN[key]
+		var ang: float = deg_to_rad(float(tv[0]))
+		csc = float(tv[1])
+		var cx: float = float(tv[2]) * W / float(String(key).split("_")[0])
+		var cy: float = tr.size.y + 4.0 - 693.5 * csc
+		cpos = Vector2(cx, cy) - Vector2(40, -150).rotated(ang) * csc
+		cpos.y = tr.size.y + 4.0 - ty1 * csc * cos(ang)       # đáy lá thật (ảnh) chạm mép trên khung phản
+		canopy["rot"] = ang
 	canopy.sc = csc
 	var fl := -1.0 if canopy.flip else 1.0
 	var need := 0.0                                          # dời ngang ít nhất để không lớp lá / bóng nào chạm phản
