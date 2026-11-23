@@ -460,15 +460,16 @@ func _layout() -> void:
 		var o := (V.position + Vector2(8, 0)) / hs
 		L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(8, 62, 250, 58); L.me = Rect2(8, 140, 250, 62); L.tip = Rect2(8, 214, 250, 46)   # như cũ (cảnh dùng)
 		L.u_tools = Rect2(o.x, (V.position.y + 8 + safe) / hs, 250, 36)
-		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, CARD_W, 58)
-		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, CARD_W, 62)
+		# Link 11-23 "2 chip cách đều": khe Menu-thẻ trên = khe giữa 2 thẻ = 20
+		L.u_opp = Rect2(o.x, L.u_tools.position.y + 56, CARD_W, 58)
+		L.u_me = Rect2(o.x, L.u_tools.position.y + 134, CARD_W, 62)
 		if band:
 			# Link 11-23 "ko đều, chip Tới phiên chạm sát mép": 2 thẻ cùng cao 62, hạ 10 cho nhãn có chỗ
 			var y0: float = L.u_tools.position.y + 10
 			L.u_me = Rect2(o.x + 250 + 12, y0, CARD_W, 62)
 			L.u_opp = Rect2(L.u_me.end.x + 12, y0, CARD_W, 62)
 			L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(L.u_opp.position * hs, L.u_opp.size * hs); L.me = Rect2(L.u_me.position * hs, L.u_me.size * hs); L.tip = Rect2(L.me.position.x, L.me.end.y + 4, 1, 1)
-		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
+		L.u_tip = Rect2(o.x, L.u_tools.position.y + 208, 250, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
 	var hsx: float = L.get("hs", 1.0)
