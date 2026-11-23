@@ -78,7 +78,7 @@ def paint(mirror):
 		o = max(2, int(LN * 0.004))
 		shp = np.zeros_like(sh); shp[o:, o:] = sh[:-o, :-o]
 		sim = np.asarray(Image.fromarray((shp * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(o)), np.float32) / 255
-		col[Y0:Y1, X0:X1] *= (1 - 0.45 * sim * (1 - inside))[..., None]
+		col[Y0:Y1, X0:X1] *= (1 - 0.22 * sim * (1 - inside))[..., None]
 		a_ = inside
 		col[Y0:Y1, X0:X1] = col[Y0:Y1, X0:X1] * (1 - a_[..., None]) + np.clip(c, 0, 1) * a_[..., None]
 		al[Y0:Y1, X0:X1] = al[Y0:Y1, X0:X1] + a_ * (1 - al[Y0:Y1, X0:X1])
@@ -105,7 +105,9 @@ def paint(mirror):
 		c = base * lam[..., None] * 1.12
 		col[Y0:Y1, X0:X1] = col[Y0:Y1, X0:X1] * (1 - ins[..., None]) + np.clip(c, 0, 1) * ins[..., None]
 		al[Y0:Y1, X0:X1] = np.maximum(al[Y0:Y1, X0:X1], ins)
-	img = np.dstack([np.clip(col, 0, 1) * 255, np.clip(al, 0, 1) * 255]).astype(np.uint8)
+	# col đang là màu đã nhân alpha (phủ lên nền đen) -> chia lại cho alpha, không thì mép lá ra viền đen lởm chởm (Link 11-23)
+	rgb = np.where(al[..., None] > 1e-3, col / np.maximum(al[..., None], 1e-3), 0)
+	img = np.dstack([np.clip(rgb, 0, 1) * 255, np.clip(al, 0, 1) * 255]).astype(np.uint8)
 	im = Image.fromarray(img, "RGBA")
 	bb = im.getbbox(); im = im.crop(bb)
 	return im, bb
