@@ -695,9 +695,9 @@ const CARD_W := 214.0
 func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	var on: bool = not Gm.over and int(Gm.turn) == side
 	# Link 11-23 "viền Bạn xanh dương, AI đỏ": viền luôn theo phe, tới phiên thì viền dày hơn
-	var ring := Color8(214, 72, 84) if side == 2 else Color8(52, 132, 214)
-	if not on: ring = ring.lerp(Color(1, 1, 1), 0.25)
-	_box(ci, r, CARD, 12, ring, 2.6 if on else 1.6)
+	# Link 11-23 "2 viền bằng nhau, đỏ chứ không đỏ hồng": cùng dày 2.4, cùng đậm; tới phiên chỉ báo bằng nhãn
+	var ring := Color8(222, 38, 38) if side == 2 else Color8(37, 120, 220)
+	_box(ci, r, CARD, 12, ring, 2.4)
 	var name: String
 	var sub: String
 	var av: String
