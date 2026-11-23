@@ -394,6 +394,8 @@ func _layout() -> void:
 	KU = K0 * minf(su / 0.9, csw / 338.0)
 	var V := Rect2(-_off / K, vs / K)       # cả cửa sổ (css khung)
 	L = {"port": port}
+	# Link 11-23 "640x904, 776x914, 768x1024, 860x1000, 1005x920, 1000x860 bỏ gà đi" (776x914 dùng khung 860x1000, 1005x920 dùng 1000x860)
+	L.no_hen = DS in [Vector2(640, 904), Vector2(768, 1024), Vector2(860, 1000), Vector2(1000, 860)]
 	var safe := 6.0
 	L.tools = Rect2(8, 8 + safe, minf(W - 16, 420), 36)
 	var face: float

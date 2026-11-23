@@ -326,6 +326,9 @@ func build(L: Dictionary, W: float, H: float, board_tex: Texture2D) -> void:
 				var k2: float = room2 / r.size.x; it[3] = s0 * k2
 				it[1] = frm.end.x - (ur.position.x - tw.x / 2) * s0 * k2
 	hen = {}
+	if L.get("no_hen", false):
+		items = items.filter(func(e): return e[0] != "ga")
+		chicks = []
 	for it in items:
 		var t := tex(it[0]); var sh: Array = it[4]; var s: float = it[3]
 		var sdw := _shadow(self, t, Vector2(it[1], it[2]), Vector2(sh[0], sh[1]), sh[2] * s, sh[3], 0.0, s)
