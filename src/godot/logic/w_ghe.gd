@@ -187,8 +187,8 @@ func ut(ok: bool) -> void:   # ut: hết lượt ghé (ok = chất đủ thùng)
 			G.nv.S0(Y, Lt)
 			Pt.append(str(Lt) + " " + String(G.item_name(Y)).to_lower())
 		WC.qi("ghe")
-		_ta("Chất đủ thùng! Ghe thưởng thêm " + G.fmt_n(int(At.xu)) + " xu, " + str(int(At.xp)) + " kinh nghiệm, " + ", ".join(PackedStringArray(Pt)) + ".")
-		Db("Ghe thương hồ cảm ơn, nhổ neo đi tiếp!")
+		_ta("Chất đủ thùng! Ghe thưởng thêm " + G.fmt_n(int(At.xu)) + " xu, " + str(int(At.xp)) + " kinh nghiệm, " + ", ".join(PackedStringArray(Pt)) + ". Ghe cảm ơn, nhổ neo đi tiếp!")   # (bản 517) gộp một câu, khỏi bị câu nhổ neo đè mất câu thưởng
+		Db("")
 	else:
 		Db("Ghe thương hồ hết giờ đậu, đã nhổ neo. Thùng chất rồi vẫn được trả tiền.")
 	G.mark()
