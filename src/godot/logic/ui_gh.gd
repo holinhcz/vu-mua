@@ -121,7 +121,7 @@ func _box(x: float, y: float, w: float, h: float, i: int, o: Dictionary, dock: b
 		out.append_array(_rowi(x + w - xw - 2.0, y + 6.0, 16.0, ["c", xs], 10.0, 800, "rgb(150, 90, 10)")[0])
 	var nw: float = w - 50.0 - xw
 	out.append(_dt(x + 46.0, y + 6.0, nw, 16.0, _fitw(nm, 10.5, 800, nw), 10.5, 800, BROWN, "left"))
-	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 11.0, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
+	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, (G.fmt_n(q) if done else G.fmt_n(mini(hv, 99999))) + "/" + G.fmt_n(q), 11.0, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
 	if done:
 		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã chất lên ghe", 9.5, 700, "rgb(40, 110, 50)", "left"))
 	elif ok:
