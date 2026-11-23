@@ -980,6 +980,9 @@ func game_update(dt: float) -> void:
 	var rest: float = (.14 + minf(.25, G.ten * .12)) if G.state == "fight" else 0.0
 	G.rodV += ((rest - G.rodA) * 60 - G.rodV * 9) * dt
 	G.rodA += G.rodV * dt
+	# rung cần chỉ tăng lúc kéo cá căng dây; hết kéo (đứt dây, sổng cá, câu được) thì tắt dần trong ~0.4 s
+	if G.state != "fight":
+		G.shake = maxf(0, G.shake - dt * 2.5)
 	match G.state:
 		"cast":
 			var u: float = G.t / G.flight.dur
