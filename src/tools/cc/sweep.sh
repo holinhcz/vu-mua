@@ -3,10 +3,11 @@
 # bash sweep.sh [OUT.jpg] ["WxH WxH ..."]   (project thử /home/claude/ccq, Godot /home/claude/gd)
 OUT=${1:-/tmp/claude-0/cc_sweep.jpg}
 SZ=${2:-"360x860 412x915 412x735 411x722 474x696 640x904 768x1024 860x1000 1000x860 1024x768 904x640 915x412 1440x900 1600x900 1980x900"}
+X=${CMDX:-}   # lệnh thêm trước khi chụp, vd CMDX="2:fillbasket;2.5:shop;"
 Q=/home/claude/ccq; G=/home/claude/gd/Godot_v4.5.1-stable_linux.x86_64; D=/home/claude/cc_shots/w
 for sz in $SZ; do
   rm -f $D/s_$sz.png
-  timeout 150 xvfb-run -a -s "-screen 0 2600x1400x24" $G --path $Q --rendering-driver opengl3 --resolution $sz -- k=1 "cmd=1:hour_12;1.2:start;5:shot_s_$sz;5.5:quit" > /dev/null 2>&1
+  timeout 150 xvfb-run -a -s "-screen 0 2600x1400x24" $G --path $Q --rendering-driver opengl3 --resolution $sz -- k=1 "cmd=1:hour_12;1.2:start;${X}5:shot_s_$sz;5.5:quit" > /dev/null 2>&1
 done
 python3 - "$SZ" "$OUT" "$D" <<'PY'
 import sys
