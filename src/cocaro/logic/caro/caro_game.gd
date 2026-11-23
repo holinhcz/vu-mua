@@ -587,12 +587,11 @@ func _draw_pieces() -> void:
 func _font(w := 700) -> Font:
 	return A.font(w)
 
-# Link 11-23 "chỉ sử dụng 3 size": mọi chữ quy về 3 cỡ — nhỏ 11 (dòng phụ), vừa 13 (nút, chữ thường), lớn 20 (tựa, điểm)
-const FS_S := 11.0
-const FS_M := 13.0
+# Link 11-23 "2 size 14 vs 20": mọi chữ quy về 2 cỡ — 14 (chữ thường, nút, dòng phụ), 20 (tựa, điểm)
+const FS_M := 14.0
 const FS_L := 20.0
 static func _fs3(fs: float) -> float:
-	return FS_S if fs <= 12.0 else (FS_M if fs <= 16.0 else FS_L)
+	return FS_M if fs <= 16.0 else FS_L
 
 func _text(ci: CanvasItem, p: Vector2, s: String, fs: float, col: Color, w := 700, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
 	fs = _fs3(fs)
@@ -673,9 +672,10 @@ func _card(ci: CanvasItem, r: Rect2, side: int) -> void:
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 - 6), str(Gm.score[side - 1]), 22, PCOL[side - 1], 800, HORIZONTAL_ALIGNMENT_CENTER)
 	_text(ci, Vector2(sx, r.position.y + r.size.y / 2 + 15), "ván", 10, INK2, 600, HORIZONTAL_ALIGNMENT_CENTER)
 	if on:
-		var tr := Rect2(r.position.x + 62, r.position.y - 9, 62, 17)
-		_box(ci, tr, Color8(60, 120, 200), 8, Color(0, 0, 0, 0), 0, false)
-		_text(ci, Vector2(tr.position.x, tr.position.y + 8.5), "Tới phiên", 10.5, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
+		var tw_: float = A.tw("Tới phiên", 700, _fs3(10.5)) + 16.0
+		var tr := Rect2(r.position.x + 58, r.position.y - 11, tw_, 21)
+		_box(ci, tr, Color8(60, 120, 200), 10, Color(0, 0, 0, 0), 0, false)
+		_text(ci, Vector2(tr.position.x, tr.position.y + 10.5), "Tới phiên", 10.5, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 
 func _draw_hud() -> void:
 	if L.is_empty():
@@ -724,7 +724,7 @@ func _draw_hud() -> void:
 	if ov != "":
 		hits = []
 		# hộp thoại: cỡ KU như cờ gánh, co lại nếu màn thấp (không bị cắt); nằm giữa cả cửa sổ
-		var hp := {"menu": 588.0, "rules": 420.0, "end": 250.0}
+		var hp := {"menu": 604.0, "rules": 480.0, "end": 250.0}
 		K = minf(KU, (_vs.y - 24.0) / float(hp.get(ov, 540.0)))
 		var w0 := W; var h0 := H
 		W = _vs.x / K; H = _vs.y / K
@@ -795,7 +795,7 @@ func _draw_ov(ci: CanvasItem) -> void:
 
 func _ov_menu(ci: CanvasItem) -> void:
 	var can_resume: bool = Gm.hist.size() > 0 and not Gm.over
-	var h := 540.0 + (48.0 if can_resume else 0.0)
+	var h := 556.0 + (48.0 if can_resume else 0.0)
 	var r := _panel(ci, h)
 	var x := r.position.x + 16
 	var w := r.size.x - 32
@@ -811,17 +811,17 @@ func _ov_menu(ci: CanvasItem) -> void:
 	y += 20
 	for j in 4:
 		var o: Dictionary = OPP[j]
-		var br := Rect2(x, y, w, 46)
+		var br := Rect2(x, y, w, 50)
 		var id := "ai" + str(j)
 		var rr := br if _press != id else Rect2(br.position + br.size * 0.02, br.size * 0.96)
 		_box(ci, rr, Color8(255, 252, 244), 12, Color8(232, 214, 186), 1.4, false)
-		_avatar(ci, Vector2(rr.position.x + 24, rr.position.y + 23), o.k, 16, Color8(232, 214, 186))
+		_avatar(ci, Vector2(rr.position.x + 24, rr.position.y + 25), o.k, 16, Color8(232, 214, 186))
 		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 15), o.name, 15, INK, 800)
 		var wl := "thắng " + str(int(stats.w[j])) + " · thua " + str(int(stats.l[j]))
-		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 33), str(o.lvl) + " · " + wl, 11, INK2, 600)
-		_text(ci, Vector2(rr.end.x - 12, rr.position.y + 23), "+" + str(o.xu) + " xu", 13, Color8(190, 120, 20), 800, HORIZONTAL_ALIGNMENT_RIGHT)
+		_text(ci, Vector2(rr.position.x + 48, rr.position.y + 35), str(o.lvl) + " · " + wl, 11, INK2, 600)
+		_text(ci, Vector2(rr.end.x - 12, rr.position.y + 25), "+" + str(o.xu) + " xu", 13, Color8(190, 120, 20), 800, HORIZONTAL_ALIGNMENT_RIGHT)
 		hits.append([Rect2(br.position * K, br.size * K), id])
-		y += 52
+		y += 56
 	_btn(ci, Rect2(x, y, w, 40), "pvp", "Hai người chơi chung 1 máy", Color8(255, 252, 244), INK, 14)
 	y += 50
 	# tuỳ chọn
@@ -845,7 +845,7 @@ func _opt(ci: CanvasItem, r: Rect2, id: String, label: String, val: String) -> v
 	hits.append([Rect2(r.position * K, r.size * K), id])
 
 func _ov_rules(ci: CanvasItem) -> void:
-	var r := _panel(ci, 420)
+	var r := _panel(ci, 480)
 	var x := r.position.x + 18
 	var w := r.size.x - 36
 	var y := r.position.y + 42
@@ -861,11 +861,11 @@ func _ov_rules(ci: CanvasItem) -> void:
 	var f := _font(600)
 	for pt in parts:
 		_text(ci, Vector2(x, y), pt[0], 13.5, Color8(160, 90, 30), 800)
-		y += 18
+		y += 20
 		var lines := _wrap(pt[1], 12, w, f)
 		for ln in lines:
 			_text(ci, Vector2(x, y), ln, 12, INK, 600)
-			y += 17
+			y += 19
 		y += 6
 	_btn(ci, Rect2(r.position.x + r.size.x / 2 - 70, r.end.y - 52, 140, 38), "close", "Đóng", GOLD, INK, 14, Color8(200, 150, 40))
 
