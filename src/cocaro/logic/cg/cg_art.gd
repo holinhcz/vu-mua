@@ -21,20 +21,17 @@ const R_GLOW := Rect2(0, 64, 64, 64)    # tròn trắng mờ dần (tô màu lú
 
 # ------------------------------------------------------------ chữ
 static func font(w: int) -> Font:
-	if _font.has(w):
-		return _font[w]
-	if _base == null:
-		_base = FontFile.new()
-		_base.load_dynamic_font("res://ui/font/baloo2.ttf")
-		_base.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
-		_base.hinting = TextServer.HINTING_LIGHT
-		_base.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
-		_base.fallbacks = [load_nunito()]
-	var v := FontVariation.new()
-	v.base_font = _base
-	v.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): w}
-	_font[w] = v
-	return v
+	# Link 11-23 "đổi font đồng bộ": caro dùng chữ như Nông Trại = Nunito 700 (thường) / Nunito 800 (đậm)
+	var k := 800 if w >= 800 else 700
+	if _font.has(k):
+		return _font[k]
+	var f := FontFile.new()
+	f.load_dynamic_font("res://ui/font/nunito_%d.ttf" % k)
+	f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+	f.hinting = TextServer.HINTING_LIGHT
+	f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_AUTO
+	_font[k] = f
+	return f
 
 static func load_nunito() -> Font:
 	var f := FontFile.new()

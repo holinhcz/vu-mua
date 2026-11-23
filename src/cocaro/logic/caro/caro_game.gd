@@ -685,11 +685,17 @@ func _draw_hud() -> void:
 	var tr: Rect2 = L.u_tools
 	_box(ci, tr, CARD, 12, Color8(232, 214, 186), 1.2)
 	var items := [["menu", "Menu"], ["undo", "Đi lại" + (" " + str(Gm.undo) if Gm.mode == "ai" else "")], ["rules", "Luật"], ["sound", "Âm thanh" if int(S.sound) else "Tắt tiếng"]]
-	var bw := tr.size.x / items.size()
+	# ô rộng theo độ dài chữ (Nunito rộng hơn Baloo: "Âm thanh" không còn sát vạch)
+	var tfs := 12.5
+	var tws := []; var tsum := 0.0
+	for it in items:
+		var wv: float = A.tw(it[1], 700, tfs) + 16.0; tws.append(wv); tsum += wv
+	var cx := tr.position.x
 	for j in items.size():
-		var r := Rect2(tr.position.x + j * bw, tr.position.y, bw, tr.size.y)
+		var bw: float = tws[j] / tsum * tr.size.x
+		var r := Rect2(cx, tr.position.y, bw, tr.size.y); cx += bw
 		var dim: bool = items[j][0] == "undo" and (Gm.hist.is_empty() or Gm.over or (Gm.mode == "ai" and int(Gm.undo) <= 0))
-		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], 12.5, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+		_text(ci, Vector2(r.position.x, r.position.y + r.size.y / 2), items[j][1], tfs, Color8(160, 140, 120) if dim else INK, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 		if j > 0:
 			ci.draw_line(Vector2(r.position.x, r.position.y + 8), Vector2(r.position.x, r.end.y - 8), LINE, 1.0)
 		hits.append([Rect2(r.position * K, r.size * K), items[j][0]])
