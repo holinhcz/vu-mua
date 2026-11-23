@@ -465,8 +465,16 @@ func _layout() -> void:
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 134, CARD_W, 62)
 		if not band:
 			# Link 11-23 "màn ngang to vừa đủ chip thì trái dưới phải trên": thẻ AI góc trên phải (dưới nút toàn màn), thẻ Bạn góc dưới trái
-			L.u_opp = Rect2((V.end.x - 8) / hs - CARD_W, L.u_tools.position.y + 56, CARD_W, 58)
-			L.u_me = Rect2(o.x, (V.end.y - 8) / hs - 62, CARD_W, 62)
+			# Link 11-23 "gần sát mép bàn cờ": thẻ AI kế mép phải khung phản (ngang mép trên), thẻ Bạn kế mép trái (ngang mép dưới)
+			var frr := fx + face + (rw - 1.0) * face / 2.0
+			var fbt := fy + face + face * 12 / 392
+			var g := 18.0
+			var ox := minf((frr + g) / hs, (V.end.x - 8) / hs - CARD_W)
+			var oy := fy / hs + 10
+			if ox + CARD_W > (V.end.x - 8) / hs - 38 - 8:
+				oy = maxf(oy, L.u_tools.position.y + 36 + 16)      # không đè nút toàn màn hình
+			L.u_opp = Rect2(ox, oy, CARD_W, 58)
+			L.u_me = Rect2(maxf((frl - g) / hs - CARD_W, o.x), fbt / hs - 62, CARD_W, 62)
 		if band:
 			# Link 11-23 "ko đều, chip Tới phiên chạm sát mép": 2 thẻ cùng cao 62, hạ 10 cho nhãn có chỗ
 			var y0: float = L.u_tools.position.y + 10
