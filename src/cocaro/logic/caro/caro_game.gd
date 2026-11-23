@@ -447,7 +447,7 @@ func _layout() -> void:
 		# Link 11-23 "cột thẻ trái + cột trống phải ăn hết bề ngang, càng lúc càng nhỏ": màn ngang nào xếp
 		# thanh công cụ + 2 thẻ thành 1 hàng trên cùng cho phản to hơn thì dùng kiểu hàng trên
 		var hb := minf(KU / K, (V.size.x - 16) / (250.0 + 12 + CARD_W + 12 + CARD_W))
-		var bh := 8 + safe + 62 * hb + 14
+		var bh := 8 + safe + (10 + 62) * hb + 14
 		var face_b := minf((H - bh - 14) / (1.0 + 12.0 / 392.0), (W - 24) / rw)
 		var band := face_b > face * 1.05
 		if band:
@@ -463,9 +463,10 @@ func _layout() -> void:
 		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, CARD_W, 58)
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, CARD_W, 62)
 		if band:
-			var y0: float = L.u_tools.position.y
+			# Link 11-23 "ko đều, chip Tới phiên chạm sát mép": 2 thẻ cùng cao 62, hạ 10 cho nhãn có chỗ
+			var y0: float = L.u_tools.position.y + 10
 			L.u_me = Rect2(o.x + 250 + 12, y0, CARD_W, 62)
-			L.u_opp = Rect2(L.u_me.end.x + 12, y0, CARD_W, 58)
+			L.u_opp = Rect2(L.u_me.end.x + 12, y0, CARD_W, 62)
 			L.tools = Rect2(8, 8 + safe, 250, 36); L.opp = Rect2(L.u_opp.position * hs, L.u_opp.size * hs); L.me = Rect2(L.u_me.position * hs, L.u_me.size * hs); L.tip = Rect2(L.me.position.x, L.me.end.y + 4, 1, 1)
 		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
 		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
