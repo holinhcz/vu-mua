@@ -43,7 +43,10 @@ var stats := {"w": [0, 0, 0, 0], "l": [0, 0, 0, 0]}
 var Gm := {}
 var ov := "menu"            # "", "menu", "rules", "end"
 var hits := []              # [Rect2, id] nút đang hiện (điểm ảnh, tính từ góc khung _off)
-var KU := 1.0               # cỡ giao diện như cờ gánh: điểm ảnh / css chuẩn (dọc 412x915, ngang 1280x720)
+var KU := 1.0
+var WEB := OS.has_feature("web")
+var _fs_t := 0.0
+var _fs_last := 0               # cỡ giao diện như cờ gánh: điểm ảnh / css chuẩn (dọc 412x915, ngang 1280x720)
 var snd: Node = null
 var reward_txt := ""
 var _bg: Control
@@ -402,7 +405,7 @@ func _layout() -> void:
 		# cỡ thẻ theo KU (không lớn hơn chỗ chừa sẵn quanh phản), neo mép cửa sổ / mép phản; L.* tính trong hệ đã co (chia hs)
 		var hs := minf(1.0, KU / K)
 		L.hs = hs
-		var tw := minf(V.size.x - 16, 420 * hs)
+		var tw := minf(V.size.x - 16 - (44 * hs if WEB else 0.0), 420 * hs)
 		# L.opp/me/tip = chỗ chừa cho cảnh (caro_nen né), giữ như cũ; L.u_* = thẻ thật vẽ ra (hệ đã co hs)
 		L.opp = Rect2(W - 8 - cw, maxf(54 + safe, fy - 66), cw, 58)
 		L.me = Rect2(8, fy + face + face * 12 / 392 + 24, cw, 62)
@@ -411,6 +414,7 @@ func _layout() -> void:
 		L.u_opp = Rect2((V.end.x - 8) / hs - cw, (fy - 8) / hs - 58, cw, 58)
 		L.u_me = Rect2((V.position.x + 8) / hs, (fy + face + face * 12 / 392 + 24) / hs, cw, 62)
 		L.u_tip = Rect2(L.u_me.position.x, L.u_me.end.y + 10, cw, 46)
+		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	else:
 		var colw := _colw(W, H)
 		var rw: float = float(BJ.w) / float(BJ.face[2])     # khung gỗ rộng hơn lòng phản
@@ -431,6 +435,7 @@ func _layout() -> void:
 		L.u_opp = Rect2(o.x, L.u_tools.position.y + 48, 250, 58)
 		L.u_me = Rect2(o.x, L.u_tools.position.y + 126, 250, 62)
 		L.u_tip = Rect2(o.x, L.u_tools.position.y + 200, 250, 46)
+		L.u_fs = Rect2((V.end.x - 8) / hs - 38, L.u_tools.position.y, 38, 36)
 	# chỗ thẻ thật trên màn (css khung) để gà né (Link 11-23: gà bị thẻ "Bạn" che)
 	var hsx: float = L.get("hs", 1.0)
 	L.huds = []
@@ -495,6 +500,13 @@ func _process(dt: float) -> void:
 	_clock += dt
 	if not _ready_ok:
 		return
+	if WEB:
+		_fs_t += dt
+		if _fs_t > 0.4:
+			_fs_t = 0.0
+			var f := int(JavaScriptBridge.eval("window.__fs||0", true))
+			if f != _fs_last:
+				_fs_last = f; _hud.queue_redraw()
 	var vs := get_viewport_rect().size
 	if vs != _vs:
 		_layout()
@@ -706,7 +718,29 @@ func _draw_hud() -> void:
 		_T(ci)
 		_draw_ov(ci)
 		W = w0; H = h0; K = k_save; _ov_o = Vector2.ZERO
+	_fs_btn(ci)
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+# nút toàn màn hình góc trên phải (Link 11-23), chỉ bản web (app vốn đã toàn màn); vẽ trên cùng, bấm được cả lúc mở menu
+func _fs_btn(ci: CanvasItem) -> void:
+	if not (WEB and L.has("u_fs")):
+		return
+	var k_save := K
+	K = K * float(L.get("hs", 1.0))
+	_T(ci)
+	var fr: Rect2 = L.u_fs
+	var pr := Rect2(fr.position + fr.size * 0.04, fr.size * 0.92) if _press == "fs" else fr
+	_box(ci, pr, CARD, 12, Color8(232, 214, 186), 1.2)
+	var c := pr.get_center(); var a := 7.0; var b := 3.6
+	var fs_on := int(JavaScriptBridge.eval("window.__fs||0", true)) == 1
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			var d := -1.0 if fs_on else 1.0         # đang toàn màn: góc quay ra ngoài (nút thu nhỏ)
+			var q := c + Vector2(sx, sy) * (a - b if fs_on else a)
+			ci.draw_line(q, q + Vector2(-sx * b * d, 0), INK, 1.8)
+			ci.draw_line(q, q + Vector2(0, -sy * b * d), INK, 1.8)
+	hits.append([Rect2(fr.position * K, fr.size * K), "fs"])
+	K = k_save
 
 # ------------------------------------------------------------ hộp thoại
 var _ks := 1.0
@@ -889,6 +923,8 @@ func _gui_input(ev: InputEvent) -> void:
 	var XP := pos - _off
 	if down:
 		_press = _hit(XP)
+		if _press == "fs" and WEB:
+			JavaScriptBridge.eval("window.__fsw=1")      # trình duyệt chỉ cho bật toàn màn trong lúc nhấc tay (index.html)
 		if _press != "":
 			_hud.queue_redraw()
 		return
@@ -935,6 +971,8 @@ func _do(id: String) -> void:
 			ov = "rules"
 		"close":
 			ov = "menu" if Gm.hist.is_empty() and not Gm.over and not Gm.get("started", false) else ""
+		"fs":
+			pass                                           # index.html bật/tắt lúc nhấc tay
 		"sound":
 			S.sound = 0 if int(S.sound) else 1
 			snd.on = bool(int(S.sound))
