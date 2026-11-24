@@ -13,7 +13,7 @@ from moi_ve import *          # noqa
 import numpy as np
 from scipy import ndimage as ndi
 
-OLIVE = hexc('#7d8c3c'); OLIVE_D = hexc('#56632a'); BROWN = hexc('#6e5a2e'); SPOT = hexc('#33391a')
+OLIVE = hexc('#9cad58'); OLIVE_D = hexc('#72813c'); BROWN = hexc('#8c7746'); SPOT = hexc('#56622e')   # (11-24 Link "màu ếch đậm quá, xuống 1 tone": sáng hơn 1 bậc)
 YEL = hexc('#c9c06a'); BELLY = hexc('#f6eec8')
 
 

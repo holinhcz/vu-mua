@@ -16,7 +16,7 @@ KHO = {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_mevinh",
        "ho": "ca_ho", "tradau": "ca_tradau"}
 # (11-24 Link "vẽ ếch cá chép với tép") con của lờ / lọp / giăng câu trong vườn, không câu được ở bờ kênh:
 # chỉ có ô Kho (không chép vô gói hình câu cá). Gốc art/cc_fish: chep = ca_ve.py, tep = ca_ve2.py, ech = moi/ve_ech.py
-KHO_ONLY = {"chep": "ca_chep", "tep": "tep", "ech": "ech"}
+KHO_ONLY = {"chep": "ca_chep", "tep": "tep", "ech": "ech", "cua": "cua"}   # ghẹ (art/cc_fish/ghe.webp, ve_cua.py) chưa có món trong vườn
 MAXW = 1200
 a = b = 0
 for fid, kid in list(KHO.items()) + list(KHO_ONLY.items()):
