@@ -85,9 +85,11 @@ func step(dt: float) -> void:
 		_lo_sync()
 		_vit_sync()
 		_meo_sync()
+		_sbub_sync()
 	if meo != null and is_instance_valid(meo):
 		meo.hap = float(G.w_all.WCA.qi_hap)
 	_kite_step()
+	_sbub_step()
 	_pick_sync()
 	_float_step(dt)
 	fx.step(dt)
@@ -138,7 +140,6 @@ func _lo_sync() -> void:
 			n.position = Vector2(F.en(float(a.gx) + 0.5, float(a.gy) + 0.5), F.nn(float(a.gx) + 0.5, float(a.gy) + 0.5))
 			_sorted(n)
 			lo[k] = n
-		n.has_fish = W.w4(a)
 		n.night = G.night
 	for k in lo.keys():
 		if not keep.has(k):
@@ -147,7 +148,6 @@ func _lo_sync() -> void:
 
 class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô = 32 x 16)
 	var kind := "lo"
-	var has_fish := false
 	var night := false
 	var seed := 0.0
 	var t := 0.0
@@ -157,13 +157,6 @@ class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô
 		queue_redraw()
 	func _draw() -> void:
 		gf.call(self, kind, Vector2.ZERO, 1.0, t, seed, night)
-		if has_fish:   # có cá: gợn nước loang + chấm vàng nhấp nháy (cao, khỏi bị bụi hoa che)
-			var r := fmod(t * .9, 1.0)
-			draw_arc(Vector2(0, 2), 6.0 + r * 10.0, 0, TAU, 24, Color(1, 1, 1, (1.0 - r) * .7), 1.0, true)
-			var q := Vector2(0, -30 + sin(t * 3.0) * 1.5)
-			draw_circle(q, 4.2, Color(.55, .35, .1, .9))
-			draw_circle(q, 3.4, Color(1, .82, .2, .97))
-			draw_circle(q, 1.5, Color(1, 1, 1, .95))
 
 # hình lờ / lọp / giăng / vịt vẽ bằng nét (chưa có ảnh), dùng chung cho mặt nước và thẻ Xây dựng: c = giữa ô, s = tỉ lệ
 static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, seed := 0.0, night := false) -> void:
@@ -306,15 +299,7 @@ class VitNode extends Node2D:   # gốc = tâm vùng nước; vịt bơi lòng v
 		for q in pts():
 			df.call(self, q - position, 1.4, float(D[i].dir), t + i * 1.7, night)
 			i += 1
-		if egg > 0:   # trứng chờ lấy: bong bóng trứng trên tâm đàn
-			var b := Vector2(0, -26 + sin(t * 2.0) * 1.2)
-			draw_circle(b, 6.0, Color(1, .98, .9, .95))
-			draw_arc(b, 6.0, 0, TAU, 20, Color(.55, .4, .2, .8), 1.0, true)
-			var E := PackedVector2Array()
-			for k in 12:
-				var a := TAU * k / 12.0
-				E.append(b + Vector2(cos(a) * 2.4, sin(a) * 3.1 - .3))
-			draw_colored_polygon(E, Color(.85, .9, .78))
+
 
 # ------------------------------------------------------------------ (bản 546) mèo mướp (g.pet.meo, w_ca: gq chạm, wq quà sáng): ngồi trước Kho
 var meo: MeoNode = null
@@ -356,9 +341,9 @@ class MeoNode extends Node2D:   # mèo mướp ngồi, đuôi ve vẩy; đói th
 		queue_redraw()
 	var cf := Callable()   # song_ve.cat
 	func _draw() -> void:
-		cf.call(self, Vector2.ZERO, 1.6, t, night, hungry, hap)
+		cf.call(self, Vector2.ZERO, 1.6, t, night, hap)
 
-static func cat(ci: CanvasItem, p0: Vector2, s: float, t := 0.0, night := false, hungry := false, hap := 0.0) -> void:   # mèo ngồi (gốc = chân)
+static func cat(ci: CanvasItem, p0: Vector2, s: float, t := 0.0, night := false, hap := 0.0) -> void:   # mèo ngồi (gốc = chân)
 	ci.draw_set_transform(p0, 0.0, Vector2(s, s))
 	var dk := 0.62 if night else 1.0
 	var o := Color(.92 * dk, .6 * dk, .26 * dk)
@@ -395,16 +380,6 @@ static func cat(ci: CanvasItem, p0: Vector2, s: float, t := 0.0, night := false,
 		ci.draw_circle(Vector2(-1.2, hy), 1.6, Color(.95, .35, .4, minf(1.0, hap)))
 		ci.draw_circle(Vector2(1.2, hy), 1.6, Color(.95, .35, .4, minf(1.0, hap)))
 		ci.draw_colored_polygon(PackedVector2Array([Vector2(-2.7, hy + .4), Vector2(2.7, hy + .4), Vector2(0, hy + 3.4)]), Color(.95, .35, .4, minf(1.0, hap)))
-	elif hungry:   # đói: bong bóng hình cá
-		var b := Vector2(5.0, -21.0 + sin(t * 2.0) * 1.0)
-		ci.draw_circle(b, 5.2, Color(1, .98, .92, .95))
-		ci.draw_arc(b, 5.2, 0, TAU, 20, Color(.55, .4, .2, .8), .9, true)
-		var F2 := PackedVector2Array()
-		for i in 12:
-			var a := TAU * i / 12.0
-			F2.append(b + Vector2(cos(a) * 2.6 - .6, sin(a) * 1.3))
-		ci.draw_colored_polygon(F2, Color(.35, .55, .7))
-		ci.draw_colored_polygon(PackedVector2Array([b + Vector2(1.8, 0), b + Vector2(3.4, -1.4), b + Vector2(3.4, 1.4)]), Color(.35, .55, .7))
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 # ------------------------------------------------------------------ (bản 546) diều đang thả (g.dieu.on): bay trên đầu nhân vật, dây xuống tay
@@ -474,6 +449,64 @@ class KiteNode extends Node2D:   # gốc = chân nhân vật
 		for i in 10:
 			T.append(X * Vector2(sin(t * 3.0 + i * .7) * 3.0, 16 + i * 3.0))
 		draw_polyline(T, B, 1.2, true)
+
+# ------------------------------------------------------------------ (bản 548) BONG BÓNG CHUNG (farm.Bubble, như ruộng chín): lờ có cá
+# (hình con chủ lực: lờ cá rô, lọp lươn, giăng cá lóc), vịt có trứng (trứng vịt), mèo đói (cá rô). Chạm bong bóng = làm liền.
+const BUB_ID := {"lo": "ca_ro", "lop": "luon", "giang": "ca_loc"}
+var sbubs := {}   # khoá -> [Bubble, chỗ gốc, việc {type, k}]
+func _sbub_sync() -> void:
+	var W = G.w_all.WCA
+	var want := {}
+	var off: bool = F.ui.bdp == null or String(F.ui.bdp.mode) == "off"
+	if off:
+		for a in W.t1()["set"]:
+			if W.w4(a):
+				var k: String = W.bk(a)
+				want["l:" + k] = [String(BUB_ID.get(String(a.t), "ca_ro")), Vector2(F.en(float(a.gx) + .5, float(a.gy) + .5), F.nn(float(a.gx) + .5, float(a.gy) + .5) - 30.0), {"type": "lob", "k": k}]
+		if vit != null and is_instance_valid(vit) and vit.egg > 0:
+			want["vit"] = ["trung_vit", vit.position + Vector2(0, -30), {"type": "vit", "k": "vit"}]
+		if meo != null and is_instance_valid(meo) and meo.hungry:
+			want["meo"] = ["ca_ro", meo.position + Vector2(0, -38), {"type": "meo", "k": "meo"}]
+	for k in sbubs.keys():
+		if not want.has(k):
+			sbubs[k][0].queue_free()
+			sbubs.erase(k)
+	for k in want:
+		var e = sbubs.get(k)
+		if e == null:
+			var b = F.get_script().Bubble.new()
+			b.fnt = F.fnt
+			b.farm = F
+			b.z_index = 40
+			F.add_child(b)
+			e = [b, Vector2.ZERO, {}]
+			sbubs[k] = e
+		var bb = e[0]
+		bb.kind = "ripe"
+		bb.id = want[k][0]
+		bb.text = ""
+		bb.can = true
+		bb.visible = true
+		e[1] = want[k][1]
+		e[2] = want[k][2]
+		F._bub_sig(bb)
+
+func _sbub_step() -> void:
+	var tt := Time.get_ticks_msec() / 1000.0
+	var still: bool = G.motion_off()
+	for k in sbubs:
+		var e: Array = sbubs[k]
+		var b = e[0]
+		b.position = e[1] if still else e[1] + Vector2(0.0, sin(tt * 3.0 + e[1].x) * 1.2)
+		if not still:
+			F._bub_set(b, tt)
+
+func bub_pick(w: Vector2, z: float):   # farm._pk_bubs: chạm trúng bong bóng -> việc
+	for k in sbubs:
+		var b = sbubs[k][0]
+		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
+			return sbubs[k][2]
+	return null
 
 # ------------------------------------------------------------------ (bản 546) chọn chỗ đặt lờ / thả vịt: tô ô xanh
 var pk: PickNode = null
@@ -673,6 +706,11 @@ func pick_add(L: Array) -> void:
 func tap(h: Dictionary) -> void:
 	var k := String(h.k)
 	if F.has_job(k):
+		return
+	if h.type == "lob":   # (bản 548) chạm bong bóng có cá: ra thăm liền
+		var ns = G.w_all.WCAU.ext.get("Ns")
+		if ns is Callable and ns.is_valid():
+			ns.call({"type": "lo", "key": k})
 		return
 	if h.type == "lo":   # (bản 546) vòng nút Thăm / Gỡ (rm_don)
 		F.ui.dn_open({"lo": k})

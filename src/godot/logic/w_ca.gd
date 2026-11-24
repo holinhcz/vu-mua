@@ -952,7 +952,7 @@ func lo_info(key: String) -> Dictionary:   # vòng nút lờ: {n: tên, s: dòng
 		return {}
 	var n: Dictionary = nst(a.t)
 	var r := w4(a)
-	return {"n": String(n.n), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + (" · bậc " + str(lo_lv(String(a.t)))) + (" · không mục" if int(n.use) <= 0 else " · dùng thêm " + str(int(n.use) - int(a.u)) + " lần")}
+	return {"n": String(n.n) + " · bậc " + str(lo_lv(String(a.t))), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + (" · không mục" if int(n.use) <= 0 else " · còn " + str(int(n.use) - int(a.u)) + " lần")}
 
 func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt bẫy
 	var e := gs(t, a, n)

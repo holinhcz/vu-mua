@@ -390,6 +390,8 @@ func _tn_pill() -> void:   # tnPill: "Đêm nay bão lớn về · phòng chốn
 func _lo_pill() -> void:   # (bản 547) "N lờ có cá · đi thăm": chạm mở bảng Lờ lọp
 	var n: int = WCA.ready_keys().size()
 	_pill_put("lo", [str(n) + " lờ lọp có cá · đi thăm", false] if n > 0 else [], func() -> void: U.lop_open())
+	if pl.has("lo"):
+		pl.lo.ic = "res://ui/img/lo/lo.webp"
 
 func _dieu_pill() -> void:   # (bản 546) chiều mùa gió chướng: "Có gió chướng · thả diều" (diều đang bay: "Diều đang bay · thi diều"); chạm mở bảng Diều
 	var t: Dictionary = WCA.fh()
@@ -399,6 +401,8 @@ func _dieu_pill() -> void:   # (bản 546) chiều mùa gió chướng: "Có gi�
 	elif WCA._tr(t.get("on")):   # hết gió: tự thu diều
 		t.on = 0
 	_pill_put("dieu", tx, func() -> void: U.pcp.open_solo("dieu"))
+	if pl.has("dieu"):
+		pl.dieu.ic = "res://ui/svg/mat/dieu.svg"
 
 func _goal_pill() -> void:   # (bản 362) mục tiêu tân thủ (w_sys.goal_view) thành một dòng trong cột việc; đủ thì chạm nhận thưởng
 	var v: Dictionary = WS.goal_view()

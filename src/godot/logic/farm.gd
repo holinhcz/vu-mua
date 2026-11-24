@@ -1050,7 +1050,7 @@ func _tap_do(sp: Vector2) -> void:
 		ui.close_all()
 		return
 	match String(h.get("type", "")):
-		"nn", "fl", "bun", "lo", "vit", "meo":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn, (bản 541) thăm lờ / lọp / giăng
+		"nn", "fl", "bun", "lo", "lob", "vit", "meo":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn, (bản 541) thăm lờ / lọp / giăng
 			ui.close_all()
 			if song != null:
 				song.tap(h)
@@ -1176,6 +1176,10 @@ func _pk_bubs(w: Vector2):   # Su.bubs: bong bóng đang hiện -> thứ có bon
 		var b: Bubble = plots[i].bub
 		if b.visible and b.kind != "lock" and b.kind != "" and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
 			return {"type": "ray", "i": i} if G.has_ray(i) else {"type": "plot", "i": i}   # bong bóng của ô: rầy (ord 10) trước ô (44)
+	if song != null:   # (bản 548) bong bóng lờ có cá, vịt có trứng, mèo đói (song_ve)
+		var sb = song.bub_pick(w, z)
+		if sb != null:
+			return sb
 	for i in tbubs:   # cây ăn trái / thùng ong
 		var b: Bubble = tbubs[i]
 		if b.visible and b.position.distance_to(w) <= 10.0 * b.k + 3.0 / z:
