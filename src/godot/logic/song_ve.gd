@@ -156,13 +156,13 @@ class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô
 		t += dt
 		queue_redraw()
 	func _draw() -> void:
-		gf.call(self, kind, Vector2.ZERO, 1.0, t, seed, night)
+		gf.call(self, kind, Vector2.ZERO, 1.6, t, seed, night)   # (bản 549) to hơn 1,6 cho dễ thấy
 
 # hình lờ / lọp / giăng / vịt vẽ bằng nét (chưa có ảnh), dùng chung cho mặt nước và thẻ Xây dựng: c = giữa ô, s = tỉ lệ
 static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, seed := 0.0, night := false) -> void:
 	var dk := 0.62 if night else 1.0
 	var tre := Color(.78, .62, .36) * dk
-	var tre2 := Color(.55, .40, .20) * dk
+	var tre2 := Color(.42, .28, .12) * dk
 	tre.a = 1.0
 	tre2.a = 1.0
 	var bob := sin(t * 1.6 + seed) * .6
@@ -462,7 +462,7 @@ func _sbub_sync() -> void:
 		for a in W.t1()["set"]:
 			if W.w4(a):
 				var k: String = W.bk(a)
-				want["l:" + k] = [String(BUB_ID.get(String(a.t), "ca_ro")), Vector2(F.en(float(a.gx) + .5, float(a.gy) + .5), F.nn(float(a.gx) + .5, float(a.gy) + .5) - 30.0), {"type": "lob", "k": k}]
+				want["l:" + k] = [String(BUB_ID.get(String(a.t), "ca_ro")), Vector2(F.en(float(a.gx) + .5, float(a.gy) + .5), F.nn(float(a.gx) + .5, float(a.gy) + .5) - 38.0), {"type": "lob", "k": k}]
 		if vit != null and is_instance_valid(vit) and vit.egg > 0:
 			want["vit"] = ["trung_vit", vit.position + Vector2(0, -30), {"type": "vit", "k": "vit"}]
 		if meo != null and is_instance_valid(meo) and meo.hungry:
@@ -695,7 +695,7 @@ func pick_add(L: Array) -> void:
 			continue
 		var ql := nl.position
 		var kk: String = k
-		F._pk_add(L, {"type": "lo", "k": kk}, 6, ql.y, func(p: Vector2) -> bool: return absf(p.x - ql.x) < 16.0 and p.y > ql.y - 26.0 and p.y < ql.y + 8.0)
+		F._pk_add(L, {"type": "lo", "k": kk}, 6, ql.y, func(p: Vector2) -> bool: return absf(p.x - ql.x) < 22.0 and p.y > ql.y - 30.0 and p.y < ql.y + 10.0)
 	var WX = G.w_all.WX
 	for o in WX.v6():   # bãi bùn
 		if WX.bS(o):

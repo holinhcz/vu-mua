@@ -742,3 +742,9 @@ func _scard(y: float, pic: String, ttl: String, sub: String, desc: String, btns:
 		bx -= 6.0
 	return [out, h]
 
+func _mat_ic(id: String) -> String:   # (bản 549) mã hình vật liệu nâng cấp cho _icx: ảnh ui/img/vl (đồ câu), svg ui/svg/mat, không có thì hình món
+	if FileAccess.file_exists("res://ui/img/vl/" + id + ".webp"):
+		return "pic:res://ui/img/vl/" + id + ".webp"
+	if FileAccess.file_exists("res://ui/svg/mat/" + id + ".svg"):
+		return "svg:res://ui/svg/mat/" + id + ".svg"
+	return id

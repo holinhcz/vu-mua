@@ -5,6 +5,8 @@ extends RefCounted
 # (bản 546) {"lo": khoá bẫy} lờ / lọp / giăng đang đặt: 2 nút [Thăm: hình cá] [Gỡ: cất về, đặt lại khỏi tốn xu],
 #   chip: tên + "Có cá rồi" / "Còn N phút · dùng thêm K lần".
 
+# (bản 549) nút Gỡ: mũi tên kéo lên khỏi mặt nước (trước xài hình giỏ, nhìn tưởng lấy cá)
+const GO_SVG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><path d=\"M8 46 q6 -5 12 0 t12 0 t12 0 t12 0\" fill=\"none\" stroke=\"#4e9bb0\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M8 55 q6 -5 12 0 t12 0 t12 0 t12 0\" fill=\"none\" stroke=\"#8cc3cf\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M32 40 V12\" stroke=\"#8a5a2a\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M20 22 L32 9 L44 22\" fill=\"none\" stroke=\"#8a5a2a\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
 var U          # ui.gd
 var G
 var key := {}  # {"hu": vật lang.HU} hoặc {"o": món f (g.objs, giữ chính dict để chỉ số đổi vẫn tìm ra)} hoặc {"pd": [x, y]} ô ruộng lúa hoang (bản 514)
@@ -28,7 +30,7 @@ func open(k: Dictionary) -> void:
 		for b in [".fast", ".star"]:
 			U._set_svg(U.rm_gi[b].kids()[0], U._ring("rmw", "#1e90e8", "rgba(150,112,48,.18)", 0.0))
 		U._rm_ic(".fast", FileAccess.get_file_as_string("res://ui/svg/kh/ca_ro.svg"), true)
-		U._rm_ic(".star", FileAccess.get_file_as_string("res://ui/svg/kh/pc_gui.svg"), true)
+		U._rm_ic(".star", GO_SVG, true)
 		U._txt(U._q(U.rm_gi[".fast"], "", "b"), "")
 		sync()
 		pos()

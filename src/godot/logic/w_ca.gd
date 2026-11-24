@@ -944,6 +944,9 @@ func lo_place(t: String) -> void:
 			run.call()
 		return true
 	var sub := "Ô xanh là chỗ đặt được: sông Vàm, sát mé bờ." if t == "giang" else "Ô xanh là chỗ đặt được: mương, ao, mé sông sát bờ."
+	var bt = a.get("bait")
+	if bt != null and _barn(String(bt[0])) < int(bt[1]):   # (bản 549) báo trước: hết mồi thì mỗi mẻ bớt 1 con
+		sub = "Hết " + _nm(String(bt[0])).to_lower() + " làm mồi: đặt vẫn được nhưng mỗi mẻ ít hơn 1 con."
 	wg("lo", false, {"msg": "Chạm ô nước để đặt " + String(a.n).to_lower() + ("" if lo_free(t) else " · " + _sa(a.xu) + " xu"), "sub": sub, "at": [G.ppos.x, G.ppos.y], "cb": cb, "lo": t})
 
 func lo_info(key: String) -> Dictionary:   # vòng nút lờ: {n: tên, s: dòng phụ, ready}
@@ -952,7 +955,11 @@ func lo_info(key: String) -> Dictionary:   # vòng nút lờ: {n: tên, s: dòng
 		return {}
 	var n: Dictionary = nst(a.t)
 	var r := w4(a)
-	return {"n": String(n.n) + " · bậc " + str(lo_lv(String(a.t))), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + (" · không mục" if int(n.use) <= 0 else " · còn " + str(int(n.use) - int(a.u)) + " lần")}
+	var P := ["Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút"]   # (bản 549) ngắn cho vừa chip
+	if n.get("bait") != null and not _tr(a.get("b")):
+		P.append("hết mồi")
+	P.append("không mục" if int(n.use) <= 0 else str(int(n.use) - int(a.u)) + " lần")
+	return {"n": String(n.n) + " · bậc " + str(lo_lv(String(a.t))), "ready": r, "s": " · ".join(P)}
 
 func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt bẫy
 	var e := gs(t, a, n)
