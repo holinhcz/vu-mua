@@ -64,6 +64,11 @@ func open() -> void:
 			G.mark()
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
+		# (bản 534) câu cá bỏ cấp riêng: mở mồi theo cấp vườn, kinh nghiệm câu cộng vô vườn; giờ + thời tiết như chip đồng hồ vườn
+		"lv": func() -> int: return G.lv(),
+		"xp": func(n: int): G.add_xp(n, "cau"),
+		"xpi": func() -> Array: return [int(G.g.pc.xp), G.xp_need(G.lv())],
+		"wx": func() -> String: return String(G.troi.TEN[G.troi.cur if G.troi.cur != "" else "nang"]),
 		# mồi chung Kho (cc_data.KHO_BAIT: tép sống = tép trong Kho vườn)
 		"bait": func(id: String): return int(G.g.barn.get(id, 0)),
 		"bait_add": func(id: String, d: int):

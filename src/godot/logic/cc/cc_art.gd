@@ -458,12 +458,25 @@ static func fit(ci: CanvasItem, t: Texture2D, r: Rect2, mod := Color.WHITE) -> v
 	var sz := ts * s
 	ci.draw_texture_rect(t, Rect2(r.get_center() - sz / 2, sz), false, mod)
 
+static var _fcoin = false
 static func svg(ci: CanvasItem, name: String, r: Rect2, mod := Color.WHITE) -> void:
+	if name == "coin":   # (bản 534) chạy trong vườn: đồng xu vàng của vườn (ui/img/coin.webp); bản chơi riêng không có thì xu vẽ sẵn
+		if _fcoin is bool:
+			_fcoin = null
+			var b := FileAccess.get_file_as_bytes("res://ui/img/coin.webp")
+			var im := Image.new()
+			if not b.is_empty() and im.load_webp_from_buffer(b) == OK:
+				im.generate_mipmaps()
+				_fcoin = ImageTexture.create_from_image(im)
+		if _fcoin != null:
+			fit(ci, _fcoin, r.grow(r.size.x * .08), mod)
+			return
 	var t := icon(name, maxf(r.size.x, r.size.y))
 	if t != null:
 		ci.draw_texture_rect(t, r, false, mod)
 
 const ICON := {
+	"lock": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M7 10V7a5 5 0 0 1 10 0v3\" fill=\"none\" stroke=\"rgb(120,112,98)\" stroke-width=\"2.4\"/><rect x=\"4\" y=\"10\" width=\"16\" height=\"11\" rx=\"2.5\" fill=\"rgb(150,140,120)\"/><circle cx=\"12\" cy=\"15.5\" r=\"1.8\" fill=\"#fff\"/></svg>",   # (bản 534) ổ khóa của vườn (ui_sl.gd LOCK)
 	"coin": '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="25" r="19" fill="#b8801a"/><circle cx="24" cy="23" r="19" fill="#f4c040" stroke="#9a6a10" stroke-width="2.5"/><circle cx="24" cy="23" r="13.5" fill="none" stroke="#c8901a" stroke-width="2"/><rect x="19" y="18" width="10" height="10" rx="1.5" fill="#7a4a08"/><path d="M12 15a14 14 0 0 1 9-6" stroke="#fff6c0" stroke-width="3" fill="none" stroke-linecap="round"/></svg>',
 	"basket": '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path d="M10 20h28l-3 20a4 4 0 0 1-4 3H17a4 4 0 0 1-4-3z" fill="#c89a52" stroke="#6a4a1c" stroke-width="2.4"/><path d="M12 26h24M13 32h22M14 38h20" stroke="#8a6228" stroke-width="2"/><path d="M18 21l-1 21M24 21v21M30 21l1 21" stroke="#a87a3a" stroke-width="1.6"/><path d="M14 20c1-9 19-9 20 0" fill="none" stroke="#6a4a1c" stroke-width="3"/><path d="M20 19c3-5 9-6 13-2-2 4-8 5-13 2z" fill="#7a9a5a" stroke="#3a5a24" stroke-width="1.6"/><circle cx="29" cy="17" r="1.2" fill="#222"/></svg>',
 	"book": '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path d="M8 10c6-2 11-1 16 3 5-4 10-5 16-3v28c-6-2-11-1-16 3-5-4-10-5-16-3z" fill="#f6ead0" stroke="#6a4a1c" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 13v28" stroke="#6a4a1c" stroke-width="2"/><path d="M11 22c3-3 7-3 10 0-3 3-7 3-10 0z" fill="#5a8a3a"/><path d="M27 28c3-3 7-3 10 0-3 3-7 3-10 0z" fill="#c8602a"/><circle cx="18.5" cy="21.6" r=".9" fill="#222"/><circle cx="34.5" cy="27.6" r=".9" fill="#222"/></svg>',

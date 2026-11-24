@@ -931,7 +931,16 @@ func caught(f: Dictionary, w: float) -> void:
 	ui.show_catch({"f": f, "w": w, "cm": cm, "isNew": is_new, "rec": rec, "xp": xp, "val": D.fish_value(f, w)})
 	set_state("card")
 
+func lv() -> int:   # (bản 534) trong vườn: cấp VƯỜN (câu cá bỏ cấp riêng); bản chơi riêng: cấp câu cá
+	if host != null and host.has("lv"):
+		return int(host.lv.call())
+	return int(S.lv)
+
 func add_xp(n: int) -> void:
+	if host != null and host.has("xp"):   # (bản 534) kinh nghiệm câu được cộng thẳng vào cấp vườn
+		host.xp.call(n)
+		ui.hud_dirty()
+		return
 	S.xp += n
 	while S.xp >= D.xp_need(S.lv):
 		S.xp -= D.xp_need(S.lv)

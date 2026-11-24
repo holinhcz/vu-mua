@@ -366,21 +366,9 @@ func _draw_hud(ci: Box) -> void:
 	A.svg(ci, "coin", Rect2(xr.position.x + 4, xr.get_center().y - ics / 2 - 1, ics, ics))
 	A.text(ci, xs, xr.position.x + 4 + ics + 6, xr.get_center().y - 1, fs, A.F_BROWN, 0, 800)
 	_pop(ci)
-	# cấp + thanh kinh nghiệm
-	var lfs := 13.0 if n else 15.0
-	var need := D.xp_need(S.lv)
-	var lt := "Cấp " + str(S.lv)
-	var em := "" if n else "%d/%d kn" % [S.xp, need]
-	var lw := maxf(96.0 if n else 132.0, A.tw(lt, lfs) + (A.tw(em, 12, 700) + 4 if em != "" else 0) + 24)
-	var lr := Rect2(xr.end.x + 8, top, lw, ph)
-	met(ci, lr, ph / 2)
-	var ty := lr.position.y + ph * .36
-	A.text(ci, "Cấp ", lr.position.x + 12, ty, lfs, A.F_BROWN, 0, 800)
-	A.text(ci, str(S.lv), lr.position.x + 12 + A.tw("Cấp ", lfs), ty, lfs, A.F_BROWN, 0, 800)
-	if em != "":
-		A.text(ci, em, lr.position.x + 12 + A.tw(lt, lfs) + 4, ty + 1, 12, A.SMALL2, 0, 700)
-	var br := Rect2(lr.position.x + 12, lr.position.y + ph * .62, lw - 24, 9)
-	A.bar_bg(ci, br, float(S.xp) / need, A.F_XP)
+	# cấp + thanh kinh nghiệm (bản 534: chỉ bản chơi riêng; trong vườn câu cá dùng cấp vườn, khỏi hiện)
+	if game.host == null:
+		_hud_lv(ci, xr, top, ph, n)
 	# cài đặt
 	var ib := 40.0 if n else 44.0
 	var sr := Rect2(L.W - 12 - ib, top, ib, ib)
@@ -407,6 +395,8 @@ func _draw_hud(ci: Box) -> void:
 	var ic := "rain" if rain else ("sun" if h >= 5.6 and h < 18.8 else "moon")
 	var ts := fmt_h(h, game.host != null)
 	var sm := "" if n else ("Mưa" if rain else D.phase_name(h))
+	if game.host != null and game.host.has("wx"):
+		sm = str(game.host.wx.call())
 	var cw = 4 + ics + 6 + A.tw(ts, fs) + (6 + A.tw(sm, 13, 600) if sm != "" else 0) + 12
 	var cr := Rect2(sr.position.x - 8 - cw, top, cw, ph)
 	met(ci, cr, ph / 2)
@@ -491,6 +481,23 @@ func _draw_hud(ci: Box) -> void:
 				var cnt := str(S.basket.size())
 				A.badge(ci, Vector2(r.end.x - 4, r.position.y + 4), cnt, 12.0)
 	_draw_act(ci)
+
+func _hud_lv(ci: Box, xr: Rect2, top: float, ph: float, n: bool) -> void:   # ô "Cấp N" + thanh kinh nghiệm (bản chơi riêng)
+	var S: Dictionary = game.S
+	var lfs := 13.0 if n else 15.0
+	var need := D.xp_need(S.lv)
+	var lt := "Cấp " + str(S.lv)
+	var em := "" if n else "%d/%d kn" % [S.xp, need]
+	var lw := maxf(96.0 if n else 132.0, A.tw(lt, lfs) + (A.tw(em, 12, 700) + 4 if em != "" else 0) + 24)
+	var lr := Rect2(xr.end.x + 8, top, lw, ph)
+	met(ci, lr, ph / 2)
+	var ty := lr.position.y + ph * .36
+	A.text(ci, "Cấp ", lr.position.x + 12, ty, lfs, A.F_BROWN, 0, 800)
+	A.text(ci, str(S.lv), lr.position.x + 12 + A.tw("Cấp ", lfs), ty, lfs, A.F_BROWN, 0, 800)
+	if em != "":
+		A.text(ci, em, lr.position.x + 12 + A.tw(lt, lfs) + 4, ty + 1, 12, A.SMALL2, 0, 700)
+	var br := Rect2(lr.position.x + 12, lr.position.y + ph * .62, lw - 24, 9)
+	A.bar_bg(ci, br, float(S.xp) / need, A.F_XP)
 
 func _act_d2() -> float:   # cỡ nút Quăng, cùng luật với _draw_act
 	var d := 84.0 if nar() else 92.0
@@ -857,13 +864,15 @@ func _layout_modal() -> void:
 	var k: String = _mod.kind
 	var fp := minf(1.0, L.H / KPOV)
 	var pw := minf(KW, L.W)
-	var ph := KH * fp
 	var top: float = (L.H - KPOV * fp) / 2 + KTOP * fp
 	_mod.w = pw
-	_mod.r = Rect2((L.W - pw) / 2, top, pw, ph)
+	_mod.r = Rect2((L.W - pw) / 2, top, pw, KH * fp)
 	_mod.top = _head_h(k)
 	_mod.dock = _dock_h(k)
 	var content_h := _body(null, KCW, false)
+	# (bản 534) bảng ít đồ co lại vừa nội dung như khung Kho của vườn (trước luôn cao 524,6 -> giỏ trống trơn trống nửa bảng)
+	var ph: float = clampf(_mod.top + content_h + 22.0 + _mod.dock + (3.0 if _mod.dock > 0 else 6.0), 220.0, KH * fp)
+	_mod.r = Rect2((L.W - pw) / 2, top, pw, ph)
 	var br := Rect2(_mod.r.position.x + 2.5, top + _mod.top, pw - 5, ph - _mod.top - _mod.dock - (3.0 if _mod.dock > 0 else 6.0))
 	body.position = br.position
 	body.size = br.size
@@ -972,9 +981,10 @@ func _draw_modal(ci: Box) -> void:
 				_dex_dock(ci, r)
 		"shop":
 			# vạch = kinh nghiệm tới cấp sau (lên cấp mở mồi mới); nút cam = giỏ cá (đồ nghề đổi bằng cá trong giỏ)
-			var need := D.xp_need(S.lv)
+			var xi: Array = game.host.xpi.call() if game.host != null and game.host.has("xpi") else [int(S.xp), D.xp_need(S.lv)]
+			var need: int = maxi(1, int(xi[1]))
 			var cap: int = D.CAGE[S.cage].cap
-			_kcbox(ci, r, float(S.xp) / need, false, [["Cấp %d · còn " % S.lv, A.F_MUTED, 600], [str(need - S.xp), A.F_PRICE, 800], [" kn lên cấp", A.F_MUTED, 600]],
+			_kcbox(ci, r, float(xi[0]) / need, false, [[("Cấp vườn %d · còn " if game.host != null else "Cấp %d · còn ") % game.lv(), A.F_MUTED, 600], [str(need - int(xi[0])), A.F_PRICE, 800], [" kinh nghiệm", A.F_MUTED, 600]],
 				"Giỏ %d/%d" % [S.basket.size(), cap], false, func(): game.snd.ui(); _open("basket"))
 			_shop_dock(ci, r)
 			# tab (.khseg: tab chọn xanh lá cao 33, tab kia kem cao 30, chân cùng một đường; đứng trên thanh tre)
@@ -1215,6 +1225,8 @@ func _tile(ci, r: Rect2, fid: String, name: String, low: String, low_col: Color,
 	var pr := Rect2(rr.position.x + 5, rr.position.y + 6, rr.size.x - 10, 34)
 	if fid.begins_with("@"):
 		A.pic(ci, fid.substr(1), pr, Color(.5, .5, .5, .45) if dark else Color.WHITE)
+		if dark:   # (bản 534) món chưa mở: ổ khóa như vườn
+			A.svg(ci, "lock", Rect2(pr.get_center() - Vector2(11, 11), Vector2(22, 22)))
 	else:
 		var t: Texture2D = A.img(fid)
 		if t != null:
@@ -1424,7 +1436,7 @@ func _b_shop(ci, w: float, y: float) -> float:
 			_open("shop", _mod.arg)
 		if _mod.arg == "bait":
 			var b: Dictionary = D.BAIT[k]
-			var lock: bool = b.lv > S.lv
+			var lock: bool = b.lv > game.lv()
 			var low: String = ("Cấp %d" % b.lv) if lock else ("Vô hạn" if k == "trun" else "Có %d" % int(S.baits.get(k, 0)))
 			_tile(ci, r, "@" + k, b.name, low, A.SMALL2 if lock else A.F_BROWN, false, 0, sel == k, lock, "s" + k, tap, S.bait == k)
 		else:
@@ -1459,14 +1471,14 @@ func _shop_dock(ci, r: Rect2) -> float:
 		var b: Dictionary = D.BAIT[k]
 		title = b.name
 		desc = b.desc
-		if b.lv > S.lv:
-			hint = "Lên cấp %d mới mở" % b.lv
+		if b.lv > game.lv():
+			hint = ("Vườn lên cấp %d mới mở" if game.host != null else "Lên cấp %d mới mở") % b.lv
 			hint_bad = true
 		else:
 			sub = " · " + ("vô hạn" if k == "trun" else "có %d" % int(S.baits.get(k, 0)))
 			hint = ("Đang có %d xu" % S.xu) if b.pack else ""
 			if S.bait == k:
-				btns.append(["Đang móc", "", "hook", Callable(), true, ""])
+				btns.append(["✓ Đang dùng", "", "hook", Callable(), false, ""])
 			elif k == "trun" or int(S.baits.get(k, 0)) > 0:
 				btns.append(["Móc mồi", "alt", "use" + k, func():
 					S.bait = k
