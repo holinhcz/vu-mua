@@ -26,7 +26,7 @@ var ext := {}              # hàm của hệ khác (người ghép gán Callable
 
 # ------------------------------------------------------------------ dữ liệu
 var Wf := []               # mã cá (cau_ca/ds_ca: cá cũ còn trong công thức, lờ / lọp / giăng)
-var Wcc := []              # (bản 540) 16 loại cá của Câu cá (cc_data.KHO, theo bậc): Bộ sưu tập > Cá + sổ cá vườn
+var Wcc := []              # (bản 540) 16 loại cá của Câu cá (cc_data.KHO, theo bậc) + cá chép (giăng câu): Bộ sưu tập > Cá + sổ cá vườn
 var ns := {}               # lờ, lọp, giăng câu
 var m6 := []               # cá tát ao
 var k4 := []               # diều
@@ -60,6 +60,7 @@ func _init(game) -> void:
 	G = game
 	Wf = _ja("cau_ca/ds_ca")
 	Wcc = preload("res://logic/cc/cc_data.gd").KHO.values()
+	Wcc.append("ca_chep")   # (bản 544) cá chép: chỉ giăng câu ra, vẫn vô sổ / Bộ sưu tập
 	ns = _jd("cau_ca/lo_lop_cau_giang")
 	m6 = _ja("cau_ca/tat_muong")
 	k4 = _ja("mini_game/dieu")
@@ -817,8 +818,12 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 		var fi = G.g.get("fish")
 		for d in l:
 			G.g.barn[d] = _barn(d) + int(l[d])
-			if fi is Dictionary and fi.get("dex") is Dictionary and fi.dex.get(d) is Dictionary:
+			if fi is Dictionary and fi.get("dex") is Dictionary and (fi.dex.get(d) is Dictionary or _wall().has(d)):   # (bản 544) cá trong sổ: chưa có mục thì tạo
+				if not (fi.dex.get(d) is Dictionary):
+					fi.dex[d] = {"n": 0, "best": 0.0}
 				fi.dex[d].n = int(fi.dex[d].get("n", 0)) + int(l[d])
+				if G.w_all != null:
+					tc().seen[d] = 1
 			h.append(str(l[d]) + " " + _nm(d).to_lower())
 		c = "Thăm " + String(n.n).to_lower() + " được " + ", ".join(h) + (" (để lâu quá, cá xổng bớt)" if e else "") + (". Đêm cá ăn mạnh!" if G.night else ".")
 		_no("lo", 1.0, [float(a.gx) + 0.5, float(a.gy) + 1.2])

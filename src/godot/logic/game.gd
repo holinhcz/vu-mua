@@ -136,6 +136,9 @@ func _migrate(s: Dictionary) -> Dictionary:
 		s.sv2 = 1
 	if not s.has("ht"):   # NTWEB: điểm Hệ Thống theo cấp đã cộng ở _on_level, không để htS (w_sys) cộng lần nữa
 		s.ht = {"mig": 1}
+	if s.get("barn") is Dictionary and s.barn.has("ca_koi"):   # (bản 544) bỏ cá koi (cá chép vàng): bán theo giá cũ 150 xu / con
+		s.coins = int(s.get("coins", 0)) + 150 * maxi(0, int(s.barn.ca_koi))
+		s.barn.erase("ca_koi")
 	var f := _fresh()
 	for k in f.keys():
 		if not s.has(k):
