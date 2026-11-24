@@ -63,6 +63,12 @@ func _ready() -> void:
 	shs.resize(32)
 	_load()
 	_xu_last = int(S.xu)
+	if host != null and host.has("free") and S.basket.size():   # (bản 537) save cũ: cá trong giỏ chuyển vô Kho vườn, Kho chật thì bán theo giá
+		for c in S.basket:
+			var kid := str(D.KHO.get(c.id, ""))
+			if kid != "" and not host.kho.call(kid, 1):
+				S.xu = int(S.xu) + D.fish_value(D.fish(c.id), float(c.w))
+		S.basket = []
 	D.kho_price = host.price if host != null and host.has("price") else Callable()   # (bản 536) giá cá theo Kho vườn
 	for k in D.KHO_BAIT:
 		_bait_last[k] = int(S.baits.get(k, 0))
@@ -759,7 +765,10 @@ func reel_back() -> void:
 
 func start_fight(perfect: bool) -> void:
 	var f: Dictionary = G.fish.f
-	var w: float = f.w[0] + (f.w[1] - f.w[0]) * pow(randf(), 1.6 if f.rar >= 3 else 2.2)
+	var ex: float = 1.6 if f.rar >= 3 else 2.2
+	if host != null and host.has("free"):   # (bản 537) trong vườn bỏ giỏ: món "giỏ đựng" = cá to dễ dính hơn (mỗi bậc bớt độ cong)
+		ex = maxf(1.0, ex - 0.4 * int(S.cage))
+	var w: float = f.w[0] + (f.w[1] - f.w[0]) * pow(randf(), ex)
 	var k: float = (w - f.w[0]) / (f.w[1] - f.w[0] if f.w[1] != f.w[0] else 1.0)
 	G.hook = {"f": f, "w": w, "size": .8 + .45 * k, "P": f.P * (.85 + .35 * k), "st0": f.st * (.8 + .5 * k), "x": G.fl.x, "vx": 0.0, "beh": "calm", "bt": .6, "surf": 0.0, "wk": 0.0}
 	G.hook.st = G.hook.st0 * (.75 if perfect else 1.0)

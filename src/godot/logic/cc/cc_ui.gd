@@ -462,7 +462,8 @@ func _draw_hud(ci: Box) -> void:
 		var mh := 62.0 if n else 76.0
 		var mi := 34.0 if n else 44.0
 		var mfs := 12.0 if n else 14.0
-		var menu := [["basket", "Giỏ cá", func(): open_basket()], ["shop", "Chợ", func(): open_shop("bait")], ["book", "Sổ cá", func(): open_dex()]]
+		var vk: bool = game.host != null and game.host.has("free")   # (bản 537) trong vườn: cá vô Kho
+		var menu := [["basket", "Kho" if vk else "Giỏ cá", func(): open_basket()], ["shop", "Chợ", func(): open_shop("bait")], ["book", "Sổ cá", func(): open_dex()]]
 		for i in 3:
 			var r: Rect2
 			if n:
@@ -477,7 +478,7 @@ func _draw_hud(ci: Box) -> void:
 			A.text(ci, menu[i][1], r.get_center().x, r.position.y + (mh - mi - mfs) / 2 + mi + mfs * .5 - 1 + oy, mfs, A.F_BROWN, 1, 800)
 			var cb: Callable = menu[i][2]
 			ci.items.append({"r": r, "id": id, "tap": func(): _ui_tap(); cb.call()})
-			if id == "basket" and S.basket.size() > 0:
+			if id == "basket" and not vk and S.basket.size() > 0:
 				var cnt := str(S.basket.size())
 				A.badge(ci, Vector2(r.end.x - 4, r.position.y + 4), cnt, 12.0)
 	_draw_act(ci)
@@ -1394,6 +1395,9 @@ func _to_screen(p: Vector2) -> Vector2:
 	return p
 
 func basket_count(id: String) -> int:
+	if game.host != null and game.host.has("free"):   # (bản 537) trong vườn: cá nằm trong Kho
+		var kid := str(D.KHO.get(id, ""))
+		return int(game.host.bait.call(kid)) if kid != "" else 0
 	var n := 0
 	for c in game.S.basket:
 		if c.id == id:
@@ -1408,6 +1412,10 @@ func has_fish(need: Dictionary) -> bool:
 
 func take_fish(need: Dictionary) -> void:
 	var S: Dictionary = game.S
+	if game.host != null and game.host.has("free"):
+		for id in need:
+			game.host.bait_add.call(str(D.KHO.get(id, "")), -int(need[id]))
+		return
 	for id in need:
 		for k in need[id]:
 			var best := -1
@@ -1776,7 +1784,8 @@ func _draw_card(ci: Box) -> void:
 	var f: Dictionary = _card.f
 	var junk := f.has("junk")
 	var cap: int = D.CAGE[S.cage].cap
-	var full: bool = S.basket.size() >= cap
+	var vk: bool = game.host != null and game.host.has("free")   # (bản 537) trong vườn: không giỏ, cá vô thẳng Kho vườn
+	var full: bool = (int(game.host.free.call()) < 1) if vk else S.basket.size() >= cap
 	A.under_rect(ci, Rect2(0, 0, L.W, L.H), Color(10 / 255.0, 24 / 255.0, 12 / 255.0, .45))
 	var cw := minf(400, L.W - 32)
 	var short := low()
@@ -1787,7 +1796,7 @@ func _draw_card(ci: Box) -> void:
 		acts.append(["Bỏ thùng rác · +phước", "", "junk", ""])
 	else:
 		if not full:
-			acts.append(["Bỏ giỏ", "", "keep", "basket"])
+			acts.append(["Vô Kho" if vk else "Bỏ giỏ", "", "keep", "" if vk else "basket"])
 		acts.append(["Bán liền %d" % _card.val, "gold", "sell", "coin"])
 		acts.append(["Thả về", "alt", "free", ""])
 	# xếp nút theo hàng (flex-wrap)
@@ -1927,6 +1936,19 @@ func _draw_card(ci: Box) -> void:
 				_card_done()
 			"keep":
 				game.snd.ui()
+				if vk:
+					# vô thẳng Kho vườn; con to hơn trung bình: thưởng liền phần chênh so với giá Kho (Kho chỉ đếm con, không nhớ cân)
+					var kid := str(D.KHO.get(f.id, ""))
+					if kid == "" or not game.host.kho.call(kid, 1):
+						toast("Kho vườn đầy, bán ngay hoặc thả về", "bad")
+						return
+					var bonus: int = maxi(0, int(_card.val) - int(game.host.price.call(kid)))
+					if bonus > 0:
+						S.xu += bonus
+						fly_coins(int(ceil(bonus / 15.0)), Vector2(L.W / 2, L.H / 2 + 100))
+					toast("Đã cất vô Kho" + ((" · cá to +%d xu" % bonus) if bonus > 0 else ""), "good")
+					_card_done()
+					return
 				S.basket.append({"id": f.id, "w": _card.w})
 				_card_done()
 				if S.tut < 4:
@@ -1959,7 +1981,7 @@ func _draw_card(ci: Box) -> void:
 			x += a[1] + 8
 		y += 46
 	if full and not junk:
-		A.text(ci, "Giỏ đầy rồi! Bán bớt hoặc đổi giỏ lớn hơn.", 0, y + 8 + 14 * .6, 14, Color("#a8401a"), 1, 600, 0.0, A.INK, xf)
+		A.text(ci, ("Kho vườn đầy (%s): bán ngay hoặc thả về." % str(game.host.room.call())) if vk else "Giỏ đầy rồi! Bán bớt hoặc đổi giỏ lớn hơn.", 0, y + 8 + 14 * .6, 14, Color("#a8401a"), 1, 600, 0.0, A.INK, xf)
 
 # ============================================================ màn đầu
 func show_title() -> void:

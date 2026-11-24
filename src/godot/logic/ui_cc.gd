@@ -65,6 +65,7 @@ func open() -> void:
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
 		"price": func(id: String) -> int: return G.price(id),
+		"free": func() -> int: return G.kho_room(),   # (bản 537) chỗ trống Kho vườn: cá câu vô thẳng Kho
 		# (bản 535) Giỏ cá / Chợ / Sổ cá / Cài đặt mở bảng khung Kho chung của vườn (ui_ccp.gd) thay bảng tự vẽ
 		"pan": func(kind: String, arg): _pan(g, kind, arg),
 		# (bản 534) câu cá bỏ cấp riêng: mở mồi theo cấp vườn, kinh nghiệm câu cộng vô vườn; giờ + thời tiết như chip đồng hồ vườn
@@ -126,7 +127,9 @@ var _player := 10
 func _pan(g, kind: String, arg) -> void:
 	var k := ""
 	match kind:
-		"basket": k = "gio"
+		"basket":   # (bản 537) không còn giỏ: mở Kho vườn, lọc mục Cá
+			_kho_go(g)
+			return
 		"dex": k = "so"
 		"set": k = "set"
 		"shop": k = "do" if str(arg) == "gear" else "moi"
@@ -149,6 +152,31 @@ func _pan(g, kind: String, arg) -> void:
 			_pvis.append(c)
 			c.visible = false
 
+func _kho_go(g) -> void:
+	if ui.layer != 110:
+		_player = ui.layer
+		ui.layer = 110
+		ui.visible = true
+	g.G.paused = true
+	ui.kh_f = "song"
+	ui.kh_sel = ""
+	ui.kho_open()
+	ui._kho_tab(0)
+	ui._kho_chips()
+	for c in ui.root.get_children() + ui.get_children():
+		if c != ui.root and not (c in ui.kho_roots) and c is CanvasItem and c.visible:
+			_pvis.append(c)
+			c.visible = false
+	var tm := Timer.new()   # Kho đóng (nút X) -> trả màn câu
+	tm.wait_time = .15
+	tm.autostart = true
+	ui.add_child(tm)
+	tm.timeout.connect(func():
+		if not ui.kho_on:
+			tm.queue_free()
+			ui.kh_f = "all"
+			_pan_end(g))
+
 func _pan_end(g) -> void:
 	for c in _pvis:
 		if is_instance_valid(c):
@@ -167,6 +195,8 @@ func close() -> void:
 		return
 	if ui.ccpp != null and ui.ccpp.on:
 		ui.ccpp.close()
+	if ui.kho_on:
+		ui.kho_close()
 	on = false
 	for n in _vis:
 		if is_instance_valid(n):
