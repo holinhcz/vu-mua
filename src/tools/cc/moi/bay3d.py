@@ -331,14 +331,15 @@ def render(scene, name, water=True):
     GX, GY = np.meshgrid(xs, ys)
     O = GX.reshape(-1, 1) * RT + GY.reshape(-1, 1) * UP - FWD * 200
     n = len(O)
-    t = np.full(n, 150, F32); hit = np.zeros(n, bool); act = np.arange(n)
+    dz = B @ FWD; t0 = 200 + float(dz.min()) - 2; t1 = 200 + float(dz.max()) + 2
+    t = np.full(n, t0, F32); hit = np.zeros(n, bool); act = np.arange(n)
     for it in range(260):
         P = O[act] + FWD * t[act, None]
         d = scene.sdf(P)
         t[act] += d
         h = d < .004
         hit[act[h]] = True
-        keep = (~h) & (t[act] < 260)
+        keep = (~h) & (t[act] < t1)
         act = act[keep]
         if len(act) == 0:
             break
