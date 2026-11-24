@@ -517,10 +517,10 @@ def leaf(base, d, ln, wd, col='#4f8a36', bend=.12, tilt=0.0):
     return e
 
 
-def fruit(fr, k, c, cs=1.0, seed=0):
+def fruit(fr, k, c, cs=1.0, seed=0, yaw=None):
     rs = np.random.RandomState(abs(int(seed * 7919 + c[0] * 13 + c[1] * 31)) % (2 ** 31))
     c = V(*c)
-    yaw = rs.uniform(0, 2 * np.pi)
+    yaw = rs.uniform(0, 2 * np.pi) if yaw is None else yaw
     ax0 = V(math.cos(yaw), math.sin(yaw), 0); ax1 = V(-math.sin(yaw), math.cos(yaw), 0)
     if k == 'dua':   # dưa hấu: dài, sọc rằn xanh đậm, đốm vàng chỗ nằm
         e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (2.7 * cs, 2.0 * cs, 1.9 * cs), 'dua')
@@ -963,8 +963,10 @@ def cho_load(fr, h, kind, zf, Wb, seed):
                     vv = (j - (nj - 1) / 2) * step * (.92 if ly == 0 else 1) + rs.uniform(-.3, .3)
                     o += fruit(fr, kinds[(ki + j * 3 + ly) % len(kinds)], fr.w(uu + rs.uniform(-.4, .4), vv, zf + (2.0 + ly * 2.9) * cs), cs, seed + ki)
                 uu += step; ki += 1
-        for uu in (-L * .22, L * .0, L * .2):   # buồng chuối vàng nằm trên đỉnh mô
-            o += fruit(fr, 'chuoi', fr.w(uu, rs.uniform(-.6, .6), zf + (2.0 + 3 * 2.9) * cs + 1.6), 1.35)
+        # nải chuối xếp nằm gọn dưới sàn khoang, giữa sạp lái và mô trái, cuống quay về lái
+        yw = math.atan2(fr.U[1], fr.U[0])
+        for vv, dz_ in ((-2.3, 0), (2.3, 0), (0, 1.3)):
+            o += fruit(fr, 'chuoi', fr.w(-L * .55, vv, zf + .3 + dz_), 1.15, seed, yaw=yw)
     elif kind == 'nong':  # bao gạo chất 3 tầng kín khoang, thúng lúa mũi
         cs = 1.45
         uu = -L * .32 + 2.6 * cs; k = 0
