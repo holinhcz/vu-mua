@@ -83,7 +83,7 @@ void fragment() {
 		vec4 kk = texelFetch(uK, ti, 0);
 		int kind = int(kk.a * 255.0 + 0.5) / 16;
 		if (kind == 1) {
-			c = kk.rgb;
+			c = kk.rgb * (0.95 + 0.10 * vno(wp / 70.0 + 5.3));   // tông loang nhẹ, không theo ô
 			float px = max(fwidth(wp.x), 1e-4);
 			float base = wp.y + 0.5 * wp.x;
 			float e1 = (fract((base - 0.4) / 4.0 + 0.5) - 0.5) * 4.0 * 0.894;

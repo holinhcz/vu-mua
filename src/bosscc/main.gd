@@ -66,9 +66,9 @@ func _layout() -> void:
 			var t := Vector2i(s, h)
 			var w0 := tile_pos(s, h)
 			var ey := pow(w0.x / 185.0, 2) + pow((w0.y - 1000.0) / 190.0, 2)
-			var k := 2 if ey <= 1.0 else (3 if ey > 1.7 else 0)  # sân phơi giữa, cỏ quanh, cỏ dại xa
+			var k := 2 if ey <= 1.0 else (3 if ey > 3.2 else 0)  # sân phơi giữa, cỏ quanh, cỏ dại xa
 			if s <= RA and h <= RA and s >= RA - 18 and h >= RA - 18: k = 1
-			elif s <= RA + 1 and h <= RA + 1 and s >= RA - 19 and h >= RA - 19: k = 0   # bờ cỏ quanh ruộng
+			elif s <= RA + 2 and h <= RA + 2 and s >= RA - 20 and h >= RA - 20: k = 0   # bờ cỏ quanh ruộng (2 ô)
 			elif s + h < 2 * RA - 30: k = 3
 			kind[t] = k
 			if k == 1:
@@ -84,7 +84,7 @@ func _ground() -> void:
 	for t in kind:
 		var q: Vector2i = t - T0
 		var c: Color = pal[rng.randi() % pal.size()]
-		if harvested.has(t) or gnaw.has(t): c = [Color8(196, 172, 98), Color8(188, 164, 92), Color8(202, 178, 104), Color8(192, 168, 96)][rng.randi() % 4]
+		if harvested.has(t) or gnaw.has(t): c = Color8(194, 170, 98)
 		c.a = float(kind[t] * 16) / 255.0
 		ik.set_pixelv(q, c)
 		if road.has(t):
@@ -142,35 +142,40 @@ func _scenery() -> void:
 		if gnaw.has(t):
 			if rng.randf() < 0.5: put("caytrong/lua", "dlua1", w + jit, rng.randf() < 0.5)
 			continue
-		put("caytrong/lua", "dlua3", w + jit, rng.randf() < 0.5)
+		var sp3 := put("caytrong/lua", "dlua3", w + jit + Vector2(0, rng.randf_range(-2, 2)), rng.randf() < 0.5)
+		sp3.scale *= rng.randf_range(0.82, 1.12)
 	# vài bụi lúa sót lẻ loi trên ruộng gặt (không đứng sát chân boss)
 	for t in harvested:
 		var w := tile_pos(t.x, t.y)
 		if abs(w.x) < 150 and abs(w.y - BOSS_Y) < 75: continue
 		if rng.randf() < 0.10: put("caytrong/lua", "dlua1", w + Vector2(rng.randf_range(-8, 8), rng.randf_range(-4, 4)), rng.randf() < 0.5)
-	# bờ cỏ: lau, bụi cỏ, bụi lá mọc thưa không đều + vài khóm hoa nhỏ
+	# bờ cỏ 2 ô: lau, bụi cỏ, bụi lá mọc thưa lệch nhau 2 hàng; hoa từng cặp khóm cách đều (không lẻ loi)
 	var HOA := ["h_cuc_vang", "h_mong_ga", "h_da_yen", "h_mai_dia", "h_van_tho", "h_cuc_trang"]
 	var hi := 0
-	for i in 40:
-		var f := rng.randf()
-		var sd := rng.randf() < 0.5
-		var tp := tile_pos(RA + 1.0 + rng.randf_range(-0.25, 0.25), RA - 19 + f * 20.0) if sd else tile_pos(RA - 19 + f * 20.0, RA + 1.0 + rng.randf_range(-0.25, 0.25))
-		if abs(tp.x) > 260 or tp.y < 560: continue
-		if abs(tp.x) < 40: continue                      # lối lên ruộng ở giữa
-		var r := rng.randf()
-		if r < 0.25: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
-		elif r < 0.50: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
-		elif r < 0.70: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
-		elif r < 0.85: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
-		else:
+	for sd in [0, 1]:
+		for i in 26:
+			var f := (i + rng.randf_range(0.1, 0.9)) / 26.0 * 21.0
+			var row := RA + 1.15 + (0.9 if i % 2 == 1 else 0.0) + rng.randf_range(-0.2, 0.2)
+			var tp := tile_pos(row, RA - 20 + f) if sd == 0 else tile_pos(RA - 20 + f, row)
+			if abs(tp.x) > 255 or tp.y < 540: continue
+			if abs(tp.x) < 36: continue
+			var r := rng.randf()
+			if r < 0.3: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+			elif r < 0.6: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+			elif r < 0.8: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+			else: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+		for j in 3:
+			var f2 := 21.0 - (j * 3.2 + 3.0)
+			var tp2 := tile_pos(RA + 1.9, RA - 20 + f2) if sd == 0 else tile_pos(RA - 20 + f2, RA + 1.9)
+			if abs(tp2.x) > 240: continue
 			var nm: String = HOA[hi % HOA.size()]; hi += 1
-			for j in 2: put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], tp + Vector2(rng.randf_range(-9, 9), rng.randf_range(-4, 4)), rng.randf() < 0.5)
+			for k2 in 3: put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], tp2 + Vector2(rng.randf_range(-12, 12), rng.randf_range(-5, 5)), rng.randf() < 0.5)
 	# sân phơi: đụn rơm + chòi canh dạt 2 bên, đá nhỏ, bụi lau ở mép màn; giữa sân chừa trống cho người chơi
-	put("caylang/rom", "d0", Vector2(-205, 905))
-	put("caylang/rom", "d2", Vector2(-172, 930), true)
-	put("caylang/rom", "d1", Vector2(-218, 960))
-	put("congtrinh/choi", "d1", Vector2(200, 1010), true)
-	put("caylang/rom", "d3", Vector2(214, 860))
+	put("caylang/rom", "d0", Vector2(-188, 900))
+	put("caylang/rom", "d2", Vector2(-160, 926), true)
+	put("congtrinh/choi", "d1", Vector2(172, 1040), true)
+	put("caylang/rom", "d3", Vector2(196, 880))
+	put("caylang/rom", "d1", Vector2(-176, 1150), true)
 	put("trangtri/da_nho", "d0", Vector2(-120, 1120))
 	put("trangtri/da_nho_reu", "d1", Vector2(150, 1160), true)
 	for p2 in [Vector2(-232, 1060), Vector2(-226, 1190), Vector2(236, 1130), Vector2(230, 1225), Vector2(-150, 1225), Vector2(120, 1236), Vector2(-240, 800), Vector2(242, 780)]:
