@@ -40,6 +40,10 @@ func _build() -> void:
 	var sh := _kshell([], "", func(_k): pass, 0.0)
 	_kmount(sh[0], sh[1], float(sh[2]), out[0], float(out[1]))
 
+func _lo_pic(t: String) -> String:   # (bản 553) hình 3D đúng cấp đang có (art/bay -> ui/img/lo/<món><cấp>.webp, cấp 1 không số)
+	var v: int = _W().lo_lv(t)
+	return IMG + t + (str(v) if v > 1 else "") + ".webp"
+
 func _lock(t: String) -> String:   # "" = đặt được
 	var W = _W()
 	var q: int = W._qf("lo")
@@ -77,21 +81,21 @@ func _body() -> Array:
 	var s2: Dictionary = _merge(e, nx) if not nx.is_empty() else {}
 	var blk := []
 	var yy := 0.0
-	var iw := XW - 20.0   # (bản 551) 4 cột chia theo bề ngang thẻ: nhãn 38%, bậc này 26%, mũi tên 8%, bậc kế 28%
-	var c1 := X0 + 10.0 + iw * 0.38
-	var c2 := c1 + iw * 0.26
-	var c3 := c2 + iw * 0.08
+	var iw := XW - 20.0   # (bản 552) 4 cột: nhãn 46% (nhãn dài "Cá lóc, cá chép dễ vô"), bậc này 22%, mũi tên 7%, bậc kế 25%
+	var c1 := X0 + 10.0 + iw * 0.46
+	var c2 := c1 + iw * 0.22
+	var c3 := c2 + iw * 0.07
 	for r in _rows(s, s2):
-		blk.append(_dt(X0 + 10.0, yy, iw * 0.38 - 4.0, 16.0, _fitw(String(r[0]), 10.5, 700, iw * 0.38 - 4.0), 10.5, 700, SUB, "left"))
-		blk.append(_dt(c1, yy, iw * 0.26, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
+		blk.append(_dt(X0 + 10.0, yy, iw * 0.46 - 8.0, 16.0, _fitw(String(r[0]), 10.5, 700, iw * 0.46 - 8.0), 10.5, 700, SUB, "left"))
+		blk.append(_dt(c1, yy, iw * 0.22, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
 		if r.size() > 2:
-			blk.append(_dt(c2, yy, iw * 0.08, 16.0, "→", 10.5, 800, SUB))
-			blk.append(_dt(c3, yy, iw * 0.28, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
+			blk.append(_dt(c2, yy, iw * 0.07, 16.0, "→", 10.5, 800, SUB))
+			blk.append(_dt(c3, yy, iw * 0.25, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
 		yy += 17.0
 	yy += 4.0
 	var btns := []
 	if W.qk(t) > 0:   # (bản 551) camera tới cái đang đặt (ưu tiên cái có cá)
-		btns.append(["Tới chỗ", _goto.bind(t), "off"])
+		btns.append(["Tới chỗ", _goto.bind(t), "plain"])
 	if lk == "":
 		var full: bool = W.qk(t) >= int(s.max)
 		var free: bool = W.lo_free(t)
@@ -117,7 +121,7 @@ func _body() -> Array:
 	if bt != null:
 		var have: int = int(G.g.barn.get(String(bt[0]), 0))
 		sub += " · " + G.item_name(String(bt[0])).to_lower() + " " + str(have) + ("" if have >= int(bt[1]) else " (hết mồi, ít cá hơn)")
-	var C := _scard(y, IMG + t + ".webp", String(e.n) + " · bậc " + str(v) + ("" if not nx.is_empty() else " (cao nhất)"), sub, lk, btns, [blk, yy])
+	var C := _scard(y, _lo_pic(t), String(e.n) + " · bậc " + str(v) + ("" if not nx.is_empty() else " (cao nhất)"), sub, lk, btns, [blk, yy])
 	out.append_array(C[0])
 	y += float(C[1]) + GG
 	# lưới 3 ô
@@ -129,7 +133,7 @@ func _body() -> Array:
 		var c := _chip(x, y, cw, 84.0, "got" if k == sel else "fut")
 		c.act = func(): sel = k; _redo()
 		out.append(c)
-		out.append(_icx(x + cw * 0.5, y + 24.0, 38.0, "pic:" + IMG + k + ".webp"))
+		out.append(_icx(x + cw * 0.5, y + 24.0, 44.0, "pic:" + _lo_pic(k)))
 		out.append(_dt(x + 3.0, y + 46.0, cw - 6.0, 14.0, String(W.ns[k].n), 10.5, 800, BROWN))
 		var has := false
 		for key in R:

@@ -134,80 +134,43 @@ func _lo_sync() -> void:
 		var n = lo.get(k)
 		if n == null or not is_instance_valid(n):
 			n = LoNode.new()
-			n.gf = Callable(get_script(), "gear")
-			n.kind = String(a.t)
 			n.seed = float(int(a.gx) * 13 + int(a.gy) * 7)
 			n.position = Vector2(F.en(float(a.gx) + 0.5, float(a.gy) + 0.5), F.nn(float(a.gx) + 0.5, float(a.gy) + 0.5))
 			_sorted(n)
 			lo[k] = n
-		n.night = G.night
+		var lv: int = W.lo_lv(String(a.t))
+		var fr: String = ("n" if G.night else "d") + String(a.t) + (str(lv) if lv > 1 else "")
+		if n.fr != fr:   # đổi cấp / ngày đêm thì đổi hình
+			var A: Dictionary = atlas("bay").get(fr, {})
+			n.fr = fr
+			n.tx = tex("bay", fr) if not A.is_empty() else null
+			n.rc = Rect2(float(A.get("ox", 0)), float(A.get("oy", 0)), float(A.get("gw", 0)), float(A.get("gh", 0)))
 	for k in lo.keys():
 		if not keep.has(k):
 			_unsort(lo[k])
 			lo.erase(k)
 
-class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô = 32 x 16)
-	var kind := "lo"
-	var night := false
+class LoNode extends Node2D:   # (bản 553) hình 3D dựng sẵn ui/img/ts/bay (4 cấp, ngày / đêm), gốc = chỗ đặt chân giữa món ngay mặt nước
+	var tx: Texture2D = null
+	var rc := Rect2()
+	var fr := ""
 	var seed := 0.0
 	var t := 0.0
-	var gf := Callable()   # song_ve.gear (hàm tĩnh của lớp ngoài)
 	func _process(dt: float) -> void:
 		t += dt
 		queue_redraw()
 	func _draw() -> void:
-		gf.call(self, kind, Vector2.ZERO, 1.6, t, seed, night)   # (bản 549) to hơn 1,6 cho dễ thấy
+		if tx != null:
+			draw_texture_rect(tx, Rect2(rc.position + Vector2(0, sin(t * 1.6 + seed) * .35), rc.size), false)
 
-# hình lờ / lọp / giăng / vịt vẽ bằng nét (chưa có ảnh), dùng chung cho mặt nước và thẻ Xây dựng: c = giữa ô, s = tỉ lệ
-static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, seed := 0.0, night := false) -> void:
-	var dk := 0.62 if night else 1.0
-	var tre := Color(.78, .62, .36) * dk
-	var tre2 := Color(.42, .28, .12) * dk
-	tre.a = 1.0
-	tre2.a = 1.0
-	var bob := sin(t * 1.6 + seed) * .6
-	var P := func(v: Vector2) -> Vector2: return c0 + v * s
+# hình vịt / mèo vẽ bằng nét (chưa có ảnh) cho thẻ Xây dựng: c = giữa ô, s = tỉ lệ
+static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, _seed := 0.0, night := false) -> void:
 	match kind:
-		"lo":   # lờ tre: ống đan nằm nghiêng nửa chìm, miệng loe, 2 cọc giữ
-			for x in [-9.0, 9.0]:
-				ci.draw_line(P.call(Vector2(x, 2)), P.call(Vector2(x + 1, -11)), tre2, 1.6 * s, true)
-			var c := Vector2(0, -2 + bob)
-			var Q := PackedVector2Array()
-			for i in 17:
-				var a := PI + PI * i / 16.0
-				Q.append(P.call(c + Vector2(cos(a) * 10.0, sin(a) * 5.0)))
-			ci.draw_colored_polygon(Q, tre)
-			for i in 5:   # nan đan
-				var x := -8.0 + i * 4.0
-				ci.draw_line(P.call(c + Vector2(x, 0)), P.call(c + Vector2(x + 1.5, -4.0 + absf(x) * .12)), tre2, .8 * s, true)
-			ci.draw_line(P.call(c + Vector2(-10, 0)), P.call(c + Vector2(10, 0)), tre2, .9 * s, true)
-			ci.draw_arc(P.call(c + Vector2(-10, -1.5)), 2.6 * s, -PI * .5, PI * .5, 8, tre2, 1.2 * s, true)   # miệng lờ
-		"lop":   # lọp lươn: ống tre cắm xiên, có đốt, nhô khỏi nước
-			var b := Vector2(-2, 1 + bob * .5)
-			var tp := b + Vector2(5, -15)
-			ci.draw_line(P.call(b), P.call(tp), tre2, 4.2 * s, true)
-			ci.draw_line(P.call(b), P.call(tp), tre, 3.0 * s, true)
-			for f in [.35, .7]:
-				var q: Vector2 = b.lerp(tp, f)
-				ci.draw_line(P.call(q + Vector2(-2, 0)), P.call(q + Vector2(2, 0)), tre2, 1.0 * s, true)
-			ci.draw_circle(P.call(tp), 1.4 * s, tre2)
-		"giang":   # giăng câu: 2 cọc tre, dây căng, 3 phao trắng đỏ nhấp nhô
-			var A := Vector2(-13, 3)
-			var B := Vector2(13, -3)
-			ci.draw_line(P.call(A), P.call(A + Vector2(0, -12)), tre2, 1.8 * s, true)
-			ci.draw_line(P.call(B), P.call(B + Vector2(0, -12)), tre2, 1.8 * s, true)
-			ci.draw_line(P.call(A + Vector2(0, -9)), P.call(B + Vector2(0, -9)), Color(.9 * dk, .88 * dk, .8 * dk, .7), .7 * s, true)
-			for i in 3:
-				var q := A.lerp(B, (i + 1) / 4.0) + Vector2(0, -1 + sin(t * 2.2 + seed + i * 1.3) * .8)
-				ci.draw_circle(P.call(q), 1.7 * s, Color(.95 * dk, .95 * dk, .92 * dk))
-				ci.draw_circle(P.call(q + Vector2(0, -1.0)), 1.0 * s, Color(.85 * dk, .2 * dk, .15 * dk))
 		"meo":   # thẻ Xây dựng
 			cat(ci, c0 + Vector2(0, 6) * s, s * 1.5, 0.0, night)
 		"vit":   # 3 con vịt cho thẻ
 			for q in [[Vector2(-8, 2), 1.0], [Vector2(6, -2), -1.0], [Vector2(9, 5), 1.0]]:
 				duck(ci, c0 + q[0] * s, s, q[1], t + q[0].x, night)
-	if kind in ["lo", "lop"]:   # vòng nước quanh chân
-		ci.draw_arc(c0 + Vector2(0, 2) * s, 11.0 * s, 0, TAU, 24, Color(1, 1, 1, .35 * dk), .8 * s, true)
 
 static func duck(ci: CanvasItem, p: Vector2, s: float, dir: float, t := 0.0, night := false) -> void:   # vịt bơi: thân trắng, đầu, mỏ cam, gợn nước
 	var dk := 0.62 if night else 1.0
