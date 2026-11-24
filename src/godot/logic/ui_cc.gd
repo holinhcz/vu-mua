@@ -8,9 +8,9 @@ extends RefCounted
 # ProjectSettings.load_resource_pack() -> res://ui/img/cc/... đọc được như thường. Lần sau mở máy: đọc file đã lưu, khỏi tải.
 
 const GAME := preload("res://logic/cc/cc_game.gd")
-const CC_V := "fd72fbef"     # crc gói hình (mk_ccpack.py in ra)
-const CC_N := 3        # số miếng l/cc_<i>.wasm
-const CC_SIZE := 17851972     # tổng số byte
+const CC_V := "c04ba4c4"     # crc gói hình (mk_ccpack.py in ra)
+const CC_N := 2        # số miếng l/cc_<i>.wasm
+const CC_SIZE := 10293692     # tổng số byte
 static var _packed := false
 static var _ld: CanvasLayer = null
 static var _lab: Label = null
@@ -24,6 +24,7 @@ static var _layer: CanvasLayer = null
 static var _vis := []
 static var _modal := false
 static var _self = null
+var game = null   # màn câu đang mở (hook thử)
 
 func _init(u) -> void:
 	ui = u
@@ -44,6 +45,7 @@ func open() -> void:
 	_layer = CanvasLayer.new()
 	_layer.layer = 100
 	var g := GAME.new()
+	game = g
 	g.setup(float(ui.dpr_v))
 	g.cache_v = CC_V      # (Link 11-23 "ấn 3s mới vào game"): ảnh dựng theo cỡ màn lưu lại, lần sau mở nhanh
 	# (Link 11-23 "nối đồng bộ vô game, câu cá chỉ là minigame"): xài xu vườn, cá cất vô Kho vườn,

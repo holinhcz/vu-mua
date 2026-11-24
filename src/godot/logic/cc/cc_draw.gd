@@ -656,6 +656,9 @@ var _fg_key := ""
 var _fg_rect := Rect2()
 
 func _gan_img(nm: String) -> Image:
+	var op: Dictionary = _gan.get("op", {})
+	if op.has(nm) and game.scn._opim.has(nm):   # (bản 539) hình vườn dùng chung (op_share.py): xoá bóng + cắt lề như bờ bên kia
+		return game.scn._op_img(nm, op)
 	var b := FileAccess.get_file_as_bytes(GAN + nm + ".webp")
 	var im := Image.new()
 	if b.is_empty() or im.load_webp_from_buffer(b) != OK:
@@ -690,6 +693,11 @@ func _fg_build() -> void:
 		_fg_rect = Rect2(r.position, Vector2(r.size.x, float(ph) / K))
 		l_fg.queue_redraw()
 		return
+	var op: Dictionary = _gan.get("op", {})
+	if not op.is_empty():   # (bản 539) tải hình vườn dùng chung trước (song song; vườn đã hiện thì trình duyệt giữ sẵn)
+		await game.scn._op_prep(op.keys(), op)
+		if key != _fg_key:
+			return
 	var s: float = float(pw) / float(_gan.W)        # điểm ảnh máy / đơn vị khung
 	var v := SubViewport.new()
 	v.size = Vector2i(pw, ph)
@@ -785,7 +793,7 @@ func draw_near_trees(ci: CanvasItem, tod: Dictionary) -> void:
 			if it != null:
 				list.append([nm, .62 + i * .055, float(it.ax) / float(it.w), float(it.ay) / float(it.h), i * 1.7, .78 - (i % 2) * .12, i == 1])
 	for q in list:
-		var bt: Texture2D = A.img(q[0])
+		var bt: Texture2D = _near_tex(String(q[0]))
 		if bt == null:
 			continue
 		var bh: float = L.fgH * (float(q[5]) if q.size() > 5 else 1.55)
@@ -795,6 +803,20 @@ func draw_near_trees(ci: CanvasItem, tod: Dictionary) -> void:
 		ci.draw_set_transform(foot, ang, Vector2(-1 if (q.size() > 6 and q[6]) else 1, 1))
 		ci.draw_texture_rect(bt, Rect2(-float(q[2]) * bw, -float(q[3]) * bh, bw, bh), false, Color(tc.r, tc.g, tc.b, 1))
 	ci.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+var _near := {}
+func _near_tex(nm: String) -> Texture2D:   # (bản 539) vạn thọ "gan/..." = hình vườn dùng chung (_gan_img): chưa tải xong thì chưa vẽ, khỏi nhớ null
+	if not nm.begins_with("gan/"):
+		return A.img(nm)
+	if _near.has(nm):
+		return _near[nm]
+	var im := _gan_img(nm.substr(4))
+	if im == null:
+		return null
+	im.fix_alpha_edges()
+	im.generate_mipmaps()
+	_near[nm] = ImageTexture.create_from_image(im)
+	return _near[nm]
 
 # ------------------------------------------------------------ chuồn chuồn
 func draw_dragonfly(ci: CanvasItem, tod: Dictionary) -> void:

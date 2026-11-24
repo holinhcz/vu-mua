@@ -63,13 +63,19 @@ func _ready() -> void:
 	shs.resize(32)
 	_load()
 	_xu_last = int(S.xu)
+	D.kho_price = host.price if host != null and host.has("price") else Callable()   # (bản 536) giá cá theo Kho vườn
 	if host != null and host.has("free") and S.basket.size():   # (bản 537) save cũ: cá trong giỏ chuyển vô Kho vườn, Kho chật thì bán theo giá
+		var sold := 0
 		for c in S.basket:
 			var kid := str(D.KHO.get(c.id, ""))
-			if kid != "" and not host.kho.call(kid, 1):
-				S.xu = int(S.xu) + D.fish_value(D.fish(c.id), float(c.w))
+			if kid == "" or not host.kho.call(kid, 1):
+				sold += D.fish_value(D.fish(c.id), float(c.w))
+		if sold > 0:   # cộng thẳng xu vườn (khỏi chờ lần lưu sau)
+			host.add.call(sold)
+			S.xu = int(S.xu) + sold
+			_xu_last = int(S.xu)
 		S.basket = []
-	D.kho_price = host.price if host != null and host.has("price") else Callable()   # (bản 536) giá cá theo Kho vườn
+		host.sv["basket"] = []   # ghi liền vô save vườn: lưu vườn trước lần lưu câu cá kế cũng không chuyển 2 lần
 	for k in D.KHO_BAIT:
 		_bait_last[k] = int(S.baits.get(k, 0))
 	_reset_state()

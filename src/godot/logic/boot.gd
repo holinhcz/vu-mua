@@ -13,6 +13,15 @@ var farm: Node2D
 var ui: CanvasLayer
 var _done := false
 
+func _cct(a: Array) -> void:
+	var gm = ui.ccp.game
+	if gm == null:
+		return
+	var CDx = preload("res://logic/cc/cc_data.gd")
+	var f: Dictionary = CDx.fish(String(a[1]))
+	var w := float(a[2])
+	gm.ui.show_catch({"f": f, "w": w, "cm": 20, "isNew": false, "rec": false, "xp": 5, "val": CDx.fish_value(f, w)})
+
 func _ready() -> void:
 	G = GameS.new()
 	G.name = "Game"
@@ -223,6 +232,9 @@ func _test_hook() -> void:
 			"chox": G.troi.hh = 7.0; G.w_all.WC.Ui.al = 1.0; G.w_all.WCU.open_cho(int(a[1]) if a.size() > 1 else 0)   # (bản 517) thử bảng Chợ nổi: chox[:ghe]
 			"kllua": G.w_all.WCA.klq.append({"id": "lua", "g": 8.1, "h": 1, "s": 33.1, "t": 0, "d": G.day(), "sea": 2, "day": 1, "wx": "mua", "st": 1, "who": "", "c": 45, "rec": false}); G.w_all.WCA.klq.append({"id": "bap", "g": 900.0, "h": 3, "s": 22.0, "br": 13.0, "t": 0, "d": G.day(), "sea": 0, "day": 3, "wx": "nang", "st": 2, "who": "", "c": 80, "rec": true}); ui.kl_show()   # (bản 526) thử thẻ trái khủng: bông lúa rồi trái bắp kỷ lục
 			"mgx": {"caro": ui.carop, "cg": ui.cgp, "oq": ui.oqp, "tso": ui.tsop}[a[1]].open()   # (bản 533) thử mở mini game (tải gói hình riêng)
+			"ccb": G.g.ccsv = {"basket": [{"id": "ro", "w": .3}, {"id": "loc", "w": 1.2}, {"id": "ho", "w": 30.0}]}; G.mark()   # (bản 539) thử: save cũ còn cá trong giỏ
+			"cct": _cct(a)   # cct:<cá>:<cân> (bản 539) thử thẻ cá câu được
+			"ccfull": G.g.barn["lua"] = int(G.g.barn.get("lua", 0)) + 200; G.mark()   # thử: Kho đầy
 			"ccx": ui.ccp.open()   # (bản 529) thử mở Câu cá (tải gói hình ghi thẳng ra file)
 			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)

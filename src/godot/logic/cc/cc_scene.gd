@@ -453,8 +453,9 @@ func _op_base() -> String:
 		return str(JavaScriptBridge.eval("new URL('..', location.href).href"))
 	return OS.get_environment("NT_BASE")
 
-func _op_prep(names: Array) -> void:
-	var op: Dictionary = _bo.get("op", {})
+func _op_prep(names: Array, op: Dictionary = {}) -> void:   # op: mục "op" của bo.json (mặc định) hoặc gan.json (bờ bên này, cc_draw)
+	if op.is_empty():
+		op = _bo.get("op", {})
 	var q := []
 	for nm in names:
 		if op.has(nm) and not _opim.has(nm) and not q.has(nm):
@@ -486,12 +487,12 @@ func _op_prep(names: Array) -> void:
 		if not (got[nm] as PackedByteArray).is_empty():
 			_opim[nm] = got[nm]
 
-func _op_img(nm: String) -> Image:
+func _op_img(nm: String, op: Dictionary = {}) -> Image:
 	var im := Image.new()
 	if im.load_webp_from_buffer(_opim[nm]) != OK:
 		return null
 	im.convert(Image.FORMAT_RGBA8)
-	var e: Dictionary = _bo.op[nm]
+	var e: Dictionary = (op if not op.is_empty() else _bo.op)[nm]
 	var rr: Array = e.get("r", [])
 	var k := 0
 	while k + 2 < rr.size():   # xoá bóng tròn dưới gốc (vườn nhìn từ trên xuống)
