@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# (11-24) BỎ: Link "xấu vler, góc nhìn 3D đâu" -> vẽ lại bằng khối 3D thật ở bay3d.py (ảnh art/bay giờ là của bay3d.py)
 # LỜ / LỌP / GIĂNG CÂU CẤP 1 (11-24 Link "vẽ giăng - lờ - lợp cấp 1 đi, tự vẽ đi vườn chưa có"): đồ bắt cá đặt dưới nước
 # trong vườn, cùng kiểu vẽ với cá câu (tô từng điểm ảnh, sáng trên-trái, viền mảnh màu tối của chỗ đó). Cấp 1 = đồ tre mộc.
 #   lờ   : ống tre đan bụng phình nằm ngang, miệng có hom (phễu nan chĩa vô), đuôi túm buộc mây, 2 cọc tre giữ
