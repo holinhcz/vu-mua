@@ -6,7 +6,7 @@
 # sáng trên-trái, viền mảnh màu tối của chỗ đó (như cá câu). Ra 6 px / đơn vị (vẽ gấp 4 rồi thu).
 #   <id>.webp  : nguyên món (ô / bảng)     <id>_w.webp : đặt trên nước (phần dưới mặt nước mờ, ngả màu nước)
 #   meta.json  : chỗ đặt chân (điểm (0,0,0) = giữa món ngay mặt nước) theo điểm ảnh của ảnh ra
-#   python3 bay3d.py OUTDIR [lo lop giang]     (env PXU = điểm ảnh / đơn vị, mặc định 6; SSA = vẽ gấp, mặc định 4)
+#   python3 bay3d.py OUTDIR [lo lop giang lo2 lo3 lo4 lop2 ...]   (số = cấp, không số = cấp 1)     (env PXU = điểm ảnh / đơn vị, mặc định 6; SSA = vẽ gấp, mặc định 4)
 import os, sys, math, json
 import numpy as np
 from scipy import ndimage as ndi
@@ -166,12 +166,37 @@ class Line:
 
 
 class Ball:
-    def __init__(s, C, R, mat, sq=(1, 1, 1)):
+    def __init__(s, C, R, mat, sq=(1, 1, 1), cut=None):
         s.C = V(*C); s.R = R; s.mat = mat; s.sq = V(*sq); s.bound = (s.C, R * float(max(sq)) + 1)
+        s.cut = None if cut is None else nz(V(*cut))      # nửa quả: bỏ phía pháp tuyến cut
 
     def sdf(s, P):
         q = (P - s.C) / s.sq
-        return (np.linalg.norm(q, axis=1) - s.R) * float(min(s.sq))
+        d = (np.linalg.norm(q, axis=1) - s.R) * float(min(s.sq))
+        if s.cut is not None:
+            d = np.maximum(d, (P - s.C) @ s.cut)
+        return d
+
+
+class Box:
+    """hộp bo góc: tâm C, 3 trục (đơn vị) ax0..2, nửa cạnh h"""
+    def __init__(s, C, axes, h, mat, rr=.05):
+        s.C = V(*C); s.A = np.array([nz(V(*a)) for a in axes], F32); s.h = V(*h); s.mat = mat; s.rr = rr
+        s.bound = (s.C, float(np.linalg.norm(s.h)) + 1)
+
+    def sdf(s, P):
+        q = np.abs((P - s.C) @ s.A.T) - (s.h - s.rr)
+        return np.linalg.norm(np.maximum(q, 0), axis=1) + np.minimum(q.max(1), 0) - s.rr
+
+
+def M(o, col=None, sp=None, pw=None, emit=None, dk=None):
+    """gắn chất liệu riêng cho 1 khối: màu gốc, độ bóng, đèn tự sáng"""
+    if col is not None: o.col = hexc(col) if isinstance(col, str) else col
+    if dk is not None: o.dk = hexc(dk) if isinstance(dk, str) else dk
+    if sp is not None: o.sp = sp
+    if pw is not None: o.pw = pw
+    if emit is not None: o.emit = emit
+    return o
 
 
 # ------------------------------------------------------------ tô màu theo chất liệu
@@ -190,29 +215,65 @@ def albedo(obj, P):
         k = np.floor(u); f = u % 1.0
         gap = sstep(.38, .48, np.abs(f - .5))
         tone = (hsh(k + (3 if m == 'hom' else 0)) - .5) * .2
-        c = TRE[None] * (1 + tone + .1 * (vnoise(P, 2.5, 1) - .5))[:, None]
+        base = getattr(obj, 'col', TRE)
+        c = base[None] * (1 + tone + .1 * (vnoise(P, 2.5, 1) - .5))[:, None]
         c = c * (1 - .07 * np.sin(z * 9 + k))[:, None]                          # xơ dọc nan
         c = c * (1 - .35 * sstep(.55, .85, vnoise(P, 1.6, 2)) * .5)[:, None]   # lốm đốm cũ
         c = c * (1 - gap * .55)[:, None] + TOI[None] * (gap * .55)[:, None]
         if m == 'hom':
             c = c * .9
         return c
+    if m in ('kem', 'dong'):      # kẽm / đồng thau: kim loại, hơi loang
+        base = getattr(obj, 'col', hexc('#9ea4a6') if m == 'kem' else hexc('#c99a3c'))
+        return base[None] * (.85 + .3 * vnoise(P, .7, 11))[:, None]
+    mc = getattr(obj, 'col', MAY)
     if m == 'may' and not isinstance(obj, Torus):
-        return MAY[None] * (.85 + .3 * vnoise(P, .5, 9))[:, None]
+        return mc[None] * (.85 + .3 * vnoise(P, .5, 9))[:, None]
     if m == 'may':
         z, q, th = obj.local(P)
         tw = .5 + .5 * np.sin(th * 26 + np.arctan2(z, q - obj.R) * 2)        # mây quấn xoắn
-        return MAY[None] * (.85 + .25 * tw)[:, None]
+        return mc[None] * (.85 + .25 * tw)[:, None]
+    if m == 'go':   # gỗ tràm: sớ dọc, vỏ xám nâu, không đốt
+        _, sl = obj.seg(P)
+        base = getattr(obj, 'col', hexc('#9a8466'))
+        v = vnoise(P * V(4, 4, .35), 1, 12)
+        c = base[None] * (.78 + .4 * v)[:, None]
+        if obj.cut is None:
+            return c
+        top = (P[:, 2] > obj.P[:, 2].max() - .6)
+        return np.where(top[:, None], hexc('#d8bf92')[None], c)
+    if m == 'son':  # cọc sơn đỏ có khoanh trắng
+        _, sl = obj.seg(P)
+        L = obj.cum[-1]
+        band = ((sl > L * .55) & (sl < L * .62)) | ((sl > L * .86) & (sl < L * .9))
+        c = np.where(band[:, None], hexc('#ece6d6')[None], hexc('#a83a2a')[None])
+        return c * (.92 + .16 * vnoise(P, .8, 13))[:, None]
+    if m == 'xop':
+        return hexc('#f2f0ea')[None] * (.9 + .15 * vnoise(P * 3, 1, 14))[:, None]
+    if m == 'nhua':  # phao nhựa nửa đỏ nửa trắng
+        return np.where((P[:, 2] > obj.C[2])[:, None], hexc('#d23a2e')[None], hexc('#f0eee8')[None])
+    if m == 'gao':   # gáo dừa
+        v = vnoise(P * V(5, 5, 5), 1, 15)
+        return (hexc('#6a4526')[None] * (.75 + .5 * v)[:, None])
+    if m == 'kinh':  # chai đèn
+        return np.broadcast_to(hexc('#a9c8a0'), (n, 3)).copy()
+    if m == 'lua':
+        return np.broadcast_to(hexc('#ffd27a'), (n, 3)).copy()
     if m == 'coc':
         _, sl = obj.seg(P)
         n_ = obj.nodes or 6
         nd = np.exp(-(((sl % n_) - n_ / 2) / .25) ** 2)
-        c = COC[None] * (1 + .12 * (vnoise(P * V(3, 3, .25), 1, 4) - .5))[:, None]
-        c = c + (COC_D - COC)[None] * (nd * .6 + .3 * sstep(.6, .9, vnoise(P, 3, 5)))[:, None]
+        cc = getattr(obj, 'col', COC); cd = getattr(obj, 'dk', COC_D)
+        c = cc[None] * (1 + .12 * (vnoise(P * V(3, 3, .25), 1, 4) - .5))[:, None]
+        c = c + (cd - cc)[None] * (nd * .6 + .3 * sstep(.6, .9, vnoise(P, 3, 5)))[:, None]
         top = (P[:, 2] > obj.P[:, 2].max() - .6)
         return np.where(top[:, None], hexc('#e3d29c')[None], c)
     if m == 'day':
-        return np.broadcast_to(hexc('#e9e3d0'), (n, 3)).copy()
+        dc = getattr(obj, 'col', hexc('#e9e3d0'))
+        if hasattr(obj, 'seg'):
+            _, sl = obj.seg(P)
+            return dc[None] * (1 - .12 * (np.sin(sl * 9) > .3))[:, None]    # dây bện
+        return np.broadcast_to(dc, (n, 3)).copy()
     if m == 'thep':
         return np.broadcast_to(hexc('#9aa3aa'), (n, 3)).copy()
     if m == 'moi':
@@ -314,13 +375,21 @@ def render(scene, name, water=True):
                 rad = d - (d @ o.ax)[:, None] * o.ax
                 rad /= np.linalg.norm(rad, axis=1, keepdims=True) + 1e-6
                 inner[m] = sstep(.0, .4, -(N[m] * rad).sum(1))
+    spk = np.full(len(P), .1, F32); pwk = np.full(len(P), 24., F32); emk = np.zeros(len(P), F32)
+    DEF_SP = {'kem': (.55, 30), 'dong': (.75, 36), 'nhua': (.4, 40), 'kinh': (.8, 60), 'thep': (.5, 40)}
+    for i, o in enumerate(scene.objs):
+        m = oid == i
+        if m.any():
+            d0 = DEF_SP.get(o.mat, (.1, 24))
+            spk[m] = getattr(o, 'sp', d0[0]); pwk[m] = getattr(o, 'pw', d0[1]); emk[m] = getattr(o, 'emit', 0)
     lam = np.clip(N @ LIGHT, 0, 1)
     H_ = nz(LIGHT - FWD)
-    spec = np.clip(N @ H_, 0, 1) ** 24 * .1
+    spec = np.clip(N @ H_, 0, 1) ** pwk * spk
     sky = .5 + .5 * N[:, 2]
     lum = (.34 + .16 * sky) * ao + .78 * lam * sh * (.55 + .45 * ao)
     lum = lum * (1 - .66 * inner)
     col = alb * lum[:, None] + spec[:, None] * sh[:, None] * (1 - inner)[:, None]
+    col = col * (1 - emk[:, None]) + alb * emk[:, None]        # đèn: tự sáng
     col = np.clip(col, 0, 1)
     rgb = np.zeros((n, 3), F32); a = np.zeros(n, F32); z = np.zeros(n, F32); dep = np.full(n, 1e3, F32)
     rgb[idx] = col; a[idx] = 1; z[idx] = P[:, 2]; dep[idx] = t[idx]
@@ -374,116 +443,185 @@ def outline(rgb, a, a_full):
 
 
 # ============================================================ các món (đơn vị làng: 1 ô = cạnh ~22.6)
-def stake(x, y, z0, z1, r, nodes=5.5, lean=(0, 0)):
+def stake(x, y, z0, z1, r, nodes=5.5, lean=(0, 0), mat='coc', col=None, dk=None):
     top = (x + lean[0], y + lean[1], z1)
-    return Line([(x, y, z0), top], [r, r * .95], 'coc', nodes=nodes,
-                cut_top=((top[0], top[1], z1 - .3), (.5, .2, 1)))
+    o = Line([(x, y, z0), top], [r, r * .95], mat, nodes=nodes if mat == 'coc' else None,
+             cut_top=((top[0], top[1], z1 - .3), (.5, .2, 1)))
+    return M(o, col=col, dk=dk)
 
 
-def ties(C, ax, R, n=3, gap=.34, r=.17):
+def ties(C, ax, R, n=3, gap=.34, r=.17, mat='may', col=None):
     a = nz(V(*ax))
-    return [Torus(V(*C) + a * (i - (n - 1) / 2) * gap, ax, R, r, 'may') for i in range(n)]
+    return [M(Torus(V(*C) + a * (i - (n - 1) / 2) * gap, ax, R, r, mat), col=col) for i in range(n)]
 
 
-def lo():
+# ------------------------------------------------------------ 4 cấp (11-24 Link "cấp 2 cấp 3 cấp 4 là gì" -> vẽ thôi, bên kia gắn)
+#  1 tre mộc, mây          2 tre già ám khói, mây đôi      3 dầu chai bóng nâu + kẽm      4 tre đen bóng như mun + đồng thau
+TIER = {
+    1: dict(tre='#cfae72', sp=.1, pw=24, ring='may', ringc='#7a5230', coc=('#d8c886', '#9a8a4c'), cmat='coc'),
+    2: dict(tre='#a7844f', sp=.14, pw=24, ring='may', ringc='#5a3a20', coc=('#b3a067', '#6f5f2c'), cmat='coc'),
+    3: dict(tre='#94602e', sp=.38, pw=30, ring='kem', ringc='#9ea4a6', coc=('#a07a46', '#6a4c26'), cmat='coc'),
+    4: dict(tre='#40302a', sp=.55, pw=40, ring='dong', ringc='#c99a3c', coc=('#4a3626', '#2a1e16'), cmat='go'),
+}
+
+
+def lo(t=1):
+    T = TIER[t]
     # lờ nằm ngang mặt nước (camera ở phía +x +y: hướng 135 độ = phải màn hình, 315 = trái)
     ax = nz(V(math.cos(math.radians(342)), math.sin(math.radians(342)), 0))   # từ đuôi về miệng: miệng chĩa trái màn hình, hơi về phía người xem
-    L = 19.0
+    L = 19.0 + (t - 1) * .7
     tail = -ax * L * .5 + V(0, 0, .4)
     A = tail + ax * L                      # miệng
     dirm = -ax                             # trục từ miệng vô đuôi
     prof = [(0, 4.2), (.08, 4.45), (.32, 4.9), (.58, 4.5), (.8, 3.1), (.94, 1.7), (1, 1.3)]
-    body = Tube(A, dirm, L, prof, 'dan', shell=.32, open0=True, open1=True, wv=(46, .09))
-    hom = Tube(A + dirm * .05, dirm, 6.5, [(0, 4.0), (.75, 1.25), (1, 1.0)], 'hom', shell=.22, open0=True, open1=True, wv=(26, .08))
+    body = M(Tube(A, dirm, L, prof, 'dan', shell=.32, open0=True, open1=True, wv=(46 + (t - 1) * 6, .09)), col=T['tre'], sp=T['sp'], pw=T['pw'])
+    hom = M(Tube(A + dirm * .05, dirm, 6.5, [(0, 4.0), (.75, 1.25), (1, 1.0)], 'hom', shell=.22, open0=True, open1=True, wv=(26, .08)), col=T['tre'], sp=T['sp'], pw=T['pw'])
     objs = [body, hom]
-    # đai mây: vòng quanh thân theo bảng bán kính
+    if t >= 2:   # hom 2 lớp: hom trong nữa, cá vô khó ra
+        objs.append(M(Tube(A + dirm * 6.0, dirm, 4.5, [(0, 3.9), (1, .9)], 'hom', shell=.2, open0=True, open1=True, wv=(22, .08)), col=T['tre'], sp=T['sp'], pw=T['pw']))
     ps = np.array([p[0] for p in prof]) * L; pr = np.array([p[1] for p in prof])
-    for s_ in [.25, 3.2, 6.4, 9.6, 12.6, 15.2]:
+    for j, s_ in enumerate([.25, 3.2, 6.4, 9.6, 12.6, 15.2]):
+        s_ = s_ * L / 19.0
         R = float(np.interp(s_, ps, pr)) + .06
-        objs.append(Torus(A + dirm * s_, dirm, R, .17, 'may'))
-    objs.append(Torus(A + dirm * .1, dirm, 4.2, .32, 'may'))     # vành miệng to
-    # đuôi túm buộc mây + núm
+        rm = T['ring'] if (t < 3 or j % 2 == 0 or t == 4) else 'may'          # cấp 3: kẽm xen mây
+        rc = T['ringc'] if rm == T['ring'] else '#6a4426'
+        offs = [-.22, .22] if t == 2 else [0]                                  # cấp 2: đai đôi
+        for o_ in offs:
+            objs.append(M(Torus(A + dirm * (s_ + o_), dirm, R, .17 if rm == 'may' else .15, rm), col=rc))
+    objs.append(M(Torus(A + dirm * .1, dirm, 4.2, .32 if t < 4 else .36, T['ring'] if t >= 3 else 'may'), col=T['ringc']))     # vành miệng
     for k in range(3):
-        objs.append(Torus(A + dirm * (L - .4 - k * .36), dirm, 1.35 + k * .07, .19, 'may'))
-    objs.append(Ball(A + dirm * (L + .5), .75, 'may'))
-    # 2 cọc tre cắm 2 bên giữ lờ (đóng xuống bùn), dây buộc vắt qua lưng
+        objs.append(M(Torus(A + dirm * (L - .4 - k * .36), dirm, 1.35 + k * .07, .19, T['ring'] if t == 4 else 'may'), col=T['ringc'] if t == 4 else '#6a4426'))
+    objs.append(M(Ball(A + dirm * (L + .5), .75, 'dong' if t == 4 else 'may'), col='#c99a3c' if t == 4 else '#6a4426'))
     side = nz(np.cross(V(0, 0, 1), ax))
+    stk = []
     for s_, sd, h in [(5.0, 1, 7.0), (13.5, -1, 6.2)]:
+        s_ = s_ * L / 19.0
         c = A + dirm * s_
         R = float(np.interp(s_, ps, pr))
         p = c + side * sd * (R + .55)
-        objs.append(stake(float(p[0]), float(p[1]), -7, h, .42))
-        objs += ties((float(p[0]), float(p[1]), 3.2), (0, 0, 1), .5, 3, .3, .14)
-        # dây mây vắt từ cọc qua lưng lờ
+        objs.append(stake(float(p[0]), float(p[1]), -7, h, .42, mat=T['cmat'], col=T['coc'][0], dk=T['coc'][1]))
+        objs += ties((float(p[0]), float(p[1]), 3.2), (0, 0, 1), .5, 3, .3, .14, mat=T['ring'] if t == 4 else 'may', col=T['ringc'] if t == 4 else None)
         q0 = p + V(0, 0, 3.2); q1 = c + V(0, 0, R + .12)
         mid = (q0 + q1) / 2 + V(0, 0, .5)
-        objs.append(Line([tuple(q0), tuple(mid), tuple(q1)], .14, 'may'))
+        objs.append(M(Line([tuple(q0), tuple(mid), tuple(q1)], .14, 'may'), col='#6a4426' if t > 1 else None))
+        stk.append((p, h))
+    if t >= 3:   # phao đánh dấu buộc dây từ đầu cọc, nổi cạnh lờ
+        p, h = stk[1]
+        cam = nz(V(1, 1, 0))                       # phía người xem: phao nổi trước mặt lờ cho thấy
+        fp = A + dirm * (L * .62) + cam * 7.0
+        fp[2] = .25
+        objs.append(M(Ball(fp, .8, 'nhua' if t == 3 else 'dong'), col='#c99a3c' if t == 4 else None))
+        top_ = p + V(0, 0, h - 1.0)
+        objs.append(M(Line([tuple(top_), tuple((top_ + fp) / 2 + V(0, 0, -.6)), tuple(fp + V(0, 0, .7))], .06, 'day'), col='#d9e6e8'))
+    if t == 4:   # cửa sập đồng trên lưng để trút cá + bản lề
+        s_ = 11.0 * L / 19.0
+        R = float(np.interp(s_, ps, pr))
+        up = V(0, 0, 1)
+        C = A + dirm * s_ + up * (R + .05)
+        objs.append(Box(C, (dirm, side, up), (1.5, 1.25, .1), 'dong', rr=.06))
+        objs.append(Line([tuple(C + side * 1.25 - dirm * 1.3 + up * .1), tuple(C + side * 1.25 + dirm * 1.3 + up * .1)], .12, 'dong'))
+        objs.append(Ball(C - side * .8 + up * .22, .2, 'dong'))     # núm kéo
     return Scene(objs)
 
 
-def lop():
-    # ống lọp mảnh cắm xiên: miệng dưới nước (z -3), đầu trên nhú khỏi nước bịt nùi bẹ chuối
+def lop(t=1):
+    T = TIER[t]
+    # ống lọp mảnh cắm xiên: miệng dưới nước (z -3), đầu trên nhú khỏi nước có nắp
     d = nz(V(math.cos(math.radians(150)) * .62, math.sin(math.radians(150)) * .62, .78))
     L = 20.0
     A = -d * L * .3                       # miệng
-    body = Tube(A, d, L, [(0, 1.75), (.05, 1.85), (.5, 1.8), (1, 1.65)], 'dan', shell=.22, open0=True, open1=True, wv=(26, .07))
-    hom = Tube(A + d * .04, d, 3.5, [(0, 1.62), (1, .45)], 'hom', shell=.16, open0=True, open1=True, wv=(14, .06))
+    body = M(Tube(A, d, L, [(0, 1.75), (.05, 1.85), (.5, 1.8), (1, 1.65)], 'dan', shell=.22, open0=True, open1=True, wv=(26 + (t - 1) * 3, .07)), col=T['tre'], sp=T['sp'], pw=T['pw'])
+    hom = M(Tube(A + d * .04, d, 3.5, [(0, 1.62), (1, .45)], 'hom', shell=.16, open0=True, open1=True, wv=(14, .06)), col=T['tre'], sp=T['sp'], pw=T['pw'])
     objs = [body, hom]
-    for s_ in np.arange(.2, L, 1.35):
-        objs.append(Torus(A + d * float(s_), d, 1.86, .1, 'may'))
-    objs.append(Torus(A + d * .08, d, 1.75, .2, 'may'))
-    # nùi bẹ chuối nhét đầu trên
+    for j, s_ in enumerate(np.arange(.2, L, 1.35)):
+        rm = T['ring'] if (t == 2 or j % 3 == 0 or t == 1) else 'may'
+        if t == 1: rm = 'may'
+        rc = T['ringc'] if rm == T['ring'] else '#6a4426'
+        objs.append(M(Torus(A + d * float(s_), d, 1.86, .1 if rm == 'may' else .11, rm), col=rc))
+    objs.append(M(Torus(A + d * .08, d, 1.75, .2, T['ring'] if t >= 3 else 'may'), col=T['ringc']))
     top = A + d * L
-    rs = np.random.RandomState(3)
     _, e1, e2 = frame(d)
-    for k in range(8):
-        o = e1 * rs.uniform(-.9, .9) + e2 * rs.uniform(-.9, .9)
-        p0 = top - d * 1.2 + o
-        p1 = top + d * rs.uniform(1.0, 2.3) + o * 1.3 + e1 * rs.uniform(-.4, .4)
-        objs.append(Line([tuple(p0), tuple(p1)], [rs.uniform(.45, .6), .22], 'be'))
-    objs += [Torus(top - d * (.25 + i * .34), d, 1.72, .16, 'may') for i in range(3)]
-    # cọc nhỏ cắm cạnh, dây buộc ống vô cọc
+    if t == 1:   # nùi bẹ chuối nhét đầu trên
+        rs = np.random.RandomState(3)
+        for k in range(8):
+            o = e1 * rs.uniform(-.9, .9) + e2 * rs.uniform(-.9, .9)
+            p0 = top - d * 1.2 + o
+            p1 = top + d * rs.uniform(1.0, 2.3) + o * 1.3 + e1 * rs.uniform(-.4, .4)
+            objs.append(Line([tuple(p0), tuple(p1)], [rs.uniform(.45, .6), .22], 'be'))
+    elif t == 2:   # nắp gáo dừa úp đầu ống
+        objs.append(Ball(top + d * .1, 2.05, 'gao', sq=(1, 1, 1), cut=-d))
+        objs.append(M(Torus(top - d * .05, d, 2.0, .16, 'may'), col='#5a3a20'))
+    elif t == 3:   # nắp gỗ có chốt ngang
+        objs.append(M(Line([tuple(top - d * .3), tuple(top + d * .5)], 1.95, 'go'), col='#8a6a44'))
+        objs.append(M(Line([tuple(top + d * .1 - e1 * 2.6), tuple(top + d * .1 + e1 * 2.6)], .22, 'go'), col='#6a4e30'))
+    else:          # nắp đồng có núm
+        objs.append(M(Line([tuple(top - d * .3), tuple(top + d * .45)], 1.95, 'dong'), sp=.8))
+        objs.append(Ball(top + d * 2.55, .45, 'dong'))
+        objs.append(M(Line([tuple(top + d * 2.2), tuple(top + d * 2.6)], .25, 'dong'), sp=.8))
+    if t == 1:
+        objs += [Torus(top - d * (.25 + i * .34), d, 1.72, .16, 'may') for i in range(3)]
     side = nz(np.cross(V(0, 0, 1), d))
     sp = A + d * 11.0
     c = sp + side * 2.6
-    objs.append(stake(float(c[0]), float(c[1]), -6, sp[2] + 4.5, .32, nodes=4.8))
-    objs += ties((float(c[0]), float(c[1]), sp[2] + .5), (0, 0, 1), .38, 3, .26, .11)
+    objs.append(stake(float(c[0]), float(c[1]), -6, sp[2] + 4.5, .32, nodes=4.8, mat=T['cmat'], col=T['coc'][0], dk=T['coc'][1]))
+    objs += ties((float(c[0]), float(c[1]), sp[2] + .5), (0, 0, 1), .38, 3, .26, .11, mat=T['ring'] if t == 4 else 'may', col=T['ringc'] if t == 4 else None)
     q0 = c + V(0, 0, sp[2] - c[2] + .5); q1 = sp + V(0, 0, 1.9)
-    objs.append(Line([tuple(q0), tuple((q0 + q1) / 2 + V(0, 0, .25)), tuple(q1)], .11, 'may'))
+    if t >= 3:   # dây cước
+        objs.append(M(Line([tuple(q0), tuple((q0 + q1) / 2 + V(0, 0, .25)), tuple(q1)], .07, 'day'), col='#d9e6e8'))
+    else:
+        objs.append(M(Line([tuple(q0), tuple((q0 + q1) / 2 + V(0, 0, .25)), tuple(q1)], .11, 'may'), col='#6a4426' if t > 1 else None))
     return Scene(objs)
 
 
-def giang():
-    # dây giăng giữa 2 cọc, 4 thẻo thòng xuống: phao khúc trúc nổi, lưỡi + mồi tép dưới nước
+def giang(t=1):
+    # dây giăng giữa 2 cọc, thẻo thòng xuống: phao nổi, lưỡi + mồi tép dưới nước. Cấp càng cao càng nhiều lưỡi
+    nh = [4, 6, 8, 10][t - 1]
     dirl = nz(V(math.cos(math.radians(118)), math.sin(math.radians(118)), 0))
-    Lw = 24.0
+    Lw = 24.0 + (t - 1) * 2.5
     P0 = -dirl * Lw / 2; P1 = dirl * Lw / 2
-    objs = [stake(float(P0[0]), float(P0[1]), -7, 10.5, .48, nodes=5.6), stake(float(P1[0]), float(P1[1]), -7, 9.6, .45, nodes=5.4)]
+    cm, cc = [('coc', ('#d8c886', '#9a8a4c')), ('coc', ('#b3a067', '#6f5f2c')), ('go', ('#9a8466', None)), ('son', (None, None))][t - 1]
+    objs = [stake(float(P0[0]), float(P0[1]), -7, 10.5, .48, nodes=5.6, mat=cm, col=cc[0], dk=cc[1]),
+            stake(float(P1[0]), float(P1[1]), -7, 9.6, .45, nodes=5.4, mat=cm, col=cc[0], dk=cc[1])]
     h0, h1 = 7.6, 7.0
-    objs += ties((float(P0[0]), float(P0[1]), h0), (0, 0, 1), .56, 3, .3, .15)
-    objs += ties((float(P1[0]), float(P1[1]), h1), (0, 0, 1), .53, 3, .3, .15)
+    rmat = 'dong' if t == 4 else 'may'
+    objs += ties((float(P0[0]), float(P0[1]), h0), (0, 0, 1), .56, 3, .3, .15, mat=rmat, col='#c99a3c' if t == 4 else ('#5a3a20' if t > 1 else None))
+    objs += ties((float(P1[0]), float(P1[1]), h1), (0, 0, 1), .53, 3, .3, .15, mat=rmat, col='#c99a3c' if t == 4 else ('#5a3a20' if t > 1 else None))
     pts = []
-    for k in range(25):
-        t = k / 24
-        p = P0 + (P1 - P0) * t
-        pts.append((float(p[0]), float(p[1]), h0 + (h1 - h0) * t - 2.6 * 4 * t * (1 - t)))
-    objs.append(Line(pts, .1, 'day'))
+    for k in range(31):
+        u = k / 30
+        p = P0 + (P1 - P0) * u
+        pts.append((float(p[0]), float(p[1]), h0 + (h1 - h0) * u - 2.6 * 4 * u * (1 - u)))
+    lc, lr = [('#e9e3d0', .1), ('#b8743a', .13), ('#d9e6e8', .07), ('#e8e2c8', .09)][t - 1]   # dây gai / dây dù / cước / cước bện
+    objs.append(M(Line(pts, lr, 'day'), col=lc))
     side = nz(np.cross(V(0, 0, 1), dirl))
-    for i, t in enumerate([.2, .4, .6, .8]):
-        k = int(round(t * 24)); top = V(*pts[k])
-        fz = .55
-        f = top.copy(); f[2] = fz
+    for i in range(nh):
+        u = (i + 1) / (nh + 1)
+        k = int(round(u * 30)); top = V(*pts[k])
+        f = top.copy(); f[2] = .55
         f = f + side * (.25 if i % 2 else -.15)
-        objs.append(Line([tuple(top), tuple(f + V(0, 0, .5))], .07, 'day'))
-        # phao: khúc trúc nằm ngang nổi trên nước, đầu sơn đỏ
+        objs.append(M(Line([tuple(top), tuple(f + V(0, 0, .5))], .07, 'day'), col=lc))
         fa = nz(dirl + side * (.3 if i % 2 else -.25))
-        objs.append(Line([tuple(f - fa * 1.0), tuple(f + fa * 1.0)], .42, 'phao'))
+        if t == 1:     # phao khúc trúc đầu đỏ
+            objs.append(Line([tuple(f - fa * 1.0), tuple(f + fa * 1.0)], .42, 'phao'))
+        elif t == 2:   # phao xốp trắng
+            objs.append(Box(f + V(0, 0, .05), (fa, np.cross(V(0, 0, 1), fa), (0, 0, 1)), (.75, .5, .4), 'xop', rr=.12))
+        else:          # phao nhựa đỏ trắng / phao đồng
+            objs.append(M(Ball(f + V(0, 0, .1), .55, 'nhua' if t == 3 else 'dong'), sp=.5 if t == 3 else None))
         hk = f + V(0, 0, -4.2)
-        objs.append(Line([tuple(f), tuple(hk + V(0, 0, .6))], .06, 'day'))
-        # lưỡi chữ J + mồi tép
+        objs.append(M(Line([tuple(f), tuple(hk + V(0, 0, .6))], .06, 'day'), col=lc))
         J = [hk + V(0, 0, .6), hk, hk + side * .2 + V(0, 0, -.45), hk + side * .55 + V(0, 0, -.35), hk + side * .62 + V(0, 0, .05)]
         objs.append(Line([tuple(p) for p in J], .07, 'thep'))
         objs.append(Line([tuple(hk + side * .5 + V(0, 0, -.2)), tuple(hk + side * .85 + V(0, 0, .45)), tuple(hk + side * 1.0 + V(0, 0, .95))], [.22, .2, .1], 'moi'))
+    if t >= 3:   # lục lạc đồng treo đầu cọc trái: cá giựt là reo
+        b0 = P0 + V(0, 0, 10.2) + side * .55
+        objs.append(M(Line([tuple(P0 + V(0, 0, 10.2)), tuple(b0), tuple(b0 + V(0, 0, -.9))], .05, 'day'), col='#5a3a20'))
+        objs.append(Ball(b0 + V(0, 0, -1.35), .48, 'dong'))
+        objs.append(Torus(b0 + V(0, 0, -1.6), (0, 0, 1), .3, .1, 'dong'))
+    if t == 4:   # đèn chai trên đầu cọc phải: câu đêm
+        b = P1 + V(0, 0, 9.6)
+        objs.append(M(Line([tuple(b), tuple(b + V(0, 0, 1.3))], .5, 'kinh'), sp=.8, pw=60))
+        objs.append(M(Line([tuple(b + V(0, 0, 1.3)), tuple(b + V(0, 0, 1.9))], .18, 'kinh'), sp=.8))
+        objs.append(M(Ball(b + V(0, 0, 2.3), .26, 'lua', sq=(1, 1, 1.7)), emit=1.0))
     return Scene(objs)
 
 
@@ -492,7 +630,8 @@ if __name__ == '__main__':
     mp = os.path.join(OUT, 'meta.json')
     meta = json.load(open(mp)) if os.path.exists(mp) else {}
     for k in IDS:
-        sc = {'lo': lo, 'lop': lop, 'giang': giang}[k]()
+        base = k.rstrip('1234'); tier = int(k[len(base):] or 1)     # lo, lo2, lo3, lo4 ...
+        sc = {'lo': lo, 'lop': lop, 'giang': giang}[base](tier)
         (im, imw), anc = render(sc, k)
         im.save(os.path.join(OUT, k + '.webp'), lossless=True, quality=100, method=6)
         imw.save(os.path.join(OUT, k + '_w.webp'), lossless=True, quality=100, method=6)
