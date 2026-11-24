@@ -32,6 +32,11 @@ func open(k: Dictionary) -> void:
 		U._rm_ic(".fast", FileAccess.get_file_as_string("res://ui/svg/kh/ca_ro.svg"), true)
 		U._rm_ic(".star", GO_SVG, true)
 		U._txt(U._q(U.rm_gi[".fast"], "", "b"), "")
+		var a = G.w_all.WCA.bm(String(k.lo))   # (bản 550) camera dời cái lờ ra giữa màn (dưới vòng nút), khỏi bị cột việc che
+		if a != null:
+			var w1 := Vector2(U.F.en(float(a.gx) + .5, float(a.gy) + .5), U.F.nn(float(a.gx) + .5, float(a.gy) + .5))
+			var sc := Vector2(U.vw * 0.5, U.vh * 0.58)
+			U.cam_tw = {"z0": U.main.zoom, "z1": U.main.zoom, "w0": U.main.cam + sc * U.Css.K / U.main.zoom, "w1": w1, "s": sc * U.Css.K, "t": 0.0}
 		sync()
 		pos()
 		return

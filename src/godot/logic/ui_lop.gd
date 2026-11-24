@@ -157,7 +157,8 @@ func _rows(s: Dictionary, n: Dictionary) -> Array:   # [nhãn, bậc này, (bậ
 			out.append([r[0], a])
 		else:
 			var b: String = f.call(n, r[1])
-			out.append([r[0], a, b, a != b])
+			if a != b:   # (bản 550) hai bậc như nhau (vd mồi "không cần") thì khỏi ghi
+				out.append([r[0], a, b, true])
 	return out
 
 const ROI := {"harvest": "thu hoạch", "rice": "gặt lúa", "collect": "thu chuồng", "work": "làm xưởng", "chop": "chặt cây", "clear": "dọn cây cỏ",
