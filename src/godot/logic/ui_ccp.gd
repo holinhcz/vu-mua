@@ -151,37 +151,6 @@ const GRN := "rgb(40, 110, 50)"
 const RED := "rgb(190, 50, 60)"
 const GOLDC := "rgb(150, 90, 10)"
 
-# thẻ chọn (trên lưới): hình + tên + dòng phụ + đoạn tả + nút
-func _scard(y: float, pic: String, ttl: String, sub: String, desc: String, btns: Array, extra := []) -> Array:   # btns: [[chữ, việc, kiểu]]
-	var out := []
-	var P: Array = _para(X0 + 10.0, y + 46.0, XW - 20.0, desc, 10.5, 600, SUB, 14.0) if desc != "" else [[], 0.0]
-	var h: float = 46.0 + float(P[1]) + (6.0 if desc != "" else 0.0) + (extra[1] if extra.size() else 0.0) + 34.0
-	var c := _chip(X0, y, XW, h, "fut")
-	out.append(c)
-	if pic != "":
-		out.append(_icx(X0 + 26.0, y + 23.0, 34.0, "pic:" + pic))
-	out.append(_dt(X0 + 48.0, y + 7.0, XW - 56.0, 17.0, _fitw(ttl, 12.5, 800, XW - 56.0), 12.5, 800, BROWN, "left"))
-	if sub != "":
-		out.append(_dt(X0 + 48.0, y + 25.0, XW - 56.0, 15.0, _fitw(sub, 10.5, 700, XW - 56.0), 10.5, 700, SUB, "left"))
-	out.append_array(P[0])
-	var yy: float = y + 46.0 + float(P[1]) + (6.0 if desc != "" else 0.0)
-	if extra.size():
-		for k in extra[0]:
-			Snap._move(k, Vector2(0, yy))
-		out.append_array(extra[0])
-		yy += extra[1]
-	var bx := X0 + XW - 8.0
-	for i in range(btns.size() - 1, -1, -1):
-		var b: Array = btns[i]
-		var bw: float = Box.text_w(String(b[0]), 11.0, 800) + 26.0
-		bx -= bw
-		if String(b[2]) == "gold":
-			out.append(_dbtn(bx, yy, bw, 26.0, String(b[0]), b[1]))
-		else:
-			out.append(_btn(bx, yy, bw, 26.0, String(b[0]), b[1], String(b[2])))
-		bx -= 6.0
-	return [out, h]
-
 # ------------------------------------------------------------------ Mồi câu
 func _moi() -> Array:
 	var S := _S()

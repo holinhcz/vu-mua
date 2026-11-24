@@ -107,7 +107,7 @@ func open() -> void:
 			if not (G.g.fish.dex.get(kid) is Dictionary):
 				G.g.fish.dex[kid] = {"n": 0, "best": 0.0}
 			return G.g.fish.dex[kid],
-		"caught": func(kid: String, kg := 0.0):   # kg: cân con vừa câu (ghi "con lớn nhất" sổ cá vườn)
+		"caught": func(kid: String, kg := 0.0) -> Array:   # kg: cân con vừa câu (ghi "con lớn nhất" sổ cá vườn); trả về tên vật liệu rơi
 			if not (G.g.get("fish") is Dictionary):
 				G.g.fish = {"rod": 0, "total": 0, "dex": {}}
 			var f: Dictionary = G.g.fish
@@ -120,7 +120,13 @@ func open() -> void:
 					f.dex[kid] = {"n": 1, "best": kg}
 				if G.w_all != null:
 					G.w_all.WCA.tc().seen[kid] = 1
-			G.mark(),
+			var got := []   # (bản 547) vật liệu đồ câu rơi như câu cũ (nang_cap/roi_vat_lieu "fish": phao, cước, lưỡi câu)
+			for c in G.D.drop.get("fish", []):
+				if randf() < float(c[1]):
+					G.mat_add(String(c[0]), 1)
+					got.append(G.item_name(String(c[0])))
+			G.mark()
+			return got,
 	}
 	g.closed.connect(Callable(get_script(), "_s_close"))
 	_layer.add_child(g)

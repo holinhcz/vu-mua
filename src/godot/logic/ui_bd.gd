@@ -23,7 +23,7 @@ var HELP := {
 	"hoaco": "Bụi cây, cỏ dại, lau sậy chiếm trọn 1 ô, bấm Đổi kiểu để chọn 1 trong 4 dáng. Các món còn lại: mỗi ô đất chia 4 chỗ nhỏ, mỗi chỗ trồng một khóm hoa hay bụi cỏ. Chạm để trồng, giữ kéo để trồng liền. Cứ 4 khóm thêm 1 điểm đẹp.",
 	"nen": "Chọn loại nền rồi chạm lên đất đã khai hoang để tô, giữ kéo để tô liền. Đồ đạc, hoa cỏ đặt lên trên vẫn giữ nguyên. Cứ 6 ô nền thêm 1 điểm đẹp.",
 	"duong": "Chọn loại đường rồi chạm từng ô để lát, giữ kéo để lát liền một dải. Đường làng có sẵn cũng gỡ hoặc lát lại được.",
-	"nuoc": "Hoa sen, thuyền và cầu cần đặt trên mặt nước. Dùng \"Đào ao\" để tạo thêm ô nước. Lờ tre, lọp lươn, giăng câu: chọn rồi chạm ô nước tô xanh (sát bờ), nhân vật lội ra đặt; chạm cái đã đặt để thăm hoặc gỡ về (đặt lại khỏi tốn xu). Đàn vịt: thả xuống ao, hồ, sông, chạm đàn để cho ăn lúa, lấy trứng.",
+	"nuoc": "Hoa sen, thuyền và cầu cần đặt trên mặt nước. Dùng \"Đào ao\" để tạo thêm ô nước. Đàn vịt: thả xuống ao, hồ, sông, chạm đàn để cho ăn lúa, lấy trứng.",
 	"qua": "Cây ăn trái cho trái chín theo giờ, chạm cây để hái. Cây giống quý đổi được ở hội chợ thì trồng miễn phí.",
 	"def": "Chọn một món rồi chạm lên đất của bạn để đặt. Chạm giữ món đã đặt trên làng để dời hoặc bán lại một nửa giá. Mỗi món thêm điểm đẹp, làng đẹp thì nông sản bán giá cao hơn."}
 
@@ -382,15 +382,8 @@ func _cards() -> Array:   # [{name, pr, r (0 mở / 1 khoá / 2 đủ), lv, i, a
 				continue
 			add.call({"name": gt.n, "pr": ["t", "Cấp " + str(at), "lk"] if at > 0 else ((["t", "Góp xong", "ok"] if _ct_is(gt.id) else ["t", str(A) + " cây giống", "ok"]) if A > 0 else (["t", "Dân góp", "lk"] if _ct_lock(gt.id) != "" else ["c", int(gt.cost), ""])),
 				"act": ["id", gt.id], "ic": ["id", gt.id]}, 1 if at > 0 else 0, at)
-	if cat == "nuoc":   # (bản 546) đồ sông nước: lờ tre, lọp lươn, giăng câu (w_ca g.lo), đàn vịt (g.pet.vit) — mua lúc đặt
-		var W = G.w_all.WCA
-		for t in W.FS:
-			var e: Dictionary = W.ns[t]
-			var on: int = W.qk(t)
-			var lq: int = W._qf("lo")   # cấp mở lờ lọp
-			var lk: bool = lq > 0 or (t == "giang" and W._o0() <= 0)
-			var pr: Array = ["t", "Cấp " + str(lq), "lk"] if lq > 0 else (["t", "Mở sông Vàm", "lk"] if lk else (["t", "✓ Đã đủ", "ok"] if on >= int(e.max) else (["t", "Đặt lại", "free"] if W.lo_free(t) else ["c", int(e.xu), ""])))
-			add.call({"name": String(e.n), "pr": pr, "act": ["song", t], "ic": ["song", t], "cnt": str(on) + "/" + str(e.max), "full": on >= int(e.max)}, 1 if lk else (2 if on >= int(e.max) else 0), (lq if lq > 0 else 10000) if lk else 0)
+	if cat == "nuoc":   # (bản 546) đàn vịt (g.pet.vit) — mua lúc đặt
+		var W = G.w_all.WCA   # (bản 547) lờ / lọp / giăng qua bảng riêng Menu › Làm ăn › Lờ lọp
 		var vn: int = int(W.cc().vit.n)
 		var vq: int = W._qf("vit")   # cấp mở đàn vịt
 		var vl: bool = vq > 0 or not W.e6()
@@ -630,10 +623,7 @@ func _card(c: Dictionary) -> void:
 					_ps()
 				return
 			close()
-			if a == "vit":
-				G.w_all.WCA.vq("vit")
-			else:
-				G.w_all.WCA.lo_place(a)
+			G.w_all.WCA.vq("vit")
 
 # ------------------------------------------------------------------ hình trong ô thẻ / thanh dưới
 func _icon(cv: Control, ic: Array, locked: bool) -> void:

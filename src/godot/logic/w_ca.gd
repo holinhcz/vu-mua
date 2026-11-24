@@ -681,6 +681,59 @@ func iv() -> void:   # iV: đánh dấu đã gặp (mỗi 2 giây)
 				t.obj[n] = 1
 
 # ------------------------------------------------------------------ lờ, lọp, giăng câu (g.lo)
+# (bản 547) 4 BẬC mỗi loại (lo_lop_cau_giang.json "up": bậc 2..4, nâng bằng xu + vật liệu nâng cấp): nst(t) = luật của bậc đang có
+func lo_lv(t: String) -> int:
+	return clampi(int(t1().get("lv", {}).get(t, 1)), 1, 1 + ns[t].get("up", []).size())
+
+func nst(t: String) -> Dictionary:
+	var e: Dictionary = ns[t]
+	var v := lo_lv(t)
+	if v <= 1:
+		return e
+	var o := e.duplicate()
+	o.merge(e.up[v - 2], true)
+	return o
+
+func lo_next(t: String) -> Dictionary:   # bậc kế ({} = bậc 4 rồi)
+	var v := lo_lv(t)
+	var U: Array = ns[t].get("up", [])
+	return U[v - 1] if v - 1 < U.size() else {}
+
+func lo_up_ok(t: String) -> bool:
+	var u := lo_next(t)
+	if u.is_empty() or int(G.g.coins) < int(u.xu):
+		return false
+	for m in u.m:
+		if G.mat_n(String(m[0])) < int(m[1]):
+			return false
+	return true
+
+func lo_up(t: String) -> bool:
+	var u := lo_next(t)
+	if u.is_empty():
+		return false
+	if not lo_up_ok(t):
+		_ta("Chưa đủ xu hoặc vật liệu để nâng.")
+		return false
+	G.g.coins = int(G.g.coins) - int(u.xu)
+	for m in u.m:
+		G.mat_add(String(m[0]), -int(m[1]))
+	var T := t1()
+	if not (T.get("lv") is Dictionary):
+		T.lv = {}
+	T.lv[t] = lo_lv(t) + 1
+	_ta(String(ns[t].n) + " lên bậc " + str(T.lv[t]) + "!")
+	_gr([12, 30, 18])
+	_ba()
+	return true
+
+func ready_keys() -> Array:   # khoá các bẫy đang có cá
+	var o := []
+	for a in t1()["set"]:
+		if w4(a):
+			o.append(bk(a))
+	return o
+
 func t1() -> Dictionary:   # T1
 	var t = G.g.get("lo")
 	if not (t is Dictionary):
@@ -720,10 +773,10 @@ func bm(t: String) -> Variant:   # Bm
 	return null
 
 func w4(t: Dictionary) -> bool:   # w4: có cá rồi
-	return _now() - float(t.at) >= float(ns[t.t].ms)
+	return _now() - float(t.at) >= float(nst(t.t).ms)
 
 func l6_ms(t: Dictionary) -> float:   # L6: ms còn lại
-	return maxf(0.0, float(ns[t.t].ms) - (_now() - float(t.at)))
+	return maxf(0.0, float(nst(t.t).ms) - (_now() - float(t.at)))
 
 func ready_n() -> int:   # T1()["set"].filter(w4).length (tên tab "Lờ lọp (n)")
 	var n := 0
@@ -733,7 +786,7 @@ func ready_n() -> int:   # T1()["set"].filter(w4).length (tên tab "Lờ lọp (
 	return n
 
 func fr_put(t: String, a: int, n: int) -> bool:   # fR: đặt bẫy
-	var e: Dictionary = ns[t]
+	var e: Dictionary = nst(t)
 	var r = e.get("bait")
 	var o: bool = r == null or _barn(String(r[0])) >= int(r[1])
 	if r != null and o:
@@ -751,7 +804,7 @@ func sr(t: String) -> void:   # sR: gỡ bẫy
 	var n = bm(t)
 	if n != null:
 		a["set"].erase(n)
-		_ta("Đã gỡ " + String(ns[n.t].n).to_lower() + " về cất. Đặt lại (Xây dựng › Mặt nước) khỏi tốn xu.")
+		_ta("Đã gỡ " + String(nst(n.t).n).to_lower() + " về cất. Đặt lại (Menu › Lờ lọp) khỏi tốn xu.")
 		_ba()
 
 static func zu(t: Array) -> String:   # ZU: rút theo trọng số
@@ -769,7 +822,7 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 	var a = bm(t)
 	if a == null:
 		return false
-	var n: Dictionary = ns[a.t]
+	var n: Dictionary = nst(a.t)
 	if not w4(a):
 		_ta(String(n.n) + " mới đặt, chừng " + str(int(ceil(l6_ms(a) / 6e4))) + " phút nữa mới có.")
 		return false
@@ -777,7 +830,7 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 	var r := []
 	for d in n.c:
 		if d[0] != "ca_linh" or _qs():
-			r.append(d)
+			r.append([d[0], float(d[1]) * (float(n.get("k", 1.0)) if n.get("rare", []).has(d[0]) else 1.0)])   # (bản 547) bậc cao: con quý dễ vô
 	if _n4():
 		r = r + [["tom", 45]]
 	var bait = n.get("bait")
@@ -811,7 +864,7 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 		_a0(float(a.gx) + 0.5, float(a.gy) + 0.5, "+" + ", ".join(hh))
 	a.u = int(a.u) + 1
 	t1().n = int(t1().n) + 1
-	if int(a.u) >= int(n.use):
+	if int(n.use) > 0 and int(a.u) >= int(n.use):   # (bản 547) bậc 4: use 0 = không mục
 		t1()["set"].erase(a)
 		t1().own[a.t] = maxi(0, jd(String(a.t)) - 1)
 		c += " " + String(n.n) + " cũ mục rồi, bỏ luôn, mua cái mới nha."
@@ -831,7 +884,7 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 	return true
 
 func gs(t: String, a: int, n: int) -> String:   # GS: lý do không đặt bẫy được ("" = được)
-	var e: Dictionary = ns[t]
+	var e: Dictionary = nst(t)
 	if qk(t) >= jd(t):
 		return ("Đặt hết " + String(e.n).to_lower() + " rồi. Mua thêm hoặc gỡ bớt.") if jd(t) else ("Chưa có " + String(e.n).to_lower() + ". Mua trước đã.")
 	if ku(a, n) != null:
@@ -841,9 +894,9 @@ func gs(t: String, a: int, n: int) -> String:   # GS: lý do không đặt bẫy
 	return "" if _uu(a, n) else "Chỗ này xa bờ quá, lội không tới. Đặt sát mé nước (hoặc sắm xuồng ba lá)."
 
 func lo_why(t: String, a: int, n: int) -> String:   # như gs, không bắt mua trước
-	var e: Dictionary = ns[t]
+	var e: Dictionary = nst(t)
 	if qk(t) >= int(e.max):
-		return "Đặt đủ " + str(e.max) + " " + String(e.n).to_lower() + " rồi. Gỡ bớt cái cũ."
+		return "Đặt đủ " + str(int(e.max)) + " " + String(e.n).to_lower() + " rồi. Gỡ bớt cái cũ."
 	if ku(a, n) != null:
 		return "Chỗ này đã có bẫy rồi."
 	if _tr(e.get("river")) and _il(a, n) != "canal":
@@ -856,9 +909,9 @@ func lo_free(t: String) -> bool:   # còn cái cất sẵn: đặt khỏi trả 
 func lo_place(t: String) -> void:
 	if not _jg("lo"):
 		return
-	var a: Dictionary = ns[t]
+	var a: Dictionary = nst(t)
 	if qk(t) >= int(a.max):
-		_ta("Đặt đủ " + str(a.max) + " " + String(a.n).to_lower() + " rồi. Gỡ bớt cái cũ.")
+		_ta("Đặt đủ " + str(int(a.max)) + " " + String(a.n).to_lower() + " rồi. Gỡ bớt cái cũ.")
 		return
 	if t == "giang" and _o0() <= 0:
 		_ta("Mở một khúc sông Vàm trước đã.")
@@ -897,9 +950,9 @@ func lo_info(key: String) -> Dictionary:   # vòng nút lờ: {n: tên, s: dòng
 	var a = bm(key)
 	if a == null:
 		return {}
-	var n: Dictionary = ns[a.t]
+	var n: Dictionary = nst(a.t)
 	var r := w4(a)
-	return {"n": String(n.n), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + " · dùng thêm " + str(int(n.use) - int(a.u)) + " lần"}
+	return {"n": String(n.n), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + (" · bậc " + str(lo_lv(String(a.t)))) + (" · không mục" if int(n.use) <= 0 else " · dùng thêm " + str(int(n.use) - int(a.u)) + " lần")}
 
 func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt bẫy
 	var e := gs(t, a, n)

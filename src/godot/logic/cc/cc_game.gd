@@ -958,7 +958,9 @@ func caught(f: Dictionary, w: float) -> void:
 	if f.has("junk"):
 		S.luck = minf(10, S.luck + 1)
 	elif host != null and host.has("caught"):
-		host.caught.call(str(D.KHO.get(f.id, "")), w)   # vườn đếm cá câu (nhiệm vụ, thành tựu, sổ làng)
+		var got = host.caught.call(str(D.KHO.get(f.id, "")), w)   # vườn đếm cá câu (nhiệm vụ, thành tựu, sổ làng)
+		if got is Array and not got.is_empty():   # (bản 547) vật liệu đồ câu rơi (phao, cước, lưỡi): nâng giăng câu bên vườn
+			ui.toast("+1 " + ", +1 ".join(got), "info")
 	if S.tut < 3:
 		S.tut = 3
 	save(true)
