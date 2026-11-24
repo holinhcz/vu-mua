@@ -403,10 +403,12 @@ FRUITM = {'dua', 'bi', 'khom', 'dua2', 'xoai', 'cam2', 'chuoi2', 'leaf', 'khoai'
 
 def albedo_lit(obj, P):
     c = albedo(obj, P)
-    return c * 1.15 if obj.mat in FRUITM else c
+    return c * 1.0 if obj.mat in FRUITM else c   # đã sáng chung bằng LT, không nhân thêm (khỏi cháy màu)
 
 
 B.albedo = albedo_lit
+# 11-25 Link "độ sáng tối có tối quá ko": ghe cũ sáng TB .45, đình .57, ghe 3D cũ chỉ .22 -> nâng nền, bóng đổ không đen kịt
+B.LT.update(amb=.5, sky=.2, shmin=.45, aop=.6, expo=1.25)
 
 
 def _bbox(self):
@@ -801,16 +803,18 @@ def awning(fr, h, u0, u1, zf, col, col2, head=13.5):
 
 
 def oars(fr, h, side=1.0):
-    """2 cây chèo gác ngang xuồng, cán gác mép, lưỡi chìa ra nước"""
+    """2 cây chèo gác dọc trong lòng xuồng trên các băng ngồi, không chìa ra ngoài mạn"""
     L = h.L
     o = []
-    for i, uu in enumerate((-.25, .15)):
-        z = zt_at(h, uu) + .3
-        a = fr.w(uu * L - 2, -side * (w_at(h, uu) - 1.0), z)
-        b = fr.w(uu * L + 3 + i, side * (w_at(h, uu) + 9.0), z - 1.2)
-        o.append(M(Line([tuple(a), tuple(b)], .28, 'go2'), col=hexc('#b08a52')))
+    for i, e in enumerate((.42, .7)):
+        a0, a1 = -.5 + .06 * i, .3 + .06 * i
+        wmin = min(w_at(h, a0), w_at(h, a1))
+        v = side * (wmin * e - .6)
+        z0 = zt_at(h, a0) - .45; z1 = zt_at(h, a1) - .45
+        a = fr.w(a0 * L, v, z0); b = fr.w(a1 * L, v * .9, z1)
+        o.append(M(Line([tuple(a), tuple(b)], .26, 'go2'), col=hexc('#b08a52')))
         d = nz(b - a)
-        o.append(M(Box(tuple(b - d * 1.2), (d, nz(np.cross(V(0, 0, 1), d)), (0, 0, 1)), (2.2, .9, .12), 'go2', rr=.1), col=hexc('#b08a52')))
+        o.append(M(Box(tuple(b - d * 1.4), (d, nz(np.cross(V(0, 0, 1), d)), (0, 0, 1)), (1.8, .75, .1), 'go2', rr=.1), col=hexc('#a87e48')))
     return o
 
 

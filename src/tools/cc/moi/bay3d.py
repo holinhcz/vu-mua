@@ -321,6 +321,10 @@ class Scene:
         return np.array(pts, F32)
 
 
+# thông số sáng (tool khác giữ mặc định; ghe3d chỉnh riêng)
+LT = dict(amb=.34, sky=.16, dif=.78, shmin=0.0, aop=1.0, expo=1.0)
+
+
 def render(scene, name, water=True):
     ppu = PXU * SSA
     B = scene.bbox()
@@ -387,8 +391,10 @@ def render(scene, name, water=True):
     H_ = nz(LIGHT - FWD)
     spec = np.clip(N @ H_, 0, 1) ** pwk * spk
     sky = .5 + .5 * N[:, 2]
-    lum = (.34 + .16 * sky) * ao + .78 * lam * sh * (.55 + .45 * ao)
-    lum = lum * (1 - .66 * inner)
+    shl = LT['shmin'] + (1 - LT['shmin']) * sh          # bóng đổ không đen kịt (mặc định 0 = như cũ)
+    aol = ao ** LT['aop']
+    lum = (LT['amb'] + LT['sky'] * sky) * aol + LT['dif'] * lam * shl * (.55 + .45 * aol)
+    lum = lum * (1 - .66 * inner) * LT['expo']
     col = alb * lum[:, None] + spec[:, None] * sh[:, None] * (1 - inner)[:, None]
     col = col * (1 - emk[:, None]) + alb * emk[:, None]        # đèn: tự sáng
     col = np.clip(col, 0, 1)
