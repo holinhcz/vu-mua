@@ -360,6 +360,7 @@ func ui_tick() -> void:   # ui.gd mỗi 0,25 s
 	_ray_pill()
 	_tn_pill()
 	_hdn_pill()
+	_dieu_pill()
 	_goal_pill()
 	_pills_sort()
 	WEV.step()
@@ -384,6 +385,15 @@ func _pill_put(k: String, tx, cb: Callable, kd := "") -> void:   # tx: [chữ, g
 
 func _tn_pill() -> void:   # tnPill: "Đêm nay bão lớn về · phòng chống" / "N nhà gặp nạn · giúp bà con"
 	_pill_put("tn", WD.tn_pill_txt(), func() -> void: U.tn_open("phong" if WL.tn_on(WL._vr() + 1) != null else "nan"), "khan")
+
+func _dieu_pill() -> void:   # (bản 546) chiều mùa gió chướng: "Có gió chướng · thả diều" (diều đang bay: "Diều đang bay · thi diều"); chạm mở bảng Diều
+	var t: Dictionary = WCA.fh()
+	var tx = []
+	if WCA.cg():
+		tx = ["Diều đang bay · thi diều" if WCA._tr(t.get("on")) else "Có gió chướng · thả diều", false]
+	elif WCA._tr(t.get("on")):   # hết gió: tự thu diều
+		t.on = 0
+	_pill_put("dieu", tx, func() -> void: U.pcp.open_solo("dieu"))
 
 func _goal_pill() -> void:   # (bản 362) mục tiêu tân thủ (w_sys.goal_view) thành một dòng trong cột việc; đủ thì chạm nhận thưởng
 	var v: Dictionary = WS.goal_view()

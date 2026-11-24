@@ -10,7 +10,7 @@ extends RefCounted
 var G
 var ui = null              # w_ca_ui.gd (gán ở _init của nó)
 var WR = null              # w_ruong.gd: qs, o0, n4, qf, _yh (người ghép gán)
-var WC = null              # w_cho.gd: YT, T_ ($T), hN (người ghép gán)
+var WC = null              # w_cho.gd: YT, T_ ($T) (người ghép gán)
 var WS = null              # w_sys.gd: htv (người ghép gán)
 var WK = null              # w_kho.gd: Rl (người ghép gán)
 var ext := {}              # hàm của hệ khác (người ghép gán Callable):
@@ -32,11 +32,9 @@ var m6 := []               # cá tát ao
 var k4 := []               # diều
 var Z7 := {}               # tên chức năng
 const FS := ["lo", "lop", "giang"]
-const Nh := {"vit": 600, "ca": 240, "meo": 300, "chim": 900}
+const Nh := {"vit": 600, "meo": 300}   # (bản 546) bỏ cá nuôi, chào mào
 const t6 := 8              # đàn vịt tối đa
 const a6 := 300.0          # giây no của vịt mỗi lần rải lúa
-const n6 := 360.0          # giây no của cá
-const Xf := 900.0          # cá lớn đủ
 
 # ------------------------------------------------------------------ trạng thái không lưu
 var M3 := -1               # rY
@@ -46,7 +44,6 @@ var zi = null              # thi diều
 var l6 := 0.0              # vịt chạy tới bờ (vẽ)
 var c6 := 0.0              # cá ngoi lên ăn (vẽ)
 var qi_hap := 0.0          # Qi.hap: mèo vui (vẽ)
-var rh_sing := 0.0         # Rh.sing: chim hót (vẽ)
 var XT := {}               # w2
 var _zt_v := -1            # uN
 var _zt = null             # v4
@@ -735,25 +732,6 @@ func ready_n() -> int:   # T1()["set"].filter(w4).length (tên tab "Lờ lọp (
 			n += 1
 	return n
 
-func uu(t: String) -> void:   # UU: mua bẫy
-	var a: Dictionary = ns[t]
-	var n := t1()
-	if int(G.g.coins) < int(a.xu):
-		_ta("Cần " + _sa(a.xu) + " xu.")
-		return
-	if jd(t) >= int(a.max):
-		_ta("Có đủ " + str(a.max) + " " + String(a.n).to_lower() + " rồi.")
-		return
-	if t == "giang" and _o0() <= 0:
-		_ta("Mở một khúc sông Vàm trước đã.")
-		return
-	G.g.coins = int(G.g.coins) - int(a.xu)
-	n.own[t] = jd(t) + 1
-	if not (n.get("hp") is Dictionary):
-		n.hp = {}
-	_ta("Mua thêm " + String(a.n).to_lower() + '. Bấm "Đặt" rồi chạm vào mặt nước để đặt.')
-	_ba()
-
 func fr_put(t: String, a: int, n: int) -> bool:   # fR: đặt bẫy
 	var e: Dictionary = ns[t]
 	var r = e.get("bait")
@@ -773,7 +751,7 @@ func sr(t: String) -> void:   # sR: gỡ bẫy
 	var n = bm(t)
 	if n != null:
 		a["set"].erase(n)
-		_ta("Đã gỡ " + String(ns[n.t].n).to_lower() + " về.")
+		_ta("Đã gỡ " + String(ns[n.t].n).to_lower() + " về cất. Đặt lại (Xây dựng › Mặt nước) khỏi tốn xu.")
 		_ba()
 
 static func zu(t: Array) -> String:   # ZU: rút theo trọng số
@@ -862,20 +840,66 @@ func gs(t: String, a: int, n: int) -> String:   # GS: lý do không đặt bẫy
 		return "Giăng câu phải đặt trên sông Vàm."
 	return "" if _uu(a, n) else "Chỗ này xa bờ quá, lội không tới. Đặt sát mé nước (hoặc sắm xuồng ba lá)."
 
-func nk_lo(t: String) -> void:   # Nk: nút "Đặt" -> chạm mặt nước
-	var a: Dictionary = ns[t]
-	if qk(t) >= jd(t):
-		_ta(("Đặt hết " + String(a.n).to_lower() + " rồi. Mua thêm hoặc gỡ bớt.") if jd(t) else ("Chưa có " + String(a.n).to_lower() + ". Mua trước đã."))
+func lo_why(t: String, a: int, n: int) -> String:   # như gs, không bắt mua trước
+	var e: Dictionary = ns[t]
+	if qk(t) >= int(e.max):
+		return "Đặt đủ " + str(e.max) + " " + String(e.n).to_lower() + " rồi. Gỡ bớt cái cũ."
+	if ku(a, n) != null:
+		return "Chỗ này đã có bẫy rồi."
+	if _tr(e.get("river")) and _il(a, n) != "canal":
+		return "Giăng câu phải đặt trên sông Vàm."
+	return "" if _uu(a, n) else "Chỗ này xa bờ quá, lội không tới. Đặt sát mé nước."
+
+func lo_free(t: String) -> bool:   # còn cái cất sẵn: đặt khỏi trả xu
+	return jd(t) > qk(t)
+
+func lo_place(t: String) -> void:
+	if not _jg("lo"):
 		return
-	var cb := func(n: int, e: int) -> bool:
-		var r := gs(t, n, e)
+	var a: Dictionary = ns[t]
+	if qk(t) >= int(a.max):
+		_ta("Đặt đủ " + str(a.max) + " " + String(a.n).to_lower() + " rồi. Gỡ bớt cái cũ.")
+		return
+	if t == "giang" and _o0() <= 0:
+		_ta("Mở một khúc sông Vàm trước đã.")
+		return
+	if not lo_free(t) and int(G.g.coins) < int(a.xu):
+		_ta("Cần " + _sa(a.xu) + " xu.")
+		return
+	var cb := func(x: int, y: int) -> bool:
+		var r := lo_why(t, x, y)
 		if r != "":
 			_ta(r)
 			return false
-		hz(t, n, e)   # (bản 541) nhân vật lội ra mé nước rồi mới đặt (trước: đặt liền tại chỗ)
+		var run := func() -> bool:
+			var o := lo_why(t, x, y)
+			if o != "":
+				_ta(o)
+				return false
+			if not lo_free(t):
+				if int(G.g.coins) < int(a.xu):
+					_ta("Cần " + _sa(a.xu) + " xu.")
+					return false
+				G.g.coins = int(G.g.coins) - int(a.xu)
+				t1().own[t] = jd(t) + 1
+			return fr_put(t, x, y)
+		var m = mt(x, y)
+		var gl := _x("Gl")
+		if m != null and gl.is_valid():
+			gl.call({"key": "lop" + t + "@" + str(x) + "," + str(y), "kind": "lo", "pos": m.stand, "dur": 0.6, "run": run})
+		else:
+			run.call()
 		return true
-	var sub := "Giăng câu phải đặt trên sông Vàm, sát mé bờ." if t == "giang" else "Chọn chỗ mương, ao, mé sông sát bờ để còn lội ra thăm."
-	wg("lo", false, {"msg": "Chạm vào mặt nước để đặt " + String(a.n).to_lower(), "sub": sub, "at": [G.ppos.x, G.ppos.y], "cb": cb})
+	var sub := "Ô xanh là chỗ đặt được: sông Vàm, sát mé bờ." if t == "giang" else "Ô xanh là chỗ đặt được: mương, ao, mé sông sát bờ."
+	wg("lo", false, {"msg": "Chạm ô nước để đặt " + String(a.n).to_lower() + ("" if lo_free(t) else " · " + _sa(a.xu) + " xu"), "sub": sub, "at": [G.ppos.x, G.ppos.y], "cb": cb, "lo": t})
+
+func lo_info(key: String) -> Dictionary:   # vòng nút lờ: {n: tên, s: dòng phụ, ready}
+	var a = bm(key)
+	if a == null:
+		return {}
+	var n: Dictionary = ns[a.t]
+	var r := w4(a)
+	return {"n": String(n.n), "ready": r, "s": ("Có cá rồi" if r else "Còn " + str(int(ceil(l6_ms(a) / 6e4))) + " phút") + (" · không mồi" if n.get("bait") != null and not _tr(a.get("b")) else "") + " · dùng thêm " + str(int(n.use) - int(a.u)) + " lần"}
 
 func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt bẫy
 	var e := gs(t, a, n)
@@ -911,23 +935,22 @@ func cc() -> Dictionary:   # Cc
 		G.g.pet = t
 	if not (t.get("vit") is Dictionary):
 		t.vit = {"n": 0, "f": 0, "e": 0, "a": 0}
-	if not (t.get("ca") is Dictionary):
-		t.ca = {"n": 0, "g": 0, "f": 0}
+	if t.has("ca") or t.has("chim"):   # (bản 546) bỏ cá nuôi, chào mào: trả lại tiền mua
+		if t.get("ca") is Dictionary and float(t.ca.get("n", 0)) > 0:
+			G.g.coins = int(G.g.coins) + 240
+		if t.get("chim") is Dictionary and _tr(t.chim.get("has")):
+			G.g.coins = int(G.g.coins) + 900
+		t.erase("ca")
+		t.erase("chim")
 	if not (t.get("meo") is Dictionary):
 		t.meo = {"has": 0, "fd": -1, "gd": -1, "pt": 0, "tim": 0}
-	if not (t.get("chim") is Dictionary):
-		t.chim = {"has": 0, "fd": -1, "gi": 0, "cd": -1, "sd": -1}
 	for a in ["n", "f", "e", "a"]:
 		var v = t.vit.get(a)
 		if not _num(v) or is_nan(float(v)) or is_inf(float(v)):
 			t.vit[a] = 0
-	for a in ["n", "g", "f"]:
-		var v = t.ca.get(a)
-		if not _num(v) or is_nan(float(v)) or is_inf(float(v)):
-			t.ca[a] = 0
 	return t
 
-func dn(t: float) -> void:   # dN: vịt ăn, đẻ trứng; cá ăn, lớn (cả lúc tắt game)
+func dn(t: float) -> void:   # dN: vịt ăn, đẻ trứng (cả lúc tắt game)
 	var a = G.g.get("pet")
 	if not (a is Dictionary):
 		return
@@ -940,11 +963,6 @@ func dn(t: float) -> void:   # dN: vịt ăn, đẻ trứng; cá ăn, lớn (c�
 			n.a = float(n.a) - 150.0
 			if float(n.get("e", 0)) < float(n.n) * 3:
 				n.e = int(n.get("e", 0)) + 1
-	var r = a.get("ca")
-	if r is Dictionary and float(r.get("n", 0)) > 0 and float(r.get("f", 0)) > 0 and float(r.get("g", 0)) < Xf:
-		var o := minf(t, float(r.f))
-		r.f = float(r.f) - o
-		r.g = minf(Xf, float(r.g) + o)
 
 func wq() -> void:   # WQ: mèo tha quà buổi sáng (mỗi giây)
 	var p = G.g.get("pet")
@@ -993,35 +1011,6 @@ func xx() -> bool:   # Xx: chạm đàn vịt
 	_ta("Vịt đang no, lội ao kêu cạp cạp.")
 	return true
 
-func jx() -> bool:   # Jx: chạm ao cá nuôi
-	var t: Dictionary = cc().ca
-	if not _tr(t.n):
-		return false
-	if float(t.g) >= Xf:
-		var a := maxi(1, _rnd(float(t.n) * 0.9))
-		G.g.barn.ca_tra = _barn("ca_tra") + a
-		t.n = 0
-		t.g = 0
-		t.f = 0
-		var n = w2("ca")
-		var e: float = float(n.c[0]) if n != null else 4.5
-		var r: float = float(n.c[1]) if n != null else -2.5
-		_a0(e, r, "+" + str(a) + " cá tra")
-		_qi("ao")
-		_ba()
-		return true
-	if float(t.f) < n6 * 0.6:
-		if _barn("bot") < 1:
-			_ta("Cần 1 bao bột (cám) cho cá ăn. Xay lúa ở cối xay.")
-			return false
-		G.g.barn.bot = _barn("bot") - 1
-		t.f = minf(n6 * 2.0, float(t.f) + n6)
-		_ta("Rải cám cho cá. Cá lớn " + str(_rnd(float(t.g) / Xf * 100.0)) + "%.")
-		c6 = 1.5
-		_ba()
-		return true
-	_ta("Cá đang ăn no, lớn " + str(_rnd(float(t.g) / Xf * 100.0)) + "%.")
-	return true
 
 func gq() -> bool:   # GQ: chạm mèo
 	var t: Dictionary = cc().meo
@@ -1057,51 +1046,12 @@ func gq() -> bool:   # GQ: chạm mèo
 	qi_hap = 2.0
 	return true
 
-func jq() -> bool:   # jQ: chạm chào mào
-	var t: Dictionary = cc().chim
-	var a := _vr()
-	if not _tr(t["has"]):
-		return false
-	if int(t.fd) != a:
-		var n := ""
-		for e in ["qua_chuoi", "ot"]:
-			if _barn(e) > 0:
-				n = e
-				break
-		if n != "":
-			G.g.barn[n] = _barn(n) - 1
-			t.fd = a
-			if int(t.get("sd", -1)) != a:
-				t.sd = a
-				t.gi = mini(10, int(t.get("gi", 0)) + 1)
-			_ta("Cho chào mào ăn " + _nm(n).to_lower() + ". Giọng hót lên " + str(t.gi) + "/10.")
-			rh_sing = 4.0
-			_ba()
-			return true
-		_ta("Chào mào cần 1 trái chuối chín hoặc ớt.")
-		return false
-	rh_sing = 3.0
-	_ta("Chào mào hót líu lo. Giọng " + str(t.gi) + "/10.")
-	return true
 
-func dq() -> void:   # DQ: đem chào mào đi thi
-	var t: Dictionary = cc().chim
-	var a := _vr()
-	if not _tr(t["has"]) or int(t.cd) == a or int(t.gi) < 3:
-		return
-	t.cd = a
-	var n := minf(0.85, 0.2 + int(t.gi) * 0.07)
-	var e := randf() < n
-	var r := _v0(150 * int(t.gi) if e else 30 * int(t.gi))
-	G.g.coins = int(G.g.coins) + r
-	_qi("chim")
-	_ta(("Chào mào đoạt giải nhất hội thi chim làng! Thưởng " + _sa(r) + " xu.") if e else ("Chào mào hót hay nhưng chưa đoạt giải, được thưởng khuyến khích " + _sa(r) + " xu."))
-	_ba()
 
 func vq(t: String) -> void:   # VQ: nút data-pet trong tab Nuôi thêm
 	var a := cc()
 	var n := int(Nh.get(t, 0))
-	if (t == "vit" or t == "ca" or t == "mvit" or t == "mca") and not _jg("vit"):
+	if (t == "vit" or t == "mvit") and not _jg("vit"):
 		return
 	if t == "meo" and not _jg("meo"):
 		return
@@ -1116,20 +1066,8 @@ func vq(t: String) -> void:   # VQ: nút data-pet trong tab Nuôi thêm
 			return
 		G.g.coins = int(G.g.coins) - n
 		WC.T_(3)
-	elif t == "ca":
-		if not e6():
-			_ta("Chưa có mặt nước nào trong đất của bạn.")
-			return
-		if int(G.g.coins) < n:
-			_ta("Cần " + _sa(n) + " xu.")
-			return
-		wg("ca", true)
-		return
 	elif t == "mvit":
 		wg("vit", false)
-		return
-	elif t == "mca":
-		wg("ca", false)
 		return
 	elif t == "meo":
 		if _tr(a.meo["has"]):
@@ -1140,18 +1078,6 @@ func vq(t: String) -> void:   # VQ: nút data-pet trong tab Nuôi thêm
 		G.g.coins = int(G.g.coins) - n
 		a.meo["has"] = 1
 		_ta("Bà Năm cho bạn một bé mèo mướp. Mỗi ngày cho Mướp ăn 1 con cá nhỏ, sáng hôm sau nó tha quà về.")
-	elif t == "chim":
-		if _tr(a.chim["has"]):
-			return
-		if int(_pc().lv) < 4:
-			_ta("Cấp 4 mới nuôi chào mào.")
-			return
-		if int(G.g.coins) < n:
-			_ta("Cần " + _sa(n) + " xu.")
-			return
-		G.g.coins = int(G.g.coins) - n
-		a.chim["has"] = 1
-		_ta("Treo lồng chào mào trước hiên. Mỗi ngày cho ăn chuối hoặc ớt, giọng hót lên dần rồi đem đi thi.")
 	_ba()
 	_ec()
 
@@ -1159,24 +1085,16 @@ func uz(t: String) -> String:   # uZ: tên việc khi chạm con vật
 	var a := cc()
 	if t == "vit":
 		return ("Lượm " + str(a.vit.e) + " trứng vịt") if _tr(a.vit.e) else ("Rải lúa cho vịt" if float(a.vit.f) < a6 * 0.6 else "Ra thăm vịt")
-	if t == "ca":
-		return "Kéo lưới bắt cá" if float(a.ca.g) >= Xf else ("Rải cám cho cá" if float(a.ca.f) < n6 * 0.6 else "Ra thăm ao")
 	if t == "meo":
 		return "Vuốt ve" if int(a.meo.fd) == _vr() else "Cho mèo ăn"
-	if t == "chim":
-		return "Nghe chim hót" if int(a.chim.fd) == _vr() else "Cho chim ăn"
 	return "Đi tới"
 
 func tk(t: String) -> Variant:   # tK: chữ nổi khi chạm con vật ({b, s} hoặc null)
 	var a := cc()
 	if t == "vit":
 		return {"b": "Đàn vịt · " + str(a.vit.n) + " con", "s": (("Có " + str(a.vit.e) + " trứng vịt, chạm để lượm. ") if _tr(a.vit.e) else "") + ("Vịt đói, chạm để rải lúa." if float(a.vit.f) < a6 * 0.6 else "Vịt đang no.")}
-	if t == "ca":
-		return {"b": "Cá nuôi · " + str(a.ca.n) + " con", "s": "Lớn " + str(_rnd(float(a.ca.g) / Xf * 100.0)) + "%. " + ("Chạm để kéo lưới." if float(a.ca.g) >= Xf else ("Chạm để rải cám (bột)." if float(a.ca.f) < n6 * 0.6 else "Cá đang no."))}
 	if t == "meo":
 		return {"b": "Mèo Mướp", "s": "Đã ăn hôm nay. Chạm để vuốt ve." if int(a.meo.fd) == _vr() else "Đói rồi, chạm để cho ăn 1 con cá nhỏ."}
-	if t == "chim":
-		return {"b": "Chào mào · giọng " + str(a.chim.gi) + "/10", "s": "Đã ăn hôm nay." if int(a.chim.fd) == _vr() else "Chạm để cho ăn chuối hoặc ớt."}
 	return null
 
 # ------------------------------------------------------------------ chỗ thả vịt, cá
@@ -1272,13 +1190,14 @@ func w2(t: String) -> Variant:   # w2: vùng nước của đàn (t: ô, set, ba
 	return e
 
 func wg(t: String, a: bool, n = null) -> void:   # wg (+ lớp bọc Jg("vit")): vào chế độ chọn chỗ thả
-	if (t == "vit" or t == "ca") and not _jg("vit"):
+	if t == "vit" and not _jg("vit"):
 		return
 	_g2()
 	yf = {"k": t, "buy": a, "cb": n.get("cb") if n is Dictionary else null,
 		"msg": String(n.get("msg")) if n is Dictionary and _tr(n.get("msg")) else "Chạm vào mặt nước để thả " + ("vịt" if t == "vit" else "cá"),
 		"sub": String(n.get("sub")) if n is Dictionary and _tr(n.get("sub")) else "Ô nước sáng viền vàng là chỗ thả được: ao sen, hồ, sông Vàm, ao tự đào.",
-		"at": (n.get("at") if n is Dictionary else (w2(t).c if w2(t) != null else zt()))}   # camera dời tới at (lớp làng)
+		"at": (n.get("at") if n is Dictionary else (w2(t).c if w2(t) != null else zt())),   # camera dời tới at (lớp làng)
+		"lo": String(n.get("lo", "")) if n is Dictionary else ""}   # (bản 546) loại lờ đang đặt: song_ve tô ô xanh
 	if ui != null:
 		ui.pick_bar()
 
@@ -1314,14 +1233,11 @@ func nk(r: int, o: int) -> void:   # nK (theo ô): chạm mặt nước khi đan
 			return
 		G.g.coins = int(G.g.coins) - h
 		s.at = [r, o]
-		if f == "vit":
-			if WC != null:
-				WC.T_(3)
-		elif WC != null:
-			WC.hN(10)
+		if WC != null:
+			WC.T_(3)
 	else:
 		s.at = [r, o]
-		_ta("Đã lùa " + ("đàn vịt" if f == "vit" else "cá") + " qua " + o6(f) + ".")
+		_ta("Đã lùa đàn vịt qua " + o6(f) + ".")
 	XT = {}
 	f6()
 	_ba()
@@ -1342,7 +1258,7 @@ func ch() -> void:   # CH: ghi chức năng đã dùng từ bản cũ (g.cdOld, 
 			if g.lang.fam[a] is Dictionary and _tr(g.lang.fam[a].get("job")):
 				t.thue = 1
 	var p = g.get("pet")
-	if p is Dictionary and ((p.get("vit") is Dictionary and float(p.vit.get("n", 0)) > 0) or (p.get("ca") is Dictionary and float(p.ca.get("n", 0)) > 0)):
+	if p is Dictionary and (p.get("vit") is Dictionary and float(p.vit.get("n", 0)) > 0):
 		t.vit = 1
 	g.cdOld = t
 	g.cdv = 1
@@ -1394,21 +1310,11 @@ func b6(t: bool) -> void:   # b6 (+ lớp bọc vét mương ra đất sét)
 	ai.st = "end"
 	for o in ai.got:
 		G.g.barn[o] = _barn(String(o)) + int(ai.got[o])
-	var a = G.g.get("pet").get("ca") if G.g.get("pet") is Dictionary else null
-	var n := 0
-	if a is Dictionary and _tr(a.get("n")):
-		var e = r6("ca")
-		if e != null and e[0] >= 2 and e[0] <= 6 and e[1] >= -4 and e[1] <= -2 and float(a.g) >= Xf * 0.5:
-			n = maxi(1, _rnd(float(a.n) * 0.8 * float(a.g) / Xf))
-			G.g.barn.ca_tra = _barn("ca_tra") + n
-			a.n = 0
-			a.g = 0
-			a.f = 0
 	_qi("tatao")
 	_w1(5 + int(ai.n), "tat")
 	_ba()
 	if not t:
-		_xs("Hết giờ! Bắt được " + str(ai.n) + " con" + ((", thêm " + str(n) + " cá tra nuôi trong ao") if n else "") + ". Nướng trui mời bà con xóm hay mang về hết?")
+		_xs("Hết giờ! Bắt được " + str(ai.n) + " con. Nướng trui mời bà con xóm hay mang về hết?")
 		ai.end = true   # hiện nút Nướng trui (ai.n >= 3) và Mang về hết
 	# lớp bọc
 	var k := 1 + int(floor(randf() * 3))
@@ -1521,7 +1427,10 @@ func xk(t) -> Dictionary:   # xk
 			return a
 	return k4[0]
 
+var dbg_wind := false   # hook thử "wind": coi như đang có gió
 func cg() -> bool:   # Cg: đang có gió thả diều
+	if dbg_wind:
+		return true
 	var xi: int = G.season()
 	var w: String = String(G.troi.wx())
 	if w == "":
@@ -1655,7 +1564,6 @@ func step(t: float, offline: bool) -> void:
 	l6 = maxf(0.0, l6 - t)   # KQ
 	c6 = maxf(0.0, c6 - t)
 	qi_hap = maxf(0.0, qi_hap - t)   # ZQ
-	rh_sing = maxf(0.0, rh_sing - t)
 	if _wq_t > 0.0:
 		_wq_t -= t
 		if _wq_t <= 0.0 and _wq_msg != "":

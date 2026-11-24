@@ -28,7 +28,7 @@ func _loauto() -> void:
 	var bd := 1e9
 	for x in range(int(G.ppos.x) - 25, int(G.ppos.x) + 25):
 		for y in range(int(G.ppos.y) - 25, int(G.ppos.y) + 25):
-			if W._p0(x, y) and W._ci(W._fo(x, y)) and W.gs(String(W.yf.k) if W.yf != null and false else "lo", x, y) == "":
+			if W._p0(x, y) and W._ci(W._fo(x, y)) and (W.yf == null or String(W.yf.get("lo", "")) == "" or W.lo_why(String(W.yf.lo), x, y) == ""):
 				var d := Vector2(x - G.ppos.x, y - G.ppos.y).length()
 				if d < bd:
 					bd = d
@@ -262,8 +262,15 @@ func _test_hook() -> void:
 			"ccc": if ui.ccp.game != null: ui.ccp.game.caught(preload("res://logic/cc/cc_data.gd").fish(String(a[1])), float(a[2]))   # (bản 540) thử: câu được 1 con
 			"ccd": push_error("QKDEX " + JSON.stringify(G.g.get("fish", {}).get("dex", {})) + " CC " + JSON.stringify(G.g.get("ccsv", {}).get("dex", {})))
 			"ccq": if ui.ccp.game != null: ui.ccp.game.close_game()   # (bản 540) thử: thoát câu cá
-			"lot": G.g.coins = int(G.g.coins) + 3000; G.w_all.WCA.uu(a[1] if a.size() > 1 else "lo"); G.w_all.WCA.nk_lo(a[1] if a.size() > 1 else "lo")   # (bản 541) thử: mua + bấm Đặt lờ
+			"lot": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 3000; G.w_all.WCA.lo_place(a[1] if a.size() > 1 else "lo")   # (bản 541) thử: mua + bấm Đặt lờ
 			"landall": for k9 in farm.PC.G0: G.g.land[k9] = 1   # thử: mở hết khu đất
+			"camt": var m8 = ui.main; m8.cam = Vector2(farm.en(float(a[1]), float(a[2])), farm.nn(float(a[1]), float(a[2]))) - m8.get_viewport_rect().size / m8.zoom / 2   # thử: camera tới ô
+			"dbg2": push_error("QKD ids " + str(G.lang.objs().map(func(o): return String(o.id)).filter(func(x): return "kho" in x or "nha" in x)) + " meo " + str(farm.song._meo_pos()) + " has " + str(G.w_all.WCA.cc().meo) + " cg " + str(G.w_all.WCA.cg()) + " sea " + str(G.season()) + " wx " + G.troi.wx() + " h " + str(G.w_all.WCA._d0()) + " night " + str(G.night))
+			"wind": G.troi.hh = 15.0; G.w_all.WCA.dbg_wind = true   # thử: chiều có gió chướng
+			"camm": var mp8 = farm.song._meo_pos(); if mp8 != null: ui.main.cam = Vector2(farm.en(mp8.x, mp8.y), farm.nn(mp8.x, mp8.y)) - ui.main.get_viewport_rect().size / ui.main.zoom / 2
+			"dieuq": var d8: Dictionary = G.w_all.WCA.fh(); d8["has"]["sao"] = 1; d8.cur = "sao"; d8.on = 1   # thử: thả diều
+			"meoq": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 2000; G.w_all.WCA.vq("meo"); for f9 in ["ca_ro"]: G.g.barn[f9] = 3   # thử: xin mèo
+			"vitq": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 2000; G.g.barn["lua"] = int(G.g.barn.get("lua", 0)) + 20; G.w_all.WCA.vq("vit")   # thử: mua vịt (vào chọn chỗ)
 			"loauto": _loauto()   # thử: tự tìm ô nước sát bờ gần nhất rồi chạm
 			"lost": push_error("QKST " + JSON.stringify(G.w_all.WCA.t1()["set"]) + " pick " + JSON.stringify(farm.pick(farm.screen_to_world(Vector2(float(a[1]), float(a[2])) * ui.main.dpr))) if a.size() > 2 else "")
 			"lord": _lord()   # thử: lờ có cá liền, camera tới lờ đầu tiên

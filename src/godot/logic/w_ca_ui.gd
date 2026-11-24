@@ -1,7 +1,7 @@
 extends "res://logic/w_ui_base.gd"
 # Giao diện lờ lọp, thú cưng, tát ao, thả diều: chép nội dung và nút từ bản web.
 #  - (bản 527) tab Câu cá cũ đã bỏ: câu cá = minigame logic/cc (ui_cc.gd).
-#  - tab Nuôi thêm (QQ + nút data-pet của GV), tab Diều (zh "dieu"), tab Lờ lọp (zh "lo") trong bảng nhân vật.
+#  - tab Nuôi thêm (QQ + nút data-pet của GV), tab Diều (zh "dieu"), trong bảng nhân vật. (bản 546) Lờ lọp + đàn vịt qua Xây dựng › Mặt nước.
 #  - thanh chọn chỗ thả .visitbar.pickbar (wg / f6).
 #  - bảng Tát ao bắt cá (y4: #tMsg, #tBag, nút data-trui / data-tve) và Thi diều (dU: #kMsg, nút Kéo dây data-kp / Xong data-kd).
 # Khung canvas (SX, _K, gU) là phần vẽ: ở đây chỉ chừa chỗ (Control) và nhận chạm; lớp vẽ đọc R.ai / R.zi.
@@ -126,15 +126,7 @@ static func _clear(n: Node) -> void:
 		n.remove_child(c)
 		c.queue_free()
 
-# ------------------------------------------------------------------ bảng nhân vật: tab Nuôi thêm, Diều, Lờ lọp
-func tab_name(id: String) -> String:   # zh[].n()
-	if id == "dieu":
-		return "Diều"
-	if id == "lo":
-		var t: int = R.ready_n()
-		return "Lờ lọp" + ((" (" + str(t) + ")") if t else "")
-	return "Nuôi thêm"
-
+# ------------------------------------------------------------------ bảng nhân vật: tab Nuôi thêm, Diều
 func _ec() -> void:
 	var f := _x("ec")
 	if f.is_valid():
@@ -142,52 +134,8 @@ func _ec() -> void:
 
 func tab_body(id: String) -> Control:   # QQ / zh["dieu"].html / zh["lo"].html (+ click)
 	match id:
-		"nuoi": return _qq()
 		"dieu": return _dieu()
-		"lo": return _lo()
 	return Control.new()
-
-func _qq() -> Control:   # QQ + GV (data-pet)
-	var t: Dictionary = R.cc()
-	var a: Dictionary = t.vit
-	var n: Dictionary = t.ca
-	var e: Dictionary = t.meo
-	var r: Dictionary = t.chim
-	var o: int = G.day()
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", int(_k(8)))
-	v.add_child(_note("Nuôi thêm quanh nhà. Chạm vào con vật trên cảnh để nhân vật ra cho ăn, thu sản phẩm."))
-	var pet := func(k: String) -> void:
-		if k == "thi":
-			R.dq()
-		else:
-			R.vq(k)
-		_ec()
-	var nv := int(a.n)
-	var vb := []
-	if nv < R.t6:
-		vb.append(_btn(("Thêm 3 con" if nv else "Mua 3 con, chọn chỗ thả") + " · " + G.fmt_n(R.Nh.vit), false, R.e6(), pet.bind("vit")))
-	if nv:
-		vb.append(_btn("Đổi chỗ thả", false, true, pet.bind("mvit")))
-	v.add_child(_tt("Đàn vịt" + ((" · " + str(nv) + " con · thả ở " + R.o6("vit")) if nv else ""),
-		("Đói/no: " + (("còn no " + str(int(ceil(float(a.f) / 60.0))) + " phút") if float(a.f) > 0 else "đang đói") + " · trứng chờ lấy: " + str(a.e) + ". Cho ăn bằng lúa, mỗi con 150 giây đẻ 1 trứng.") if nv else ("Thả đàn vịt xuống ao, hồ hay sông tùy bạn chọn, cho ăn lúa thì đẻ trứng vịt. 3 con " + G.fmt_n(R.Nh.vit) + " xu (tối đa " + str(R.t6) + ")."),
-		[_jobs(vb)]))
-	var nc := int(n.n)
-	v.add_child(_tt("Cá nuôi" + ((" · " + str(nc) + " con · thả ở " + R.o6("ca")) if nc else ""),
-		("Lớn " + str(R._rnd(float(n.g) / R.Xf * 100.0)) + "% · " + ("đang no" if float(n.f) > 0 else "đang đói, cần cám") + ". Lớn đủ thì chạm ao để kéo lưới lấy cá tra.") if nc else ("Thả cá giống xuống ao, hồ hay sông tùy bạn chọn, rải cám (bột) cho ăn, khoảng 15 phút được cá tra. 10 con " + G.fmt_n(R.Nh.ca) + " xu."),
-		[_btn("Đổi chỗ thả", false, true, pet.bind("mca"))] if nc else [_btn("Chọn chỗ, thả 10 con · " + G.fmt_n(R.Nh.ca), false, R.e6(), pet.bind("ca"))]))
-	var mh: bool = R._tr(e["has"])
-	v.add_child(_tt("Mèo mướp" + ((" · thân " + str(int(e.get("tim", 0))) + "/10") if mh else ""),
-		(("Hôm nay đã ăn." if int(e.fd) == o else "Chưa cho ăn hôm nay (1 cá nhỏ).") + " Cho ăn hôm nay thì sáng mai Mướp tha quà về. Vuốt ve mỗi tiếng +8 sức.") if mh else ("Mèo canh nhà, cho ăn cá mỗi ngày thì sáng ra tha quà về. " + G.fmt_n(R.Nh.meo) + " xu."),
-		[] if mh else [_btn("Xin mèo · " + G.fmt_n(R.Nh.meo), false, true, pet.bind("meo"))]))
-	var ch: bool = R._tr(r["has"])
-	var thi := int(r.gi) >= 3 and int(r.cd) != o
-	v.add_child(_tt("Chào mào" + ((" · giọng " + str(r.gi) + "/10") if ch else ""),
-		(("Hôm nay đã ăn." if int(r.fd) == o else "Chưa cho ăn hôm nay (chuối hoặc ớt).") + " Mỗi ngày ăn đủ thì giọng hót lên 1. Giọng từ 3 trở lên đem đi thi mỗi ngày một lần.") if ch else ("Lồng chim treo hiên, sáng sáng hót líu lo. Mở ở cấp 4, " + G.fmt_n(R.Nh.chim) + " xu."),
-		[_btn("Đã thi hôm nay" if int(r.cd) == o else "Đi thi hót", thi, thi, pet.bind("thi"))] if ch else [_btn("Mua · " + G.fmt_n(R.Nh.chim), false, G.lv() >= 4, pet.bind("chim"))]))
-	if not R.e6():
-		v.add_child(_note("Vịt và cá cần mặt nước trong đất của bạn: ao sen, hồ, sông Vàm hoặc ao tự đào."))
-	return v
 
 func _dieu() -> Control:   # zh "dieu": html + click
 	var t: Dictionary = R.fh()
@@ -215,44 +163,6 @@ func _dieu() -> Control:   # zh "dieu": html + click
 	var b2 := _btn("Mai thi tiếp" if int(t.td) == G.day() else "Thi diều với tụi nhỏ", false, has_cur and int(t.td) != G.day(), func() -> void:   # data-kcon
 		R.du())
 	v.add_child(_jobs([b1, b2]))
-	return v
-
-func _lo() -> Control:   # zh "lo": html + click
-	var t: Dictionary = R.t1()
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", int(_k(8)))
-	v.add_child(_note("Mua lờ, lọp, dây câu rồi đặt dưới mương, ao, sông. Để một lúc cá vô, ra thăm lấy cá. Đặt ban đêm, thăm ban đêm được nhiều hơn. Thỉnh thoảng rái cá vô ăn mất. Đã thăm " + str(int(t.n)) + " lần."))
-	for n in R.FS:
-		var e: Dictionary = R.ns[n]
-		var r: int = R.jd(n)
-		var o: int = R.qk(n)
-		var bait = e.get("bait")
-		var key: String = n
-		var buy := _btn("Mua · " + G.fmt_n(int(e.xu)), false, r < int(e.max), func() -> void:   # data-lob
-			R.uu(key)
-			_ec())
-		var put := _btn("Đặt", true, o < r, func() -> void:   # data-lop
-			R.nk_lo(key))
-		v.add_child(_tt(String(e.n) + " · có " + str(r) + "/" + str(e.max) + " · đang đặt " + str(o),
-			String(e.d) + " Thăm mỗi " + str(R._rnd(float(e.ms) / 6e4)) + " phút" + ((", mồi " + str(int(bait[1])) + " " + G.item_name(String(bait[0])).to_lower() + " (kho còn " + str(int(G.g.barn.get(bait[0], 0))) + ")") if bait != null else "") + ".",
-			[buy, put]))
-	if t["set"].size():
-		v.add_child(_sec("Đang đặt", "Chạm Thăm để nhân vật lội ra lấy cá."))
-		for n in t["set"]:
-			var e: Dictionary = R.ns[n.t]
-			var r: bool = R.w4(n)
-			var key: String = R.bk(n)
-			var visit := _btn("Thăm", r, r, func() -> void:   # data-loh
-				var g2 := _x("g2")
-				if g2.is_valid():
-					g2.call()
-				var ns_ := _x("Ns")
-				if ns_.is_valid():
-					ns_.call({"type": "lo", "key": key}))
-			var rm := _btn("Gỡ", false, true, func() -> void:   # data-lor
-				R.sr(key)
-				_ec())
-			v.add_child(_tt(String(e.n), ("Có cá rồi" if r else "Còn " + str(int(ceil(R.l6_ms(n) / 6e4))) + " phút") + (" · không mồi" if e.get("bait") != null and not R._tr(n.get("b")) else "") + " · dùng thêm " + str(int(e.use) - int(n.u)) + " lần", [visit, rm], r))
 	return v
 
 # ------------------------------------------------------------------ thanh chọn chỗ thả (Ud)
@@ -319,9 +229,6 @@ func tat_open() -> void:   # y4: dựng .raceov "Tát ao bắt cá"
 	_t.end = false
 	tat_draw()
 
-func tat_area() -> Control:   # khung vẽ tát ao (lớp vẽ _K đọc R.ai)
-	return _t.get("area") if tat != null else null
-
 func tat_draw() -> void:   # xS + jN + nút kết thúc
 	if tat == null or R.ai == null:
 		return
@@ -381,23 +288,12 @@ func kite_open() -> void:   # dU: dựng .raceov "Thi diều"
 	_kt.btn = b
 	kite_draw()
 
-func kite_area() -> Control:   # khung vẽ thi diều (lớp vẽ gU đọc R.zi)
-	return _kt.get("area") if kite != null else null
-
 func kite_draw() -> void:   # #kMsg, nút Xong
 	if kite == null or R.zi == null:
 		return
 	_kt.msg.text = String(R.zi.msg)
 	if R._tr(R.zi.get("done")):
 		_kt.btn.text = "Xong"
-
-func kite_key(e) -> void:   # wk: phím cách giữ / thả, Esc đóng
-	if R.zi == null or not (e is InputEventKey):
-		return
-	if e.keycode == KEY_SPACE:
-		R.kite_hold(e.pressed)
-	elif e.keycode == KEY_ESCAPE and e.pressed:
-		R.as_close()
 
 func kite_close() -> void:   # zi.ov.remove()
 	if kite != null:

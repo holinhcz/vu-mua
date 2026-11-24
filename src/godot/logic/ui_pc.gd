@@ -7,12 +7,13 @@ extends "res://logic/ui_ls.gd"
 #     trái Nón / Áo / Quần / Dép (đồ mặc, chưa có), phải Bình tưới / Liềm / Cuốc / Gùi (đồ nghề cấp 0-3);
 #     hàng dưới Xe đạp / Xuồng ba lá / Bùa / Bùa EXP. Chạm ô: chi tiết + nút Sắm / Nâng / Mở túi.
 #     Dưới: cấp, kinh nghiệm, sức (+ ăn hồi sức), chỉ số (tốc độ đi, việc đã làm), Về nhà ngủ.
-#   Tab Nuôi thêm, Diều, Lờ lọp: thân của w_ca_ui (tab_body).
+#   (bản 546) chỉ còn tab Nhân vật; bảng Diều (thân w_ca_ui) mở riêng qua open_solo("dieu").
 
 const KDD := "kdd"
 # (Link 11-23 "bỏ câu cũ đi"): tab Câu cá cũ bỏ, câu cá giờ là minigame Câu Cá Bờ Kênh (Menu > Giải trí, ui_cc.gd)
-const TABS := [["nv", "Nhân vật"], ["nuoi", "Nuôi thêm"], ["dieu", "Diều"], ["lo", "Lờ lọp"]]
-const WTABS := ["nuoi", "dieu", "lo"]
+# (bản 546) lờ lọp + đàn vịt qua Xây dựng › Mặt nước, mèo qua Xây dựng › Chuồng, Diều mở riêng từ nút viên lúc có gió
+const TABS := [["nv", "Nhân vật"]]
+const WTABS := ["dieu"]
 const LEFT := ["non", "ao", "quan", "dep"]
 const RIGHT := ["binh", "liem", "cuoc", "gui"]
 const BOT := ["xe", "xuong", "bua", "xp"]
@@ -28,12 +29,26 @@ func _init(ui) -> void:
 	super(ui)
 	K = Snap.load_snap(KDD)
 
+var solo := ""   # (bản 546) mở riêng 1 bảng (Diều từ nút viên "Có gió chướng"): chỉ 1 tab
+func open_solo(t: String) -> void:
+	solo = t
+	tab = t
+	U.close_all()
+	U.kho_close()
+	on = true
+	scroll = 0.0
+	sig = ""
+	_build()
+
 func open(t := "") -> void:
 	if t == "cau":   # câu cũ đã bỏ: mở minigame câu cá
 		U.ccp.open()
 		return
+	solo = ""
 	if t != "":
 		tab = t
+	if WTABS.has(tab) and solo == "":
+		tab = "nv"
 	U.close_all()
 	U.kho_close()
 	on = true
@@ -71,7 +86,7 @@ func _tab_go(k: String) -> void:
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
-	var L := TABS.map(func(x): return [x[0], x[1], false])
+	var L := [[solo, {"dieu": "Diều"}.get(solo, solo), false]] if solo != "" else TABS.map(func(x): return [x[0], x[1], false])
 	var blocks: Array
 	if WTABS.has(tab) and G.w_all != null and G.w_all.WCAU != null:
 		wc = G.w_all.WCAU.tab_body(tab)

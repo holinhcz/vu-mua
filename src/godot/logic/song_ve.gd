@@ -5,7 +5,8 @@ extends RefCounted
 #     lớn trôi chậm, nước nổi trôi nhanh); chạm vớt (khúc sông đã mua); tới cuối sông thì mờ đi, cụm mới trôi vô từ đầu trên
 #   - bãi bùn lúc nước ròng (w_xuong.v6): mảng bùn ở mép nước, có món để mò; chạm đi tới mò
 #   - (bản 541) lờ tre / lọp lươn / giăng câu đang đặt (g.lo.set, w_ca): vẽ nét ở ô nước; có cá thì gợn nước + chấm vàng;
-#     chạm -> nhân vật ra bờ thăm (w_ca.rk)
+#     (bản 546) chạm -> vòng nút Thăm / Gỡ (rm_don); đàn vịt bơi trong vùng nước, chạm -> ra bờ cho ăn / lấy trứng;
+#     đang chọn chỗ đặt lờ / thả vịt (w_ca.yf) thì tô xanh ô đặt được; mèo mướp ngồi trước Kho; diều đang thả bay trên đầu
 #   - cá búng mặt nước: sông, kênh, ao trên màn thỉnh thoảng có cá búng lên, nước bắn, vòng gợn loang (mưa nhiều, đêm ít)
 
 const BongNuoc = preload("res://logic/bong_nuoc.gd")
@@ -82,6 +83,12 @@ func step(dt: float) -> void:
 		_t1 = 1.0
 		_bush_sync()
 		_lo_sync()
+		_vit_sync()
+		_meo_sync()
+	if meo != null and is_instance_valid(meo):
+		meo.hap = float(G.w_all.WCA.qi_hap)
+	_kite_step()
+	_pick_sync()
 	_float_step(dt)
 	fx.step(dt)
 
@@ -125,6 +132,7 @@ func _lo_sync() -> void:
 		var n = lo.get(k)
 		if n == null or not is_instance_valid(n):
 			n = LoNode.new()
+			n.gf = Callable(get_script(), "gear")
 			n.kind = String(a.t)
 			n.seed = float(int(a.gx) * 13 + int(a.gy) * 7)
 			n.position = Vector2(F.en(float(a.gx) + 0.5, float(a.gy) + 0.5), F.nn(float(a.gx) + 0.5, float(a.gy) + 0.5))
@@ -143,57 +151,379 @@ class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô
 	var night := false
 	var seed := 0.0
 	var t := 0.0
+	var gf := Callable()   # song_ve.gear (hàm tĩnh của lớp ngoài)
 	func _process(dt: float) -> void:
 		t += dt
 		queue_redraw()
 	func _draw() -> void:
-		var dk := 0.62 if night else 1.0
-		var tre := Color(.78, .62, .36) * dk
-		var tre2 := Color(.55, .40, .20) * dk
-		var nuoc := Color(1, 1, 1, .35 * dk)
-		var bob := sin(t * 1.6 + seed) * .6
-		match kind:
-			"lo":   # lờ tre: ống đan nằm nghiêng nửa chìm, miệng loe, 2 cọc giữ
-				for x in [-9.0, 9.0]:
-					draw_line(Vector2(x, 2), Vector2(x + 1, -11), tre2, 1.6, true)
-				var c := Vector2(0, -2 + bob)
-				var P := PackedVector2Array()
-				for i in 17:
-					var a := PI + PI * i / 16.0
-					P.append(c + Vector2(cos(a) * 10.0, sin(a) * 5.0))
-				P.append(c + Vector2(10, 0))
-				draw_colored_polygon(P, tre)
-				for i in 5:   # nan đan
-					var x := -8.0 + i * 4.0
-					draw_line(c + Vector2(x, 0), c + Vector2(x + 1.5, -4.0 + absf(x) * .12), tre2, .8, true)
-				draw_line(c + Vector2(-10, 0), c + Vector2(10, 0), tre2, .9, true)
-				draw_arc(c + Vector2(-10, -1.5), 2.6, -PI * .5, PI * .5, 8, tre2, 1.2, true)   # miệng lờ
-			"lop":   # lọp lươn: ống tre cắm xiên, có đốt, nhô khỏi nước
-				var b := Vector2(-2, 1 + bob * .5)
-				var tp := b + Vector2(5, -15)
-				draw_line(b, tp, tre2, 4.2, true)
-				draw_line(b, tp, tre, 3.0, true)
-				for f in [.35, .7]:
-					var q: Vector2 = b.lerp(tp, f)
-					draw_line(q + Vector2(-2, 0), q + Vector2(2, 0), tre2, 1.0, true)
-				draw_circle(tp, 1.4, tre2)
-			"giang":   # giăng câu: 2 cọc tre, dây căng, 3 phao trắng đỏ nhấp nhô
-				var A := Vector2(-13, 3)
-				var B := Vector2(13, -3)
-				draw_line(A, A + Vector2(0, -12), tre2, 1.8, true)
-				draw_line(B, B + Vector2(0, -12), tre2, 1.8, true)
-				draw_line(A + Vector2(0, -9), B + Vector2(0, -9), Color(.9, .88, .8, .7) * dk, .7, true)
-				for i in 3:
-					var q := A.lerp(B, (i + 1) / 4.0) + Vector2(0, -1 + sin(t * 2.2 + seed + i * 1.3) * .8)
-					draw_circle(q, 1.7, Color(.95, .95, .92) * dk)
-					draw_circle(q + Vector2(0, -1.0), 1.0, Color(.85, .2, .15) * dk)
-		if kind != "giang":   # vòng nước quanh chân
-			draw_arc(Vector2(0, 2), 11.0, 0, TAU, 24, nuoc, .8, true)
-		if has_fish:   # có cá: gợn nước loang + chấm vàng nhấp nháy
+		gf.call(self, kind, Vector2.ZERO, 1.0, t, seed, night)
+		if has_fish:   # có cá: gợn nước loang + chấm vàng nhấp nháy (cao, khỏi bị bụi hoa che)
 			var r := fmod(t * .9, 1.0)
 			draw_arc(Vector2(0, 2), 6.0 + r * 10.0, 0, TAU, 24, Color(1, 1, 1, (1.0 - r) * .7), 1.0, true)
-			draw_circle(Vector2(0, -20 + sin(t * 3.0) * 1.5), 3.2, Color(1, .82, .2, .95))
-			draw_circle(Vector2(0, -20 + sin(t * 3.0) * 1.5), 1.4, Color(1, 1, 1, .95))
+			var q := Vector2(0, -30 + sin(t * 3.0) * 1.5)
+			draw_circle(q, 4.2, Color(.55, .35, .1, .9))
+			draw_circle(q, 3.4, Color(1, .82, .2, .97))
+			draw_circle(q, 1.5, Color(1, 1, 1, .95))
+
+# hình lờ / lọp / giăng / vịt vẽ bằng nét (chưa có ảnh), dùng chung cho mặt nước và thẻ Xây dựng: c = giữa ô, s = tỉ lệ
+static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, seed := 0.0, night := false) -> void:
+	var dk := 0.62 if night else 1.0
+	var tre := Color(.78, .62, .36) * dk
+	var tre2 := Color(.55, .40, .20) * dk
+	tre.a = 1.0
+	tre2.a = 1.0
+	var bob := sin(t * 1.6 + seed) * .6
+	var P := func(v: Vector2) -> Vector2: return c0 + v * s
+	match kind:
+		"lo":   # lờ tre: ống đan nằm nghiêng nửa chìm, miệng loe, 2 cọc giữ
+			for x in [-9.0, 9.0]:
+				ci.draw_line(P.call(Vector2(x, 2)), P.call(Vector2(x + 1, -11)), tre2, 1.6 * s, true)
+			var c := Vector2(0, -2 + bob)
+			var Q := PackedVector2Array()
+			for i in 17:
+				var a := PI + PI * i / 16.0
+				Q.append(P.call(c + Vector2(cos(a) * 10.0, sin(a) * 5.0)))
+			ci.draw_colored_polygon(Q, tre)
+			for i in 5:   # nan đan
+				var x := -8.0 + i * 4.0
+				ci.draw_line(P.call(c + Vector2(x, 0)), P.call(c + Vector2(x + 1.5, -4.0 + absf(x) * .12)), tre2, .8 * s, true)
+			ci.draw_line(P.call(c + Vector2(-10, 0)), P.call(c + Vector2(10, 0)), tre2, .9 * s, true)
+			ci.draw_arc(P.call(c + Vector2(-10, -1.5)), 2.6 * s, -PI * .5, PI * .5, 8, tre2, 1.2 * s, true)   # miệng lờ
+		"lop":   # lọp lươn: ống tre cắm xiên, có đốt, nhô khỏi nước
+			var b := Vector2(-2, 1 + bob * .5)
+			var tp := b + Vector2(5, -15)
+			ci.draw_line(P.call(b), P.call(tp), tre2, 4.2 * s, true)
+			ci.draw_line(P.call(b), P.call(tp), tre, 3.0 * s, true)
+			for f in [.35, .7]:
+				var q: Vector2 = b.lerp(tp, f)
+				ci.draw_line(P.call(q + Vector2(-2, 0)), P.call(q + Vector2(2, 0)), tre2, 1.0 * s, true)
+			ci.draw_circle(P.call(tp), 1.4 * s, tre2)
+		"giang":   # giăng câu: 2 cọc tre, dây căng, 3 phao trắng đỏ nhấp nhô
+			var A := Vector2(-13, 3)
+			var B := Vector2(13, -3)
+			ci.draw_line(P.call(A), P.call(A + Vector2(0, -12)), tre2, 1.8 * s, true)
+			ci.draw_line(P.call(B), P.call(B + Vector2(0, -12)), tre2, 1.8 * s, true)
+			ci.draw_line(P.call(A + Vector2(0, -9)), P.call(B + Vector2(0, -9)), Color(.9 * dk, .88 * dk, .8 * dk, .7), .7 * s, true)
+			for i in 3:
+				var q := A.lerp(B, (i + 1) / 4.0) + Vector2(0, -1 + sin(t * 2.2 + seed + i * 1.3) * .8)
+				ci.draw_circle(P.call(q), 1.7 * s, Color(.95 * dk, .95 * dk, .92 * dk))
+				ci.draw_circle(P.call(q + Vector2(0, -1.0)), 1.0 * s, Color(.85 * dk, .2 * dk, .15 * dk))
+		"meo":   # thẻ Xây dựng
+			cat(ci, c0 + Vector2(0, 6) * s, s * 1.5, 0.0, night)
+		"vit":   # 3 con vịt cho thẻ
+			for q in [[Vector2(-8, 2), 1.0], [Vector2(6, -2), -1.0], [Vector2(9, 5), 1.0]]:
+				duck(ci, c0 + q[0] * s, s, q[1], t + q[0].x, night)
+	if kind in ["lo", "lop"]:   # vòng nước quanh chân
+		ci.draw_arc(c0 + Vector2(0, 2) * s, 11.0 * s, 0, TAU, 24, Color(1, 1, 1, .35 * dk), .8 * s, true)
+
+static func duck(ci: CanvasItem, p: Vector2, s: float, dir: float, t := 0.0, night := false) -> void:   # vịt bơi: thân trắng, đầu, mỏ cam, gợn nước
+	var dk := 0.62 if night else 1.0
+	var w := Color(.97 * dk, .96 * dk, .92 * dk)
+	var sh := Color(.78 * dk, .76 * dk, .7 * dk)
+	var bob := sin(t * 2.4) * .4 * s
+	ci.draw_arc(p + Vector2(0, 1.2 * s), 5.5 * s, 0, TAU, 18, Color(1, 1, 1, .3 * dk), .7 * s, true)
+	var B := PackedVector2Array()
+	for i in 14:
+		var a := TAU * i / 14.0
+		B.append(p + Vector2(cos(a) * 4.2 * s, sin(a) * 2.2 * s + bob - 1.0 * s))
+	ci.draw_colored_polygon(B, sh)
+	var B2 := PackedVector2Array()
+	for i in 14:
+		var a := TAU * i / 14.0
+		B2.append(p + Vector2(cos(a) * 3.8 * s, sin(a) * 1.8 * s + bob - 1.4 * s))
+	ci.draw_colored_polygon(B2, w)
+	ci.draw_line(p + Vector2(-3.6 * dir, -1.6) * s + Vector2(0, bob), p + Vector2(-5.0 * dir, -3.0) * s + Vector2(0, bob), w, 1.2 * s, true)   # đuôi
+	var h := p + Vector2(3.0 * dir, -4.4) * s + Vector2(0, bob)
+	ci.draw_line(p + Vector2(2.4 * dir, -2.0) * s + Vector2(0, bob), h, w, 1.8 * s, true)   # cổ
+	ci.draw_circle(h, 1.6 * s, w)
+	ci.draw_line(h + Vector2(1.2 * dir, .2) * s, h + Vector2(3.0 * dir, .5) * s, Color(.95 * dk, .55 * dk, .1 * dk), 1.0 * s, true)   # mỏ
+	ci.draw_circle(h + Vector2(.5 * dir, -.4) * s, .35 * s, Color(.1, .1, .1))
+
+# ------------------------------------------------------------------ (bản 546) đàn vịt thả nước (g.pet.vit, w_ca: w2 vùng nước, xx chạm)
+var vit: VitNode = null
+func _vit_sync() -> void:
+	var W = G.w_all.WCA
+	var v: Dictionary = W.cc().vit
+	var z = W.w2("vit") if int(v.n) > 0 else null
+	if z == null:
+		if vit != null:
+			_unsort(vit)
+			vit = null
+		return
+	if vit == null or not is_instance_valid(vit):
+		vit = VitNode.new()
+		vit.F = F
+		vit.df = Callable(get_script(), "duck")
+		_sorted(vit)
+	vit.zone = z
+	vit.n = mini(8, int(v.n))
+	vit.egg = int(v.e)
+	vit.night = G.night
+	var c: Vector2 = Vector2(F.en(float(z.c[0]), float(z.c[1])), F.nn(float(z.c[0]), float(z.c[1])))
+	if vit.position != c:
+		vit.position = c
+
+class VitNode extends Node2D:   # gốc = tâm vùng nước; vịt bơi lòng vòng trong các ô của vùng
+	var F
+	var zone := {}
+	var n := 0
+	var egg := 0
+	var night := false
+	var t := 0.0
+	var D := []   # {p (đơn vị ô), to, dir}
+	var df := Callable()   # song_ve.duck
+	func _tile_pt() -> Vector2:
+		var T: Array = zone.get("t", [])
+		if T.is_empty():
+			return Vector2(zone.c[0], zone.c[1])
+		var q: Array = T[randi() % T.size()]
+		return Vector2(float(q[0]) + randf_range(.25, .75), float(q[1]) + randf_range(.25, .75))
+	func _process(dt: float) -> void:
+		t += dt
+		while D.size() < n:
+			var p := _tile_pt()
+			D.append({"p": p, "to": _tile_pt(), "dir": 1.0})
+		while D.size() > n:
+			D.pop_back()
+		for d in D:
+			var v: Vector2 = d.to - d.p
+			if v.length() < .05:
+				d.to = _tile_pt()
+			else:
+				var m := v.normalized() * minf(v.length(), dt * .18)
+				d.p += m
+				var sx: float = m.x - m.y   # en(x, y) tăng theo x - y
+				if absf(sx) > .001:
+					d.dir = signf(sx)
+		queue_redraw()
+	func pts() -> Array:   # chỗ từng con (toạ độ làng)
+		var o := []
+		for d in D:
+			o.append(Vector2(F.en(d.p.x, d.p.y), F.nn(d.p.x, d.p.y)))
+		return o
+	func _draw() -> void:
+		var i := 0
+		for q in pts():
+			df.call(self, q - position, 1.4, float(D[i].dir), t + i * 1.7, night)
+			i += 1
+		if egg > 0:   # trứng chờ lấy: bong bóng trứng trên tâm đàn
+			var b := Vector2(0, -26 + sin(t * 2.0) * 1.2)
+			draw_circle(b, 6.0, Color(1, .98, .9, .95))
+			draw_arc(b, 6.0, 0, TAU, 20, Color(.55, .4, .2, .8), 1.0, true)
+			var E := PackedVector2Array()
+			for k in 12:
+				var a := TAU * k / 12.0
+				E.append(b + Vector2(cos(a) * 2.4, sin(a) * 3.1 - .3))
+			draw_colored_polygon(E, Color(.85, .9, .78))
+
+# ------------------------------------------------------------------ (bản 546) mèo mướp (g.pet.meo, w_ca: gq chạm, wq quà sáng): ngồi trước Kho
+var meo: MeoNode = null
+func _meo_pos() -> Variant:   # trước hiên Kho hàng (món "kho" trong làng), không có thì trước cửa nhà
+	var L = G.lang
+	for o in L.objs():
+		if String(o.id) == "kho" or String(o.id) == "kho2":
+			var tp: Dictionary = L.Pi[o.id]
+			return Vector2(float(o.gx) + float(tp.fw) * .5 + .9, float(o.gy) + float(tp.fd) + .35)
+	return Vector2(5.0, 6.7)   # không có Kho hàng: trước cửa nhà (chỗ về ngủ 4,6)
+func _meo_sync() -> void:
+	var m: Dictionary = G.w_all.WCA.cc().meo
+	var p = _meo_pos() if G.w_all.WCA._tr(m.get("has")) else null
+	if p == null:
+		if meo != null:
+			_unsort(meo)
+			meo = null
+		return
+	if meo == null or not is_instance_valid(meo):
+		meo = MeoNode.new()
+		meo.cf = Callable(get_script(), "cat")
+		_sorted(meo)
+	var q := Vector2(F.en(p.x, p.y), F.nn(p.x, p.y))
+	if meo.position != q:
+		meo.position = q
+	meo.tl = p
+	meo.hungry = int(m.get("fd", -1)) != int(G.w_all.WCA._vr())
+	meo.night = G.night
+	meo.hap = float(G.w_all.WCA.qi_hap)
+
+class MeoNode extends Node2D:   # mèo mướp ngồi, đuôi ve vẩy; đói thì kêu (bong bóng cá), vui thì tim
+	var tl := Vector2.ZERO
+	var hungry := false
+	var night := false
+	var hap := 0.0
+	var t := 0.0
+	func _process(dt: float) -> void:
+		t += dt
+		queue_redraw()
+	var cf := Callable()   # song_ve.cat
+	func _draw() -> void:
+		cf.call(self, Vector2.ZERO, 1.6, t, night, hungry, hap)
+
+static func cat(ci: CanvasItem, p0: Vector2, s: float, t := 0.0, night := false, hungry := false, hap := 0.0) -> void:   # mèo ngồi (gốc = chân)
+	ci.draw_set_transform(p0, 0.0, Vector2(s, s))
+	var dk := 0.62 if night else 1.0
+	var o := Color(.92 * dk, .6 * dk, .26 * dk)
+	var o2 := Color(.74 * dk, .42 * dk, .14 * dk)
+	var w := Color(.98 * dk, .94 * dk, .86 * dk)
+	var B := PackedVector2Array()   # bóng
+	for i in 14:
+		var a := TAU * i / 14.0
+		B.append(Vector2(cos(a) * 6.0, sin(a) * 2.2 + .5))
+	ci.draw_colored_polygon(B, Color(0, 0, 0, .18))
+	var sw := sin(t * 2.2) * .5   # đuôi
+	ci.draw_polyline(PackedVector2Array([Vector2(3.5, -1.5), Vector2(7.0, -3.0 + sw), Vector2(8.0 + sw, -7.0 + sw * 2.0)]), o2, 1.6, true)
+	var Bd := PackedVector2Array()   # thân ngồi
+	for i in 16:
+		var a := TAU * i / 16.0
+		Bd.append(Vector2(cos(a) * 4.4, sin(a) * 4.6 - 4.4))
+	ci.draw_colored_polygon(Bd, o)
+	for k in 3:   # vằn
+		ci.draw_line(Vector2(-3.4 + k * 0.4, -6.5 + k * 2.0), Vector2(-1.2 + k * 0.4, -6.0 + k * 2.0), o2, .8, true)
+	ci.draw_circle(Vector2(-.6, -3.0), 2.2, w)   # ức trắng
+	var h := Vector2(-1.0, -10.2 + sin(t * 1.3) * .15)   # đầu + tai
+	ci.draw_colored_polygon(PackedVector2Array([h + Vector2(-3.2, -1.0), h + Vector2(-2.6, -4.6), h + Vector2(-.6, -2.4)]), o2)
+	ci.draw_colored_polygon(PackedVector2Array([h + Vector2(3.2, -1.0), h + Vector2(2.6, -4.6), h + Vector2(.6, -2.4)]), o2)
+	ci.draw_circle(h, 3.3, o)
+	var blink := fmod(t, 3.7) < .15
+	for ex in [-1.2, 1.2]:
+		if blink:
+			ci.draw_line(h + Vector2(ex - .6, -.3), h + Vector2(ex + .6, -.3), Color(.2, .15, .1), .6, true)
+		else:
+			ci.draw_circle(h + Vector2(ex, -.4), .55, Color(.15, .3, .1))
+	ci.draw_circle(h + Vector2(0, .9), .35, Color(.9, .45, .45))
+	if hap > 0.0:   # vừa cho ăn / vuốt ve: tim bay lên
+		var hy := -18.0 - (3.0 - hap) * 4.0
+		ci.draw_circle(Vector2(-1.2, hy), 1.6, Color(.95, .35, .4, minf(1.0, hap)))
+		ci.draw_circle(Vector2(1.2, hy), 1.6, Color(.95, .35, .4, minf(1.0, hap)))
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(-2.7, hy + .4), Vector2(2.7, hy + .4), Vector2(0, hy + 3.4)]), Color(.95, .35, .4, minf(1.0, hap)))
+	elif hungry:   # đói: bong bóng hình cá
+		var b := Vector2(5.0, -21.0 + sin(t * 2.0) * 1.0)
+		ci.draw_circle(b, 5.2, Color(1, .98, .92, .95))
+		ci.draw_arc(b, 5.2, 0, TAU, 20, Color(.55, .4, .2, .8), .9, true)
+		var F2 := PackedVector2Array()
+		for i in 12:
+			var a := TAU * i / 12.0
+			F2.append(b + Vector2(cos(a) * 2.6 - .6, sin(a) * 1.3))
+		ci.draw_colored_polygon(F2, Color(.35, .55, .7))
+		ci.draw_colored_polygon(PackedVector2Array([b + Vector2(1.8, 0), b + Vector2(3.4, -1.4), b + Vector2(3.4, 1.4)]), Color(.35, .55, .7))
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+# ------------------------------------------------------------------ (bản 546) diều đang thả (g.dieu.on): bay trên đầu nhân vật, dây xuống tay
+var kite: KiteNode = null
+func _kite_step() -> void:
+	var W = G.w_all.WCA
+	var t: Dictionary = W.fh()
+	if not (W._tr(t.get("on")) and W._tr(t.get("cur"))):
+		if kite != null:
+			kite.queue_free()
+			kite = null
+		return
+	if kite == null or not is_instance_valid(kite):
+		kite = KiteNode.new()
+		kite.z_index = 50   # trên cây cối
+		F.add_child(kite)
+	for e in W.k4:
+		if e.id == t.cur:
+			kite.c1 = Color(String(e.c1))
+			kite.c2 = Color(String(e.c2))
+			kite.kind = String(e.id)
+	var pp := Vector2(F.en(G.ppos.x, G.ppos.y), F.nn(G.ppos.x, G.ppos.y))
+	kite.position = pp
+	kite.night = G.night
+
+class KiteNode extends Node2D:   # gốc = chân nhân vật
+	var c1 := Color.RED
+	var c2 := Color.YELLOW
+	var kind := "sao"
+	var night := false
+	var t := 0.0
+	func _process(dt: float) -> void:
+		t += dt
+		queue_redraw()
+	func _draw() -> void:
+		var hand := Vector2(3, -16)
+		var k := Vector2(-70 + sin(t * .7) * 8.0, -150 + sin(t * 1.1) * 6.0)
+		var M := PackedVector2Array()   # dây võng
+		for i in 13:
+			var f := i / 12.0
+			M.append(hand.lerp(k, f) + Vector2(0, sin(f * PI) * 10.0))
+		draw_polyline(M, Color(1, 1, 1, .7), .8, true)
+		var r := sin(t * 1.3) * .12
+		var X := Transform2D(r, k)
+		var dk := .7 if night else 1.0
+		var A := c1 * dk
+		var B := c2 * dk
+		A.a = 1.0
+		B.a = 1.0
+		if kind == "en":   # cánh én
+			draw_colored_polygon(PackedVector2Array([X * Vector2(0, -6), X * Vector2(-18, 2), X * Vector2(-6, 2), X * Vector2(0, 10), X * Vector2(6, 2), X * Vector2(18, 2)]), A)
+			draw_colored_polygon(PackedVector2Array([X * Vector2(0, -6), X * Vector2(-4, 2), X * Vector2(0, 8), X * Vector2(4, 2)]), B)
+		elif kind == "ca":   # cá chép: thân bầu + đuôi dài
+			var P := PackedVector2Array()
+			for i in 16:
+				var a := TAU * i / 16.0
+				P.append(X * Vector2(cos(a) * 7.0, sin(a) * 11.0))
+			draw_colored_polygon(P, A)
+			draw_circle(X * Vector2(-2.5, -5), 1.5, B)
+			for i in 3:
+				draw_line(X * Vector2(-3 + i * 3, 9), X * Vector2(-6 + i * 3 + sin(t * 3 + i) * 3, 24 + i * 2), B, 1.6, true)
+		else:   # diều sáo: hình thoi, 2 màu, ống sáo ngang
+			draw_colored_polygon(PackedVector2Array([X * Vector2(0, -14), X * Vector2(-10, 0), X * Vector2(0, 16)]), A)
+			draw_colored_polygon(PackedVector2Array([X * Vector2(0, -14), X * Vector2(10, 0), X * Vector2(0, 16)]), B)
+			draw_line(X * Vector2(-12, -2), X * Vector2(12, -2), Color(.55, .4, .2), 1.2, true)
+		var T := PackedVector2Array()   # đuôi
+		for i in 10:
+			T.append(X * Vector2(sin(t * 3.0 + i * .7) * 3.0, 16 + i * 3.0))
+		draw_polyline(T, B, 1.2, true)
+
+# ------------------------------------------------------------------ (bản 546) chọn chỗ đặt lờ / thả vịt: tô ô xanh
+var pk: PickNode = null
+func _pick_sync() -> void:
+	var W = G.w_all.WCA
+	var y = W.yf
+	var want := y != null and (String(y.get("lo", "")) != "" or String(y.k) == "vit")
+	if not want:
+		if pk != null:
+			pk.queue_free()
+			pk = null
+		return
+	var key := str(y.get("lo", "")) + "|" + str(y.k) + "|" + str(int(G.ppos.x)) + "," + str(int(G.ppos.y)) + "|" + str(W._ver())
+	if pk != null and pk.key == key:
+		return
+	if pk == null:
+		pk = PickNode.new()
+		pk.z_index = -5
+		F.add_child(pk)
+	pk.key = key
+	var T := []
+	var lo := String(y.get("lo", ""))
+	var cx := int(G.ppos.x)
+	var cy := int(G.ppos.y)
+	for x in range(cx - 22, cx + 23):
+		for yy in range(cy - 22, cy + 23):
+			if not W._p0(x, yy) or not W._ci(W._fo(x, yy)):
+				continue
+			if lo != "" and W.lo_why(lo, x, yy) != "":
+				continue
+			var Q := PackedVector2Array()
+			for c in [[0, 0], [1, 0], [1, 1], [0, 1]]:
+				Q.append(Vector2(F.en(x + c[0], yy + c[1]), F.nn(x + c[0], yy + c[1])))
+			T.append(Q)
+	pk.T = T
+	pk.queue_redraw()
+
+class PickNode extends Node2D:
+	var key := ""
+	var T := []
+	var t := 0.0
+	func _process(dt: float) -> void:
+		t += dt
+		modulate.a = .75 + sin(t * 3.0) * .2
+	func _draw() -> void:
+		for Q in T:
+			draw_colored_polygon(Q, Color(.45, .9, .35, .32))
+			var L: PackedVector2Array = Q.duplicate()
+			L.append(Q[0])
+			draw_polyline(L, Color(.9, 1, .6, .85), 1.0, true)
 
 # ------------------------------------------------------------------ lục bình + bèo trôi, rau muống trôi riêng
 const N_LB := 12
@@ -319,6 +649,13 @@ func pick_add(L: Array) -> void:
 		if f.n.modulate.a < 0.5:
 			continue
 		F._pk_add(L, {"type": "fl", "k": f.key}, 6, q.y, func(p: Vector2) -> bool: return absf(p.x - q.x) < 15.0 and p.y > q.y - 14.0 and p.y < q.y + 6.0)
+	if meo != null and is_instance_valid(meo):   # (bản 546) mèo
+		var qm: Vector2 = meo.position
+		F._pk_add(L, {"type": "meo", "k": "meo"}, 6, qm.y, func(p: Vector2) -> bool: return absf(p.x - qm.x) < 13.0 and p.y > qm.y - 26.0 and p.y < qm.y + 5.0)
+	if vit != null and is_instance_valid(vit):   # (bản 546) đàn vịt
+		for q in vit.pts():
+			var qv: Vector2 = q
+			F._pk_add(L, {"type": "vit", "k": "vit"}, 6, qv.y, func(p: Vector2) -> bool: return absf(p.x - qv.x) < 11.0 and p.y > qv.y - 14.0 and p.y < qv.y + 5.0)
 	for k in lo:   # (bản 541) lờ / lọp / giăng
 		var nl: Node2D = lo[k]
 		if not is_instance_valid(nl):
@@ -337,10 +674,23 @@ func tap(h: Dictionary) -> void:
 	var k := String(h.k)
 	if F.has_job(k):
 		return
-	if h.type == "lo":   # (bản 541) ra bờ thăm lờ (w_all: Ns -> lo_stand + rk)
-		var ns = G.w_all.WCAU.ext.get("Ns")
-		if ns is Callable and ns.is_valid():
-			ns.call({"type": "lo", "key": k})
+	if h.type == "lo":   # (bản 546) vòng nút Thăm / Gỡ (rm_don)
+		F.ui.dn_open({"lo": k})
+		return
+	if h.type == "meo":   # (bản 546) tới cho mèo ăn / vuốt ve (w_ca.gq)
+		if meo != null and is_instance_valid(meo):
+			var mp: Vector2 = meo.tl + Vector2(.5, .3)
+			G.w_all._job("meox", [mp.x, mp.y], 0.5, func() -> bool: return G.w_all.WCA.gq())
+		return
+	if h.type == "vit":   # (bản 546) ra bờ cho vịt ăn / lấy trứng (w_ca.xx)
+		var z = G.w_all.WCA.w2("vit")
+		var p = z.bank[0] if z != null and z.bank.size() else null
+		if p != null:
+			var best: Array = z.bank[0]
+			for b in z.bank:
+				if Vector2(float(b[0]) - G.ppos.x, float(b[1]) - G.ppos.y).length() < Vector2(float(best[0]) - G.ppos.x, float(best[1]) - G.ppos.y).length():
+					best = b
+			G.w_all._job("vitx", best, 0.35, func() -> bool: return G.w_all.WCA.xx())
 		return
 	if h.type == "fl":
 		for f in fl:

@@ -144,7 +144,7 @@ func _box(x: float, y: float, w: float, h: float, a: int, f: int, c: Dictionary)
 		ok = int(G.g.coins) >= int(c.xu)
 		bt = "Mua"
 		var k: String = c.k
-		var sub := "Thả ao sen nuôi lớn." if k == "cagiong" else "Thả ao sen, đẻ trứng vịt." if k == "vitcon" else "Rẻ hơn tiệm 20%." if k == "cg" else "Rẻ hơn chợ phiên." if k == "giong" else "Thả vô chuồng." if k == "con" else ""
+		var sub := "Thả ao sen, đẻ trứng vịt." if k == "vitcon" else "Rẻ hơn tiệm 20%." if k == "cg" else "Rẻ hơn chợ phiên." if k == "giong" else "Thả vô chuồng." if k == "con" else ""
 		info = nm + ": " + G.fmt_n(int(c.xu)) + " xu. " + sub + ("" if ok else " Chưa đủ xu.")
 	out.append(_icx(x + 24.0, y + 26.0, 36.0, ic))
 	var nl: Array = _wrap(nm, 10.5, 800, w - 52.0)

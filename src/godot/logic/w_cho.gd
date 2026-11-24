@@ -220,8 +220,6 @@ func pQ(t: Dictionary) -> String:   # pQ: tên kèo ghe bán
 		return "1 con " + String(QQ[t.id].name).to_lower() + " giống"
 	if k == "cg":
 		return "Cây giống " + String(_pi()[t.id].n).to_lower()
-	if k == "cagiong":
-		return str(int(t.q)) + " con cá giống"
 	if k == "vitcon":
 		return "1 con vịt con"
 	return ho(t.id, int(t.q))
@@ -232,8 +230,6 @@ func bB(t: Dictionary) -> String:   # $B: mã hình của kèo (Ai)
 		return String(QQ[t.id].make)
 	if k == "cg":
 		return String(_ei()[t.id].p)
-	if k == "cagiong":
-		return "ca_tra"
 	if k == "vitcon":
 		return "trung_vit"
 	return String(t.id)
@@ -411,7 +407,6 @@ func _jd0() -> Array:   # jd gốc
 	for W in [f, s]:
 		if W != null:
 			l[0].append({"t": "ban", "k": "cg", "id": W, "q": 1, "xu": _r(float(Pi[W].cost) * 0.8)})
-	l[0].append({"t": "ban", "k": "cagiong", "id": "cagiong", "q": 10, "xu": 240})
 	l[0].append({"t": "ban", "k": "vitcon", "id": "vitcon", "q": 1, "xu": 220})
 	var h = KR(a)
 	if h != null:
@@ -517,7 +512,7 @@ func _dd_room(t: int, a: int) -> int:   # lớp bọc A1 của Dd: số chỗ kh
 		return 0
 	if n.t == "doi":
 		return maxi(0, int(n.q) - int(n.gq))
-	if n.k in ["cg", "cagiong", "vitcon", "con"]:
+	if n.k in ["cg", "vitcon", "con"]:
 		return 0
 	return int(n.q) if int(n.get("q", 0)) else 1
 
@@ -605,8 +600,6 @@ func _dd(t: int, a: int) -> bool:   # Dd gốc
 			var r := _lang0()
 			r.cg[e.id] = int(r.cg.get(e.id, 0)) + 1
 			_ta("Mua được cây giống " + String(_pi()[e.id].n).to_lower() + ". Vào Xây dựng › Cây ăn trái để trồng (miễn phí).")
-		elif e.k == "cagiong":
-			hN(int(e.q))
 		elif e.k == "vitcon":
 			T_(1)
 		elif e.k == "con":
@@ -635,36 +628,17 @@ func _Cc() -> Dictionary:   # Cc (g.pet, chép đúng web; hệ thú cưng làm 
 		G.g.pet = t
 	if not (t.get("vit") is Dictionary):
 		t.vit = {"n": 0, "f": 0, "e": 0, "a": 0}
-	if not (t.get("ca") is Dictionary):
-		t.ca = {"n": 0, "g": 0, "f": 0}
 	if not (t.get("meo") is Dictionary):
 		t.meo = {"has": 0, "fd": -1, "gd": -1, "pt": 0, "tim": 0}
-	if not (t.get("chim") is Dictionary):
-		t.chim = {"has": 0, "fd": -1, "gi": 0, "cd": -1, "sd": -1}
 	for a in ["n", "f", "e", "a"]:
 		var v = t.vit.get(a)
 		if not (v is float or v is int) or is_nan(float(v)) or is_inf(float(v)):
 			t.vit[a] = 0
-	for a in ["n", "g", "f"]:
-		var v = t.ca.get(a)
-		if not (v is float or v is int) or is_nan(float(v)) or is_inf(float(v)):
-			t.ca[a] = 0
 	return t
 
 func _o6(k: String) -> String:   # o6 (web gọi thẳng)
 	var f := _x("o6")
 	return String(f.call(k)) if f.is_valid() else ""
-
-func hN(t: int) -> void:   # hN: thả cá giống xuống ao
-	var a: Dictionary = _Cc().ca
-	if float(a.n) > 0 and float(a.g) >= XF:
-		_ta("Ao đang có cá lớn, kéo lưới trước rồi thả lứa mới.")
-		G.g.coins = int(G.g.coins) + 240
-		return
-	a.n = mini(FQ, int(a.n) + t)
-	if int(a.n) == t:
-		a.g = 0
-	_ta("Thả " + str(t) + " con cá giống xuống " + _o6("ca") + ". Rải cám (bột) cho cá ăn, khoảng 15 phút cá lớn.")
 
 func T_(t: int) -> void:   # $T: thả vịt con
 	var a: Dictionary = _Cc().vit

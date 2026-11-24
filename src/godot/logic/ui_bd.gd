@@ -18,12 +18,12 @@ const GROUPS := [{"k": "caycoi", "c": [["cay", "Cây"], ["qua", "Ăn trái"], ["
 	{"k": "trangtri", "c": [["vat", "Đồ vật"], ["nuoc", "Mặt nước"]]},
 	{"k": "matdat", "c": [["duong", "Đường"], ["nen", "Nền đất"]]}]
 var HELP := {
-	"chuong": "Xây chuồng rồi mới mua được con giống (Sổ làng › Chợ phiên, hoặc ghe cây giống ở chợ nổi sáng sớm). Mỗi chuồng 2×2 ô, nuôi tối đa 6 con. Chuồng đã xây thì chạm giữ trên làng để dời.",
+	"chuong": "Mèo mướp không cần chuồng: xin về là ngồi trước Kho hàng, chạm để cho ăn 1 cá nhỏ mỗi ngày, sáng hôm sau Mướp tha quà về. Xây chuồng rồi mới mua được con giống (Sổ làng › Chợ phiên, hoặc ghe cây giống ở chợ nổi sáng sớm). Mỗi chuồng 2×2 ô, nuôi tối đa 6 con. Chuồng đã xây thì chạm giữ trên làng để dời.",
 	"xuong": "Mỗi loại xưởng xây tối đa 2 cái, cái thứ hai giá gấp đôi. Chọn xưởng rồi chọn chỗ đặt trên đất trống (tô xanh). Món cao cấp cần nguyên liệu do xưởng khác làm ra.",
 	"hoaco": "Bụi cây, cỏ dại, lau sậy chiếm trọn 1 ô, bấm Đổi kiểu để chọn 1 trong 4 dáng. Các món còn lại: mỗi ô đất chia 4 chỗ nhỏ, mỗi chỗ trồng một khóm hoa hay bụi cỏ. Chạm để trồng, giữ kéo để trồng liền. Cứ 4 khóm thêm 1 điểm đẹp.",
 	"nen": "Chọn loại nền rồi chạm lên đất đã khai hoang để tô, giữ kéo để tô liền. Đồ đạc, hoa cỏ đặt lên trên vẫn giữ nguyên. Cứ 6 ô nền thêm 1 điểm đẹp.",
 	"duong": "Chọn loại đường rồi chạm từng ô để lát, giữ kéo để lát liền một dải. Đường làng có sẵn cũng gỡ hoặc lát lại được.",
-	"nuoc": "Hoa sen, thuyền và cầu cần đặt trên mặt nước. Dùng \"Đào ao\" để tạo thêm ô nước.",
+	"nuoc": "Hoa sen, thuyền và cầu cần đặt trên mặt nước. Dùng \"Đào ao\" để tạo thêm ô nước. Lờ tre, lọp lươn, giăng câu: chọn rồi chạm ô nước tô xanh (sát bờ), nhân vật lội ra đặt; chạm cái đã đặt để thăm hoặc gỡ về (đặt lại khỏi tốn xu). Đàn vịt: thả xuống ao, hồ, sông, chạm đàn để cho ăn lúa, lấy trứng.",
 	"qua": "Cây ăn trái cho trái chín theo giờ, chạm cây để hái. Cây giống quý đổi được ở hội chợ thì trồng miễn phí.",
 	"def": "Chọn một món rồi chạm lên đất của bạn để đặt. Chạm giữ món đã đặt trên làng để dời hoặc bán lại một nửa giá. Mỗi món thêm điểm đẹp, làng đẹp thì nông sản bán giá cao hơn."}
 
@@ -347,6 +347,10 @@ func _cards() -> Array:   # [{name, pr, r (0 mở / 1 khoá / 2 đủ), lv, i, a
 			var at: int = 0 if A else L.pen_lv(gt)
 			add.call({"name": LN.CO[gt], "pr": ["t", "✓ Đã xây", "ok"] if A else (["t", "Cấp " + str(at), "lk"] if at > 0 else ["c", int(L.C.xM[gt]), ""]),
 				"act": ["pen", gt], "ic": ["pen", gt], "full": A}, 2 if A else (1 if at > 0 else 0), at)
+		var WM = G.w_all.WCA   # (bản 546) mèo mướp: không cần chuồng, ở trước Kho hàng
+		var mq: int = WM._qf("meo")
+		var mh: bool = WM._tr(WM.cc().meo.get("has"))
+		add.call({"name": "Mèo mướp", "pr": ["t", "✓ Đã có", "ok"] if mh else (["t", "Cấp " + str(mq), "lk"] if mq > 0 else ["c", int(WM.Nh.meo), ""]), "act": ["song", "meo"], "ic": ["song", "meo"], "full": mh}, 2 if mh else (1 if mq > 0 else 0), mq)
 	elif cat == "xuong":
 		for ty in G._j("che_bien/thu_tu_xuong"):
 			var a: Dictionary = G.xw.T[ty]
@@ -378,6 +382,19 @@ func _cards() -> Array:   # [{name, pr, r (0 mở / 1 khoá / 2 đủ), lv, i, a
 				continue
 			add.call({"name": gt.n, "pr": ["t", "Cấp " + str(at), "lk"] if at > 0 else ((["t", "Góp xong", "ok"] if _ct_is(gt.id) else ["t", str(A) + " cây giống", "ok"]) if A > 0 else (["t", "Dân góp", "lk"] if _ct_lock(gt.id) != "" else ["c", int(gt.cost), ""])),
 				"act": ["id", gt.id], "ic": ["id", gt.id]}, 1 if at > 0 else 0, at)
+	if cat == "nuoc":   # (bản 546) đồ sông nước: lờ tre, lọp lươn, giăng câu (w_ca g.lo), đàn vịt (g.pet.vit) — mua lúc đặt
+		var W = G.w_all.WCA
+		for t in W.FS:
+			var e: Dictionary = W.ns[t]
+			var on: int = W.qk(t)
+			var lq: int = W._qf("lo")   # cấp mở lờ lọp
+			var lk: bool = lq > 0 or (t == "giang" and W._o0() <= 0)
+			var pr: Array = ["t", "Cấp " + str(lq), "lk"] if lq > 0 else (["t", "Mở sông Vàm", "lk"] if lk else (["t", "✓ Đã đủ", "ok"] if on >= int(e.max) else (["t", "Đặt lại", "free"] if W.lo_free(t) else ["c", int(e.xu), ""])))
+			add.call({"name": String(e.n), "pr": pr, "act": ["song", t], "ic": ["song", t], "cnt": str(on) + "/" + str(e.max), "full": on >= int(e.max)}, 1 if lk else (2 if on >= int(e.max) else 0), (lq if lq > 0 else 10000) if lk else 0)
+		var vn: int = int(W.cc().vit.n)
+		var vq: int = W._qf("vit")   # cấp mở đàn vịt
+		var vl: bool = vq > 0 or not W.e6()
+		add.call({"name": "Đàn vịt", "pr": ["t", "Cấp " + str(vq), "lk"] if vq > 0 else (["t", "Cần ao", "lk"] if vl else (["t", "✓ Đã đủ", "ok"] if vn >= W.t6 else ["c", int(W.Nh.vit), ""])), "act": ["song", "vit"], "ic": ["song", "vit"], "cnt": str(vn) + "/" + str(W.t6), "full": vn >= W.t6}, 1 if vl else (2 if vn >= W.t6 else 0), (vq if vq > 0 else 10000) if vl else 0)
 	out.sort_custom(func(p, q): return p.r < q.r if p.r != q.r else ((p.lv < q.lv) if (p.r == 1 and p.lv != q.lv) else p.i < q.i))
 	return out
 
@@ -606,10 +623,29 @@ func _card(c: Dictionary) -> void:
 		"mini": mini = a; sel = -1; move_idx = -1; last_k = ""; hov = null; _fl("mini")
 		"id": qy(a)
 		"soon": G.toast.emit("Sắp có: " + String(lg().Pi[a].n) + ".")
+		"song":   # (bản 546) đóng Xây dựng, vào chọn ô nước (w_ca.wg): lờ / lọp / giăng mua lúc đặt, vịt 3 con một lần
+			if a == "meo":
+				if not G.w_all.WCA._tr(G.w_all.WCA.cc().meo.get("has")):
+					G.w_all.WCA.vq("meo")
+					_ps()
+				return
+			close()
+			if a == "vit":
+				G.w_all.WCA.vq("vit")
+			else:
+				G.w_all.WCA.lo_place(a)
 
 # ------------------------------------------------------------------ hình trong ô thẻ / thanh dưới
 func _icon(cv: Control, ic: Array, locked: bool) -> void:
 	var kind: String = ic[0]
+	if kind == "song":   # (bản 546) lờ / lọp / giăng / vịt: vẽ nét (song_ve.gear)
+		var d2 := SongIcon.new()
+		d2.k = ic[1]
+		d2.size = cv.size
+		d2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		d2.modulate.a = 0.45 if locked else 1.0
+		cv.add_child(d2)
+		return
 	if kind in ["road", "nen", "mini"] and not (kind == "mini" and ic[1] != "_x"):
 		var d := TileIcon.new()
 		d.v = self
@@ -647,7 +683,7 @@ func _icon(cv: Control, ic: Array, locked: bool) -> void:
 
 func _ic_key(ic: Array) -> Array:   # [gói, khung] của hình thẻ; [] = vẽ bằng code / không có
 	var kind: String = ic[0]
-	if kind in ["road", "nen"] or (kind == "mini" and ic[1] == "_x"):
+	if kind in ["road", "nen", "song"] or (kind == "mini" and ic[1] == "_x"):
 		return []
 	var bk := ""
 	var kk := ""
@@ -748,6 +784,22 @@ func _icon_fill(tr: TextureRect) -> void:
 	if tx != null:
 		tr.texture = tx
 		_ic.erase(tr)
+
+class SongIcon extends Control:   # (bản 546) thẻ đồ sông nước: mặt nước xanh + hình nét (mèo: không nền nước)
+	var k := ""
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		var c := Vector2(w / 2.0, h * 0.58)
+		if k == "meo":
+			load("res://logic/song_ve.gd").cat(self, Vector2(w / 2.0, h * 0.82), w / 30.0)
+			return
+		var R := PackedVector2Array()
+		for i in 24:
+			var a := TAU * i / 24.0
+			R.append(c + Vector2(cos(a) * w * .42, sin(a) * h * .22 + h * .04))
+		draw_colored_polygon(R, Color(.42, .66, .72, .9))
+		load("res://logic/song_ve.gd").gear(self, k, c, w / 46.0, 0.0, 0.0, false)
 
 class TileIcon extends Control:   # Mb / Cb / Pb: 2x2 ô đường hoặc nền (hoặc ô nhổ bỏ) vẽ bằng code
 	var v
