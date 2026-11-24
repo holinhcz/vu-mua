@@ -493,7 +493,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 	var cws := []
 	var sm := 0.0
 	for it in list:
-		var s0: String = G.fmt_n(mini(int(it[2]), 99999)) + "/" + G.fmt_n(int(it[3]))
+		var s0: String = G.fmt_n(int(it[3])) if String(it[0]) == "xu" else G.fmt_n(mini(int(it[2]), 99999)) + "/" + G.fmt_n(int(it[3]))   # (bản 551) xu: chỉ ghi số cần, đủ xanh thiếu đỏ
 		var cw0: float = minf(38.0 + maxf(Box.text_w(String(it[1]), 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w)
 		cws.append(cw0)
 		sm += cw0
@@ -509,6 +509,10 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 		else:   # (bản 456) không lọt 1 hàng: lưới 2 cột rộng bằng nhau cho đều
 			for i in cws.size():
 				cws[i] = floorf((w - 5.0) * 0.5)
+	elif list.size() > 0 and sm + gs < w:   # (bản 551) lọt 1 hàng: giãn đều cho kín bề ngang, cách đều 2 mép
+		var ex := (w - sm - gs) / list.size()
+		for i in cws.size():
+			cws[i] = floorf(float(cws[i]) + ex)
 	for i in list.size():
 		var it: Array = list[i]
 		var id := String(it[0])
@@ -517,7 +521,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 		var q := int(it[3])
 		var good := hv >= q
 		ok = ok and good
-		var s: String = G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
+		var s: String = G.fmt_n(q) if id == "xu" else G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
 		var cw: float = cws[i]
 		var tw := cw - 40.0
 		var fs := clampf(10.0 * tw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)

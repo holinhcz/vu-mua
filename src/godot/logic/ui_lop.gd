@@ -77,15 +77,21 @@ func _body() -> Array:
 	var s2: Dictionary = _merge(e, nx) if not nx.is_empty() else {}
 	var blk := []
 	var yy := 0.0
+	var iw := XW - 20.0   # (bản 551) 4 cột chia theo bề ngang thẻ: nhãn 38%, bậc này 26%, mũi tên 8%, bậc kế 28%
+	var c1 := X0 + 10.0 + iw * 0.38
+	var c2 := c1 + iw * 0.26
+	var c3 := c2 + iw * 0.08
 	for r in _rows(s, s2):
-		blk.append(_dt(X0 + 10.0, yy, 92.0, 16.0, _fitw(String(r[0]), 10.5, 700, 92.0), 10.5, 700, SUB, "left"))
-		blk.append(_dt(X0 + 104.0, yy, 82.0, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
+		blk.append(_dt(X0 + 10.0, yy, iw * 0.38 - 4.0, 16.0, _fitw(String(r[0]), 10.5, 700, iw * 0.38 - 4.0), 10.5, 700, SUB, "left"))
+		blk.append(_dt(c1, yy, iw * 0.26, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
 		if r.size() > 2:
-			blk.append(_dt(X0 + 186.0, yy, 16.0, 16.0, "→", 10.5, 800, SUB))
-			blk.append(_dt(X0 + 204.0, yy, XW - 214.0, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
+			blk.append(_dt(c2, yy, iw * 0.08, 16.0, "→", 10.5, 800, SUB))
+			blk.append(_dt(c3, yy, iw * 0.28, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
 		yy += 17.0
 	yy += 4.0
 	var btns := []
+	if W.qk(t) > 0:   # (bản 551) camera tới cái đang đặt (ưu tiên cái có cá)
+		btns.append(["Tới chỗ", _goto.bind(t), "off"])
 	if lk == "":
 		var full: bool = W.qk(t) >= int(s.max)
 		var free: bool = W.lo_free(t)
@@ -129,8 +135,12 @@ func _body() -> Array:
 		for key in R:
 			if String(key).begins_with(k + "@"):
 				has = true
+		var nf := 0
+		for key in R:
+			if String(key).begins_with(k + "@"):
+				nf += 1
 		var low := _lock(k)
-		low = ("Bậc " + str(W.lo_lv(k)) + " · " + str(W.qk(k)) + "/" + str(int(W.nst(k).max))) if low == "" else "Chưa mở"
+		low = (str(nf) + " cái có cá" if nf > 0 else "Bậc " + str(W.lo_lv(k)) + " · " + str(W.qk(k)) + "/" + str(int(W.nst(k).max))) if low == "" else "Chưa mở"
 		out.append(_dt(x + 3.0, y + 64.0, cw - 6.0, 14.0, _fitw(low, 9.5, 700, cw - 6.0), 9.5, 700, GRN if has else SUB))
 		if has:
 			out.append(_dtick(x + cw - 17.0, y + 5.0, 13.0))
@@ -194,6 +204,19 @@ func _up(t: String) -> void:
 	else:
 		_dsay("Chưa đủ xu hoặc vật liệu.")
 	_redo()
+
+func _goto(t: String) -> void:
+	var W = _W()
+	var pick = null
+	for a in W.t1()["set"]:
+		if String(a.t) == t and (pick == null or (W.w4(a) and not W.w4(pick))):
+			pick = a
+	if pick == null:
+		return
+	close()
+	var w1 := Vector2(U.F.en(float(pick.gx) + .5, float(pick.gy) + .5), U.F.nn(float(pick.gx) + .5, float(pick.gy) + .5))
+	var sc := Vector2(U.vw * 0.5, U.vh * 0.5)
+	U.cam_tw = {"z0": U.main.zoom, "z1": U.main.zoom, "w0": U.main.cam + sc * Css.K / U.main.zoom, "w1": w1, "s": sc * Css.K, "t": 0.0}
 
 func _visit_all() -> void:
 	var ns = G.w_all.WCAU.ext.get("Ns")
