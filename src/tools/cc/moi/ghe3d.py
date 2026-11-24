@@ -17,8 +17,28 @@ ZK = 1 / .8660254       # cao trên màn (đơn vị) -> z thế giới
 
 
 # ------------------------------------------------------------ tăng tốc: bỏ qua khối ở xa (cầu bao)
+def _groups(self):
+    if getattr(self, '_gr', None) is None:
+        gs = {}
+        for i, o in enumerate(self.objs):
+            gs.setdefault(getattr(o, 'grp', -1 - i), []).append(i)
+        out = []
+        for k, ids in gs.items():
+            if len(ids) == 1:
+                c, r = self.objs[ids[0]].bound
+                out.append((V(*c), float(r), ids))
+                continue
+            cs = np.array([self.objs[i].bound[0] for i in ids], F32); rr = np.array([self.objs[i].bound[1] for i in ids], F32)
+            lo = (cs - rr[:, None]).min(0); hi = (cs + rr[:, None]).max(0)
+            c = (lo + hi) / 2
+            r = float((np.linalg.norm(cs - c, axis=1) + rr).max())
+            out.append((c, r, ids))
+        self._gr = out
+    return self._gr
+
+
 def _fast_sdf(self, P, ids=False):
-    """min khoảng cách qua mọi khối, giữ min chạy (không dựng ma trận n x số khối: ghe chợ đầy trái tốn 9 GB)"""
+    """min khoảng cách qua mọi khối, giữ min chạy; cầu bao theo nhóm món (trái, chậu cây) rồi từng khối"""
     n = len(P)
     if n > 120000:
         parts = [_fast_sdf(self, P[i:i + 120000], ids) for i in range(0, n, 120000)]
@@ -26,16 +46,31 @@ def _fast_sdf(self, P, ids=False):
             return np.concatenate([p[0] for p in parts]), np.concatenate([p[1] for p in parts])
         return np.concatenate(parts)
     best = np.full(n, 1e9, F32); arg = np.zeros(n, np.int32)
-    for i, o in enumerate(self.objs):
-        c, r = o.bound
-        db = (np.linalg.norm(P - c, axis=1) - r).astype(F32)
-        near = db < 1.0
-        d = db
-        if near.any():
-            d = db.copy()
-            d[near] = o.sdf(P[near])
-        m = d < best
-        best[m] = d[m]; arg[m] = i
+    for c, r, idl in _groups(self):
+        dg = (np.linalg.norm(P - c, axis=1) - r).astype(F32)
+        far = dg >= 1.0
+        m = far & (dg < best)
+        best[m] = dg[m]; arg[m] = idl[0]
+        ng = np.nonzero(~far)[0]
+        if len(ng) == 0:
+            continue
+        Pn = P[ng]
+        bb = best[ng]; aa = arg[ng]
+        for i in idl:
+            o = self.objs[i]
+            if len(idl) > 1:
+                oc, orr = o.bound
+                db = (np.linalg.norm(Pn - oc, axis=1) - orr).astype(F32)
+                near = db < 1.0
+                d = db
+                if near.any():
+                    d = db.copy()
+                    d[near] = o.sdf(Pn[near])
+            else:
+                d = o.sdf(Pn)
+            mm = d < bb
+            bb[mm] = d[mm]; aa[mm] = i
+        best[ng] = bb; arg[ng] = aa
     if ids:
         return best, arg
     return best
@@ -168,7 +203,10 @@ def albedo(obj, P):
             c_o = np.where(eye[:, None], hexc('#f4efe2')[None], c_o)
             c_o = np.where((eye & (pu < .42))[:, None], hexc('#1a1412')[None], c_o)
             c_o = np.where((eye & (np.hypot(ex - .0, ey + .1) < .12))[:, None], hexc('#f4efe2')[None], c_o)
-        c_o = c_o * (1 - .22 * seam * (dz > .5))[:, None]
+        butt = np.exp(-((((u + 7 * np.floor(dz / 1.05)) / 14.0) % 1.0 - .5) / .012) ** 2)   # mối nối ván so le
+        nail = (np.abs(((u / 1.4) % 1.0) - .5) < .07) & (np.abs(((dz / 1.05) % 1.0) - .5) < .09)
+        c_o = c_o * (1 - .22 * seam * (dz > .5) - .2 * butt * (dz > .5))[:, None]
+        c_o = np.where((nail & (dz > .6) & out)[:, None], c_o * .6, c_o)
         # lòng ghe gỗ, sườn ngang
         rib = np.exp(-((((u / 5.0) % 1.0) - .5) / .07) ** 2)
         c_i = hexc('#9c6c40')[None] * (1 + .12 * nz_ - .3 * rib)[:, None]
@@ -197,6 +235,8 @@ def albedo(obj, P):
         gl = side & inner_ & (q[:, 2] > h[2] * .02) & (q[:, 2] < h[2] * .48) & (np.abs(fx - .5) < .2)
         c = np.where(fr_[:, None], hexc('#f0e6c8')[None], c)
         c = np.where(gl[:, None], hexc('#2c3438')[None], c)
+        bar = gl & (np.abs(((fx - .5) / .1) % 1.0 - .5) < .12)      # song cửa sổ
+        c = np.where(bar[:, None], hexc('#d8ccb0')[None], c)
         sh = side & inner_ & wy & (np.abs(np.abs(fx - .5) - .32) < .055)     # cánh cửa sổ mở
         c = np.where(sh[:, None], hexc(getattr(obj, 'sh', '#b8452e'))[None], c)
         door = endf & (np.abs(q[:, 1]) < h[1] * .26) & (q[:, 2] < h[2] * .6)
@@ -260,6 +300,81 @@ def albedo(obj, P):
         c = {'ao': '#5b95c4', 'quan': '#2a2626', 'da': '#e2b48c', 'toc': '#221a14'}[m]
         base = getattr(obj, 'col', hexc(c))
         return base[None] * (.9 + .15 * vnoise(P, .6, 25))[:, None]
+    if m == 'leaf':   # lá: gân giữa sáng, mép sẫm, gốc -> ngọn chuyển màu, mỗi lá 1 sắc
+        q = obj.local(P)
+        x = q[:, 0] / obj.R[0]; y = q[:, 1] / obj.R[1]
+        col = obj.col
+        hj = (B.hsh(np.array([obj.C[0] * 3.1 + obj.C[1] * 7.3])) - .5)[0]
+        c = col[None] * (1 + .18 * hj + .14 * x[:, None] * np.array([[.3, .6, .1]], F32))
+        wy = np.sqrt(np.clip(1 - x ** 2, 0, 1)) + 1e-3
+        rib = np.exp(-(y / .09) ** 2)
+        vein = np.exp(-((((x * 3.5 + np.abs(y) * 2.2) % 1.0) - .5) / .08) ** 2) * (np.abs(y) / wy > .15)
+        edge = sstep(.7, .98, np.abs(y) / wy)
+        c = c * (1.08 + .3 * rib - .1 * vein - .18 * edge)[:, None]
+        under = q[:, 2] < 0
+        return np.where(under[:, None], c * .78, c)
+    if m == 'dua':    # dưa hấu: sọc rằn dọc trục dài, mép sọc gợn, đốm vàng dưới
+        q = obj.local(P) / obj.R
+        th = np.arctan2(q[:, 2], q[:, 1])
+        wob = .35 * np.sin(q[:, 0] * 9 + th * 3) + .25 * (vnoise(P, 1.6, 41) - .5)
+        st = np.sin(th * 7 + wob * 2) > -.05
+        c = np.where(st[:, None], hexc('#2a5a22')[None], hexc('#78a84a')[None])
+        c = c * (.9 + .15 * (vnoise(P, 3, 42) - .5))[:, None]
+        spot = sstep(-.55, -.85, q[:, 2])
+        return c * (1 - spot[:, None]) + hexc('#d8c870')[None] * spot[:, None]
+    if m == 'bi':     # bí đỏ: rãnh múi sẫm, đốm sáng, đáy ngả xanh
+        q = obj.local(P)
+        th = np.arctan2(q[:, 1], q[:, 0])
+        gro = np.abs(np.sin(th * 5)) ** .5
+        c = hexc('#e07a26')[None] * (.62 + .45 * gro)[:, None]
+        sp = vnoise(P, 4, 43) > .78
+        c = np.where(sp[:, None], c * 1.15, c)
+        zz = q[:, 2] / obj.R[2]
+        return c * (1 - .3 * sstep(-.2, -.9, zz))[:, None] + hexc('#6a7a2a')[None] * (.3 * sstep(-.2, -.9, zz))[:, None]
+    if m == 'khom':   # mắt dứa: ô thoi, viền nâu, chấm gai; xanh dưới -> vàng cam trên
+        q = obj.local(P)
+        zz = q[:, 2] / obj.R[2]
+        th = np.arctan2(q[:, 1], q[:, 0])
+        a1 = th * 4.5 + zz * 6; a2 = th * 4.5 - zz * 6
+        cell = np.minimum(np.abs((a1 / np.pi) % 1.0 - .5), np.abs((a2 / np.pi) % 1.0 - .5))
+        base = hexc('#6a8a3a') * (1 - sstep(-.6, .6, zz))[:, None] + hexc('#d89a30') * sstep(-.6, .6, zz)[:, None]
+        c = base * (.75 + .5 * sstep(.05, .25, cell))[:, None]
+        dot = cell > .4
+        return np.where(dot[:, None], hexc('#5a3a1e')[None], c)
+    if m == 'dua2':   # dừa xiêm: xanh bóng, gân xơ dọc, đỉnh ngả vàng nâu
+        q = obj.local(P) / obj.R
+        th = np.arctan2(q[:, 1], q[:, 0])
+        fib = .5 + .5 * np.sin(th * 26 + 3 * vnoise(P, 1, 44))
+        c = hexc('#5a8a32')[None] * (.85 + .15 * fib)[:, None]
+        tp = sstep(.55, .95, q[:, 2])
+        return c * (1 - tp[:, None]) + hexc('#a08a40')[None] * tp[:, None]
+    if m == 'xoai':   # xoài cát: xanh -> vàng, má hồng gần cuống, chấm li ti
+        q = obj.local(P) / obj.R
+        g = sstep(-1, 1, q[:, 0] + .3 * q[:, 2])
+        c = hexc('#8aa83a')[None] * (1 - g)[:, None] + hexc('#f0c840')[None] * g[:, None]
+        bl = sstep(.2, .9, -q[:, 0] + q[:, 2] * .5)
+        c = c * (1 - .5 * bl[:, None]) + hexc('#e0603a')[None] * (.5 * bl)[:, None]
+        dot = vnoise(P, 6, 45) > .82
+        return np.where(dot[:, None], c * .85, c)
+    if m == 'cam2':   # cam sành: vỏ sần lỗ tinh dầu, xanh pha cam
+        q = obj.local(P) / obj.R
+        pore = vnoise(P, 8, 46)
+        g = sstep(-.8, .8, q[:, 2] + .4 * (vnoise(P, .8, 47) - .5))
+        c = hexc('#e88a26')[None] * (1 - g)[:, None] + hexc('#8aa83a')[None] * g[:, None]
+        return c * (.88 + .2 * pore)[:, None]
+    if m == 'khoai':
+        return hexc('#9a4250')[None] * (.85 + .25 * vnoise(P, 2.5, 48))[:, None]
+    if m == 'lua':    # hạt lúa vàng
+        g = vnoise(P, 9, 49)
+        return hexc('#d8b048')[None] * (.75 + .4 * g)[:, None]
+    if m == 'chuoi2':  # trái chuối: vàng, cạnh múi, đầu xanh, núm nâu
+        d, sl = obj.seg(P)
+        tt = sl / max(float(obj.cum[-1]), 1e-3)
+        c = hexc('#f0cc38')[None] * np.ones((len(P), 1), F32)
+        c = np.where((tt < .18)[:, None], hexc('#8aa83a')[None], c)
+        c = np.where((tt > .95)[:, None], hexc('#4a3420')[None], c)
+        spk = vnoise(P, 7, 50) > .85
+        return np.where((spk & (tt > .2))[:, None], c * .75, c)
     if m in ('dua', 'bi', 'bao', 'chuoi', 'khom', 'dua2', 'chum', 'cam'):
         if m == 'dua':   # dưa hấu sọc
             d = P - obj.C
@@ -283,7 +398,15 @@ def albedo(obj, P):
     return _alb0(obj, P)
 
 
-B.albedo = albedo
+FRUITM = {'dua', 'bi', 'khom', 'dua2', 'xoai', 'cam2', 'chuoi2', 'leaf', 'khoai'}
+
+
+def albedo_lit(obj, P):
+    c = albedo(obj, P)
+    return c * 1.15 if obj.mat in FRUITM else c
+
+
+B.albedo = albedo_lit
 
 
 def _bbox(self):
@@ -338,42 +461,177 @@ def beo(fr, u, zf, zbar=74 * ZK):
     return o
 
 
-def fruit(fr, k, c, cs=1.0):
+# ------------------------------------------------------------ trái cây + lá cây chi tiết (11-24 Link "cây đéo ra cây, trái đéo ra trái, vẽ gì cũng 1 mảng màu")
+_GID = [0]
+
+
+def grp(objs):
+    """gom các khối của 1 món vào 1 nhóm: cầu bao chung để bỏ qua nhanh khi bắn tia"""
+    _GID[0] += 1
+    for o in objs:
+        o.grp = _GID[0]
+    return objs
+
+
+class Ell:
+    """elip xoay tuỳ ý: tâm C, 3 trục (đơn vị) A, bán trục R; bend: cong theo trục 0 (lá, xoài, chuối)"""
+    def __init__(s, C, axes, R, mat, bend=0.0, rib=None):
+        s.C = V(*C); s.A = np.array([nz(V(*a)) for a in axes], F32); s.R = V(*R); s.mat = mat; s.bend = bend; s.rib = rib
+        s.bound = (s.C, float(s.R.max()) + abs(bend) * float(s.R[0]) ** 2 + 1)
+
+    def local(s, P):
+        q = (P - s.C) @ s.A.T
+        if s.bend:
+            q[:, 2] = q[:, 2] - s.bend * q[:, 0] ** 2
+        return q
+
+    def sdf(s, P):
+        q = s.local(P)
+        R = np.broadcast_to(s.R, q.shape).copy()
+        if s.rib is not None:   # múi (bí): bán kính ngang thắt theo góc quanh trục 2
+            n, k = s.rib
+            th = np.arctan2(q[:, 1], q[:, 0])
+            f = 1 - k * np.abs(np.sin(th * n / 2)) ** .6
+            R[:, 0] *= f; R[:, 1] *= f
+        qq = q / R
+        k0 = np.linalg.norm(qq, axis=1)
+        return ((k0 - 1) * float(s.R.min()) * .9).astype(F32)
+
+
+def _frame(d):
+    d = nz(V(*d))
+    t = nz(np.cross(d, V(0, 0, 1))) if abs(d[2]) < .95 else nz(np.cross(d, V(1, 0, 0)))
+    return d, t, nz(np.cross(d, t))
+
+
+def leaf(base, d, ln, wd, col='#4f8a36', bend=.12, tilt=0.0):
+    """1 chiếc lá: gốc base, hướng d, dài ln, rộng wd; mặt lá ngửa lên"""
+    d = nz(V(*d))
+    side = nz(np.cross(V(0, 0, 1), d)) if abs(d[2]) < .97 else V(1, 0, 0)
+    nrm = nz(np.cross(d, side))
+    if tilt:
+        side, nrm = nz(side * math.cos(tilt) + nrm * math.sin(tilt)), nz(nrm * math.cos(tilt) - side * math.sin(tilt))
+    c = V(*base) + d * ln * .5
+    e = Ell(tuple(c), (d, side, nrm), (ln * .5, wd * .5, .13), 'leaf', bend=-bend / max(ln, .5))
+    e.col = hexc(col) if isinstance(col, str) else col
+    return e
+
+
+def fruit(fr, k, c, cs=1.0, seed=0):
+    rs = np.random.RandomState(abs(int(seed * 7919 + c[0] * 13 + c[1] * 31)) % (2 ** 31))
     c = V(*c)
-    if k == 'dua':
-        return [Ball(tuple(c), 2.2 * cs, 'dua', sq=(1.25, 1, .95))]
-    if k == 'bi':
-        return [Ball(tuple(c), 1.9 * cs, 'bi', sq=(1.1, 1.1, .8)), M(Line([tuple(c + V(0, 0, 1.3 * cs)), tuple(c + V(0, 0, 2.0 * cs))], .25 * cs, 'go2'), col=hexc('#5a6a2a'))]
-    if k == 'khom':   # trái khóm: thân mắt dứa + chùm lá nhọn
-        o = [Ball(tuple(c), 1.35 * cs, 'khom', sq=(1, 1, 1.3))]
-        top = c + V(0, 0, 1.5 * cs)
-        for q in range(6):
-            ang = q / 6 * 2 * np.pi
-            d = V(math.cos(ang), math.sin(ang), 0)
-            o.append(M(Line([tuple(top), tuple(top + d * .9 * cs + V(0, 0, 1.6 * cs))], [.32 * cs, .08 * cs], 'la'), col=hexc('#4f8a3a')))
-        o.append(M(Line([tuple(top), tuple(top + V(0, 0, 2.0 * cs))], [.3 * cs, .08 * cs], 'la'), col=hexc('#4f8a3a')))
-        return o
-    if k == 'dua2':
-        return [Ball(tuple(c), 1.5 * cs, 'dua2')]
-    if k == 'xoai':
-        return [M(Ball(tuple(c), 1.2 * cs, 'cam', sq=(1.45, 1, .9)), col=hexc('#e8c048'))]
-    if k == 'lua':   # lúa vàng đầy thúng
-        return [M(Ball(tuple(c + V(0, 0, -.6)), 2.0 * cs, 'muoi', sq=(1, 1, .35)), col=hexc('#d8b048'))]
-    if k == 'cam':
-        return [Ball(tuple(c), 1.0 * cs, 'cam')]
-    if k == 'bao':   # bao bố gối: hộp bo tròn
-        return [Box(tuple(c + V(0, 0, -.5 * cs)), (fr.U, fr.Vv, (0, 0, 1)), (2.6 * cs, 1.7 * cs, 1.1 * cs), 'bao', rr=1.0 * cs)]
+    yaw = rs.uniform(0, 2 * np.pi)
+    ax0 = V(math.cos(yaw), math.sin(yaw), 0); ax1 = V(-math.sin(yaw), math.cos(yaw), 0)
+    if k == 'dua':   # dưa hấu: dài, sọc rằn xanh đậm, đốm vàng chỗ nằm
+        e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (2.7 * cs, 2.0 * cs, 1.9 * cs), 'dua')
+        return grp([e, M(Line([tuple(c + ax0 * 2.7 * cs), tuple(c + ax0 * 3.1 * cs + V(0, 0, .3 * cs))], .16 * cs, 'go2'), col=hexc('#6a6a2a'))])
+    if k == 'bi':    # bí đỏ: múi sâu, cuống xanh nâu
+        e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (2.1 * cs, 2.1 * cs, 1.55 * cs), 'bi', rib=(10, .09))
+        st = M(Line([tuple(c + V(0, 0, 1.2 * cs)), tuple(c + V(0, 0, 1.9 * cs)), tuple(c + ax0 * .5 * cs + V(0, 0, 2.3 * cs))], [.34 * cs, .26 * cs, .2 * cs], 'go2'), col=hexc('#6a6a34'))
+        return grp([e, st])
+    if k == 'khom':  # khóm: mắt dứa, xanh dưới vàng trên, chùm lá gai
+        e = Ell(tuple(c), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (1.35 * cs, 1.35 * cs, 1.8 * cs), 'khom')
+        o = [e]
+        top = c + V(0, 0, 1.6 * cs)
+        for q in range(9):
+            ang = q / 9 * 2 * np.pi + rs.uniform(0, .3)
+            up = .55 + .4 * (q % 3) / 2
+            d = V(math.cos(ang) * (1 - up), math.sin(ang) * (1 - up), up)
+            o.append(leaf(top, d, (1.6 + .6 * (q % 2)) * cs, .45 * cs, '#4a7a52', bend=.25))
+        return grp(o)
+    if k == 'dua2':  # dừa xiêm xanh: hơi tam giác, núm nâu
+        e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (1.7 * cs, 1.55 * cs, 1.6 * cs), 'dua2')
+        return grp([e, M(Ball(tuple(c + V(0, 0, 1.45 * cs)), .45 * cs, 'go2', sq=(1, 1, .5)), col=hexc('#6a5a30'))])
+    if k == 'xoai':  # xoài: cong, xanh -> vàng -> má hồng
+        e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (1.7 * cs, 1.1 * cs, 1.0 * cs), 'xoai', bend=.07)
+        return grp([e])
+    if k == 'cam':   # cam sành: vỏ sần, xanh vàng, cuống + 1 lá
+        e = Ell(tuple(c), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (1.05 * cs, 1.05 * cs, .95 * cs), 'cam2')
+        o = [e, M(Ball(tuple(c + V(0, 0, .95 * cs)), .18 * cs, 'go2'), col=hexc('#5a5a2a'))]
+        if rs.rand() < .5:
+            o.append(leaf(c + V(0, 0, .95 * cs), ax0 + V(0, 0, .3), 1.4 * cs, .6 * cs, '#3f7a32', bend=.1))
+        return grp(o)
     if k == 'khoai':
-        return [M(Ball(tuple(c), 1.0 * cs, 'bi', sq=(1.7, 1, .9)), col=hexc('#8a3e4a'))]
-    if k == 'chuoi':   # buồng chuối
+        e = Ell(tuple(c), (ax0, ax1, (0, 0, 1)), (1.6 * cs, .85 * cs, .8 * cs), 'khoai', bend=.08)
+        return grp([e])
+    if k == 'lua':   # lúa vàng đầy thúng
+        return [M(Ball(tuple(c + V(0, 0, -.6)), 2.0 * cs, 'lua', sq=(1, 1, .35)), col=hexc('#d8b048'))]
+    if k == 'bao':
+        return [Box(tuple(c + V(0, 0, -.5 * cs)), (fr.U, fr.Vv, (0, 0, 1)), (2.6 * cs, 1.7 * cs, 1.1 * cs), 'bao', rr=1.0 * cs)]
+    if k == 'chuoi':  # nải chuối: 2 hàng trái cong chụm về cuống, vàng đầu xanh, núm nâu
         o = []
-        for q in range(5):
-            ang = q / 5 * 2 * np.pi
-            d = fr.U * math.cos(ang) + fr.Vv * math.sin(ang)
-            o.append(Line([tuple(c + d * .6 * cs + V(0, 0, 1.2 * cs)), tuple(c + d * 1.9 * cs + V(0, 0, -.4 * cs)), tuple(c + d * 1.6 * cs + V(0, 0, -1.6 * cs))], [.55 * cs, .6 * cs, .35 * cs], 'chuoi'))
-        o.append(M(Line([tuple(c + V(0, 0, -1.4 * cs)), tuple(c + V(0, 0, 2.2 * cs))], .4 * cs, 'go2'), col=hexc('#6a7a3a')))
-        return o
+        crown = c + ax0 * -1.6 * cs + V(0, 0, .3 * cs)
+        o.append(M(Line([tuple(crown + V(0, 0, -.3 * cs)), tuple(crown - ax0 * .9 * cs + V(0, 0, .6 * cs))], .45 * cs, 'go2'), col=hexc('#7a7a3a')))
+        for row in (0, 1):   # nải nằm: trái xoè ngang, đầu cong vểnh lên
+            nq = 6 - row
+            for q in range(nq):
+                sp = (q - (nq - 1) / 2) * .62 * cs
+                b = crown + ax1 * sp * .25 + V(0, 0, row * .7 * cs)
+                m1 = b + ax0 * 1.5 * cs + ax1 * sp * 1.1 + V(0, 0, .1 * cs)
+                e_ = b + ax0 * (2.8 - .3 * row) * cs + ax1 * sp * 1.5 + V(0, 0, .8 * cs)
+                o.append(M(Line([tuple(b), tuple(m1), tuple(e_)], [.3 * cs, .42 * cs, .22 * cs], 'chuoi2'), col=None))
+        return grp(o)
     return []
+
+
+def seedling(fr, c, sz=1.0, kind=0, seed=0):
+    """chậu cây giống: chậu đất có vành + cây con thật (0 bưởi con, 1 kiểng lá dài, 2 mai vàng, 3 cau con, 4 cam con có trái)"""
+    rs = np.random.RandomState(abs(int(seed * 131 + c[0] * 17 + c[1] * 7)) % (2 ** 31))
+    C = V(*c)
+    o = [Tube(tuple(C), (0, 0, 1), 1.8 * sz, [(0, .8 * sz), (.85, 1.1 * sz), (1, 1.25 * sz)], 'chau', shell=.25, open1=True),
+         M(Ball(tuple(C + V(0, 0, 1.45 * sz)), 1.0 * sz, 'muoi', sq=(1, 1, .15)), col=hexc('#5a3e28'))]
+    top = C + V(0, 0, 1.5 * sz)
+    if kind in (0, 4):   # cây ăn trái con: thân, 3 cành, chùm lá thật
+        h_ = 3.2 * sz
+        o.append(M(Line([tuple(top), tuple(top + V(.2 * sz, 0, h_))], [.24 * sz, .16 * sz], 'go2'), col=hexc('#6a4a2a')))
+        for b in range(3):
+            ang = b * 2.1 + rs.uniform(0, .6)
+            p0 = top + V(0, 0, h_ * (.5 + .2 * b))
+            p1 = p0 + V(math.cos(ang) * 1.3 * sz, math.sin(ang) * 1.3 * sz, .8 * sz)
+            o.append(M(Line([tuple(p0), tuple(p1)], .1 * sz, 'go2'), col=hexc('#6a4a2a')))
+            for l in range(5):
+                a2 = ang + (l - 2) * .7
+                o.append(leaf(p1 + V(0, 0, rs.uniform(-.3, .3) * sz), V(math.cos(a2), math.sin(a2), rs.uniform(-.1, .5)), 1.4 * sz, .7 * sz,
+                              ['#5a9a3e', '#6aaa44', '#4a8a36'][l % 3], bend=.15))
+        for l in range(4):
+            a2 = l * 1.6
+            o.append(leaf(top + V(0, 0, h_), V(math.cos(a2), math.sin(a2), .5), 1.3 * sz, .65 * sz, '#6aaa44', bend=.15))
+        if kind == 4:
+            for q in range(4):
+                ang = q * 1.7 + .5
+                o.append(M(Ell(tuple(top + V(math.cos(ang) * 1.0 * sz, math.sin(ang) * 1.0 * sz, h_ * .75)), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (.38 * sz, .38 * sz, .36 * sz), 'cam2'), col=None))
+    elif kind == 1:      # kiểng lá dài (phát tài): lá dải cong rủ
+        for q in range(8):
+            ang = q / 8 * 2 * np.pi + rs.uniform(0, .4)
+            up = .9 if q % 2 else .6
+            o.append(leaf(top + V(0, 0, .2 * sz), V(math.cos(ang) * (1 - up * .7), math.sin(ang) * (1 - up * .7), up), 3.0 * sz, .55 * sz,
+                          ['#5aa03a', '#3f8a32', '#6ab048'][q % 3], bend=.5))
+    elif kind == 2:      # mai vàng: cành nâu khẳng khiu, bông 5 cánh vàng, nụ
+        for b in range(5):
+            ang = b * 1.3 + rs.uniform(0, .4)
+            p1 = top + V(math.cos(ang) * 1.5 * sz, math.sin(ang) * 1.5 * sz, (2.6 + .4 * (b % 3)) * sz)
+            mid = (top + p1) / 2 + V(math.cos(ang + 1) * .3 * sz, math.sin(ang + 1) * .3 * sz, 0)
+            o.append(M(Line([tuple(top), tuple(mid), tuple(p1)], [.2 * sz, .13 * sz, .08 * sz], 'go2'), col=hexc('#4a3020')))
+            for fpos in (p1, mid + V(0, 0, .25 * sz)):
+                for pt in range(5):
+                    pa = pt / 5 * 2 * np.pi
+                    o.append(M(Ball(tuple(fpos + V(math.cos(pa) * .32 * sz, math.sin(pa) * .32 * sz, .12 * sz)), .24 * sz, 'cam', sq=(1, 1, .45)), col=hexc('#f6c418')))
+                o.append(M(Ball(tuple(fpos + V(0, 0, .18 * sz)), .14 * sz, 'cam'), col=hexc('#c86a10')))
+    else:                # cau con: thân có khoanh, tàu lá kép
+        tip = top + V(0, 0, 3.6 * sz)
+        o.append(M(Line([tuple(top), tuple(tip)], [.28 * sz, .18 * sz], 'go2', nodes=.7 * sz), col=hexc('#7a8a4a')))
+        for k in range(5):
+            ang = k / 5 * 2 * np.pi + rs.uniform(0, .3)
+            d = V(math.cos(ang), math.sin(ang), 0)
+            pa = tip; pb = tip + d * 1.4 * sz + V(0, 0, .5 * sz); pc = tip + d * 2.6 * sz + V(0, 0, -.5 * sz)
+            o.append(M(Line([tuple(pa), tuple(pb), tuple(pc)], [.1 * sz, .08 * sz, .05 * sz], 'go2'), col=hexc('#5a7a3a')))
+            sd = nz(np.cross(V(0, 0, 1), d))
+            for j in range(4):
+                t = .25 + j * .22
+                p = pa + (pb - pa) * min(1, t * 2) if t < .5 else pb + (pc - pb) * (t - .5) * 2
+                for e in (-1, 1):
+                    o.append(leaf(p, sd * e + d * .5 + V(0, 0, -.2), 1.1 * sz, .25 * sz, '#4f9a3a', bend=.2))
+    return grp(o)
 
 
 def heap(fr, kinds, u0, u1, zf, wd, seed=1, cs=1.4, layers=3, sf=1.0):
@@ -394,6 +652,14 @@ def heap(fr, kinds, u0, u1, zf, wd, seed=1, cs=1.4, layers=3, sf=1.0):
             uu += step
             k_i += 1
     return o
+
+
+def mui(fr, u0, u1, R, zt, col='#cfae72'):
+    """mui xuồng: vòm tre đan khum trên mép"""
+    A = fr.w(u0, 0, zt)
+    t = Tube(tuple(A), tuple(fr.U), u1 - u0, [(0, R), (1, R * .96)], 'dan', shell=.45, open0=True, open1=True, wv=(30, .12))
+    M(t, col=hexc(col), sp=.06)
+    return Cut(t, tuple(A), (0, 0, -1))
 
 
 def thung(fr, u, v, zf, r, kind, seed=0):
@@ -534,41 +800,6 @@ def crates(fr, h, u0, u1, zf, seed=3):
             if rs.rand() < .7:   # tầng 2 nhỏ hơn
                 o += crate(fr, uu + hx + rs.uniform(-.3, .3), v + rs.uniform(-.4, .4), zf + 4.3, hx * .85, hy * .8, rs.uniform(1.6, 2.0), cols[rs.randint(4)], rs.uniform(-.08, .08))
         uu += hx * 2 + .35
-    return o
-
-
-def seedling(fr, c, sz=1.0, kind=0):
-    """chậu cây giống: chậu đất + cây con (0 cây ăn trái lá sẫm, 1 kiểng lá dài, 2 mai vàng, 3 cau con, 4 cam con có trái)"""
-    o = [Tube(tuple(c), (0, 0, 1), 1.8 * sz, [(0, .85 * sz), (1, 1.2 * sz)], 'chau', shell=.25, open1=True)]
-    top = V(*c) + V(0, 0, 1.6 * sz)
-    if kind in (0, 4):
-        o.append(M(Line([tuple(top), tuple(top + V(0, 0, 2.4 * sz))], .22 * sz, 'go2'), col=hexc('#6a4a2a')))
-        for k in range(4):
-            ang = k * 1.6
-            o.append(M(Ball(tuple(top + V(math.cos(ang) * .75 * sz, math.sin(ang) * .75 * sz, 2.6 * sz + .45 * sz * (k % 2))), .8 * sz, 'la', sq=(1, 1, .7)), col=hexc('#3f7a32' if kind == 0 else '#4f8a36')))
-        if kind == 4:
-            for k in range(3):
-                ang = k * 2.1 + .5
-                o.append(Ball(tuple(top + V(math.cos(ang) * 1.2 * sz, math.sin(ang) * 1.2 * sz, 2.2 * sz)), .32 * sz, 'cam'))
-    elif kind == 1:
-        for k in range(5):
-            ang = k / 5 * 2 * np.pi
-            d = V(math.cos(ang), math.sin(ang), 0)
-            o.append(M(Line([tuple(top), tuple(top + d * 1.3 * sz + V(0, 0, 2.4 * sz))], [.35 * sz, .1 * sz], 'la'), col=hexc('#5aa03a')))
-    elif kind == 2:   # mai vàng: cành nâu, bông vàng
-        for k in range(4):
-            ang = k * 1.7 + .3
-            e = top + V(math.cos(ang) * 1.2 * sz, math.sin(ang) * 1.2 * sz, 2.6 * sz + .3 * k * sz)
-            o.append(M(Line([tuple(top), tuple(e)], .14 * sz, 'go2'), col=hexc('#5a3a22')))
-            o.append(M(Ball(tuple(e), .5 * sz, 'cam'), col=hexc('#f0c020')))
-            o.append(M(Ball(tuple((top + e) / 2 + V(0, 0, .3 * sz)), .4 * sz, 'cam'), col=hexc('#f0c020')))
-    else:             # cau con: thân mảnh, tàu lá xoè
-        tip = top + V(0, 0, 3.2 * sz)
-        o.append(M(Line([tuple(top), tuple(tip)], [.25 * sz, .16 * sz], 'go2'), col=hexc('#7a8a4a')))
-        for k in range(5):
-            ang = k / 5 * 2 * np.pi
-            d = V(math.cos(ang), math.sin(ang), 0)
-            o.append(M(Line([tuple(tip), tuple(tip + d * 1.0 * sz + V(0, 0, .6 * sz)), tuple(tip + d * 2.0 * sz + V(0, 0, -.4 * sz))], [.3 * sz, .25 * sz, .08 * sz], 'la'), col=hexc('#5a9a3a')))
     return o
 
 
@@ -727,6 +958,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
             objs += thung(fr, L * .22, 1.0, zf, 2.6, 'cam', seed + 4)
             objs += oars(fr, h, -1.0)
         objs += rope(fr, h, -.78)
+        objs += rails(fr, h, .3, hexc('#5e3a20')) + stem(fr, h, '#7a4e2c', .6)
         return Scene(objs)
     if kind == 'ghe':    # ghe thương hồ: nhà ghe ván sơn xanh, mái tôn, máy đuôi tôm, khoang trước chất thùng gỗ
         Wb = 13.0
@@ -740,6 +972,10 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         objs += beo(fr, .58 * CH * TILE, zf)
         objs += engine(fr, h)
         objs += rope(fr, h, .84)
+        objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.5, -.2, .2, .45)) + rudder(fr, h) + anchor(fr, h)
+        objs += laundry(fr, fr.w(-L * .12 + .6, Wb * .55, zd + 11.5), fr.w(.58 * CH * TILE - .8, .4, 26), 4, seed)
+        objs += flag(fr, h, -L * .93, zt_at(h, -.93) - .3)
+        objs += deck_props(fr, h, -L * .84, zt_at(h, -.84) - .3)
         return Scene(objs)
     # ghe chợ nổi (4 loại theo data)
     cs_ = CHO_SET[seed % 4]
@@ -753,7 +989,113 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
     objs += beo(fr, .58 * CH * TILE, zf)
     objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4])
+    objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.35, .3)) + anchor(fr, h)
     return Scene(objs)
+
+
+
+
+# ------------------------------------------------------------ chi tiết thân ghe (11-24 Link "vẽ cho chi tiết lại")
+def rails(fr, h, r=.45, col=None, n=26, amax=.96):
+    """nẹp mạn 2 bên chạy theo mép ghe + nẹp hông thấp hơn (gờ chắn va)"""
+    L = h.L
+    col = col if col is not None else hexc(getattr(h, 'trim', '#5e3a20'))
+    o = []
+    aa = np.linspace(-amax, amax, n)
+    for sd in (-1, 1):
+        pts = [tuple(fr.w(a * L, sd * (w_at(h, a) - .05), zt_at(h, a) + .05)) for a in aa]
+        o.append(M(Line(pts, r, 'go2'), col=col))
+        if getattr(h, 'band', None) is not None:   # gờ hông dưới dải sơn
+            pts2 = []
+            for a in aa[2:-2]:
+                w, zt, zb = h.prof(np.array([a]))
+                z = float(zt[0]) - h.bw - .2
+                k = np.sqrt(np.clip(1 - ((z - float(zt[0])) / max(float(zt[0] - zb[0]), .5)) ** 2, 0, 1))
+                pts2.append(tuple(fr.w(a * L, sd * (float(w[0]) * k + .05), z)))
+            o.append(M(Line(pts2, r * .7, 'go2'), col=hexc(h.line) * .9))
+    return o
+
+
+def stem(fr, h, col='#b8382a', big=1.0):
+    """cột mũi cong vểnh + cột lái"""
+    L = h.L
+    z1 = zt_at(h, .99)
+    o = [M(Line([tuple(fr.w(L * .985, 0, z1 - 2.5 * big)), tuple(fr.w(L * 1.01, 0, z1 + .5)), tuple(fr.w(L * 1.0, 0, z1 + 2.6 * big)), tuple(fr.w(L * .975, 0, z1 + 3.4 * big))],
+                [.7 * big, .65 * big, .55 * big, .45 * big], 'go2'), col=hexc(col))]
+    z0 = zt_at(h, -.99)
+    o.append(M(Line([tuple(fr.w(-L * .985, 0, z0 - 2 * big)), tuple(fr.w(-L * 1.005, 0, z0 + .4)), tuple(fr.w(-L * .99, 0, z0 + 1.8 * big))], [.6 * big, .55 * big, .45 * big], 'go2'), col=hexc(col)))
+    return o
+
+
+def tires(fr, h, us=(-.3, .05, .4), side=(-1, 1)):
+    """vỏ xe cũ treo mạn làm đệm chống va"""
+    L = h.L
+    o = []
+    for a in us:
+        for sd in side:
+            w = w_at(h, a); z = zt_at(h, a)
+            c = fr.w(a * L, sd * (w + .55), z - 1.9)
+            o.append(M(Torus(tuple(c), tuple(fr.Vv * sd), 1.35, .5, 'dco'), col=hexc('#26241f'), sp=.15, pw=20))
+            o.append(M(Line([tuple(fr.w(a * L, sd * (w - .1), z + .2)), tuple(c + V(0, 0, 1.3))], .12, 'day'), col=hexc('#c8b07a')))
+    return o
+
+
+def rudder(fr, h):
+    """bánh lái ván sau lái + cần lái"""
+    L = h.L
+    z0 = zt_at(h, -.97)
+    o = [M(Box(tuple(fr.w(-L - 1.6, 0, -1.0)), (fr.U, fr.Vv, (0, 0, 1)), (1.7, .22, 3.0), 'go2', rr=.15), col=hexc('#5a3a22'))]
+    o.append(M(Line([tuple(fr.w(-L - 1.2, 0, 1.6)), tuple(fr.w(-L - 1.0, 0, z0 + 1.2)), tuple(fr.w(-L + 4.5, .8, z0 + 2.0))], .25, 'go2'), col=hexc('#7a5230')))
+    return o
+
+
+def anchor(fr, h):
+    """mỏ neo sắt trên sạp mũi + cuộn xích"""
+    L = h.L
+    z = zt_at(h, .84) - .2
+    c = V(*fr.w(L * .84, -1.4, z))
+    o = [M(Line([tuple(c - fr.U * 1.6), tuple(c + fr.U * 1.6)], .28, 'thep'), col=hexc('#4a4a48'))]
+    for e in (-1, 1):
+        o.append(M(Line([tuple(c + fr.U * 1.6), tuple(c + fr.U * 1.1 + fr.Vv * e * 1.2)], .24, 'thep'), col=hexc('#4a4a48')))
+    o.append(M(Torus(tuple(c - fr.U * 1.9), (0, 0, 1), .5, .16, 'thep'), col=hexc('#4a4a48')))
+    return o
+
+
+def laundry(fr, a, b, n=4, seed=0):
+    """dây phơi đồ: dây chùng + áo quần phơi"""
+    a = V(*a); b = V(*b)
+    rs = np.random.RandomState(seed)
+    mid = (a + b) / 2 + V(0, 0, -.8)
+    o = [M(Line([tuple(a), tuple(mid), tuple(b)], .1, 'day'), col=hexc('#d8d0b8'))]
+    d = nz(b - a); sd = nz(np.cross(V(0, 0, 1), d))
+    cols = ['#d84a3a', '#3a6ab8', '#f0e8d0', '#e8b030', '#4a8a4a']
+    for k in range(n):
+        t = (k + .7) / (n + .4)
+        p = a + (b - a) * t + V(0, 0, -.8 * (1 - (2 * t - 1) ** 2) - 1.3)
+        hz = rs.uniform(1.0, 1.6)
+        o.append(M(Box(tuple(p + V(0, 0, -hz + 1.2)), (d, sd, (0, 0, 1)), (rs.uniform(.9, 1.3), .08, hz), 'cam', rr=.06), col=hexc(cols[(k + seed) % 5])))
+    return o
+
+
+def flag(fr, h, u, z0, ht=11.0):
+    """cột cờ nhỏ sau lái, cờ đỏ"""
+    top = fr.w(u, 0, z0 + ht)
+    o = [M(Line([tuple(fr.w(u, 0, z0)), tuple(top)], .2, 'go2'), col=hexc('#d8c89a'))]
+    c = top + fr.U * -1.6 + V(0, 0, -1.0)
+    o.append(M(Box(tuple(c), (fr.U, fr.Vv, (0, 0, 1)), (1.5, .06, 1.0), 'cam', rr=.04), col=hexc('#d42a20')))
+    o.append(M(Ball(tuple(c + fr.Vv * .1), .42, 'cam', sq=(1, .2, 1)), col=hexc('#f6d020')))
+    o.append(M(Ball(tuple(c - fr.Vv * .1), .42, 'cam', sq=(1, .2, 1)), col=hexc('#f6d020')))
+    return o
+
+
+def deck_props(fr, h, u, zd):
+    """đồ sinh hoạt trên sạp: lu nước, bình gas đỏ, thau, can nhựa"""
+    o = []
+    o += [M(Ball(tuple(fr.w(u, -2.6, zd + 2.0)), 1.8, 'chum', sq=(1, 1, 1.15)), sp=.5, pw=40),
+          M(Torus(tuple(fr.w(u, -2.6, zd + 4.0)), (0, 0, 1), 1.05, .3, 'chum'), sp=.5, pw=40)]
+    o.append(M(Tube(tuple(fr.w(u + .4, 2.4, zd)), (0, 0, 1), 2.6, [(0, 1.0), (.8, 1.0), (1, .55)], 'dco', shell=0.0), col=hexc('#c83a2a'), sp=.35, pw=30))
+    o.append(M(Tube(tuple(fr.w(u + 2.6, 0, zd)), (0, 0, 1), .8, [(0, 1.1), (1, 1.5)], 'dco', shell=.2, open1=True), col=hexc('#3a8ac8'), sp=.3, pw=30))
+    return o
 
 
 def parse(key):
