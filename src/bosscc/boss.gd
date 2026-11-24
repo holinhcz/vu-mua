@@ -8,6 +8,7 @@ const BossLook = preload("res://boss_look.gd")      # shared boss lighting + mat
 var ortho_size := 7.6
 var look_at_pt := Vector3(0, 1.2, 0)
 var auto_play := false
+var face_base := 0.0
 var J := {}
 var root: Node3D
 var cam: Camera3D
@@ -211,7 +212,7 @@ func _process(dt: float) -> void:
 	J["center"].rotation.z = deg_to_rad(pitch + 1.2 * sin(walk_ph * 2.0) * walk)
 	J["center"].rotation.x = deg_to_rad(2.0 * sin(walk_ph) * walk)
 	root.position.y = GROUND + hover + 0.06 * sin(t * 6.0) * flap
-	root.rotation.y = FACE0 + face
+	root.rotation.y = FACE0 + face + face_base
 	mat_body.emission_energy_multiplier = BossLook.EMISSION + 2.5 * glow
 	for nm in BI:
 		if nm == "body": continue
@@ -249,7 +250,7 @@ func _stroll() -> void:
 		var yaw: float = -FACE0 + (0.0 if d > 0 else PI)
 		walk_speed = 1.5; tw(self, "walk", 1.0, 0.3)
 		await tw(self, "face", yaw, 0.6).finished
-		await tw(root, "position:x", root.position.x + 1.5 * d, 2.0, Tween.TRANS_LINEAR).finished
+		await tw(root, "position:x", root.position.x + 0.5 * d, 1.2, Tween.TRANS_LINEAR).finished
 	await tw(self, "face", 0.0, 0.6).finished
 	await tw(self, "walk", 0.0, 0.3).finished
 	walk_speed = 1.0
