@@ -75,7 +75,7 @@ func _layout() -> void:
 				var w := tile_pos(s, h)
 				var e := pow(w.x / 200.0, 2) + pow((w.y - BOSS_Y) / 125.0, 2)
 				# gặt: quanh boss + dải sát bờ dưới (chừa lối từ sân phơi lên)
-				if e <= 0.92 + (fposmod(sin(s * 12.9898 + h * 78.233) * 43758.5453, 1.0) - 0.5) * 0.4 or (s >= RA - 1 or h >= RA - 1) and w.y > 560.0: harvested[t] = true
+				if e <= 1.3 or (s >= RA - 1 or h >= RA - 1) and w.y > 560.0: harvested[t] = true
 
 func _ground() -> void:
 	var ik := Image.create(TN.x, TN.y, false, Image.FORMAT_RGBA8)
@@ -85,9 +85,6 @@ func _ground() -> void:
 		var q: Vector2i = t - T0
 		var c: Color = pal[rng.randi() % pal.size()]
 		var hv: bool = harvested.has(t) or gnaw.has(t)
-		if kind[t] == 1 and not hv:     # ô lúa sát chỗ gặt: nền rạ dưới bụi lúa, không lộ bậc thang xanh theo ô
-			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]:
-				if harvested.has(t + d) or gnaw.has(t + d): hv = true; break
 		if hv: c = Color8(194, 170, 98)
 		c.a = float((4 if hv else kind[t]) * 16) / 255.0
 		ik.set_pixelv(q, c)
@@ -97,8 +94,8 @@ func _ground() -> void:
 	mat.set_shader_parameter("uK", ImageTexture.create_from_image(ik))
 	mat.set_shader_parameter("uRD", ImageTexture.create_from_image(ir))
 	mat.set_shader_parameter("uYE", Vector4(0, 1000, 185, 190))
-	mat.set_shader_parameter("uLP0", Vector4(26.6, 31.2, 29.0, 33.6))
-	mat.set_shader_parameter("uLP1", Vector4(31.2, 26.6, 33.6, 29.0))
+	mat.set_shader_parameter("uLP0", Vector4(27.5, 30.8, 29.4, 32.7))
+	mat.set_shader_parameter("uLP1", Vector4(30.8, 27.5, 32.7, 29.4))
 	mat.set_shader_parameter("uT0", Vector2(T0)); mat.set_shader_parameter("uTN", Vector2(TN))
 	var arr := []
 	for f in ["n/dg2_dat.webp", "n/n2_codai.webp", "n/n2_co.webp", "n/n2_dat.webp", "n/dg2_gach.webp"]:
@@ -130,53 +127,18 @@ func put(p: String, fr: String, pos: Vector2, flip := false, parent: Node = null
 	(parent if parent else ysort).add_child(sp)
 	return sp
 
-func _pre_gnaw() -> void:     # ô lúa mép chỗ gặt bị gặm: quyết trước để nền tô màu rạ
-	var r3 := RandomNumberGenerator.new(); r3.seed = 11
-	for t in kind.keys():
-		if kind[t] != 1 or harvested.has(t): continue
-		var n := 0
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			if kind.get(t + d, 0) == 1 and not harvested.has(t + d): n += 1
-		if n <= 1: harvested[t] = true
-	for t in kind:
-		if kind[t] != 1 or harvested.has(t): continue
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			if harvested.has(t + d):
-				if r3.randf() < 0.55: gnaw[t] = true
-				break
-	var g1 := gnaw.duplicate()
-	for t in kind:     # vòng thứ 2: gặm lấn sâu chỗ có chỗ không, mép không còn thẳng theo ô
-		if kind[t] != 1 or harvested.has(t) or gnaw.has(t): continue
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			if g1.has(t + d):
-				if r3.randf() < 0.35: gnaw[t] = true
-				break
+func _pre_gnaw() -> void:     # (bỏ) mép gặt giờ là đường cong mượt theo hình bầu dục
+	pass
 func _scenery() -> void:
-	# lúa chín chưa gặt trên ô ruộng chưa gặt; mép giáp chỗ gặt bị bầy cào cào gặm (ô trống / còn gốc)
+	# lúa chín: mép chỗ gặt = 1 đường cong bầu dục mượt quanh boss + dải lối đi sát bờ dưới; không lúa sót, không mép gặm
 	for t in kind:
-		if kind[t] != 1 or harvested.has(t): continue
+		if kind[t] != 1: continue
 		var w := tile_pos(t.x, t.y)
-		if w.y < 150 or w.y > 800 or abs(w.x) > 300: continue
-		var jit := Vector2(rng.randf_range(-3, 3), rng.randf_range(-1.5, 1.5))
-		if gnaw.has(t):
-			if rng.randf() < 0.5: put("caytrong/lua", "dlua1", w + jit, rng.randf() < 0.5)
-			continue
-		var sp3 := put("caytrong/lua", "dlua3", w + jit + Vector2(0, rng.randf_range(-2, 2)), rng.randf() < 0.5)
-		sp3.scale *= rng.randf_range(0.82, 1.12)
-	# mép chỗ gặt lởm chởm: bụi lúa chín lấn ra ô gặt, cao thấp lệch nhau
-	for t in harvested:
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var n2: Vector2i = t + d
-			if kind.get(n2, 0) == 1 and not harvested.has(n2) and not gnaw.has(n2) and rng.randf() < 0.55:
-				var w2 := tile_pos(t.x + d.x * 0.32 + rng.randf_range(-0.3, 0.3), t.y + d.y * 0.32 + rng.randf_range(-0.3, 0.3))
-				if abs(w2.x) < 140 and abs(w2.y - BOSS_Y) < 70: continue
-				var s4 := put("caytrong/lua", "dlua3" if rng.randf() < 0.7 else "dlua2", w2, rng.randf() < 0.5)
-				s4.scale *= rng.randf_range(0.7, 0.95)
-	# vài bụi lúa sót lẻ loi trên ruộng gặt (không đứng sát chân boss)
-	for t in harvested:
-		var w := tile_pos(t.x, t.y)
-		if abs(w.x) < 150 and abs(w.y - BOSS_Y) < 75: continue
-		if rng.randf() < 0.10: put("caytrong/lua", "dlua1", w + Vector2(rng.randf_range(-8, 8), rng.randf_range(-4, 4)), rng.randf() < 0.5)
+		if w.y < 150 or w.y > 660 or abs(w.x) > 300: continue
+		if (t.x >= RA - 1 or t.y >= RA - 1) and w.y > 560.0: continue
+		if pow(w.x / 200.0, 2) + pow((w.y - BOSS_Y) / 125.0, 2) <= 1.0: continue
+		var sp3 := put("caytrong/lua", "dlua3", w + Vector2(rng.randf_range(-1.5, 1.5), rng.randf_range(-1, 1)), rng.randf() < 0.5)
+		sp3.scale *= rng.randf_range(0.94, 1.04)
 	# bờ cỏ 2 ô: lau, bụi cỏ, bụi lá mọc thưa lệch nhau 2 hàng; hoa từng cặp khóm cách đều (không lẻ loi)
 	var HOA := ["h_cuc_vang", "h_mong_ga", "h_da_yen", "h_mai_dia", "h_van_tho", "h_cuc_trang"]
 	var hi := 0
@@ -203,7 +165,6 @@ func _scenery() -> void:
 	put("caylang/rom", "d2", Vector2(-176, 900), true)
 	put("caylang/rom", "d3", Vector2(208, 880), true)
 	put("congtrinh/choi", "d1", Vector2(192, 660), true)      # chòi canh đứng trên bờ ruộng
-	put("trangtri/da_nho_reu", "d1", Vector2(182, 912), true)
 	for p2 in [Vector2(-232, 1060), Vector2(-226, 1190), Vector2(236, 1130), Vector2(230, 1225), Vector2(-150, 1225), Vector2(120, 1236), Vector2(-240, 800), Vector2(242, 780)]:
 		var r := rng.randf()
 		if r < 0.5: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), p2, rng.randf() < 0.5)

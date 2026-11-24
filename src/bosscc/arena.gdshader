@@ -74,36 +74,22 @@ void fragment() {
 	vec2 uv = vec2(u, v);
 	float wv = zone(uv, 3) + (vno(wp / 23.0 + 34.6) * 0.7 + vno(wp / 8.5 + 6.6) * 0.3 - 0.5) * 0.84;
 	vec3 c = mix(cl, cw, softz(wv, pw));
-	{ float gn = vno(wp / 26.0 + 11.0) * 0.7 + vno(wp / 7.0 + 3.0) * 0.3;
-	  c = mix(c, c * vec3(0.78, 0.80, 0.70), smoothstep(0.35, 0.75, gn) * 0.7);
-	  c = mix(c, c * vec3(1.10, 1.02, 0.78), 0.45 * smoothstep(0.62, 0.85, vno(wp / 18.0 + 40.0)));
-	  float l = dot(c, vec3(0.3, 0.59, 0.11)); c = mix(vec3(l), c, 0.82); }
 	float yn = (vno(wp / 23.0 + 69.2) * 0.9 + vno(wp / 8.5 + 13.2) * 0.1 - 0.5);
 	float yv = zone(uv, 2) + yn * 0.6;
-	if (uYE.z > 0.0) { vec2 q = (wp - uYE.xy) / uYE.zw; yv = 1.5 - length(q) + yn * 0.28; }
+	if (uYE.z > 0.0) { vec2 q = (wp - uYE.xy) / uYE.zw; yv = 1.5 - length(q) + yn * 0.03; }
 	c = mix(c, texture(uRA, vec3(wp / tY, 3.0)).rgb * gY + oY, softz(yv, pw));
 	// lúa phơi trên sân: hạt vàng, vệt cào song song, mép mềm
 	for (int i = 0; i < 2; i++) {
 		vec4 r = i == 0 ? uLP0 : uLP1;
 		if (r.z <= r.x) continue;
 		vec2 dq = max(r.xy - uv, uv - r.zw);
-		float dd = max(dq.x, dq.y) + (vno(wp / 4.0 + float(i) * 9.0) - 0.5) * 0.16 + (vno(wp / 1.3) - 0.5) * 0.05;
+		float dd = max(dq.x, dq.y);
 		float a = clamp(-dd * 28.0 / max(pw, 1e-4) + 0.5, 0.0, 1.0);
-		// hạt lúa rơi vãi ngoài mép
-		float sp = step(0.86, hh(floor(wp / 0.6) + float(i))) * smoothstep(0.25, 0.0, dd) * step(0.0, dd);
-		vec3 gc0 = vec3(214.0, 176.0, 78.0) / 255.0;
-		c = mix(c, gc0 * 1.05, sp * 0.8);
 		if (a <= 0.0) continue;
-		float g = hh(floor(wp / 0.55));
-		vec3 gc = gc0 * (0.86 + 0.22 * g) * (0.92 + 0.14 * vno(wp / 6.0 + 2.0));
-		// luống cào: gợn sóng sáng/tối theo u
-		float rk = sin((uv.x - r.x) * 6.2832 * 4.0 + (vno(wp / 5.0) - 0.5) * 2.0);
-		gc *= 1.0 + 0.09 * rk;
-		// ụ lúa: giữa sáng, mép tối (dày ở giữa)
-		float hgt = clamp(-dd * 3.0, 0.0, 1.0);
-		gc *= 0.80 + 0.22 * hgt;
-		// trấu/rơm vụn
-		gc = mix(gc, vec3(170.0, 140.0, 80.0) / 255.0, 0.5 * step(0.93, hh(floor(wp / 0.9) + 5.0)));
+		vec3 gc = vec3(212.0, 176.0, 80.0) / 255.0 * (0.96 + 0.06 * hh(floor(wp / 0.6))) * (0.97 + 0.05 * vno(wp / 8.0));
+		float rk = sin((uv.x - r.x) * 6.2832 * 4.0);
+		gc *= 1.0 + 0.06 * rk;
+		gc *= 0.90 + 0.10 * clamp(-dd * 8.0, 0.0, 1.0);
 		c = mix(c, gc, a);
 	}
 	vec2 tf = floor(uv);
@@ -116,20 +102,20 @@ void fragment() {
 			// ruộng mới gặt: nền đất rạ loang, gốc rạ thành bụi (3 cọng + bóng), rơm rớt, bờ đất đắp thưa (6 ô), mép mềm
 			float px = max(fwidth(wp.x), 1e-4);
 			float tn = vno(wp / 40.0 + 5.3);
-			c = mix(kk.rgb, vec3(150.0, 128.0, 80.0) / 255.0, 0.35 * smoothstep(0.45, 0.8, tn));
-			c *= (0.92 + 0.12 * vno(wp / 90.0 + 2.1)) * (0.95 + 0.08 * vno(wp / 5.0));
+			c = kk.rgb * (0.97 + 0.05 * tn);
+			
 			float base = wp.y + 0.5 * wp.x;
 			const float RP = 5.0;
 			const float CP = 3.6;
 			float ri = floor(base / RP + 0.5);
 			float e1 = (base / RP - ri) * RP * 0.894;
-			float sx = wp.x * 1.118 + hh(vec2(ri, 3.0)) * CP;
+			float sx = wp.x * 1.118 + fract(ri * 0.5) * CP;
 			float ci = floor(sx / CP);
-			float dxa = sx - ci * CP - CP * 0.5 + (hh(vec2(ci, ri)) - 0.5) * 1.0;
-			if (hh(vec2(ci, ri + 17.0)) > 0.15) {
+			float dxa = sx - ci * CP - CP * 0.5;
+			{
 				float sh = length(vec2(dxa * 0.75, (e1 - 0.3) * 1.6));
 				c = mix(c, vec3(92.0, 74.0, 40.0) / 255.0, 0.42 * clamp((1.35 - sh) / px + 0.5, 0.0, 1.0));
-				float hgt = 1.6 + 1.0 * hh(vec2(ri, ci));
+				float hgt = 1.9 + 0.3 * hh(vec2(ri, ci));
 				for (int k = -1; k <= 1; k++) {
 					float fk = float(k);
 					float lean = fk * 0.35;
@@ -142,25 +128,15 @@ void fragment() {
 					c = mix(c, sc, clamp(-st / px + 0.5, 0.0, 1.0));
 				}
 			}
-			vec2 cc = floor(wp / 13.0);
-			if (hh(cc + 7.7) < 0.5) {
-				float an = hh(cc + 1.3) * 6.2832;
-				vec2 dir = vec2(cos(an), sin(an) * 0.5);
-				vec2 p0 = (cc + vec2(hh(cc + 2.1), hh(cc + 4.4))) * 13.0;
-				vec2 q = wp - p0; float tq = clamp(dot(q, dir) / dot(dir, dir), -5.0, 5.0);
-				float dl = length(q - dir * tq);
-				c = mix(c, vec3(120.0, 96.0, 52.0) / 255.0, 0.3 * clamp((0.7 - length(q - dir * tq - vec2(0.0, 0.5))) / px + 0.5, 0.0, 1.0));
-				c = mix(c, vec3(236.0, 210.0, 128.0) / 255.0, 0.9 * clamp((0.4 - dl) / px + 0.5, 0.0, 1.0));
-			}
 			// bờ đất đắp: thưa (6 ô), mép uốn theo nhiễu, mặt đất pha cỏ, bóng mềm phía dưới
-			float wob = (vno(wp / 9.0 + 1.7) - 0.5) * 0.10;
+			float wob = 0.0;
 			float fu = u - tf.x + wob, fv = v - tf.y - wob;
 			bool bu = int(mod(tf.x, 6.0)) == 0;
 			bool bv = int(mod(tf.y, 6.0)) == 2;
 			const float W = 0.17;
-			float gt = smoothstep(0.45, 0.7, vno(wp / 3.0 + 3.1));
+			float gt = 0.5;
 			vec3 top = mix(vec3(152.0, 126.0, 80.0), vec3(118.0, 136.0, 66.0), gt * 0.75) / 255.0;
-			top *= 0.9 + 0.14 * vno(wp / 1.6);
+			
 			if (bu) {
 				float a = smoothstep(W + 0.02, W - 0.02, fu);
 				c = mix(c, c * 0.78, 0.6 * smoothstep(W + 0.12, W, fu) * (1.0 - a));
