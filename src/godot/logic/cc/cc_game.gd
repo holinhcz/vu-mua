@@ -63,6 +63,7 @@ func _ready() -> void:
 	shs.resize(32)
 	_load()
 	_xu_last = int(S.xu)
+	D.kho_price = host.price if host != null and host.has("price") else Callable()   # (bản 536) giá cá theo Kho vườn
 	for k in D.KHO_BAIT:
 		_bait_last[k] = int(S.baits.get(k, 0))
 	_reset_state()

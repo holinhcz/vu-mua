@@ -109,7 +109,13 @@ static func fish(id: String) -> Dictionary:
 static func xp_need(lv: int) -> int:
 	return 40 + lv * 35
 
+static var kho_price := Callable()   # (bản 536) chạy trong vườn: giá Kho vườn của món (G.price)
 static func fish_value(f: Dictionary, w: float) -> int:
+	# (bản 536) trong vườn: một giá chung với Kho = giá Kho x căn(cân con này / cân giữa của loài): con trung bình bán đúng giá Kho,
+	# con to hơn bán cao hơn -> bán ở giỏ hay ở Kho cùng một giá (trước giỏ ăn gấp 1,5-5 lần Kho)
+	if kho_price.is_valid() and KHO.has(f.id):
+		var mid: float = (float(f.w[0]) + float(f.w[1])) * 0.5
+		return maxi(1, int(round(float(kho_price.call(String(KHO[f.id]))) * sqrt(w / maxf(0.001, mid)))))   # căn: con nhỏ nhất ~0,6, to nhất ~1,3 giá Kho
 	return maxi(1, int(round(f.base + f.kg * w)))
 
 # ------------------------------------------------------------ màu trời theo giờ (TOD)

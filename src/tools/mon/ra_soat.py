@@ -7,7 +7,11 @@ c = J('che_bien/cong_thuc'); v = J('che_bien/vat_pham'); x = J('che_bien/xuong')
 mo = J('nong_trai/cay_mo_cap'); ei = J('nong_trai/cay_an_trai'); an = J('vat_nuoi/vat_nuoi'); cm = J('vat_nuoi/chuong_mo_cap')
 issues = defaultdict(list)
 name = lambda i: (v.get(i) or cr.get(i) or {}).get('name', i)
-def sell(i): return v[i]['sell'] if i in v else cr[i]['sell']
+def sell(i, st=()):   # (bản 536) món có công thức: giá tự tính như game.gd _auto_sell (tổng nguyên liệu + phút) x k
+    if i in c and i not in st:
+        r = c[i]
+        return round((sum(sell(a, st + (i,)) * q for a, q in r['in']) + r['time'] // 60) * v.get(i, {}).get('k', 1))
+    return v[i]['sell'] if i in v else cr[i]['sell']
 # cấp có được nguyên liệu gốc
 LV = {}
 for k in cr: LV[k] = mo.get(k, cr[k].get('lv', 1))
@@ -52,8 +56,7 @@ for k, r in c.items():
 # giá theo công thức
 for k, r in c.items():
     if k in v and k in inrec:
-        f = sum(sell(i) * q for i, q in r['in']) + r['time'] // 60
-        if v[k]['sell'] != f: issues['Giá lệch công thức (tổng nguyên liệu + phút)'].append(f"{name(k)}: {v[k]['sell']} (công thức {f})")
+        pass   # (bản 536) giá món tự tính lúc chạy, khỏi so
 # vật phẩm chế biến không còn công thức (đồ bỏ)
 WS = set(x)
 for k, e in v.items():

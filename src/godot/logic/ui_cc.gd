@@ -64,6 +64,7 @@ func open() -> void:
 			G.mark()
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
+		"price": func(id: String) -> int: return G.price(id),
 		# (bản 535) Giỏ cá / Chợ / Sổ cá / Cài đặt mở bảng khung Kho chung của vườn (ui_ccp.gd) thay bảng tự vẽ
 		"pan": func(kind: String, arg): _pan(g, kind, arg),
 		# (bản 534) câu cá bỏ cấp riêng: mở mồi theo cấp vườn, kinh nghiệm câu cộng vô vườn; giờ + thời tiết như chip đồng hồ vườn

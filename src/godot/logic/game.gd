@@ -54,6 +54,7 @@ func _load_data() -> void:
 	D.y7 = _j("khac/Y7")
 	D.drop = _j("nang_cap/roi_vat_lieu")
 	D.items = _j("che_bien/vat_pham")
+	_auto_sell(_j("che_bien/cong_thuc"))
 	D.mua = _j("nong_trai/cay_dung_mua")
 	D.nhom = _j("nong_trai/nhom_vat_pham")
 	BUFFS = _j("che_bien/hieu_ung_mon_an")
@@ -74,6 +75,33 @@ func _load_data() -> void:
 		cells.append({"gx": -5 + t % 4, "gy": 1 + t / 4, "pc": "vuon"})
 	for t in 12:
 		cells.append({"gx": 10 + t % 4, "gy": 1 + t / 4, "pc": "dong"})
+
+# (bản 536) GIÁ MÓN CHẾ BIẾN TỰ TÍNH: giá = tổng (giá nguyên liệu x số lượng) + 1 xu mỗi phút nấu (thời gian gốc trong
+# cong_thuc.json), x hệ số "k" nếu món có (bánh trung thu bán giá lễ x1,5). Tính dây chuyền (bột -> bánh, mắm -> lẩu mắm):
+# đổi giá nguyên liệu gốc (nông sản, cá, thịt, trứng... trong cay_trong / vat_pham) là mọi món dùng nó, đơn hàng có món đó,
+# Kho, chợ... tự đổi theo. vat_pham.json chỉ ghi giá hàng gốc; món có công thức không ghi "sell" nữa.
+func _auto_sell(R: Dictionary) -> void:
+	var memo := {}
+	for k in R:
+		_auto1(String(k), R, memo, {})
+
+func _auto1(k: String, R: Dictionary, memo: Dictionary, st: Dictionary) -> float:
+	if memo.has(k):
+		return memo[k]
+	if not R.has(k) or st.has(k):   # hàng gốc (hoặc vòng lặp công thức: lấy giá đang ghi)
+		return float(item(k).get("sell", 0))
+	st[k] = true
+	var s := 0.0
+	for e in R[k]["in"]:
+		s += _auto1(String(e[0]), R, memo, st) * float(e[1])
+	s += floor(float(R[k].get("time", 0)) / 60.0)
+	if not D.items.has(k):
+		D.items[k] = {"name": k}
+	s = round(s * float(D.items[k].get("k", 1.0)))
+	D.items[k]["sell"] = int(s)
+	memo[k] = s
+	st.erase(k)
+	return s
 
 func crop(id: String) -> Dictionary:
 	return D.crops.get(id, {})
