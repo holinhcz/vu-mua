@@ -676,17 +676,20 @@ def thung(fr, u, v, zf, r, kind, seed=0):
     return o
 
 
-def cabin(fr, h, u0, u1, hw, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e'):
-    """nhà ghe: vách ván sơn có cửa sổ, mái tôn khum, chậu kiểng trên mái"""
+def cabin(fr, h, u0, u1, walk, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e'):
+    """nhà ghe: vách ván sơn có cửa sổ, mái tôn khum, chậu kiểng trên mái.
+    bề ngang = chỗ hẹp nhất của thân trong đoạn nhà trừ lối đi 2 bên (walk); mái nhô vừa phủ lối đi, không ra ngoài mạn"""
     L = h.L
+    wmin = min(w_at(h, a) for a in np.linspace((u0 - 1.4) / L, (u1 + 1.4) / L, 12))
+    hw = wmin - walk
     zd = min(zt_at(h, u0 / L), zt_at(h, u1 / L)) - .6
     uc = (u0 + u1) / 2; hl = (u1 - u0) / 2
     wall_b = Box(tuple(fr.w(uc, 0, zd + Hw / 2)), (fr.U, fr.Vv, (0, 0, 1)), (hl, hw, Hw / 2), 'van', rr=.25)
     wall_b.col = hexc(wall); wall_b.win = 5.2; wall_b.sh = shut
     o = [wall_b]
-    R = hw * 1.35
+    R = (wmin - .5) / .79          # nửa bề ngang mái tại mép = wmin - .5 (lọt trong mạn)
     zc = zd + Hw - R * .62
-    t = Tube(tuple(fr.w(u0 - 1.6, 0, zc)), tuple(fr.U), (u1 - u0) + 3.2, [(0, R), (1, R)], 'ton', shell=.35, open0=True, open1=True)
+    t = Tube(tuple(fr.w(u0 - 1.2, 0, zc)), tuple(fr.U), (u1 - u0) + 2.4, [(0, R), (1, R)], 'ton', shell=.35, open0=True, open1=True)
     t.fr = fr; t.col = hexc(roof)
     o.append(Cut(t, tuple(fr.w(0, 0, zd + Hw - .25)), (0, 0, -1)))
     o[-1].fr = fr
@@ -695,6 +698,10 @@ def cabin(fr, h, u0, u1, hw, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e')
     for i, vv in enumerate((-hw * .35, hw * .3)):
         pc = fr.w(u1 - 2.8 - i * 4.5, vv, ztop - .3)
         o += seedling(fr, pc, 1.7, 2 + i)
+    # lối đi ván 2 bên nhà (người đi lại, đứng chống sào)
+    for sd in (-1, 1):
+        o.append(M(Box(tuple(fr.w(uc, sd * (hw + walk * .5), zd + .1)), (fr.U, fr.Vv, (0, 0, 1)), (hl + 1.0, walk * .5 - .1, .25), 'go2', rr=.1), col=hexc('#9a6a3e')))
+    o.append(M(Box(tuple(fr.w(uc, 0, zd + Hw + .1)), (fr.U, fr.Vv, (0, 0, 1)), (hl + .6, .25, .25), 'go2', rr=.1), col=hexc('#7a4a2a')))   # đòn nóc
     return o, zd
 
 
@@ -714,13 +721,19 @@ def engine(fr, h, col='#c23b2b'):
 
 
 def deck(fr, h, a0, a1, col=None):
-    """sàn ván mũi / lái ngang mép ghe"""
+    """sàn ván mũi / lái ngang mép ghe: chia khúc ăn theo bề ngang thân (không lòi ra mạn)"""
     L = h.L
-    am = (a0 + a1) / 2
-    z = zt_at(h, am) - .55
-    ae = max(abs(a0), abs(a1))
     c = col if col is not None else (h.band * .92 if getattr(h, 'band', None) is not None else hexc('#8a5a32'))
-    return [M(Box(tuple(fr.w(am * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (abs(a1 - a0) * L / 2, max(w_at(h, ae) - .4, .5), .3), 'go2', rr=.15), col=c)]
+    lo, hi = min(a0, a1), max(a0, a1)
+    n = max(1, int(math.ceil((hi - lo) / .07)))
+    o = []
+    for i in range(n):
+        b0 = lo + (hi - lo) * i / n; b1 = lo + (hi - lo) * (i + 1) / n
+        am = (b0 + b1) / 2
+        ae = max(abs(b0), abs(b1))
+        z = zt_at(h, am) - .55
+        o.append(M(Box(tuple(fr.w(am * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), ((b1 - b0) * L / 2 + .05, max(w_at(h, ae) - .4, .5), .3), 'go2', rr=.12), col=c))
+    return o
 
 
 def thwarts(fr, h, list_a, col='#6a4024'):
@@ -735,8 +748,8 @@ def awning(fr, h, u0, u1, zf, col, col2):
     """mui bạt sọc trên khung tre (ghe chợ)"""
     L = h.L
     zt0 = zt_at(h, 0)
-    hw = w_at(h, (u0 + u1) / 2 / L)
-    R = hw * 1.05
+    hw = min(w_at(h, a) for a in np.linspace(u0 / L, u1 / L, 10)) - .5
+    R = hw
     zc = zt0 + 4.0
     o = []
     for uu in (u0 + 1, u1 - 1):
@@ -790,7 +803,7 @@ def crates(fr, h, u0, u1, zf, seed=3):
     uu = u0
     while uu < u1 - 4:
         a = uu / L
-        wd = w_at(h, min(abs(a) + .06, .99)) - 1.2
+        wd = w_at(h, min(abs(a) + .06, .99)) - 2.8
         hx = rs.uniform(2.3, 2.9)
         n = 2 if wd > 7 else 1
         for j in range(n):
@@ -897,8 +910,8 @@ def cho_load(fr, h, kind, zf, Wb, seed):
         wd = w_at(h, .44) - 3.2
         o += duck_cage(fr, fr.w(L * .44, -wd * .5, zf), 2.7) + duck_cage(fr, fr.w(L * .44, wd * .5, zf), 2.7)
     elif kind == 'trai':  # mô trái cây miệt vườn chất cao + buồng chuối
-        o += heap(fr, ['dua', 'dua2', 'khom', 'xoai', 'bi', 'dua', 'cam', 'dua2'], -L * .62, L * .46, zf, Wb * .62, seed, cs=1.25, layers=3)
-        for uu in (-L * .4, -L * .1, L * .2):   # buồng chuối nằm trên đỉnh đống
+        o += heap(fr, ['dua', 'dua2', 'khom', 'xoai', 'bi', 'dua', 'cam', 'dua2'], -L * .48, L * .46, zf, Wb * .62, seed, cs=1.25, layers=3)
+        for uu in (-L * .3, -L * .02, L * .26):   # buồng chuối nằm trên đỉnh đống
             o += fruit(fr, 'chuoi', fr.w(uu, rs.uniform(-1, 1), zf + (2.0 + 2 * 2.9) * 1.25 + 1.0), 1.25)
     elif kind == 'nong':  # bao gạo chất 3 tầng kín khoang, thúng lúa mũi
         cs = 1.45
@@ -914,7 +927,7 @@ def cho_load(fr, h, kind, zf, Wb, seed):
             uu += 2.6 * cs * 2 + .2; k += 1
         o += thung(fr, L * .6, -3.0, zf, 3.0, 'lua', seed + 1) + thung(fr, L * .62, 3.2, zf, 2.8, 'lua', seed + 2)
     else:                 # đồ bếp: củi chất đống phía lái, lu muối hột giữa, nồi đất + bao muối phía mũi
-        for pc, ln in ((-L * .52, 13.0), (-L * .24, 13.0)):   # 2 đống củi chẻ chất dọc khoang, thanh dài xếp lớp
+        for pc, ln in ((-L * .42, 12.0), (-L * .18, 12.0)):   # 2 đống củi chẻ chất dọc khoang, thanh dài xếp lớp
             wd = w_at(h, pc / L) - 1.3
             for ly in range(5):
                 hw_ = wd - ly * .9
@@ -965,17 +978,17 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         h = paint(Hull(fr, L, Wb, 6.5, 5.6, 9.0, 6.0, t=.8), '#2f7f88', 3.6)
         objs.append(h)
         zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
-        co, zd = cabin(fr, h, -L * .74, -L * .12, Wb * .74, 9.5)
+        co, zd = cabin(fr, h, -L * .6, -L * .1, 2.6, 9.5)
         objs += co
-        objs += deck(fr, h, .76, .9) + deck(fr, h, -.9, -.8)
-        objs += crates(fr, h, -L * .08, L * .66, zf, seed + 3)
+        objs += deck(fr, h, .76, .9) + deck(fr, h, -.93, -.63)   # sạp lái rộng: chỗ đứng cầm lái
+        objs += crates(fr, h, -L * .02, L * .66, zf, seed + 3)
         objs += beo(fr, .58 * CH * TILE, zf)
         objs += engine(fr, h)
         objs += rope(fr, h, .84)
         objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.5, -.2, .2, .45)) + rudder(fr, h) + anchor(fr, h)
-        objs += laundry(fr, fr.w(-L * .12 + .6, Wb * .55, zd + 11.5), fr.w(.58 * CH * TILE - .8, .4, 26), 4, seed)
+        objs += laundry(fr, fr.w(-L * .1 + .6, Wb * .45, zd + 11.0), fr.w(.58 * CH * TILE - .8, .4, 26), 4, seed)
         objs += flag(fr, h, -L * .93, zt_at(h, -.93) - .3)
-        objs += deck_props(fr, h, -L * .84, zt_at(h, -.84) - .3)
+        objs += deck_props(fr, h, -L * .67, zt_at(h, -.67) - .3)
         return Scene(objs)
     # ghe chợ nổi (4 loại theo data)
     cs_ = CHO_SET[seed % 4]
@@ -983,7 +996,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     h = paint(Hull(fr, L, Wb, 5.6, 4.9, 8.0, 5.0, t=.8), cs_['band'], 3.1, trim=cs_['trim'])
     objs.append(h)
     zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
-    objs += deck(fr, h, .78, .9) + deck(fr, h, -.9, -.78)
+    objs += deck(fr, h, .78, .9) + deck(fr, h, -.93, -.72)   # sạp lái: chỗ đứng bán hàng / cầm lái
     if mui_on and cs_['tarp']:
         objs += awning(fr, h, -L * .78, -L * .38, zf, *cs_['tarp'])
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
