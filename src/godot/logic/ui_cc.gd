@@ -133,12 +133,7 @@ func _pan(g, kind: String, arg) -> void:
 		return
 	if ui.ccpp != null:
 		ui.ccpp.on_close = Callable()   # close_all() trong _pan_open đóng bảng cũ: khỏi trả lớp về giữa chừng
-	if _pvis.is_empty() and ui.layer != 110:
-		# lớp giao diện vườn (đang ẩn lúc câu cá) hiện lên TRÊN câu cá, chỉ chừa bảng: mọi thứ khác của vườn ẩn tạm
-		for c in ui.root.get_children() + ui.get_children():   # cả nút nằm thẳng dưới lớp (nút Menu)
-			if c != ui.root and c is CanvasItem and c.visible:
-				_pvis.append(c)
-				c.visible = false
+	if ui.layer != 110:
 		_player = ui.layer
 		ui.layer = 110
 		ui.visible = true
@@ -146,6 +141,12 @@ func _pan(g, kind: String, arg) -> void:
 	var p = ui._pan_open("ccpp", "res://logic/ui_ccp.gd", [])
 	p.on_close = func(): _pan_end(g)
 	p.open2(g, k)
+	# lớp giao diện vườn (đang ẩn lúc câu cá) hiện TRÊN câu cá, chỉ chừa bảng: mọi thứ khác của vườn ẩn tạm. Ẩn SAU _pan_open:
+	# close_all() trong đó bật lại nút Menu (dock_open(false))
+	for c in ui.root.get_children() + ui.get_children():
+		if c != ui.root and c != p.box and c is CanvasItem and c.visible:
+			_pvis.append(c)
+			c.visible = false
 
 func _pan_end(g) -> void:
 	for c in _pvis:

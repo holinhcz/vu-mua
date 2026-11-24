@@ -27,6 +27,7 @@ func _init(ui) -> void:
 func open2(game, k: String) -> void:
 	cg = game
 	tab = k
+	fit = k == "set"   # bảng có tab: cao cố định như Kho (đổi tab khỏi nhảy khung); Cài đặt co vừa
 	sel = ""
 	_sure = false
 	on = true
