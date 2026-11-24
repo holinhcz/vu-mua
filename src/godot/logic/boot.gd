@@ -235,6 +235,9 @@ func _test_hook() -> void:
 			"ccb": G.g.ccsv = {"basket": [{"id": "ro", "w": .3}, {"id": "loc", "w": 1.2}, {"id": "ho", "w": 30.0}]}; G.mark()   # (bản 539) thử: save cũ còn cá trong giỏ
 			"cct": _cct(a)   # cct:<cá>:<cân> (bản 539) thử thẻ cá câu được
 			"ccfull": G.g.barn["lua"] = int(G.g.barn.get("lua", 0)) + 200; G.mark()   # thử: Kho đầy
+			"ccc": if ui.ccp.game != null: ui.ccp.game.caught(preload("res://logic/cc/cc_data.gd").fish(String(a[1])), float(a[2]))   # (bản 540) thử: câu được 1 con
+			"ccd": push_error("QKDEX " + JSON.stringify(G.g.get("fish", {}).get("dex", {})) + " CC " + JSON.stringify(G.g.get("ccsv", {}).get("dex", {})))
+			"ccq": if ui.ccp.game != null: ui.ccp.game.close_game()   # (bản 540) thử: thoát câu cá
 			"ccx": ui.ccp.open()   # (bản 529) thử mở Câu cá (tải gói hình ghi thẳng ra file)
 			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)

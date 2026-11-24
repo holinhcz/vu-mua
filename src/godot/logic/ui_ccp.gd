@@ -7,7 +7,7 @@ extends "res://logic/ui_kbang.gd"
 #  - tab Đồ nghề: cần, dây, phao, giỏ: món đang có; chọn -> thẻ: món kế, giá xu + cá cần trong Kho (chip có/cần), nút Đổi.
 #    (bản 537) "giỏ đựng" trong vườn = cá to dễ dính hơn (không còn sức chứa giỏ).
 #  - tab Sổ cá: lưới mọi loài (chưa gặp = bóng tối "???"); chạm -> bong bóng: mô tả, gợi ý chỗ câu, con lớn nhất.
-#  - Cài đặt (không tab): Âm thanh, Nhạc đàn tranh (Bật / Tắt), Thống kê, Về vườn, Chơi lại từ đầu (chạm 2 lần).
+#  - Cài đặt (không tab): Âm thanh, Nhạc đàn tranh (Bật / Tắt), Thống kê, Về vườn.
 # Luật + dữ liệu ở cc_game / cc_data / cc_ui (sell, has_fish, take_fish); bảng này chỉ dựng giao diện.
 
 const CD := preload("res://logic/cc/cc_data.gd")
@@ -15,7 +15,6 @@ const IMG := "res://ui/img/cc/"
 var cg = null          # cc_game.gd đang chạy
 var tab := "moi"
 var sel := ""          # ô đang chọn (giỏ: chỉ số; mồi / đồ nghề: mã; "" không chọn)
-var _sure := false     # Bán hết / Chơi lại: đã chạm 1 lần
 var on_close := Callable()
 const TOP := 44.0
 const TABS := [["moi", "Mồi câu"], ["do", "Đồ nghề"], ["so", "Sổ cá"]]   # (bản 537) bỏ Giỏ cá: cá vô thẳng Kho vườn
@@ -29,7 +28,6 @@ func open2(game, k: String) -> void:
 	tab = k
 	fit = k == "set"   # bảng có tab: cao cố định như Kho (đổi tab khỏi nhảy khung); Cài đặt co vừa
 	sel = ""
-	_sure = false
 	on = true
 	scroll = 0.0
 	sig = ""
@@ -49,7 +47,7 @@ func _sig() -> String:
 	var kc := []
 	for fid in CD.KHO:
 		kc.append(cg.ui.basket_count(fid))
-	return JSON.stringify([tab, sel, _sure, kc, S.xu, S.bait, S.baits, S.rod, S.line, S.flo, S.cage, S.dex.size(), S.sound, S.music, cg.lv()])
+	return JSON.stringify([tab, sel, kc, S.xu, S.bait, S.baits, S.rod, S.line, S.flo, S.cage, S.dex.size(), S.sound, S.music, cg.lv()])
 
 func step(dt: float) -> void:
 	if on and (cg == null or not is_instance_valid(cg)):
@@ -61,7 +59,6 @@ func _go(k: String) -> void:
 	if tab != k:
 		tab = k
 		sel = ""
-		_sure = false
 		scroll = 0.0
 
 func _redo() -> void:
@@ -358,17 +355,4 @@ func _caidat() -> Array:
 	out.append_array(P[0])
 	y += float(P[1]) + GG + 4.0
 	out.append(_btn(X0, y, XW, 30.0, "Thôi câu, về lại vườn", func(): close(); cg.close_game(), "go"))
-	y += 30.0 + GG
-	var lab: String = "Chạm lần nữa để xóa hết tiến trình câu cá" if _sure else "Chơi lại từ đầu"
-	out.append(_btn(X0 + 40.0, y, XW - 80.0, 28.0, lab, _reset, "red"))
-	return [out, y + 28.0 + 6.0]
-
-func _reset() -> void:
-	if not _sure:
-		_sure = true
-		_redo()
-		return
-	_sure = false
-	cg.reset_save()
-	cg.ui.hud_dirty()
-	close()
+	return [out, y + 30.0 + 6.0]   # (bản 540) bỏ "Chơi lại từ đầu": trong vườn cá, xu, cấp, sổ cá là của vườn

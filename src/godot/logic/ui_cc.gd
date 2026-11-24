@@ -95,6 +95,18 @@ func open() -> void:
 		"rain": func() -> float: return float(G.troi.rain()) if G.troi != null else 0.0,
 		# câu được 1 con (không tính rác): đếm cho vườn như câu cũ: g.fish.total (w_ca.ry -> nhiệm vụ / thành tựu Tay câu),
 		# EXP nhân vật 3, cá vườn có món thì ghi sổ làng (đã gặp) + sổ cá vườn
+		# (bản 540) SỔ CÁ MỘT NGUỒN: mục cá trong sổ câu cá chính là g.fish.dex[món] của vườn (cùng 1 Dictionary), câu cá
+		# không lưu bản riêng nữa
+		"dexd": func(kid: String, mk := true) -> Dictionary:   # mk = false: chưa có thì trả {} (khỏi đẻ mục 0 con vô save)
+			if not mk and not (G.g.get("fish") is Dictionary and G.g.fish.get("dex") is Dictionary and G.g.fish.dex.get(kid) is Dictionary):
+				return {}
+			if not (G.g.get("fish") is Dictionary):
+				G.g.fish = {"rod": 0, "total": 0, "dex": {}}
+			if not (G.g.fish.get("dex") is Dictionary):
+				G.g.fish.dex = {}
+			if not (G.g.fish.dex.get(kid) is Dictionary):
+				G.g.fish.dex[kid] = {"n": 0, "best": 0.0}
+			return G.g.fish.dex[kid],
 		"caught": func(kid: String, kg := 0.0):   # kg: cân con vừa câu (ghi "con lớn nhất" sổ cá vườn)
 			if not (G.g.get("fish") is Dictionary):
 				G.g.fish = {"rod": 0, "total": 0, "dex": {}}
@@ -104,10 +116,8 @@ func open() -> void:
 			if kid != "":
 				if not (f.get("dex") is Dictionary):
 					f.dex = {}
-				if not (f.dex.get(kid) is Dictionary):
-					f.dex[kid] = {"n": 0, "best": 0}
-				f.dex[kid].n = int(f.dex[kid].n) + 1
-				f.dex[kid].best = maxf(float(f.dex[kid].get("best", 0)), kg)
+				if not (f.dex.get(kid) is Dictionary):   # (bản 540) số con / con lớn nhất: câu cá ghi thẳng vô đây (dexd), khỏi cộng lần 2
+					f.dex[kid] = {"n": 1, "best": kg}
 				if G.w_all != null:
 					G.w_all.WCA.tc().seen[kid] = 1
 			G.mark(),

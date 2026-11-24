@@ -25,7 +25,8 @@ var ext := {}              # hàm của hệ khác (người ghép gán Callable
 #   "ec": func() -> void                               vẽ lại bảng nhân vật
 
 # ------------------------------------------------------------------ dữ liệu
-var Wf := []               # mã cá
+var Wf := []               # mã cá (cau_ca/ds_ca: cá cũ còn trong công thức, lờ / lọp / giăng)
+var Wcc := []              # (bản 540) 16 loại cá của Câu cá (cc_data.KHO, theo bậc): Bộ sưu tập > Cá + sổ cá vườn
 var ns := {}               # lờ, lọp, giăng câu
 var m6 := []               # cá tát ao
 var k4 := []               # diều
@@ -36,7 +37,6 @@ const t6 := 8              # đàn vịt tối đa
 const a6 := 300.0          # giây no của vịt mỗi lần rải lúa
 const n6 := 360.0          # giây no của cá
 const Xf := 900.0          # cá lớn đủ
-const Yx := [7.2, 8.8, 4.1, 4.8]
 
 # ------------------------------------------------------------------ trạng thái không lưu
 var M3 := -1               # rY
@@ -59,6 +59,7 @@ var _wq_t := 0.0
 func _init(game) -> void:
 	G = game
 	Wf = _ja("cau_ca/ds_ca")
+	Wcc = preload("res://logic/cc/cc_data.gd").KHO.values()
 	ns = _jd("cau_ca/lo_lop_cau_giang")
 	m6 = _ja("cau_ca/tat_muong")
 	k4 = _ja("mini_game/dieu")
@@ -140,9 +141,6 @@ func _w1(t: int, k: String) -> void:   # w1
 
 func _v0(t: float) -> int:   # v0
 	return G.nv.v0(t)
-
-func _htv(id: String) -> float:   # htv
-	return float(WS.htv(id)) if WS != null else 0.0
 
 func _kx() -> bool:   # Kx: bùa "cau"
 	return G.bh() == "cau"
@@ -239,6 +237,13 @@ func mt(t: int, a: int):   # MT: chỗ đứng câu / thăm bẫy
 				n = {"stand": [c, f], "w": [t + 0.5 - r[0] * 0.15, a + 0.5 - r[1] * 0.15], "boat": 0}
 	return n
 
+func _wall() -> Array:   # cá câu cá + cá cũ (không trùng)
+	var a := Wcc.duplicate()
+	for e in Wf:
+		if not a.has(e):
+			a.append(e)
+	return a
+
 # ------------------------------------------------------------------ câu cá: bản lưu
 func jf(t) -> Dictionary:   # JF: sửa g.fish khi tải
 	var a := {"rod": 0, "total": 0, "dex": {}}
@@ -246,7 +251,7 @@ func jf(t) -> Dictionary:   # JF: sửa g.fish khi tải
 		return a
 	a.rod = maxi(0, mini(4, int(t.get("rod", 0)) if _num(t.get("rod")) else 0))
 	a.total = maxi(0, int(t.get("total", 0)) if _num(t.get("total")) else 0)
-	for e in Wf:
+	for e in _wall():
 		var r = t.dex.get(e) if t.get("dex") is Dictionary else null
 		if r is Dictionary:
 			a.dex[e] = {"n": maxi(0, int(r.get("n", 0)) if _num(r.get("n")) else 0), "best": maxf(0.0, float(r.get("best", 0)) if _num(r.get("best")) else 0.0)}
@@ -263,14 +268,6 @@ func jf(t) -> Dictionary:   # JF: sửa g.fish khi tải
 
 static func _num(v) -> bool:
 	return typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT
-
-func _fi() -> Dictionary:   # g.fish
-	if not (G.g.get("fish") is Dictionary):
-		G.g.fish = jf(null)
-	var f: Dictionary = G.g.fish
-	if not (f.get("dex") is Dictionary):
-		f.dex = {}
-	return f
 
 func ry() -> void:   # rY: đếm cá câu cho sổ nhiệm vụ (mỗi giây)
 	var f = G.g.get("fish")
@@ -674,7 +671,7 @@ func iv() -> void:   # iV: đánh dấu đã gặp (mỗi 2 giây)
 			t.seen[e] = 1
 	var f = G.g.get("fish")
 	if f is Dictionary and f.get("dex") is Dictionary:
-		for e in Wf:
+		for e in _wall():
 			var d = f.dex.get(e)
 			if d is Dictionary and _tr(d.get("n")):
 				t.seen[e] = 1
@@ -894,20 +891,9 @@ func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt 
 	if gl.is_valid():
 		gl.call({"key": "lop" + t + "@" + str(a) + "," + str(n), "kind": "lo", "pos": r.stand, "dur": 0.6, "run": run})
 
-func lo_tip(key: String):   # t_: chữ nổi khi chạm bẫy ({b, s}; null = không phải bẫy)
-	var a = bm(key)
-	if a == null:
-		return {"b": "", "s": ""}
-	var n: Dictionary = ns[a.t]
-	return {"b": String(n.n), "s": ("Có cá rồi! Chạm để ra thăm." if w4(a) else "Đang chờ cá vô, chừng " + str(int(ceil(l6_ms(a) / 6e4))) + " phút nữa.") + (" Đang không có mồi." if n.get("bait") != null and not _tr(a.get("b")) else "") + " Dùng thêm " + str(int(n.use) - int(a.u)) + " lần."}
-
 func lo_stand(key: String):   # $U: chỗ đứng thăm bẫy
 	var a = bm(key)
 	return [float(a.gx) + 0.5, float(a.gy) + 0.5] if a != null else null
-
-func lo_at(x: int, y: int):   # YU (theo ô): bẫy ở ô chạm -> {type: "lo", key}
-	var r = ku(x, y)
-	return {"type": "lo", "key": bk(r)} if r != null else null
 
 # ------------------------------------------------------------------ thú cưng (g.pet)
 func cc() -> Dictionary:   # Cc
@@ -1184,35 +1170,6 @@ func tk(t: String) -> Variant:   # tK: chữ nổi khi chạm con vật ({b, s} 
 	if t == "chim":
 		return {"b": "Chào mào · giọng " + str(a.chim.gi) + "/10", "s": "Đã ăn hôm nay." if int(a.chim.fd) == _vr() else "Chạm để cho ăn chuối hoặc ớt."}
 	return null
-
-static func jt(t, a: float, n: float) -> Variant:   # JT: chỗ bờ gần (a, n) nhất của vùng nước t
-	if t == null:
-		return null
-	if not t.bank.size():
-		return [t.c[0], float(t.c[1]) + 0.6]
-	var e = null
-	var r := 1e9
-	for o in t.bank:
-		var l := Vector2(float(o[0]) - a, float(o[1]) - n).length()
-		if l < r:
-			r = l
-			e = o
-	return e
-
-func pet_stand(t: String) -> Variant:   # YQ: chỗ nhân vật đứng làm việc với con vật (mèo: lớp vẽ biết chỗ Qi)
-	if t == "chim":
-		return [7.85 + 0.1, 4.15 + 0.5]   # Jf
-	if t == "meo":
-		return null   # [Qi.x + .35 * Qi.f, Qi.y + .3]: chỗ mèo do lớp vẽ giữ
-	return jt(w2(t), G.ppos.x, G.ppos.y)
-
-func pet_job(k: String) -> bool:   # $Q: việc "pet" của con vật k (Xx / Jx / GQ / jQ)
-	match k:
-		"vit": return xx()
-		"ca": return jx()
-		"meo": return gq()
-		"chim": return jq()
-	return false
 
 # ------------------------------------------------------------------ chỗ thả vịt, cá
 func zt() -> Variant:   # ZT: ô nước của mình gần nhà nhất (null nếu không có)

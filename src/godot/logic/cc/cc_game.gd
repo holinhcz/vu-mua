@@ -164,6 +164,18 @@ func _load() -> void:
 		S.basket = []
 	if not (S.dex is Dictionary):
 		S.dex = {}
+	if host != null and host.has("dexd"):   # (bản 540) sổ cá một nguồn: cá -> mục sổ vườn (gộp bản cũ: lấy số lớn hơn)
+		for fid in D.KHO:
+			var cd = S.dex.get(fid)
+			var fd: Dictionary = host.dexd.call(D.KHO[fid], cd is Dictionary)
+			if cd is Dictionary:
+				fd.n = maxi(int(fd.get("n", 0)), int(cd.get("n", 0)))
+				fd.best = maxf(float(fd.get("best", 0)), float(cd.get("best", 0)))
+			if int(fd.get("n", 0)) > 0:
+				fd.best = float(fd.get("best", 0))
+				S.dex[fid] = fd
+			else:
+				S.dex.erase(fid)
 	if not (S.stats is Dictionary):
 		S.stats = {"casts": 0, "catches": 0, "snaps": 0}
 	for k in ["casts", "catches", "snaps"]:
@@ -177,7 +189,7 @@ func _load() -> void:
 func _xu_sync() -> void:
 	if host == null:
 		return
-	# hai chiều: game đổi S.xu (bán, mua) và vườn đổi xu (lương làm thuê, đơn tự giao) trong lúc câu -> cộng cả hai phần chênh
+	# (bản 540) gọi mỗi khung (_process) + lúc lưu. Hai chiều: game đổi S.xu (bán, mua) và vườn đổi xu (lương làm thuê, đơn tự giao) trong lúc câu -> cộng cả hai phần chênh
 	var c := int(host.coins.call())
 	var x := maxi(0, int(S.xu) + c - _xu_last)
 	if x != c:
@@ -190,7 +202,11 @@ func _xu_sync() -> void:
 			var o := int(_bait_last.get(k, n))
 			if n != o:
 				host.bait_add.call(D.KHO_BAIT[k], n - o)
-			_bait_last[k] = n
+			var m := n   # (bản 540) vườn đổi mồi (thu tép, xài ở nơi khác) -> theo Kho vườn
+			if host.has("bait"):
+				m = int(host.bait.call(D.KHO_BAIT[k]))
+			S.baits[k] = m
+			_bait_last[k] = m
 
 func save(now := false) -> void:
 	if not now and clock - _save_t < 1.5:
@@ -200,6 +216,9 @@ func save(now := false) -> void:
 		_xu_sync()
 		var d: Dictionary = S.duplicate(true)
 		d.erase("xu")
+		if host.has("dexd"):   # cá nằm ở sổ vườn rồi, chỉ giữ rác
+			for fid in D.KHO:
+				d.dex.erase(fid)
 		host.sv.clear()
 		host.sv.merge(d, true)
 		# lưu vườn (lên mạng) thưa thôi: lúc bán / mua / đổi / đóng thì lưu liền, còn lại 10 giây một lần
@@ -926,7 +945,7 @@ func caught(f: Dictionary, w: float) -> void:
 		S.baits[S.bait] = maxi(0, int(S.baits.get(S.bait, 0)) - 1)
 	S.stats.catches += 1
 	if not S.dex.has(f.id):
-		S.dex[f.id] = {"n": 0, "best": 0.0}
+		S.dex[f.id] = host.dexd.call(D.KHO[f.id]) if host != null and host.has("dexd") and D.KHO.has(f.id) else {"n": 0, "best": 0.0}
 	var d: Dictionary = S.dex[f.id]
 	var is_new: bool = int(d.n) == 0
 	d.n = int(d.n) + 1
@@ -1111,6 +1130,8 @@ func _process(dt: float) -> void:
 	if L.is_empty():
 		return
 	dt = minf(.05, dt)
+	if host != null:   # (bản 540) xu, mồi đi thẳng vô vườn mỗi khung (trước: lúc lưu, 1,5 giây / lần -> tắt ngang có thể lệch)
+		_xu_sync()
 	var t0 := Time.get_ticks_usec()
 	clock += dt
 	_xu_sync()

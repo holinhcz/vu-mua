@@ -104,7 +104,7 @@ func _links() -> Array:
 
 func _cols() -> Array:   # c(): [khóa, tên, danh sách, là công trình, hình chip]
 	return [["ns", "Nông sản", WCA.book_ns(), false, "lua"], ["tc", "Trái cây", WCA.book_tc(), false, "qua_xoai"],
-		["mon", "Món", WCA.book_mon(), false, "banh"], ["ca", "Cá", WCA.Wf, false, "ca_chep"], ["ct", "Công trình", WCA.book_ct(), true, "svg:res://ui/svg/mat/gach.svg"]]
+		["mon", "Món", WCA.book_mon(), false, "banh"], ["ca", "Cá", WCA.Wcc, false, "ca_ro"], ["ct", "Công trình", WCA.book_ct(), true, "svg:res://ui/svg/mat/gach.svg"]]
 
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
