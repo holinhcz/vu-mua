@@ -1478,7 +1478,7 @@ func _shop_dock(ci, r: Rect2) -> float:
 			sub = " · " + ("vô hạn" if k == "trun" else "có %d" % int(S.baits.get(k, 0)))
 			hint = ("Đang có %d xu" % S.xu) if b.pack else ""
 			if S.bait == k:
-				btns.append(["✓ Đang dùng", "", "hook", Callable(), false, ""])
+				btns.append(["Đang dùng", "", "hook", Callable(), false, ""])
 			elif k == "trun" or int(S.baits.get(k, 0)) > 0:
 				btns.append(["Móc mồi", "alt", "use" + k, func():
 					S.bait = k
