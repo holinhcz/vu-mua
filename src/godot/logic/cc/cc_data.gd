@@ -59,27 +59,28 @@ const BAIT := {
 }
 const BAIT_ORDER := ["trun", "com", "tep", "chua", "nhai", "sung", "cam"]
 
+# (bản 536) giá đồ nghề x0,57 (tròn chục): cá bán theo giá Kho (thấp hơn giá giỏ cũ) -> số con phải câu để đổi giữ như cũ
 const ROD := [
 	{"name": "Cần trúc", "desc": "Cần trúc ông nội để lại.", "range": 16, "pow": 1, "acc": 1.1},
-	{"name": "Cần tre già", "desc": "Tre già phơi khói bếp, dẻo mà chắc. Quăng xa hơn.", "range": 21, "pow": 1.3, "acc": .85, "price": 350, "need": {"ro": 3}},
-	{"name": "Cần câu lục", "desc": "Cần ráp ba khúc, quăng tới giữa kênh.", "range": 27, "pow": 1.7, "acc": .65, "price": 1400, "need": {"bong": 1, "tre": 1}},
-	{"name": "Cần ông Năm", "desc": "Cần của ông Năm câu cá hô, giờ ổng nhường lại.", "range": 34, "pow": 2.3, "acc": .5, "price": 4200, "need": {"locbong": 1, "chinh": 1}},
+	{"name": "Cần tre già", "desc": "Tre già phơi khói bếp, dẻo mà chắc. Quăng xa hơn.", "range": 21, "pow": 1.3, "acc": .85, "price": 200, "need": {"ro": 3}},
+	{"name": "Cần câu lục", "desc": "Cần ráp ba khúc, quăng tới giữa kênh.", "range": 27, "pow": 1.7, "acc": .65, "price": 800, "need": {"bong": 1, "tre": 1}},
+	{"name": "Cần ông Năm", "desc": "Cần của ông Năm câu cá hô, giờ ổng nhường lại.", "range": 34, "pow": 2.3, "acc": .5, "price": 2390, "need": {"locbong": 1, "chinh": 1}},
 ]
 const LINE := [
 	{"name": "Cước 0.2", "desc": "Dây mảnh, cá lớn là đứt.", "str": 1},
-	{"name": "Cước 0.35", "desc": "Chịu được cá lóc cỡ vừa.", "str": 1.35, "price": 280, "need": {"sac": 3}},
-	{"name": "Cước 0.5", "desc": "Dây to, kéo cá ký mấy ký.", "str": 1.8, "price": 1100, "need": {"thatlat": 1, "loc": 1}},
-	{"name": "Dây dù bện", "desc": "Bện tay, cá hô cũng khó giựt đứt.", "str": 2.6, "price": 3600, "need": {"chinh": 1}},
+	{"name": "Cước 0.35", "desc": "Chịu được cá lóc cỡ vừa.", "str": 1.35, "price": 160, "need": {"sac": 3}},
+	{"name": "Cước 0.5", "desc": "Dây to, kéo cá ký mấy ký.", "str": 1.8, "price": 630, "need": {"thatlat": 1, "loc": 1}},
+	{"name": "Dây dù bện", "desc": "Bện tay, cá hô cũng khó giựt đứt.", "str": 2.6, "price": 2050, "need": {"chinh": 1}},
 ]
 const FLO := [
 	{"name": "Phao lông nhím", "desc": "Phao truyền thống, nhạy vừa.", "win": 1, "glow": 0},
-	{"name": "Phao lông công", "desc": "Nhạy hơn: có thêm thời gian để giật.", "win": 1.18, "glow": 0, "price": 500, "need": {"loc": 1}},
-	{"name": "Phao đèn đêm", "desc": "Đầu phao phát sáng, câu đêm thấy rõ, nhạy nhất.", "win": 1.28, "glow": 1, "price": 950, "need": {"tre": 2}},
+	{"name": "Phao lông công", "desc": "Nhạy hơn: có thêm thời gian để giật.", "win": 1.18, "glow": 0, "price": 280, "need": {"loc": 1}},
+	{"name": "Phao đèn đêm", "desc": "Đầu phao phát sáng, câu đêm thấy rõ, nhạy nhất.", "win": 1.28, "glow": 1, "price": 540, "need": {"tre": 2}},
 ]
 const CAGE := [
 	{"name": "Giỏ tre nhỏ", "desc": "Đựng được 8 con.", "cap": 8},
-	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "price": 300},
-	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "price": 1200, "need": {"luon": 2}},
+	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "price": 170},
+	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "price": 680, "need": {"luon": 2}},
 ]
 # cá câu được -> món trong Kho Nông Trại (g.barn) (bản gắn trong vườn: nút "Vô Kho"). Link 11-23 "nối đủ": cả 16 loài,
 # 10 món mới khai trong godot/data/che_bien/vat_pham.json + icon ui/svg/kh/<món>.svg (tools/cc/kho/ca_kho_svg.py). Rác không vô Kho.
