@@ -23,6 +23,22 @@ TOI = hexc('#3a2a18')                                                         # 
 WATER = hexc('#5f8f8a')
 
 
+def arclen(pts):
+    d = np.hypot(*np.diff(np.array(pts), axis=0).T)
+    return np.concatenate([[0], np.cumsum(d)])
+
+
+def axis_coords(A, ax, pts, rad):
+    """ống trục thẳng: s (dọc trục) + sd (lệch ngang / bán kính) tính thẳng từ trục, khỏi nhảy giữa các đoạn của tube
+    (bán kính đổi nhiều thì tube chọn đoạn theo khoảng cách mặt ống -> s nhảy, đai mây bị đứt khúc)"""
+    cum = arclen(pts)
+    sp = (X - A[0]) * ax[0] + (Y - A[1]) * ax[1]
+    s = np.clip(sp, 0, cum[-1])
+    r = np.interp(s, cum, rad)
+    cr = (X - A[0]) * ax[1] - (Y - A[1]) * ax[0]
+    return s, np.clip(cr / np.maximum(r, 1e-3), -1, 1)
+
+
 def smooth_prof(A, B, prof, n=40):
     """trục thẳng A->B, bán kính nội suy mượt (khỏi gãy khúc ở chỗ nối các đoạn)"""
     ts = np.linspace(0, 1, n); tk = [t for t, _ in prof]; rk = [r for _, r in prof]
@@ -31,7 +47,12 @@ def smooth_prof(A, B, prof, n=40):
     return [tuple(A + (B - A) * t) for t in ts], list(r)
 
 
-def weave(s, sd, m, nslat, ring_step, ring_w=4.0, gap=.14, seed=0, ring0=0.0, ring_end=None):
+def cut(m, A, ax):
+    """bỏ phần ống thò ra trước mặt phẳng miệng (đầu tròn của tube): thân dừng đúng ở vành miệng"""
+    return m * np.clip(((X - A[0]) * ax[0] + (Y - A[1]) * ax[1]) * PX + .5, 0, 1)
+
+
+def weave(s, sd, m, nslat, ring_step, ring_w=4.0, gap=.14, seed=0, ring0=0.0, ring_end=None, persp=None):
     """vân đan trên 1 ống (từ tube): nan dọc theo góc quanh ống + đai mây ngang.
     trả (h thêm, màu, mặt nạ khe)"""
     th = np.arcsin(np.clip(sd, -1, 1))                 # góc quanh ống: nan dồn khít ở 2 mép như thật
@@ -49,6 +70,12 @@ def weave(s, sd, m, nslat, ring_step, ring_w=4.0, gap=.14, seed=0, ring0=0.0, ri
     col = col * (1 - .06 * np.sin(u * 37 + noise(.6, seed + 3) * 3))[..., None]
     h = slat * 2.2
     # đai mây ngang
+    if persp is not None:
+        # (11-24 Link "đầu tròn xoay éo ăn khớp"): nhìn xiên vô miệng (vành = elip tỉ lệ k) thì mỗi đai tròn quanh ống
+        # cũng hiện thành cung elip cùng tỉ lệ: giữa ống (mặt gần) lồi về phía miệng, 2 mép lùi lại
+        k, cum, rad = persp
+        rl = np.interp(s, cum, rad)
+        s = s + k * rl * np.sqrt(np.clip(1 - sd * sd, 0, 1))
     sr = (s - ring0) / ring_step
     d = (sr - np.round(sr)) * ring_step
     ring = np.exp(-(d / (ring_w * .55)) ** 4) * m
@@ -126,13 +153,15 @@ def lo():
     P = Pic()
     A = np.array([92., 262.]); B = np.array([420., 300.])
     ax = (B - A) / np.linalg.norm(B - A); nrm = np.array([-ax[1], ax[0]])
-    prof = [(0, 70), (.08, 80), (.3, 92), (.55, 84), (.78, 56), (.92, 30), (1, 24)]
+    prof = [(0, 78), (.08, 82), (.3, 92), (.55, 84), (.78, 56), (.92, 30), (1, 24)]
     pts, rad = smooth_prof(A, B, prof)
     # cọc sau (khuất sau lờ)
     bamboo(P, 176, 112, 172, 420, 9.5, 3, contact=0)
-    # thân lờ
+    # thân lờ (cắt phẳng ở miệng cho khớp vành)
     m, h, s, sd = tube(pts, rad)
-    hw, col, gm = weave(s, sd, m, 22, 40, 4.5, gap=.1, seed=5, ring0=12)
+    m = cut(m, A, ax)
+    s, sd = axis_coords(A, ax, pts, rad)
+    hw, col, gm = weave(s, sd, m, 22, 40, 4.5, gap=.1, seed=5, ring0=12 + .42 * rad[0], persp=(.42, arclen(pts), rad))
     hh = h + hw
     c, _ = P.shade(hh, np.ones(3, np.float32), amb=.4, dif=.75, spec=.08, sp_pow=20)
     c = c * col
@@ -146,18 +175,15 @@ def lo():
     hw2, col2, _ = weave(st, sdt, mt, 10, 5, 3.5, seed=8)
     ct, _ = P.shade(ht + hw2 * .5, np.ones(3, np.float32), amb=.42, dif=.72)
     P.put(mt, np.clip(ct * lerpc(col2, MAY, .55 * mt), 0, 1), contact=.2)
-    for i in range(3):
-        p = B - ax * (2 + i * 7)
-        rope_band(P, p[0], p[1], 7, 52 - i * 6, math.atan2(ax[1], ax[0]), 30 + i)
     mk, hk = ellipse(*(tail + ax * 6), 10, 9)
     ck, _ = P.shade(hk, MAY * 1.1, amb=.45, dif=.7, spec=.1)
     P.put(mk, ck, contact=.2)
     # miệng lờ: vành tròn nhìn xiên + hom phễu nan chĩa vô
     ang = math.atan2(ax[1], ax[0]) + math.pi / 2
-    R = 76
-    mo, ho = ellipse(*(A - ax * 4), R, R * .42, ang)
-    u = (X - (A[0] - ax[0] * 4)) * math.cos(ang) + (Y - (A[1] - ax[1] * 4)) * math.sin(ang)
-    v = -(X - (A[0] - ax[0] * 4)) * math.sin(ang) + (Y - (A[1] - ax[1] * 4)) * math.cos(ang)
+    R = rad[0]          # vành = đúng cỡ thân ở miệng, tâm ngay mặt cắt
+    mo, ho = ellipse(*A, R, R * .42, ang)
+    u = (X - A[0]) * math.cos(ang) + (Y - A[1]) * math.sin(ang)
+    v = -(X - A[0]) * math.sin(ang) + (Y - A[1]) * math.cos(ang)
     rr = np.sqrt((u / R) ** 2 + (v / (R * .42)) ** 2)
     an = np.arctan2(v / .42, u)
     inner = lerpc(TOI * 1.4, TOI * .45, sstep(.0, .9, 1 - rr))
@@ -175,7 +201,7 @@ def lo():
     for i in range(49):
         t = i / 48 * 2 * math.pi
         x = math.cos(t) * R; y = math.sin(t) * R * .42
-        ring.append((A[0] - ax[0] * 4 + x * math.cos(ang) - y * math.sin(ang), A[1] - ax[1] * 4 + x * math.sin(ang) + y * math.cos(ang)))
+        ring.append((A[0] + x * math.cos(ang) - y * math.sin(ang), A[1] + x * math.sin(ang) + y * math.cos(ang)))
     mr, hr, sr, sdr = tube(ring, [6.5] * len(ring))
     cr_ = MAY * (1 + .12 * np.sin(sr * 1.6))[..., None]
     c, _ = P.shade(hr, cr_, amb=.45, dif=.72, spec=.12, sp_pow=24)
@@ -197,16 +223,18 @@ def lop():
     ang = math.atan2(ax[1], ax[0])
     # cọc nhỏ phía sau
     bamboo(P, 300, 70, 292, 440, 7, 6, node=60, contact=0)
-    prof = [(0, 34), (.06, 37), (.5, 36), (.9, 33), (1, 31)]
+    prof = [(0, 36), (.06, 37), (.5, 36), (.9, 33), (1, 31)]
     pts, rad = smooth_prof(A, B, prof)
     m, h, s, sd = tube(pts, rad)
-    hw, col, gm = weave(s, sd, m, 13, 26, 3.6, gap=.16, seed=11, ring0=10)
+    m = cut(m, A, ax)
+    s, sd = axis_coords(A, ax, pts, rad)
+    hw, col, gm = weave(s, sd, m, 13, 26, 3.6, gap=.16, seed=11, ring0=10 + .45 * rad[0], persp=(.45, arclen(pts), rad))
     c, _ = P.shade(h + hw * .8, np.ones(3, np.float32), amb=.4, dif=.76, spec=.08, sp_pow=20)
     P.put(m, np.clip(c * col, 0, 1), edge=TRE_D * .45, line=.5, contact=.3)
     # miệng dưới: vành + hom
     pa = math.atan2(ax[1], ax[0]) + math.pi / 2
-    R = 36
-    cA = A - ax * 3
+    R = rad[0]
+    cA = A
     mo, ho = ellipse(*cA, R, R * .45, pa)
     u = (X - cA[0]) * math.cos(pa) + (Y - cA[1]) * math.sin(pa)
     v = -(X - cA[0]) * math.sin(pa) + (Y - cA[1]) * math.cos(pa)
