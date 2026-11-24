@@ -697,7 +697,7 @@ def cabin(fr, h, u0, u1, walk, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e
     ztop = zc + R
     for i, vv in enumerate((-hw * .35, hw * .3)):
         pc = fr.w(u1 - 2.8 - i * 4.5, vv, ztop - .3)
-        o += seedling(fr, pc, 1.7, 2 + i)
+        o += seedling(fr, pc, 1.25, 2 + i)
     # lối đi ván 2 bên nhà (người đi lại, đứng chống sào)
     for sd in (-1, 1):
         o.append(M(Box(tuple(fr.w(uc, sd * (hw + walk * .5), zd + .1)), (fr.U, fr.Vv, (0, 0, 1)), (hl + 1.0, walk * .5 - .1, .25), 'go2', rr=.1), col=hexc('#9a6a3e')))
@@ -770,21 +770,29 @@ def thwarts(fr, h, list_a, col='#6a4024'):
     return o
 
 
-def awning(fr, h, u0, u1, zf, col, col2):
-    """mui bạt sọc trên khung tre (ghe chợ)"""
+def awning(fr, h, u0, u1, zf, col, col2, head=13.5):
+    """mái bạt ghe chợ: cao ngang đầu người đứng (head trên sạp), 6 cột tre + đòn ngang + đòn nóc,
+    bạt căng hơi khum phía trên, 2 bên trống để người đứng bán / cầm lái"""
     L = h.L
-    zt0 = zt_at(h, 0)
-    hw = min(w_at(h, a) for a in np.linspace(u0 / L, u1 / L, 10)) - .5
-    R = hw
-    zc = zt0 + 4.0
+    hw = min(w_at(h, a) for a in np.linspace(u0 / L, u1 / L, 10)) - .6
+    zdeck = zt_at(h, (u0 + u1) / 2 / L) - .5
+    zr = zdeck + head                      # mép bạt
+    sag = 2.0                              # độ khum bạt
+    R = (hw * hw / sag + sag) / 2
     o = []
-    for uu in (u0 + 1, u1 - 1):
-        for vv in (-hw + 1, hw - 1):
-            o.append(bamboo(fr.w(uu, vv, zt0 - .5), fr.w(uu, vv * .95, zc + .6), .32))
-    t = Tube(tuple(fr.w(u0, 0, zc)), tuple(fr.U), u1 - u0, [(0, R), (1, R)], 'bat', shell=.22, open0=True, open1=True)
+    for uu in (u0 + .8, (u0 + u1) / 2, u1 - .8):
+        for sd in (-1, 1):
+            a_ = uu / L
+            o.append(bamboo(fr.w(uu, sd * (w_at(h, a_) - .9), zt_at(h, a_) - .3), fr.w(uu, sd * (hw - .3), zr - .2), .34))
+        o.append(bamboo(fr.w(uu, -hw, zr - .1), fr.w(uu, hw, zr - .1), .3))   # đòn ngang đầu cột
+    o.append(bamboo(fr.w(u0 - .4, 0, zr + sag - .1), fr.w(u1 + .4, 0, zr + sag - .1), .32))   # đòn nóc
+    t = Tube(tuple(fr.w(u0 - .6, 0, zr + sag - R)), tuple(fr.U), u1 - u0 + 1.2, [(0, R), (1, R)], 'bat', shell=.22, open0=True, open1=True)
     t.fr = fr; t.col = hexc(col); t.col2 = hexc(col2)
-    c = Cut(t, tuple(fr.w(0, 0, zc + .3)), (0, 0, -1)); c.fr = fr; c.col2 = t.col2
+    c = Cut(t, tuple(fr.w(0, 0, zr)), (0, 0, -1)); c.fr = fr; c.col2 = t.col2
     o.append(c)
+    # diềm bạt rủ 2 bên mép
+    for sd in (-1, 1):
+        o.append(M(Box(tuple(fr.w((u0 + u1) / 2, sd * (hw + .05), zr - .5)), (fr.U, fr.Vv, (0, 0, 1)), ((u1 - u0) / 2 + .6, .08, .6), 'cam', rr=.05), col=hexc(col)))
     return o
 
 
@@ -951,9 +959,9 @@ def cho_load(fr, h, kind, zf, Wb, seed):
                     vv = (jj - (nn - 1) / 2) * 1.75 * cs * 2
                     o += sack(fr, uu + (ly % 2) * 1.2 + rs.uniform(-.3, .3), vv + rs.uniform(-.3, .3), zf + ly * 2.05 * cs, cs, stripe=['#c03a2a', '#2e6aa0'][(k + ly + jj) % 2], rot=rs.uniform(-.08, .08))
             uu += 2.6 * cs * 2 + .2; k += 1
-        o += thung(fr, L * .6, -3.0, zf, 3.0, 'lua', seed + 1) + thung(fr, L * .62, 3.2, zf, 2.8, 'lua', seed + 2)
+        o += thung(fr, L * .67, -3.6, zf, 2.7, 'lua', seed + 1) + thung(fr, L * .67, 3.6, zf, 2.7, 'lua', seed + 2)
     else:                 # đồ bếp: củi chất đống phía lái, lu muối hột giữa, nồi đất + bao muối phía mũi
-        for pc, ln in ((-L * .42, 12.0), (-L * .18, 12.0)):   # 2 đống củi chẻ chất dọc khoang, thanh dài xếp lớp
+        for pc, ln in ((-L * .38, 10.0), (-L * .2, 10.0)):   # 2 đống củi chẻ chất dọc khoang, thanh dài xếp lớp
             wd = w_at(h, pc / L) - 1.3
             for ly in range(5):
                 hw_ = wd - ly * .9
@@ -974,7 +982,7 @@ def cho_load(fr, h, kind, zf, Wb, seed):
         for vv in (-4.0, 0, 4.0):
             o += clay_pot(fr, fr.w(L * .44, vv, zf), 1.9)
             o += clay_pot(fr, fr.w(L * .44 + .3, vv * .5, zf + 2.6), 1.6) if vv else []
-        o += sack(fr, L * .62, -1.8, zf, 1.2, col='#f2f0ea', stripe='#3a8a4a') + sack(fr, L * .62, 2.2, zf, 1.1, col='#f2f0ea', stripe='#3a8a4a', rot=.1)
+        o += sack(fr, L * .7, -3.4, zf, .9, col='#f2f0ea', stripe='#3a8a4a') + sack(fr, L * .7, 3.4, zf, .9, col='#f2f0ea', stripe='#3a8a4a', rot=.1)
     return o
 
 
@@ -1007,11 +1015,11 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         co, zd = cabin(fr, h, -L * .6, -L * .1, 2.6, 9.5)
         objs += co
         objs += deck(fr, h, .76, .9) + deck(fr, h, -.93, -.63)   # sạp lái rộng: chỗ đứng cầm lái
-        objs += crates(fr, h, -L * .02, L * .66, zf, seed + 3)
+        objs += crates(fr, h, -L * .02, L * .5, zf, seed + 3)   # dừng trước cây bẹo .58L
         objs += beo(fr, .58 * CH * TILE, zf)
         objs += engine(fr, h) + stand_mat(fr, h, -.8)
         objs += rope(fr, h, .84)
-        objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.5, -.2, .2, .45)) + anchor(fr, h)
+        objs += rails(fr, h) + stem(fr, h, aft=False) + tires(fr, h, (-.5, -.2, .2, .45)) + anchor(fr, h)
         objs += laundry(fr, fr.w(-L * .1 + .6, Wb * .45, zd + 11.0), fr.w(.58 * CH * TILE - .8, .4, 26), 4, seed)
         objs += flag(fr, h, -L * .93, zt_at(h, -.93) - .3)
         objs += deck_props(fr, h, -L * .66, zt_at(h, -.66) - .3)
@@ -1028,7 +1036,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
     objs += beo(fr, .58 * CH * TILE, zf)
     objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4]) + stand_mat(fr, h, -.8)
-    objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.35, .3)) + anchor(fr, h)
+    objs += rails(fr, h) + stem(fr, h, aft=False) + tires(fr, h, (-.35, .3)) + anchor(fr, h)
     return Scene(objs)
 
 
@@ -1055,12 +1063,14 @@ def rails(fr, h, r=.45, col=None, n=26, amax=.96):
     return o
 
 
-def stem(fr, h, col='#b8382a', big=1.0):
+def stem(fr, h, col='#b8382a', big=1.0, aft=True):
     """cột mũi cong vểnh + cột lái"""
     L = h.L
     z1 = zt_at(h, .99)
     o = [M(Line([tuple(fr.w(L * .985, 0, z1 - 2.5 * big)), tuple(fr.w(L * 1.01, 0, z1 + .5)), tuple(fr.w(L * 1.0, 0, z1 + 2.6 * big)), tuple(fr.w(L * .975, 0, z1 + 3.4 * big))],
                 [.7 * big, .65 * big, .55 * big, .45 * big], 'go2'), col=hexc(col))]
+    if not aft:
+        return o
     z0 = zt_at(h, -.99)
     o.append(M(Line([tuple(fr.w(-L * .985, 0, z0 - 2 * big)), tuple(fr.w(-L * 1.005, 0, z0 + .4)), tuple(fr.w(-L * .99, 0, z0 + 1.8 * big))], [.6 * big, .55 * big, .45 * big], 'go2'), col=hexc(col)))
     return o
