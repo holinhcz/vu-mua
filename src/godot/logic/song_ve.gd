@@ -4,6 +4,8 @@ extends RefCounted
 #   - lục bình + bèo trôi chung từng cụm (to nhỏ khác nhau), rau muống trôi riêng, theo lòng sông (sgeo), luôn xuôi dòng (nước
 #     lớn trôi chậm, nước nổi trôi nhanh); chạm vớt (khúc sông đã mua); tới cuối sông thì mờ đi, cụm mới trôi vô từ đầu trên
 #   - bãi bùn lúc nước ròng (w_xuong.v6): mảng bùn ở mép nước, có món để mò; chạm đi tới mò
+#   - (bản 541) lờ tre / lọp lươn / giăng câu đang đặt (g.lo.set, w_ca): vẽ nét ở ô nước; có cá thì gợn nước + chấm vàng;
+#     chạm -> nhân vật ra bờ thăm (w_ca.rk)
 #   - cá búng mặt nước: sông, kênh, ao trên màn thỉnh thoảng có cá búng lên, nước bắn, vòng gợn loang (mưa nhiều, đêm ít)
 
 const BongNuoc = preload("res://logic/bong_nuoc.gd")
@@ -79,6 +81,7 @@ func step(dt: float) -> void:
 	if _t1 <= 0.0:
 		_t1 = 1.0
 		_bush_sync()
+		_lo_sync()
 	_float_step(dt)
 	fx.step(dt)
 
@@ -110,6 +113,87 @@ func _bush_sync() -> void:
 		if not keep.has(k):
 			_unsort(bush[k])
 			bush.erase(k)
+
+# ------------------------------------------------------------------ (bản 541) lờ, lọp, giăng câu đang đặt
+var lo := {}   # key -> LoNode
+func _lo_sync() -> void:
+	var W = G.w_all.WCA
+	var keep := {}
+	for a in W.t1()["set"]:
+		var k: String = W.bk(a)
+		keep[k] = 1
+		var n = lo.get(k)
+		if n == null or not is_instance_valid(n):
+			n = LoNode.new()
+			n.kind = String(a.t)
+			n.seed = float(int(a.gx) * 13 + int(a.gy) * 7)
+			n.position = Vector2(F.en(float(a.gx) + 0.5, float(a.gy) + 0.5), F.nn(float(a.gx) + 0.5, float(a.gy) + 0.5))
+			_sorted(n)
+			lo[k] = n
+		n.has_fish = W.w4(a)
+		n.night = G.night
+	for k in lo.keys():
+		if not keep.has(k):
+			_unsort(lo[k])
+			lo.erase(k)
+
+class LoNode extends Node2D:   # gốc = giữa ô nước (đơn vị làng: ô = 32 x 16)
+	var kind := "lo"
+	var has_fish := false
+	var night := false
+	var seed := 0.0
+	var t := 0.0
+	func _process(dt: float) -> void:
+		t += dt
+		queue_redraw()
+	func _draw() -> void:
+		var dk := 0.62 if night else 1.0
+		var tre := Color(.78, .62, .36) * dk
+		var tre2 := Color(.55, .40, .20) * dk
+		var nuoc := Color(1, 1, 1, .35 * dk)
+		var bob := sin(t * 1.6 + seed) * .6
+		match kind:
+			"lo":   # lờ tre: ống đan nằm nghiêng nửa chìm, miệng loe, 2 cọc giữ
+				for x in [-9.0, 9.0]:
+					draw_line(Vector2(x, 2), Vector2(x + 1, -11), tre2, 1.6, true)
+				var c := Vector2(0, -2 + bob)
+				var P := PackedVector2Array()
+				for i in 17:
+					var a := PI + PI * i / 16.0
+					P.append(c + Vector2(cos(a) * 10.0, sin(a) * 5.0))
+				P.append(c + Vector2(10, 0))
+				draw_colored_polygon(P, tre)
+				for i in 5:   # nan đan
+					var x := -8.0 + i * 4.0
+					draw_line(c + Vector2(x, 0), c + Vector2(x + 1.5, -4.0 + absf(x) * .12), tre2, .8, true)
+				draw_line(c + Vector2(-10, 0), c + Vector2(10, 0), tre2, .9, true)
+				draw_arc(c + Vector2(-10, -1.5), 2.6, -PI * .5, PI * .5, 8, tre2, 1.2, true)   # miệng lờ
+			"lop":   # lọp lươn: ống tre cắm xiên, có đốt, nhô khỏi nước
+				var b := Vector2(-2, 1 + bob * .5)
+				var tp := b + Vector2(5, -15)
+				draw_line(b, tp, tre2, 4.2, true)
+				draw_line(b, tp, tre, 3.0, true)
+				for f in [.35, .7]:
+					var q: Vector2 = b.lerp(tp, f)
+					draw_line(q + Vector2(-2, 0), q + Vector2(2, 0), tre2, 1.0, true)
+				draw_circle(tp, 1.4, tre2)
+			"giang":   # giăng câu: 2 cọc tre, dây căng, 3 phao trắng đỏ nhấp nhô
+				var A := Vector2(-13, 3)
+				var B := Vector2(13, -3)
+				draw_line(A, A + Vector2(0, -12), tre2, 1.8, true)
+				draw_line(B, B + Vector2(0, -12), tre2, 1.8, true)
+				draw_line(A + Vector2(0, -9), B + Vector2(0, -9), Color(.9, .88, .8, .7) * dk, .7, true)
+				for i in 3:
+					var q := A.lerp(B, (i + 1) / 4.0) + Vector2(0, -1 + sin(t * 2.2 + seed + i * 1.3) * .8)
+					draw_circle(q, 1.7, Color(.95, .95, .92) * dk)
+					draw_circle(q + Vector2(0, -1.0), 1.0, Color(.85, .2, .15) * dk)
+		if kind != "giang":   # vòng nước quanh chân
+			draw_arc(Vector2(0, 2), 11.0, 0, TAU, 24, nuoc, .8, true)
+		if has_fish:   # có cá: gợn nước loang + chấm vàng nhấp nháy
+			var r := fmod(t * .9, 1.0)
+			draw_arc(Vector2(0, 2), 6.0 + r * 10.0, 0, TAU, 24, Color(1, 1, 1, (1.0 - r) * .7), 1.0, true)
+			draw_circle(Vector2(0, -20 + sin(t * 3.0) * 1.5), 3.2, Color(1, .82, .2, .95))
+			draw_circle(Vector2(0, -20 + sin(t * 3.0) * 1.5), 1.4, Color(1, 1, 1, .95))
 
 # ------------------------------------------------------------------ lục bình + bèo trôi, rau muống trôi riêng
 const N_LB := 12
@@ -235,6 +319,13 @@ func pick_add(L: Array) -> void:
 		if f.n.modulate.a < 0.5:
 			continue
 		F._pk_add(L, {"type": "fl", "k": f.key}, 6, q.y, func(p: Vector2) -> bool: return absf(p.x - q.x) < 15.0 and p.y > q.y - 14.0 and p.y < q.y + 6.0)
+	for k in lo:   # (bản 541) lờ / lọp / giăng
+		var nl: Node2D = lo[k]
+		if not is_instance_valid(nl):
+			continue
+		var ql := nl.position
+		var kk: String = k
+		F._pk_add(L, {"type": "lo", "k": kk}, 6, ql.y, func(p: Vector2) -> bool: return absf(p.x - ql.x) < 16.0 and p.y > ql.y - 26.0 and p.y < ql.y + 8.0)
 	var WX = G.w_all.WX
 	for o in WX.v6():   # bãi bùn
 		if WX.bS(o):
@@ -245,6 +336,11 @@ func pick_add(L: Array) -> void:
 func tap(h: Dictionary) -> void:
 	var k := String(h.k)
 	if F.has_job(k):
+		return
+	if h.type == "lo":   # (bản 541) ra bờ thăm lờ (w_all: Ns -> lo_stand + rk)
+		var ns = G.w_all.WCAU.ext.get("Ns")
+		if ns is Callable and ns.is_valid():
+			ns.call({"type": "lo", "key": k})
 		return
 	if h.type == "fl":
 		for f in fl:

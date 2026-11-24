@@ -13,6 +13,30 @@ var farm: Node2D
 var ui: CanvasLayer
 var _done := false
 
+func _lord() -> void:
+	var S: Array = G.w_all.WCA.t1()["set"]
+	for e9 in S:
+		e9.at = float(e9.at) - 1e8
+	push_error("QKSET " + JSON.stringify(S))
+	if S.size():
+		var m9 = ui.main
+		m9.cam = Vector2(farm.en(float(S[0].gx) + .5, float(S[0].gy) + .5), farm.nn(float(S[0].gx) + .5, float(S[0].gy) + .5)) - m9.get_viewport_rect().size / m9.zoom / 2
+
+func _loauto() -> void:
+	var W = G.w_all.WCA
+	var best := Vector2i(-999, -999)
+	var bd := 1e9
+	for x in range(int(G.ppos.x) - 25, int(G.ppos.x) + 25):
+		for y in range(int(G.ppos.y) - 25, int(G.ppos.y) + 25):
+			if W._p0(x, y) and W._ci(W._fo(x, y)) and W.gs(String(W.yf.k) if W.yf != null and false else "lo", x, y) == "":
+				var d := Vector2(x - G.ppos.x, y - G.ppos.y).length()
+				if d < bd:
+					bd = d
+					best = Vector2i(x, y)
+	push_error("QKLO " + str(best))
+	if best.x > -999:
+		W.nk(best.x, best.y)
+
 func _cct(a: Array) -> void:
 	var gm = ui.ccp.game
 	if gm == null:
@@ -238,6 +262,11 @@ func _test_hook() -> void:
 			"ccc": if ui.ccp.game != null: ui.ccp.game.caught(preload("res://logic/cc/cc_data.gd").fish(String(a[1])), float(a[2]))   # (bản 540) thử: câu được 1 con
 			"ccd": push_error("QKDEX " + JSON.stringify(G.g.get("fish", {}).get("dex", {})) + " CC " + JSON.stringify(G.g.get("ccsv", {}).get("dex", {})))
 			"ccq": if ui.ccp.game != null: ui.ccp.game.close_game()   # (bản 540) thử: thoát câu cá
+			"lot": G.g.coins = int(G.g.coins) + 3000; G.w_all.WCA.uu(a[1] if a.size() > 1 else "lo"); G.w_all.WCA.nk_lo(a[1] if a.size() > 1 else "lo")   # (bản 541) thử: mua + bấm Đặt lờ
+			"landall": for k9 in farm.PC.G0: G.g.land[k9] = 1   # thử: mở hết khu đất
+			"loauto": _loauto()   # thử: tự tìm ô nước sát bờ gần nhất rồi chạm
+			"lost": push_error("QKST " + JSON.stringify(G.w_all.WCA.t1()["set"]) + " pick " + JSON.stringify(farm.pick(farm.screen_to_world(Vector2(float(a[1]), float(a[2])) * ui.main.dpr))) if a.size() > 2 else "")
+			"lord": _lord()   # thử: lờ có cá liền, camera tới lờ đầu tiên
 			"ccx": ui.ccp.open()   # (bản 529) thử mở Câu cá (tải gói hình ghi thẳng ra file)
 			"ghxa": _ghxa()
 			"ghx": _ghet()   # thử bảng ghe (ghet trong hooks đã có: đặt bến)

@@ -324,6 +324,9 @@ func ui_setup(ui) -> void:
 		if U.pcp != null and U.pcp.on:
 			U.pcp.close()
 	WCA.ext["ec"] = ec
+	# (bản 541) Zd: chỗ (x, y) đi bộ tới được = đất của mình, không phải nước (bản Godot đi thẳng, không có lưới đi bộ như web).
+	# Thiếu cái này thì lờ / lọp / giăng ô nào cũng báo "xa bờ quá"
+	WCA.ext["Zd"] = func(x: float, y: float, _n: bool) -> bool: return WCA._bb(int(floor(x)), int(floor(y)))
 	WCA.ext["klShow"] = func() -> void: U.kl_show()   # thẻ trái khủng
 	WCA.ext["g2"] = g2
 	WCAU.ext["ec"] = ec

@@ -1036,6 +1036,12 @@ func _tap_do(sp: Vector2) -> void:
 		ui.close_all()
 		stop_jobs()
 		return
+	var WCA = G.w_all.WCA if G.w_all != null else null
+	if WCA != null and WCA.yf != null:   # (bản 541) đang chọn chỗ đặt lờ / lọp / giăng (hoặc thả vịt, cá): chạm ô nước
+		ui.close_all()
+		var tl := to_tile(w)
+		WCA.nk(int(floor(tl.x)), int(floor(tl.y)))
+		return
 	var h := pick(w)
 	# (bản 283) đang mở bảng / vòng nút / khay mà chạm ra làng: chỉ đóng lại, không làm việc kế tiếp (mở ô khác, đi tới, dọn...).
 	# Riêng khay giống đang mở thì chạm ô ruộng vẫn gieo tiếp như cũ
@@ -1044,7 +1050,7 @@ func _tap_do(sp: Vector2) -> void:
 		ui.close_all()
 		return
 	match String(h.get("type", "")):
-		"nn", "fl", "bun":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn
+		"nn", "fl", "bun", "lo":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn, (bản 541) thăm lờ / lọp / giăng
 			ui.close_all()
 			if song != null:
 				song.tap(h)

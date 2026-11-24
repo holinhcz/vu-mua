@@ -867,7 +867,7 @@ func nk_lo(t: String) -> void:   # Nk: nút "Đặt" -> chạm mặt nước
 		if r != "":
 			_ta(r)
 			return false
-		fr_put(t, n, e)
+		hz(t, n, e)   # (bản 541) nhân vật lội ra mé nước rồi mới đặt (trước: đặt liền tại chỗ)
 		return true
 	var sub := "Giăng câu phải đặt trên sông Vàm, sát mé bờ." if t == "giang" else "Chọn chỗ mương, ao, mé sông sát bờ để còn lội ra thăm."
 	wg("lo", false, {"msg": "Chạm vào mặt nước để đặt " + String(a.n).to_lower(), "sub": sub, "at": [G.ppos.x, G.ppos.y], "cb": cb})
@@ -891,9 +891,12 @@ func hz(t: String, a: int, n: int) -> void:   # hZ: nhân vật lội ra đặt 
 	if gl.is_valid():
 		gl.call({"key": "lop" + t + "@" + str(a) + "," + str(n), "kind": "lo", "pos": r.stand, "dur": 0.6, "run": run})
 
-func lo_stand(key: String):   # $U: chỗ đứng thăm bẫy
+func lo_stand(key: String):   # $U: chỗ đứng thăm bẫy (bản 541: đứng trên bờ sát bẫy, không đứng giữa nước)
 	var a = bm(key)
-	return [float(a.gx) + 0.5, float(a.gy) + 0.5] if a != null else null
+	if a == null:
+		return null
+	var m = mt(int(a.gx), int(a.gy))
+	return m.stand if m != null else [float(a.gx) + 0.5, float(a.gy) + 0.5]
 
 # ------------------------------------------------------------------ thú cưng (g.pet)
 func cc() -> Dictionary:   # Cc
