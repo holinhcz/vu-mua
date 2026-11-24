@@ -194,8 +194,8 @@ def albedo(obj, P):
             # mũi sơn đỏ + mắt ghe
             bow = (u > L * .84)
             c_o = np.where((bow & (dz < bw + .4))[:, None], hexc('#b8382a')[None], c_o)
-            eu = L * .7; ec = bw * .55
-            ex = (u - eu) / (bw * 1.25); ey = (dz - ec) / (bw * .42)
+            be = min(bw, 3.6); eu = L * .7; ec = be * .55
+            ex = (u - eu) / (be * 1.25); ey = (dz - ec) / (be * .42)
             al = np.abs(ex) ** 1.6 + ey ** 2 * (1 + .6 * np.abs(ex))     # mắt hình hạnh
             pu = np.hypot(ex - .12, ey * .9)
             eye = out & (al < 1.0)
@@ -592,7 +592,7 @@ def seedling(fr, c, sz=1.0, kind=0, seed=0):
             for l in range(5):
                 a2 = ang + (l - 2) * .7
                 o.append(leaf(p1 + V(0, 0, rs.uniform(-.3, .3) * sz), V(math.cos(a2), math.sin(a2), rs.uniform(-.1, .5)), 1.4 * sz, .7 * sz,
-                              ['#5a9a3e', '#6aaa44', '#4a8a36'][l % 3], bend=.15))
+                              ['#7cc052', '#8ad060', '#6ab84a'][l % 3], bend=.15))
         for l in range(4):
             a2 = l * 1.6
             o.append(leaf(top + V(0, 0, h_), V(math.cos(a2), math.sin(a2), .5), 1.3 * sz, .65 * sz, '#6aaa44', bend=.15))
@@ -605,7 +605,7 @@ def seedling(fr, c, sz=1.0, kind=0, seed=0):
             ang = q / 8 * 2 * np.pi + rs.uniform(0, .4)
             up = .9 if q % 2 else .6
             o.append(leaf(top + V(0, 0, .2 * sz), V(math.cos(ang) * (1 - up * .7), math.sin(ang) * (1 - up * .7), up), 3.0 * sz, .55 * sz,
-                          ['#5aa03a', '#3f8a32', '#6ab048'][q % 3], bend=.5))
+                          ['#6ab848', '#58a83e', '#7cc455'][q % 3], bend=.5))
     elif kind == 2:      # mai vàng: cành nâu khẳng khiu, bông 5 cánh vàng, nụ
         for b in range(5):
             ang = b * 1.3 + rs.uniform(0, .4)
@@ -630,7 +630,7 @@ def seedling(fr, c, sz=1.0, kind=0, seed=0):
                 t = .25 + j * .22
                 p = pa + (pb - pa) * min(1, t * 2) if t < .5 else pb + (pc - pb) * (t - .5) * 2
                 for e in (-1, 1):
-                    o.append(leaf(p, sd * e + d * .5 + V(0, 0, -.2), 1.1 * sz, .25 * sz, '#4f9a3a', bend=.2))
+                    o.append(leaf(p, sd * e + d * .5 + V(0, 0, -.2), 1.1 * sz, .25 * sz, '#62ae44', bend=.2))
     return grp(o)
 
 
@@ -695,9 +695,6 @@ def cabin(fr, h, u0, u1, walk, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e
     o[-1].fr = fr
     # chậu kiểng đặt mép mái phía trước
     ztop = zc + R
-    for i, vv in enumerate((-hw * .35, hw * .3)):
-        pc = fr.w(u1 - 2.8 - i * 4.5, vv, ztop - .3)
-        o += seedling(fr, pc, 1.25, 2 + i)
     # lối đi ván 2 bên nhà (người đi lại, đứng chống sào)
     for sd in (-1, 1):
         o.append(M(Box(tuple(fr.w(uc, sd * (hw + walk * .5), zd + .1)), (fr.U, fr.Vv, (0, 0, 1)), (hl + 1.0, walk * .5 - .1, .25), 'go2', rr=.1), col=hexc('#9a6a3e')))
@@ -712,20 +709,24 @@ def engine(fr, h, col='#c23b2b'):
     zs = zt_at(h, -.93) - .3
     piv = V(*fr.w(-L * .95, 0, zs))
     o = [M(Line([tuple(piv + V(0, 0, -1.5)), tuple(piv + V(0, 0, 1.4))], .45, 'thep'), col=hexc('#3a3a38'))]   # cọc xoay
-    c = piv + V(0, 0, 2.6)
+    k = 1.45                                # máy to rõ nhìn từ xa
+    c = piv + V(0, 0, 2.6 * k)
     ax = (fr.U, fr.Vv, (0, 0, 1))
-    o.append(M(Box(tuple(c), ax, (1.8, 1.3, 1.2), 'dco', rr=.4), col=hexc(col), sp=.4, pw=34))                    # thân máy
-    o.append(M(Box(tuple(c + V(0, 0, 1.35) - fr.U * .3), ax, (1.2, 1.0, .35), 'dco', rr=.2), col=hexc('#2e2e2e'), sp=.3, pw=30))   # nắp xi lanh
-    o.append(M(Ell(tuple(c + V(0, 0, 2.1) + fr.U * .4), ax, (1.1, .75, .5), 'dco'), col=hexc('#d8b030'), sp=.45, pw=40))          # bình xăng
-    o.append(M(Torus(tuple(c + fr.Vv * 1.35), tuple(fr.Vv), .7, .18, 'dco'), col=hexc('#2e2e2e')))                                 # bánh dây giật
-    o.append(M(Line([tuple(c - fr.U * 1.6 + V(0, 0, .6)), tuple(c - fr.U * 2.6 + V(0, 0, 1.4))], .25, 'thep'), col=hexc('#5a5a58')))   # ống pô
+    o.append(M(Line([tuple(piv + V(0, 0, 1.2)), tuple(c - V(0, 0, 1.0 * k))], .5, 'thep'), col=hexc('#4a4a48')))   # chân đế
+    o.append(M(Box(tuple(c), ax, (1.8 * k, 1.3 * k, 1.2 * k), 'dco', rr=.4 * k), col=hexc(col) * 1.12, sp=.4, pw=34))                    # thân máy
+    o.append(M(Box(tuple(c + V(0, 0, 1.35 * k) - fr.U * .3 * k), ax, (1.2 * k, 1.0 * k, .35 * k), 'dco', rr=.2 * k), col=hexc('#5a5a58'), sp=.3, pw=30))   # nắp xi lanh
+    for e in (-.5, 0, .5):   # cánh tản nhiệt
+        o.append(M(Box(tuple(c + V(0, 0, 1.75 * k) - fr.U * (.3 - e) * k), ax, (.08 * k, .9 * k, .12 * k), 'thep'), col=hexc('#8a8a86')))
+    o.append(M(Ell(tuple(c + V(0, 0, 2.1 * k) + fr.U * .5 * k), ax, (1.1 * k, .75 * k, .5 * k), 'dco'), col=hexc('#f0c430'), sp=.45, pw=40))          # bình xăng
+    o.append(M(Torus(tuple(c + fr.Vv * 1.35 * k), tuple(fr.Vv), .7 * k, .18 * k, 'dco'), col=hexc('#3a3a3a')))                                 # bánh dây giật
+    o.append(M(Line([tuple(c - fr.U * 1.6 * k + V(0, 0, .6 * k)), tuple(c - fr.U * 2.6 * k + V(0, 0, 1.4 * k))], .3, 'thep'), col=hexc('#6a6a68')))   # ống pô
     # cần lái: từ máy chìa tới trước, tay nắm cao ngang hông người đứng
-    g0 = c + fr.U * 1.6 + V(0, 0, .3)
-    g1 = c + fr.U * 7.5 + fr.Vv * .9 + V(0, 0, 1.6)
-    o.append(M(Line([tuple(g0), tuple(g1)], .26, 'thep'), col=hexc('#5a5a58')))
+    g0 = c + fr.U * 1.6 * k + V(0, 0, .3)
+    g1 = c + fr.U * 8.5 + fr.Vv * .9 + V(0, 0, 1.0)
+    o.append(M(Line([tuple(g0), tuple(g1)], .32, 'thep'), col=hexc('#8a8a86')))
     o.append(M(Line([tuple(g1), tuple(g1 + nz(g1 - g0) * 1.6)], .38, 'dco'), col=hexc('#1e1e1e')))               # tay nắm cao su
     # cây láp dài ra sau, chéo xuống, quạt 3 cánh sát mặt nước
-    s0 = c - fr.U * 1.6 - V(0, 0, .4)
+    s0 = c - fr.U * 1.6 * k - V(0, 0, .4)
     tip = V(*fr.w(-L * .95 - 13, 0, -.6))
     o.append(M(Line([tuple(s0), tuple(tip)], .3, 'thep'), col=hexc('#9a9a94')))
     d = nz(tip - s0)
@@ -836,7 +837,7 @@ def crates(fr, h, u0, u1, zf, seed=3):
     L = h.L
     rs = np.random.RandomState(seed)
     o = []
-    cols = ['#b8875a', '#a87a4e', '#c49766', '#9c6e44']
+    cols = ['#c8975e', '#b88a52', '#d4a86e', '#ac7e4c']
     uu = u0
     while uu < u1 - 4:
         a = uu / L
@@ -846,9 +847,10 @@ def crates(fr, h, u0, u1, zf, seed=3):
         for j in range(n):
             hy = (wd / n) - .25
             v = (j - (n - 1) / 2) * (wd * 2 / n)
-            o += crate(fr, uu + hx, v, zf, hx, hy * .96, rs.uniform(1.9, 2.3), cols[rs.randint(4)], rs.uniform(-.04, .04))
-            if rs.rand() < .7:   # tầng 2 nhỏ hơn
-                o += crate(fr, uu + hx + rs.uniform(-.3, .3), v + rs.uniform(-.4, .4), zf + 4.3, hx * .85, hy * .8, rs.uniform(1.6, 2.0), cols[rs.randint(4)], rs.uniform(-.08, .08))
+            hz1 = rs.uniform(2.6, 3.0)
+            o += crate(fr, uu + hx, v, zf, hx, hy * .96, hz1, cols[rs.randint(4)], rs.uniform(-.04, .04))
+            # tầng 2 luôn có, nhỏ hơn chút
+            o += crate(fr, uu + hx + rs.uniform(-.3, .3), v + rs.uniform(-.3, .3), zf + hz1 * 2 + .15, hx * .88, hy * .84, rs.uniform(2.0, 2.4), cols[rs.randint(4)], rs.uniform(-.06, .06))
         uu += hx * 2 + .35
     return o
 
@@ -901,7 +903,7 @@ def firewood(fr, u, v, z0, ln=5.0, r=1.5, seed=0):
         off = fr.Vv * math.cos(ang) * rr + V(0, 0, math.sin(ang) * rr + r)
         a = fr.w(u - ln / 2 + rs.uniform(-.3, .3), v, z0) + off
         b = fr.w(u + ln / 2 + rs.uniform(-.3, .3), v, z0) + off
-        o.append(M(Line([tuple(a), tuple(b)], .42, 'cui'), col=hexc(['#8a6a44', '#7a5a38', '#9a7a50'][k % 3])))
+        o.append(M(Line([tuple(a), tuple(b)], .44, 'cui'), col=hexc(['#b08a5a', '#9a7648', '#c49c68'][k % 3])))
     for e in (-.3, .3):
         o.append(M(Torus(tuple(fr.w(u + e * ln, v, z0 + r)), tuple(fr.U), r * .9, .18, 'may'), col=hexc('#5a3a1e')))
     return o
@@ -911,7 +913,8 @@ def salt_jar(fr, c, r=1.8):
     """lu muối hột: lu sành nâu, muối trắng đầy miệng"""
     c = V(*c)
     return [M(Ball(tuple(c + V(0, 0, r * 1.1)), r, 'chum', sq=(1, 1, 1.15)), sp=.5, pw=40),
-            M(Ball(tuple(c + V(0, 0, r * 2.15)), r * .62, 'muoi', sq=(1, 1, .45)), col=hexc('#f2f0ea'))]
+            M(Torus(tuple(c + V(0, 0, r * 2.12)), (0, 0, 1), r * .6, r * .13, 'chum'), sp=.5, pw=40),   # vành miệng lu
+            M(Ball(tuple(c + V(0, 0, r * 2.2)), r * .6, 'muoi', sq=(1, 1, .55)), col=hexc('#fafaf4'))]   # muối hột vun
 
 
 def clay_pot(fr, c, r=1.3):
@@ -935,21 +938,33 @@ def cho_load(fr, h, kind, zf, Wb, seed):
     o = []
     rs = np.random.RandomState(seed)
     if kind == 'giong':   # chậu cây giống nhiều loại, thau cá giống, lồng vịt con (chừa chỗ cây bẹo ở .58L)
-        uu = -L * .34; i = 0
+        uu = -L * .33; i = 0
+        rows = [2, 0, 1, 4, 3, 2]          # mỗi hàng 1 loại: mai / bưởi con / phát tài / cam con / cau con
         while uu < L * .14:
-            wd = w_at(h, uu / L) - 2.6
-            n = max(2, int(wd * 2 / 4.2) + 1)
+            wd = w_at(h, uu / L) - 2.8
+            n = max(2, int(wd * 2 / 5.0) + 1)
             for j, vv in enumerate(np.linspace(-wd, wd, n)):
-                o += seedling(fr, fr.w(uu + rs.uniform(-.3, .3), vv + rs.uniform(-.2, .2), zf), 1.45 + rs.uniform(-.1, .2), (i * 2 + j * 3) % 5)
-            uu += 4.2; i += 1
+                o += seedling(fr, fr.w(uu + rs.uniform(-.2, .2), vv, zf), 1.3 + rs.uniform(-.05, .1), rows[i % 6], seed + i * 7 + j)
+            uu += 5.2; i += 1
         wd = w_at(h, .28) - 3.6
         o += tub(fr, fr.w(L * .28, -wd * .55, zf), 3.0) + tub(fr, fr.w(L * .28, wd * .55, zf), 3.0, '#d04a3a')
         wd = w_at(h, .44) - 3.2
         o += duck_cage(fr, fr.w(L * .44, -wd * .5, zf), 2.7) + duck_cage(fr, fr.w(L * .44, wd * .5, zf), 2.7)
     elif kind == 'trai':  # mô trái cây miệt vườn chất cao + buồng chuối
-        o += heap(fr, ['dua', 'dua2', 'khom', 'xoai', 'bi', 'dua', 'cam', 'dua2'], -L * .48, L * .46, zf, Wb * .62, seed, cs=1.25, layers=3)
-        for uu in (-L * .3, -L * .02, L * .26):   # buồng chuối nằm trên đỉnh đống
-            o += fruit(fr, 'chuoi', fr.w(uu, rs.uniform(-1, 1), zf + (2.0 + 2 * 2.9) * 1.25 + 1.0), 1.25)
+        kinds = ['dua', 'xoai', 'khom', 'bi', 'dua2', 'cam', 'xoai', 'dua', 'bi', 'cam']
+        cs = 1.25; step = 3.6 * cs; ki = 0
+        for ly in range(4):                  # mô trái: lớp dưới kín khoang, mỗi lớp hụt vào 2 bên + 2 đầu
+            sh = ly * step * .6
+            uu = -L * .46 + sh + step / 2 + (step * .5 if ly % 2 else 0)
+            while uu < L * .44 - sh - step / 2:
+                wdl = min(w_at(h, uu / L) - 2.2, Wb * .66) - ly * step * .55
+                nj = max(1, int(wdl * 2 / step) + (0 if ly else 1))
+                for j in range(nj):
+                    vv = (j - (nj - 1) / 2) * step * (.92 if ly == 0 else 1) + rs.uniform(-.3, .3)
+                    o += fruit(fr, kinds[(ki + j * 3 + ly) % len(kinds)], fr.w(uu + rs.uniform(-.4, .4), vv, zf + (2.0 + ly * 2.9) * cs), cs, seed + ki)
+                uu += step; ki += 1
+        for uu in (-L * .22, L * .0, L * .2):   # buồng chuối vàng nằm trên đỉnh mô
+            o += fruit(fr, 'chuoi', fr.w(uu, rs.uniform(-.6, .6), zf + (2.0 + 3 * 2.9) * cs + 1.6), 1.35)
     elif kind == 'nong':  # bao gạo chất 3 tầng kín khoang, thúng lúa mũi
         cs = 1.45
         uu = -L * .32 + 2.6 * cs; k = 0
@@ -964,24 +979,21 @@ def cho_load(fr, h, kind, zf, Wb, seed):
             uu += 2.6 * cs * 2 + .2; k += 1
         o += thung(fr, L * .67, -3.6, zf, 2.7, 'lua', seed + 1) + thung(fr, L * .67, 3.6, zf, 2.7, 'lua', seed + 2)
     else:                 # đồ bếp: củi chất đống phía lái, lu muối hột giữa, nồi đất + bao muối phía mũi
-        for pc, ln in ((-L * .38, 10.0), (-L * .2, 10.0)):   # 2 đống củi chẻ chất dọc khoang, thanh dài xếp lớp
-            wd = w_at(h, pc / L) - 1.3
-            for ly in range(5):
-                hw_ = wd - ly * .9
-                if hw_ < 1.0: break
-                n = int(hw_ * 2 / .95)
+        rb = 1.35                            # bó củi chẻ buộc mây, chất kim tự tháp 3 tầng, 2 dãy dọc khoang
+        for pc in (-L * .4, -L * .26):
+            wd = w_at(h, pc / L) - 1.6
+            for ly in range(3):
+                n = int(wd * 2 / (rb * 2.1)) - ly
+                if n < 1: break
                 for jj in range(n):
-                    vv = -hw_ + (jj + .5) * (hw_ * 2 / n) + rs.uniform(-.15, .15)
-                    du = rs.uniform(-.8, .8)
-                    zz = zf + .5 + ly * .82 + rs.uniform(-.08, .08)
-                    a_ = fr.w(pc - ln / 2 + du, vv, zz); b_ = fr.w(pc + ln / 2 + du + rs.uniform(-.6, .6), vv + rs.uniform(-.2, .2), zz + rs.uniform(-.1, .1))
-                    o.append(M(Line([tuple(a_), tuple(b_)], .44 + rs.uniform(-.06, .08), 'cui'), col=hexc(['#8a6a44', '#7a5a38', '#9a7a50', '#a88a5e'][rs.randint(4)])))
+                    vv = (jj - (n - 1) / 2) * rb * 2.1
+                    o += firewood(fr, pc + rs.uniform(-.4, .4), vv, zf + ly * rb * 1.8, 7.0, rb, seed * 13 + ly * 5 + jj)
         uu = -L * .06
         while uu < L * .34:
-            wd = w_at(h, uu / L) - 3.0
-            for vv in (-wd * .55, wd * .55):
-                o += salt_jar(fr, fr.w(uu + rs.uniform(-.3, .3), vv, zf), 2.5)
-            uu += 5.6
+            wd = w_at(h, uu / L) - 3.4
+            for vv in (-wd * .5, wd * .5):
+                o += salt_jar(fr, fr.w(uu + rs.uniform(-.2, .2), vv, zf), 2.9)
+            uu += 6.6
         for vv in (-4.0, 0, 4.0):
             o += clay_pot(fr, fr.w(L * .44, vv, zf), 1.9)
             o += clay_pot(fr, fr.w(L * .44 + .3, vv * .5, zf + 2.6), 1.6) if vv else []
@@ -1012,7 +1024,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         return Scene(objs)
     if kind == 'ghe':    # ghe thương hồ: nhà ghe ván sơn xanh, mái tôn, máy đuôi tôm, khoang trước chất thùng gỗ
         Wb = 13.0
-        h = paint(Hull(fr, L, Wb, 6.5, 5.6, 9.0, 6.0, t=.8), '#2f7f88', 3.6)
+        h = paint(Hull(fr, L, Wb, 6.5, 5.6, 9.0, 6.0, t=.8), '#2f7f88', 4.6)
         objs.append(h)
         zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
         co, zd = cabin(fr, h, -L * .6, -L * .1, 2.6, 9.5)
@@ -1030,7 +1042,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     # ghe chợ nổi (4 loại theo data)
     cs_ = CHO_SET[seed % 4]
     Wb = 11.0
-    h = paint(Hull(fr, L, Wb, 5.6, 4.9, 8.0, 5.0, t=.8), cs_['band'], 3.1, trim=cs_['trim'])
+    h = paint(Hull(fr, L, Wb, 5.6, 4.9, 8.0, 5.0, t=.8), cs_['band'], 3.9, trim=cs_['trim'])
     objs.append(h)
     zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
     objs += deck(fr, h, .78, .9) + deck(fr, h, -.93, -.6, hexc('#a87a4a'))   # sạp lái: chỗ đứng bán hàng / cầm lái
@@ -1038,7 +1050,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         objs += awning(fr, h, -L * .5, -L * .26, zf, *cs_['tarp'])   # bạt che chỗ người đứng cầm lái / bán
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
     objs += beo(fr, .58 * CH * TILE, zf)
-    objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4]) + stand_mat(fr, h, -.8)
+    objs += engine(fr, h, ['#d0402e', '#e07a26', '#d0402e', '#e07a26'][seed % 4]) + stand_mat(fr, h, -.8)
     objs += rails(fr, h) + stem(fr, h, aft=False) + tires(fr, h, (-.35, .3)) + anchor(fr, h)
     return Scene(objs)
 
