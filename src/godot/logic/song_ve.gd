@@ -150,6 +150,7 @@ func _lo_sync() -> void:
 			_unsort(lo[k])
 			lo.erase(k)
 
+const LO_K := 1.8   # (bản 554) lờ / lọp / giăng trên nước phóng to 1,8 (cỡ gốc atlas nhỏ quá so với cây cối)
 class LoNode extends Node2D:   # (bản 553) hình 3D dựng sẵn ui/img/ts/bay (4 cấp, ngày / đêm), gốc = chỗ đặt chân giữa món ngay mặt nước
 	var tx: Texture2D = null
 	var rc := Rect2()
@@ -161,7 +162,7 @@ class LoNode extends Node2D:   # (bản 553) hình 3D dựng sẵn ui/img/ts/bay
 		queue_redraw()
 	func _draw() -> void:
 		if tx != null:
-			draw_texture_rect(tx, Rect2(rc.position + Vector2(0, sin(t * 1.6 + seed) * .35), rc.size), false)
+			draw_texture_rect(tx, Rect2(rc.position * LO_K + Vector2(0, sin(t * 1.6 + seed) * .5), rc.size * LO_K), false)
 
 # hình vịt / mèo vẽ bằng nét (chưa có ảnh) cho thẻ Xây dựng: c = giữa ô, s = tỉ lệ
 static func gear(ci: CanvasItem, kind: String, c0: Vector2, s: float, t := 0.0, _seed := 0.0, night := false) -> void:
@@ -425,7 +426,7 @@ func _sbub_sync() -> void:
 		for a in W.t1()["set"]:
 			if W.w4(a):
 				var k: String = W.bk(a)
-				want["l:" + k] = [String(BUB_ID.get(String(a.t), "ca_ro")), Vector2(F.en(float(a.gx) + .5, float(a.gy) + .5), F.nn(float(a.gx) + .5, float(a.gy) + .5) - 38.0), {"type": "lob", "k": k}]
+				want["l:" + k] = [String(BUB_ID.get(String(a.t), "ca_ro")), Vector2(F.en(float(a.gx) + .5, float(a.gy) + .5), F.nn(float(a.gx) + .5, float(a.gy) + .5) - 50.0), {"type": "lob", "k": k}]
 		if vit != null and is_instance_valid(vit) and vit.egg > 0:
 			want["vit"] = ["trung_vit", vit.position + Vector2(0, -30), {"type": "vit", "k": "vit"}]
 		if meo != null and is_instance_valid(meo) and meo.hungry:
@@ -658,7 +659,7 @@ func pick_add(L: Array) -> void:
 			continue
 		var ql := nl.position
 		var kk: String = k
-		F._pk_add(L, {"type": "lo", "k": kk}, 6, ql.y, func(p: Vector2) -> bool: return absf(p.x - ql.x) < 22.0 and p.y > ql.y - 30.0 and p.y < ql.y + 10.0)
+		F._pk_add(L, {"type": "lo", "k": kk}, 6, ql.y, func(p: Vector2) -> bool: return absf(p.x - ql.x) < 30.0 and p.y > ql.y - 40.0 and p.y < ql.y + 14.0)
 	var WX = G.w_all.WX
 	for o in WX.v6():   # bãi bùn
 		if WX.bS(o):
