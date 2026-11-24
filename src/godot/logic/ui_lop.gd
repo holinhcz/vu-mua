@@ -40,6 +40,10 @@ func _build() -> void:
 	var sh := _kshell([], "", func(_k): pass, 0.0)
 	_kmount(sh[0], sh[1], float(sh[2]), out[0], float(out[1]))
 
+func _lo_pic(t: String) -> String:   # (bản 553) hình 3D đúng cấp đang có (art/bay -> ui/img/lo/<món><cấp>.webp, cấp 1 không số)
+	var v: int = _W().lo_lv(t)
+	return IMG + t + (str(v) if v > 1 else "") + ".webp"
+
 func _lock(t: String) -> String:   # "" = đặt được
 	var W = _W()
 	var q: int = W._qf("lo")
@@ -117,7 +121,7 @@ func _body() -> Array:
 	if bt != null:
 		var have: int = int(G.g.barn.get(String(bt[0]), 0))
 		sub += " · " + G.item_name(String(bt[0])).to_lower() + " " + str(have) + ("" if have >= int(bt[1]) else " (hết mồi, ít cá hơn)")
-	var C := _scard(y, IMG + t + ".webp", String(e.n) + " · bậc " + str(v) + ("" if not nx.is_empty() else " (cao nhất)"), sub, lk, btns, [blk, yy])
+	var C := _scard(y, _lo_pic(t), String(e.n) + " · bậc " + str(v) + ("" if not nx.is_empty() else " (cao nhất)"), sub, lk, btns, [blk, yy])
 	out.append_array(C[0])
 	y += float(C[1]) + GG
 	# lưới 3 ô
@@ -129,7 +133,7 @@ func _body() -> Array:
 		var c := _chip(x, y, cw, 84.0, "got" if k == sel else "fut")
 		c.act = func(): sel = k; _redo()
 		out.append(c)
-		out.append(_icx(x + cw * 0.5, y + 24.0, 38.0, "pic:" + IMG + k + ".webp"))
+		out.append(_icx(x + cw * 0.5, y + 24.0, 44.0, "pic:" + _lo_pic(k)))
 		out.append(_dt(x + 3.0, y + 46.0, cw - 6.0, 14.0, String(W.ns[k].n), 10.5, 800, BROWN))
 		var has := false
 		for key in R:
