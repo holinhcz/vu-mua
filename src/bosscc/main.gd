@@ -56,7 +56,10 @@ func _layout() -> void:
 		for h in range(T0.y, T0.y + TN.y):
 			var k := 3
 			var d := s + h
-			if d >= BACK + 2: k = 2                      # sân đánh + sân người đứng
+			if d >= BACK + 2:                            # sân đánh: cỏ sân, mảng đất dưới chân boss, cỏ dại lấn 2 bên
+				var w := tile_pos(s, h)
+				var e := pow(w.x / 150.0, 2) + pow((w.y - 640.0) / 70.0, 2)
+				k = 2 if e <= 1.0 else (3 if abs(w.x) > 175 and w.y < 760 else 0)
 			elif d == BACK + 1: k = 0                    # bờ cỏ
 			elif d >= BACK - 7: k = 1                    # dải ruộng nền
 			elif d == BACK - 8: k = 0
@@ -123,6 +126,30 @@ func _scenery() -> void:
 	var pa := at(-212, 318); put("congtrinh/choi", "d0", tile_pos(pa.x, pa.y))
 	pa = at(200, 316); put("caylang/rom", "d0", tile_pos(pa.x, pa.y), true)
 	pa = at(232, 326); put("caylang/rom", "d2", tile_pos(pa.x, pa.y))
+	# bụi cỏ, lau, đá dạt 2 mép sân (giữa chừa trống cho boss)
+	var tk := []
+	var tr := 0
+	while tr < 3000 and tk.size() < 26:
+		tr += 1
+		var pp := Vector2(rng.randf_range(-250, 250), rng.randf_range(330, 720))
+		if abs(pp.x) < 150 + (40 if pp.y > 600 else 0): continue
+		var ok2 := true
+		for q in tk:
+			if q.distance_to(pp) < 44.0: ok2 = false; break
+		if not ok2: continue
+		tk.append(pp)
+		var fl2 := rng.randf() < 0.5
+		var r2 := rng.randf()
+		if r2 < 0.30: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), pp, fl2)
+		elif r2 < 0.50: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), pp, fl2)
+		elif r2 < 0.70: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), pp, fl2)
+		elif r2 < 0.86: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), pp, fl2)
+		else: put("trangtri/da_nho" if rng.randf() < 0.5 else "trangtri/da_nho_reu", "d%d" % rng.randi_range(0, 1), pp, fl2)
+	# rơm rớt + lúa bị gặm quanh chân boss (trên mảng đất)
+	for i in 7:
+		var a2 := rng.randf() * TAU
+		var pp := Vector2(cos(a2) * rng.randf_range(90, 135), 640 + sin(a2) * rng.randf_range(35, 55))
+		put("caytrong/lua", "dlua1", pp, rng.randf() < 0.5)
 	# lũy tre, dừa, dừa nước sau ruộng (trên màn)
 	var taken := []
 	var tries := 0
