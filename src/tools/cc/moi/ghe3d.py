@@ -172,6 +172,9 @@ def albedo(obj, P):
         # lòng ghe gỗ, sườn ngang
         rib = np.exp(-((((u / 5.0) % 1.0) - .5) / .07) ** 2)
         c_i = hexc('#9c6c40')[None] * (1 + .12 * nz_ - .3 * rib)[:, None]
+        if band is not None:   # lòng mép trên sơn cùng màu thân, nẹp viền
+            c_i = np.where((dz < bw * .55)[:, None], band[None] * (.9 + .08 * nz_)[:, None], c_i)
+            c_i = np.where((dz < .5)[:, None], hexc(obj.trim)[None], c_i)
         c = np.where(out[:, None], c_o, c_i)
         zf = np.maximum(zb + (zt - zb) * .42, .5)
         onfl = (np.abs(z - zf) < .5) & ~out
@@ -196,8 +199,12 @@ def albedo(obj, P):
         c = np.where(gl[:, None], hexc('#2c3438')[None], c)
         sh = side & inner_ & wy & (np.abs(np.abs(fx - .5) - .32) < .055)     # cánh cửa sổ mở
         c = np.where(sh[:, None], hexc(getattr(obj, 'sh', '#b8452e'))[None], c)
-        door = endf & (q[:, 0] < 0) & (np.abs(q[:, 1]) < h[1] * .32) & (q[:, 2] < h[2] * .6)
-        c = np.where(door[:, None], hexc('#4a2e1c')[None], c)
+        door = endf & (np.abs(q[:, 1]) < h[1] * .26) & (q[:, 2] < h[2] * .6)
+        dfr = endf & (np.abs(q[:, 1]) < h[1] * .33) & (q[:, 2] < h[2] * .7) & ~door
+        c = np.where(dfr[:, None], hexc('#f0e6c8')[None], c)
+        c = np.where(door[:, None], hexc('#7a3a24')[None] * (1 - .25 * (np.abs(q[:, 1]) < .12))[:, None], c)
+        fw = endf & (q[:, 0] > 0) & (np.abs(np.abs(q[:, 1]) - h[1] * .66) < h[1] * .14) & (q[:, 2] > 0) & (q[:, 2] < h[2] * .5)
+        c = np.where(fw[:, None], hexc('#2c3438')[None], c)
         return c
     if m == 'ton':   # mái tôn sóng
         u, v, z = obj.fr.loc(P)
@@ -226,8 +233,8 @@ def albedo(obj, P):
         return np.where(stamp[:, None], (col * .55)[None], c)
     if m == 'baog':    # bao gạo dệt trắng, sọc màu
         q = (P - obj.C) @ obj.A.T
-        g = .5 + .5 * np.sin(P[:, 0] * 9) * np.sin(P[:, 1] * 9)
-        c = obj.col[None] * (.88 + .08 * g + .08 * (vnoise(P, .8, 37) - .5))[:, None]
+        g = .5 + .5 * np.sin((P[:, 0] + P[:, 1]) * 7) * np.sin((P[:, 0] - P[:, 1] + P[:, 2]) * 7)
+        c = obj.col[None] * (.8 + .16 * g + .1 * (vnoise(P, .8, 37) - .5))[:, None]
         st = np.abs(np.abs(q[:, 0]) - obj.h[0] * .55) < .3
         return np.where(st[:, None], obj.stripe[None], c)
     if m == 'cui':     # củi chẻ
@@ -240,6 +247,7 @@ def albedo(obj, P):
         return hexc('#b0603a')[None] * (.9 + .15 * (vnoise(P, 2, 35) - .5))[:, None]
     if m == 'go2':   # đòn, ván gỗ
         base = getattr(obj, 'col', hexc('#7a4e2c'))
+        base = hexc(base) if isinstance(base, str) else base
         return base[None] * (.85 + .3 * vnoise(P * V(1, 1, 3), 1, 23))[:, None]
     if m == 'la':    # lá xanh ngọn cây bẹo
         return hexc('#5f9a3a')[None] * (.75 + .5 * vnoise(P, .8, 24))[:, None]
@@ -270,7 +278,8 @@ def albedo(obj, P):
             g = np.sin((P[:, 0] + P[:, 2]) * 3.2) * np.sin((P[:, 1] - P[:, 2]) * 3.2)
             return hexc('#c8922e')[None] * (.8 + .3 * (g > .25))[:, None]
         c = {'bao': '#e8e0cc', 'chuoi': '#e8c838', 'khom': '#c89a3a', 'dua2': '#7a9a3a', 'chum': '#5a3424', 'cam': '#e89a2a'}[m]
-        return hexc(c)[None] * (.85 + .25 * vnoise(P, .7, 26))[:, None]
+        base = getattr(obj, 'col', hexc(c))
+        return base[None] * (.85 + .25 * vnoise(P, .7, 26))[:, None]
     return _alb0(obj, P)
 
 
@@ -322,14 +331,9 @@ def beo(fr, u, zf, zbar=74 * ZK):
         o.append(M(Torus(tuple(e + V(0, 0, -.9)), tuple(fr.U), .55, .14, 'thep'), col=hexc('#6a6a6a')))
     o += [M(Torus(tuple(fr.w(u, 0, zbar)), (0, 0, 1), .85, .26, 'may'), col=hexc('#6a4424'))]
     o.append(M(Torus(tuple(fr.w(u, 0, 48 * ZK)), (0, 0, 1), .85, .26, 'may'), col=hexc('#6a4424')))   # nút buộc móc giữa sào
-    # chùm lá dừa buộc ngọn
-    tip = fr.w(u, 0, zbar + 6)
-    for k in range(7):
-        ang = k / 7 * 2 * np.pi + .3
-        d = fr.U * math.cos(ang) + fr.Vv * math.sin(ang)
-        e = tip + d * 6.5 + V(0, 0, -2.6 - 1.2 * math.sin(ang * 2) ** 2)
-        mid = tip + d * 3.4 + V(0, 0, .6)
-        o.append(M(Line([tuple(tip), tuple(mid), tuple(e)], [.75, .6, .2], 'la'), col=hexc('#6aa040')))
+    # đầu sào: quấn dây mây 3 vòng (không chùm lá, nhìn ra cây dừa)
+    for k in range(3):
+        o.append(M(Torus(tuple(fr.w(u, 0, zbar + 2.0 + k * .7)), (0, 0, 1), .8, .22, 'may'), col=hexc('#6a4424')))
     # món treo: code ghe_ve vẽ món đơn hàng ở 2 đầu đòn + giữa sào cao 48 -> không nướng sẵn trái treo
     return o
 
@@ -351,6 +355,8 @@ def fruit(fr, k, c, cs=1.0):
         return o
     if k == 'dua2':
         return [Ball(tuple(c), 1.5 * cs, 'dua2')]
+    if k == 'xoai':
+        return [M(Ball(tuple(c), 1.2 * cs, 'cam', sq=(1.45, 1, .9)), col=hexc('#e8c048'))]
     if k == 'lua':   # lúa vàng đầy thúng
         return [M(Ball(tuple(c + V(0, 0, -.6)), 2.0 * cs, 'muoi', sq=(1, 1, .35)), col=hexc('#d8b048'))]
     if k == 'cam':
@@ -421,11 +427,8 @@ def cabin(fr, h, u0, u1, hw, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e')
     # chậu kiểng đặt mép mái phía trước
     ztop = zc + R
     for i, vv in enumerate((-hw * .35, hw * .3)):
-        pc = fr.w(u1 - 2.2 - i * 3.5, vv, ztop - .2)
-        o.append(Tube(tuple(pc), (0, 0, 1), 1.4, [(0, .75), (1, 1.0)], 'chau', shell=.25, open1=True))
-        for k in range(4):
-            ang = k * 1.7
-            o.append(Ball(tuple(pc + V(math.cos(ang) * .5, math.sin(ang) * .5, 1.9 + .4 * (k % 2))), .9, 'la', sq=(1, 1, .8)))
+        pc = fr.w(u1 - 2.8 - i * 4.5, vv, ztop - .3)
+        o += seedling(fr, pc, 1.7, 2 + i)
     return o, zd
 
 
@@ -444,13 +447,14 @@ def engine(fr, h, col='#c23b2b'):
     return o
 
 
-def deck(fr, h, a0, a1, col='#8a5a32'):
+def deck(fr, h, a0, a1, col=None):
     """sàn ván mũi / lái ngang mép ghe"""
     L = h.L
     am = (a0 + a1) / 2
     z = zt_at(h, am) - .55
     ae = max(abs(a0), abs(a1))
-    return [M(Box(tuple(fr.w(am * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (abs(a1 - a0) * L / 2, max(w_at(h, ae) - .4, .5), .3), 'go2', rr=.15), col=hexc(col))]
+    c = col if col is not None else (h.band * .92 if getattr(h, 'band', None) is not None else hexc('#8a5a32'))
+    return [M(Box(tuple(fr.w(am * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (abs(a1 - a0) * L / 2, max(w_at(h, ae) - .4, .5), .3), 'go2', rr=.15), col=c)]
 
 
 def thwarts(fr, h, list_a, col='#6a4024'):
@@ -504,7 +508,11 @@ def crate(fr, u, v, z0, hx, hy, hz, col='#b8875a', rot=0.0):
     a0 = fr.U * c_ + fr.Vv * s_; a1 = nz(np.cross(V(0, 0, 1), a0))
     b = Box(tuple(fr.w(u, v, z0 + hz)), (a0, a1, (0, 0, 1)), (hx, hy, hz), 'thung', rr=.18)
     b.col = hexc(col)
-    return [b]
+    o = [b]
+    C = V(*fr.w(u, v, z0 + hz * 2 + .12))
+    for e in (-.5, .5):   # dây chằng ngang nắp thùng
+        o.append(M(Line([tuple(C + a0 * e * hx - a1 * hy), tuple(C + a0 * e * hx + a1 * hy)], .16, 'day'), col=hexc('#c8b07a')))
+    return o
 
 
 def crates(fr, h, u0, u1, zf, seed=3):
@@ -530,19 +538,37 @@ def crates(fr, h, u0, u1, zf, seed=3):
 
 
 def seedling(fr, c, sz=1.0, kind=0):
-    """chậu cây giống: chậu đất + cây con"""
-    o = [Tube(tuple(c), (0, 0, 1), 1.6 * sz, [(0, .8 * sz), (1, 1.1 * sz)], 'chau', shell=.25, open1=True)]
-    top = V(*c) + V(0, 0, 1.4 * sz)
-    if kind == 0:   # cây ăn trái con
-        o.append(M(Line([tuple(top), tuple(top + V(0, 0, 2.6 * sz))], .22 * sz, 'go2'), col=hexc('#6a4a2a')))
+    """chậu cây giống: chậu đất + cây con (0 cây ăn trái lá sẫm, 1 kiểng lá dài, 2 mai vàng, 3 cau con, 4 cam con có trái)"""
+    o = [Tube(tuple(c), (0, 0, 1), 1.8 * sz, [(0, .85 * sz), (1, 1.2 * sz)], 'chau', shell=.25, open1=True)]
+    top = V(*c) + V(0, 0, 1.6 * sz)
+    if kind in (0, 4):
+        o.append(M(Line([tuple(top), tuple(top + V(0, 0, 2.4 * sz))], .22 * sz, 'go2'), col=hexc('#6a4a2a')))
         for k in range(4):
             ang = k * 1.6
-            o.append(Ball(tuple(top + V(math.cos(ang) * .9 * sz, math.sin(ang) * .9 * sz, 2.8 * sz + .5 * (k % 2))), 1.1 * sz, 'la', sq=(1, 1, .75)))
-    else:           # cây kiểng lá dài
+            o.append(M(Ball(tuple(top + V(math.cos(ang) * .75 * sz, math.sin(ang) * .75 * sz, 2.6 * sz + .45 * sz * (k % 2))), .8 * sz, 'la', sq=(1, 1, .7)), col=hexc('#3f7a32' if kind == 0 else '#4f8a36')))
+        if kind == 4:
+            for k in range(3):
+                ang = k * 2.1 + .5
+                o.append(Ball(tuple(top + V(math.cos(ang) * 1.2 * sz, math.sin(ang) * 1.2 * sz, 2.2 * sz)), .32 * sz, 'cam'))
+    elif kind == 1:
         for k in range(5):
             ang = k / 5 * 2 * np.pi
             d = V(math.cos(ang), math.sin(ang), 0)
-            o.append(M(Line([tuple(top), tuple(top + d * 1.3 * sz + V(0, 0, 2.4 * sz))], [.35 * sz, .1 * sz], 'la'), col=hexc('#4f9a3a')))
+            o.append(M(Line([tuple(top), tuple(top + d * 1.3 * sz + V(0, 0, 2.4 * sz))], [.35 * sz, .1 * sz], 'la'), col=hexc('#5aa03a')))
+    elif kind == 2:   # mai vàng: cành nâu, bông vàng
+        for k in range(4):
+            ang = k * 1.7 + .3
+            e = top + V(math.cos(ang) * 1.2 * sz, math.sin(ang) * 1.2 * sz, 2.6 * sz + .3 * k * sz)
+            o.append(M(Line([tuple(top), tuple(e)], .14 * sz, 'go2'), col=hexc('#5a3a22')))
+            o.append(M(Ball(tuple(e), .5 * sz, 'cam'), col=hexc('#f0c020')))
+            o.append(M(Ball(tuple((top + e) / 2 + V(0, 0, .3 * sz)), .4 * sz, 'cam'), col=hexc('#f0c020')))
+    else:             # cau con: thân mảnh, tàu lá xoè
+        tip = top + V(0, 0, 3.2 * sz)
+        o.append(M(Line([tuple(top), tuple(tip)], [.25 * sz, .16 * sz], 'go2'), col=hexc('#7a8a4a')))
+        for k in range(5):
+            ang = k / 5 * 2 * np.pi
+            d = V(math.cos(ang), math.sin(ang), 0)
+            o.append(M(Line([tuple(tip), tuple(tip + d * 1.0 * sz + V(0, 0, .6 * sz)), tuple(tip + d * 2.0 * sz + V(0, 0, -.4 * sz))], [.3 * sz, .25 * sz, .08 * sz], 'la'), col=hexc('#5a9a3a')))
     return o
 
 
@@ -569,13 +595,19 @@ def duck_cage(fr, c, r=2.6):
     return o
 
 
-def sack(fr, u, v, z0, cs=1.0, col='#e8e2d0', stripe='#c03a2a', rot=0.0):
-    """bao gạo dệt trắng có sọc"""
+def sack(fr, u, v, z0, cs=1.0, col='#ddd0b0', stripe='#c03a2a', rot=0.0):
+    """bao gạo dệt màu ngà có sọc, túm buộc 2 đầu"""
     c_, s_ = math.cos(rot), math.sin(rot)
     a0 = fr.U * c_ + fr.Vv * s_; a1 = nz(np.cross(V(0, 0, 1), a0))
-    b = Box(tuple(fr.w(u, v, z0 + 1.1 * cs)), (a0, a1, (0, 0, 1)), (2.6 * cs, 1.7 * cs, 1.1 * cs), 'baog', rr=.95 * cs)
+    C = fr.w(u, v, z0 + 1.1 * cs)
+    b = Box(tuple(C), (a0, a1, (0, 0, 1)), (2.4 * cs, 1.7 * cs, 1.05 * cs), 'baog', rr=.9 * cs)
     b.col = hexc(col); b.stripe = hexc(stripe)
-    return [b]
+    o = [b]
+    for e in (-1, 1):
+        t = M(Ball(tuple(C + a0 * e * 2.55 * cs + V(0, 0, .25 * cs)), .5 * cs, 'baog', sq=(1, .7, .7)), col=hexc(col))
+        t.stripe = hexc(col); t.A = np.array([a0, a1, V(0, 0, 1)], F32); t.h = V(.5, .5, .5)
+        o.append(t)
+    return o
 
 
 def firewood(fr, u, v, z0, ln=5.0, r=1.5, seed=0):
@@ -621,20 +653,22 @@ def cho_load(fr, h, kind, zf, Wb, seed):
     L = h.L
     o = []
     rs = np.random.RandomState(seed)
-    if kind == 'giong':   # chậu cây giống chật ghe, thau cá giống, lồng vịt con
+    if kind == 'giong':   # chậu cây giống nhiều loại, thau cá giống, lồng vịt con (chừa chỗ cây bẹo ở .58L)
         uu = -L * .34; i = 0
-        while uu < L * .3:
-            wd = w_at(h, uu / L) - 2.8
-            n = max(2, int(wd * 2 / 4.6) + 1)
+        while uu < L * .14:
+            wd = w_at(h, uu / L) - 2.6
+            n = max(2, int(wd * 2 / 4.2) + 1)
             for j, vv in enumerate(np.linspace(-wd, wd, n)):
-                o += seedling(fr, fr.w(uu + rs.uniform(-.4, .4), vv + rs.uniform(-.3, .3), zf), 1.65 + rs.uniform(-.1, .2), (i + j) % 2)
-            uu += 4.6; i += 1
-        wd = w_at(h, .42) - 3.6
-        o += tub(fr, fr.w(L * .42, -wd * .55, zf), 3.3) + tub(fr, fr.w(L * .42, wd * .55, zf), 3.3, '#d04a3a')
-        o += duck_cage(fr, fr.w(L * .62, -2.0, zf), 3.0) + duck_cage(fr, fr.w(L * .64, 2.6, zf), 2.6)
+                o += seedling(fr, fr.w(uu + rs.uniform(-.3, .3), vv + rs.uniform(-.2, .2), zf), 1.45 + rs.uniform(-.1, .2), (i * 2 + j * 3) % 5)
+            uu += 4.2; i += 1
+        wd = w_at(h, .28) - 3.6
+        o += tub(fr, fr.w(L * .28, -wd * .55, zf), 3.0) + tub(fr, fr.w(L * .28, wd * .55, zf), 3.0, '#d04a3a')
+        wd = w_at(h, .44) - 3.2
+        o += duck_cage(fr, fr.w(L * .44, -wd * .5, zf), 2.7) + duck_cage(fr, fr.w(L * .44, wd * .5, zf), 2.7)
     elif kind == 'trai':  # mô trái cây miệt vườn chất cao + buồng chuối
-        o += heap(fr, ['dua', 'bi', 'dua2', 'dua', 'khom'], -L * .62, L * .5, zf, Wb * .62, seed, cs=1.25, layers=3)
-        o += fruit(fr, 'chuoi', fr.w(L * .62, -Wb * .35, zf + 2.2), 1.3) + fruit(fr, 'chuoi', fr.w(L * .62, Wb * .35, zf + 2.2), 1.3)
+        o += heap(fr, ['dua', 'dua2', 'khom', 'xoai', 'bi', 'dua', 'cam', 'dua2'], -L * .62, L * .46, zf, Wb * .62, seed, cs=1.25, layers=3)
+        for uu in (-L * .4, -L * .1, L * .2):   # buồng chuối nằm trên đỉnh đống
+            o += fruit(fr, 'chuoi', fr.w(uu, rs.uniform(-1, 1), zf + (2.0 + 2 * 2.9) * 1.25 + 1.0), 1.25)
     elif kind == 'nong':  # bao gạo chất 3 tầng kín khoang, thúng lúa mũi
         cs = 1.45
         uu = -L * .32 + 2.6 * cs; k = 0
