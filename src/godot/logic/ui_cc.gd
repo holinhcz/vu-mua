@@ -175,6 +175,7 @@ func _kho_go(g) -> void:
 		if not ui.kho_on:
 			tm.queue_free()
 			ui.kh_f = "all"
+			ui._kho_chips()
 			_pan_end(g))
 
 func _pan_end(g) -> void:

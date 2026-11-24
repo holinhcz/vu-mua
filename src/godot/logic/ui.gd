@@ -1930,6 +1930,16 @@ func _build_kho() -> void:
 		var chips = idq.get("#khChips")
 		if chips != null:
 			var L := _buttons(chips, [])
+			# (bản 538) hàng chip dài hơn khung (Cá, Chế biến, Khác bị khuất): kéo ngang để cuộn, như overflow-x của web
+			var hs = VScroll.new()
+			hs.hz = true
+			var xl := 1e9
+			var xr := 0.0
+			for c in L:   # c.r theo khung chip (con): rộng nội dung = mép phải chip cuối + đệm trái bằng đệm đầu hàng
+				xl = minf(xl, c.r.position.x)
+				xr = maxf(xr, c.r.end.x)
+			hs.setup(chips, xr + maxf(0.0, xl), chips.r.size.x)
+			kh_hs.append(hs)
 			for q in L.size():
 				var sn: Dictionary = _sm(L[q])
 				if String(sn.cls).split(" ").has("on"):
@@ -1939,11 +1949,36 @@ func _build_kho() -> void:
 				var cat: String = KH_CAT[q][0] if q < KH_CAT.size() else "khac"
 				kh_chips.append([L[q], cat, sn])
 				var cc := cat
-				_click(L[q], func(): kh_f = cc; kh_sig = ""; kh_sc.s = 0.0; _kho_chips(), "scale94")
+				_click(L[q], func():
+					if _kh_hs_moved():
+						return
+					kh_f = cc; kh_sig = ""; kh_sc.s = 0.0; _kho_chips(), "scale94")
 	# Vật liệu: chạm ô để xem
 	for b in _qall(kho_roots[1], "u2vt", []):
 		var bb: Control = b
 		_click(bb, func(): _kho_vl_pick(bb), "scale94")
+
+var kh_hs := []   # (bản 538) cuộn ngang hàng chip lọc (Hàng hóa + khi đang chọn món)
+
+func _kh_hs_moved() -> bool:
+	for h in kh_hs:
+		if h.moved():
+			return true
+	return false
+
+func _kh_hs_show() -> void:   # chip đang chọn khuất thì cuộn tới (mở Kho lọc sẵn mục Cá từ màn câu cá)
+	for h in kh_hs:
+		if h.box == null or not is_instance_valid(h.box):
+			continue
+		for c in kh_chips:
+			if c[1] == kh_f and c[0].get_parent() != null and h.box.is_ancestor_of(c[0]):
+				var x0: float = c[0].r.position.x
+				var x1: float = c[0].r.end.x
+				var vw0: float = h.box.r.size.x
+				if x0 < h.s:
+					h.to(x0 - 4.0)
+				elif x1 > h.s + vw0:
+					h.to(x1 - vw0 + 30.0)
 
 func _kho_sort() -> void:
 	var k := 0
@@ -2050,6 +2085,10 @@ func _kho_chips() -> void:
 		for k in b.kids():
 			if not k.has_meta("snap") and not k.pics.is_empty():
 				k.modulate = Color(10, 10, 10, 1) if on else Color.WHITE
+	for h in kh_hs:   # place() vừa trả chip về chỗ gốc: dời lại theo cuộn ngang, chip đang chọn khuất thì cuộn tới
+		h.off = 0.0
+		h.to(h.s)
+	_kh_hs_show()
 	kh_sig = ""
 	_kho_sync()
 
@@ -3399,7 +3438,7 @@ func scroll_add(v) -> void:
 	_scs.append(v)
 
 func scroll_moved() -> bool:   # vừa kéo cuộn một bảng (nhả tay không tính là bấm)
-	for v in [kh_sc, gv_sc, od_sc] + _scs:
+	for v in [kh_sc, gv_sc, od_sc] + _scs + kh_hs:
 		if v.moved():
 			return true
 	return false
@@ -3938,6 +3977,8 @@ func _input(e: InputEvent) -> void:
 	_od_input(e)
 	if kho_on:
 		kh_sc.input(e)
+		for h in kh_hs:
+			h.input(e)
 	gv_sc.input(e)
 	for v in _scs:
 		if v.area != null and is_instance_valid(v.area):
