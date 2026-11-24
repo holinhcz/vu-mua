@@ -706,18 +706,44 @@ def cabin(fr, h, u0, u1, walk, Hw, wall='#a9cdd0', roof='#9a4b34', shut='#b8452e
 
 
 def engine(fr, h, col='#c23b2b'):
-    """máy đuôi tôm ở lái: thân máy, cần lái, cây láp dài thò xuống nước"""
+    """máy đuôi tôm gắn trên cọc xoay ngay đuôi lái: thân máy + nắp xi lanh + bình xăng + dây giật;
+    cần lái dài chìa tới trước cho người đứng trên sạp lái cầm; cây láp dài chéo ra sau, quạt sát mặt nước"""
     L = h.L
-    zs = zt_at(h, -.9) - .3
-    c = fr.w(-L * .9, 0, zs + 1.0)
-    o = [M(Box(tuple(c), (fr.U, fr.Vv, (0, 0, 1)), (1.4, 1.0, 1.0), 'dco', rr=.35), col=hexc(col), sp=.35, pw=30)]
-    o.append(M(Box(tuple(c + V(0, 0, 1.1)), (fr.U, fr.Vv, (0, 0, 1)), (1.0, .8, .25), 'dco', rr=.2), col=hexc('#3a3a3a')))
-    a = c - fr.U * 1.2
-    b = fr.w(-L * 1.0 - 9, 0, -5.0)
-    o.append(M(Line([tuple(a), tuple(b)], .28, 'thep'), col=hexc('#8a8a86')))
-    o.append(M(Ball(tuple(b), .9, 'thep', sq=(.4, 1.2, 1.2)), col=hexc('#b0a060')))
-    o.append(M(Line([tuple(c + fr.U * 1.2 + V(0, 0, .4)), tuple(c + fr.U * 6.0 + fr.Vv * 1.0 + V(0, 0, 1.6))], .22, 'thep'), col=hexc('#4a4a4a')))
-    return o
+    zs = zt_at(h, -.93) - .3
+    piv = V(*fr.w(-L * .95, 0, zs))
+    o = [M(Line([tuple(piv + V(0, 0, -1.5)), tuple(piv + V(0, 0, 1.4))], .45, 'thep'), col=hexc('#3a3a38'))]   # cọc xoay
+    c = piv + V(0, 0, 2.6)
+    ax = (fr.U, fr.Vv, (0, 0, 1))
+    o.append(M(Box(tuple(c), ax, (1.8, 1.3, 1.2), 'dco', rr=.4), col=hexc(col), sp=.4, pw=34))                    # thân máy
+    o.append(M(Box(tuple(c + V(0, 0, 1.35) - fr.U * .3), ax, (1.2, 1.0, .35), 'dco', rr=.2), col=hexc('#2e2e2e'), sp=.3, pw=30))   # nắp xi lanh
+    o.append(M(Ell(tuple(c + V(0, 0, 2.1) + fr.U * .4), ax, (1.1, .75, .5), 'dco'), col=hexc('#d8b030'), sp=.45, pw=40))          # bình xăng
+    o.append(M(Torus(tuple(c + fr.Vv * 1.35), tuple(fr.Vv), .7, .18, 'dco'), col=hexc('#2e2e2e')))                                 # bánh dây giật
+    o.append(M(Line([tuple(c - fr.U * 1.6 + V(0, 0, .6)), tuple(c - fr.U * 2.6 + V(0, 0, 1.4))], .25, 'thep'), col=hexc('#5a5a58')))   # ống pô
+    # cần lái: từ máy chìa tới trước, tay nắm cao ngang hông người đứng
+    g0 = c + fr.U * 1.6 + V(0, 0, .3)
+    g1 = c + fr.U * 7.5 + fr.Vv * .9 + V(0, 0, 1.6)
+    o.append(M(Line([tuple(g0), tuple(g1)], .26, 'thep'), col=hexc('#5a5a58')))
+    o.append(M(Line([tuple(g1), tuple(g1 + nz(g1 - g0) * 1.6)], .38, 'dco'), col=hexc('#1e1e1e')))               # tay nắm cao su
+    # cây láp dài ra sau, chéo xuống, quạt 3 cánh sát mặt nước
+    s0 = c - fr.U * 1.6 - V(0, 0, .4)
+    tip = V(*fr.w(-L * .95 - 13, 0, -.6))
+    o.append(M(Line([tuple(s0), tuple(tip)], .3, 'thep'), col=hexc('#9a9a94')))
+    d = nz(tip - s0)
+    o.append(M(Box(tuple(s0 + (tip - s0) * .55 + V(0, 0, .45)), (d, fr.Vv, nz(np.cross(d, fr.Vv))), (2.4, .35, .1), 'thep', rr=.06), col=hexc('#7a7a74')))   # chắn láp
+    hub = tip + d * .5
+    for k in range(3):
+        ang = k / 3 * 2 * np.pi + .4
+        bd = nz(fr.Vv * math.cos(ang) + nz(np.cross(d, fr.Vv)) * math.sin(ang))
+        o.append(M(Ell(tuple(hub + bd * .9), (bd, d, nz(np.cross(bd, d))), (.95, .5, .08), 'dco'), col=hexc('#c8b060'), sp=.6, pw=50))
+    o.append(M(Ball(tuple(hub), .35, 'thep'), col=hexc('#b0a060')))
+    return grp(o)
+
+
+def stand_mat(fr, h, a):
+    """chỗ đứng cầm lái: tấm ván lót + vạch mòn ngay trước máy"""
+    L = h.L
+    z = zt_at(h, a) - .2
+    return [M(Box(tuple(fr.w(a * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (2.4, 2.2, .14), 'go2', rr=.1), col=hexc('#6a4a2e'))]
 
 
 def deck(fr, h, a0, a1, col=None):
@@ -983,12 +1009,12 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         objs += deck(fr, h, .76, .9) + deck(fr, h, -.93, -.63)   # sạp lái rộng: chỗ đứng cầm lái
         objs += crates(fr, h, -L * .02, L * .66, zf, seed + 3)
         objs += beo(fr, .58 * CH * TILE, zf)
-        objs += engine(fr, h)
+        objs += engine(fr, h) + stand_mat(fr, h, -.8)
         objs += rope(fr, h, .84)
-        objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.5, -.2, .2, .45)) + rudder(fr, h) + anchor(fr, h)
+        objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.5, -.2, .2, .45)) + anchor(fr, h)
         objs += laundry(fr, fr.w(-L * .1 + .6, Wb * .45, zd + 11.0), fr.w(.58 * CH * TILE - .8, .4, 26), 4, seed)
         objs += flag(fr, h, -L * .93, zt_at(h, -.93) - .3)
-        objs += deck_props(fr, h, -L * .67, zt_at(h, -.67) - .3)
+        objs += deck_props(fr, h, -L * .66, zt_at(h, -.66) - .3)
         return Scene(objs)
     # ghe chợ nổi (4 loại theo data)
     cs_ = CHO_SET[seed % 4]
@@ -998,10 +1024,10 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
     objs += deck(fr, h, .78, .9) + deck(fr, h, -.93, -.72)   # sạp lái: chỗ đứng bán hàng / cầm lái
     if mui_on and cs_['tarp']:
-        objs += awning(fr, h, -L * .78, -L * .38, zf, *cs_['tarp'])
+        objs += awning(fr, h, -L * .86, -L * .5, zf, *cs_['tarp'])   # bạt che chỗ người đứng cầm lái / bán
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
     objs += beo(fr, .58 * CH * TILE, zf)
-    objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4])
+    objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4]) + stand_mat(fr, h, -.8)
     objs += rails(fr, h) + stem(fr, h) + tires(fr, h, (-.35, .3)) + anchor(fr, h)
     return Scene(objs)
 
@@ -1107,7 +1133,7 @@ def deck_props(fr, h, u, zd):
     o += [M(Ball(tuple(fr.w(u, -2.6, zd + 2.0)), 1.8, 'chum', sq=(1, 1, 1.15)), sp=.5, pw=40),
           M(Torus(tuple(fr.w(u, -2.6, zd + 4.0)), (0, 0, 1), 1.05, .3, 'chum'), sp=.5, pw=40)]
     o.append(M(Tube(tuple(fr.w(u + .4, 2.4, zd)), (0, 0, 1), 2.6, [(0, 1.0), (.8, 1.0), (1, .55)], 'dco', shell=0.0), col=hexc('#c83a2a'), sp=.35, pw=30))
-    o.append(M(Tube(tuple(fr.w(u + 2.6, 0, zd)), (0, 0, 1), .8, [(0, 1.1), (1, 1.5)], 'dco', shell=.2, open1=True), col=hexc('#3a8ac8'), sp=.3, pw=30))
+    o.append(M(Tube(tuple(fr.w(u - 2.4, 3.0, zd)), (0, 0, 1), .8, [(0, 1.1), (1, 1.5)], 'dco', shell=.2, open1=True), col=hexc('#3a8ac8'), sp=.3, pw=30))
     return o
 
 
