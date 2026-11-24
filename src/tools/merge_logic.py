@@ -101,13 +101,30 @@ def main():
     # (bản 72, Link 11-13 "tải 1 lần rồi lưu vào máy") file ít đổi đứng đầu, file hay đổi (logic, main, shader) đứng cuối, cắt
     # mảnh 1 MB tính từ sau đầu pck (đầu pck 112 byte có chỗ thư mục nên là mảnh riêng). Bản mới chỉ đổi vài mảnh cuối, máy
     # giữ các mảnh còn lại trong Cache Storage (index.html lưu theo crc từng file trong files.json), khỏi tải lại 15 MB.
-    pk = write_pck(hdr, sorted(F.items(), key=lambda e: (_rank(e[0]), e[0])))
+    items = sorted(F.items(), key=lambda e: (_rank(e[0]), e[0]))
+    pk = write_pck(hdr, items)
     for f in glob.glob(os.path.join(site, 'pck_*.wasm')):
         os.remove(f)
     open(os.path.join(site, 'pck_0.wasm'), 'wb').write(pk[:FB])
+    # (bản 548) CẮT MẢNH THEO FILE, chỗ cắt do TÊN file quyết định (băm tên), không theo từng 1 MB: thêm / đổi / bớt một hình
+    # chỉ đổi đúng mảnh chứa nó, các mảnh khác giữ y byte -> máy giữ lại (index.html khoá bộ nhớ theo crc mảnh, không theo số
+    # thứ tự). Trước: cắt đều 1 MB, thêm 1 hình ở đầu là xô lệch hết 44 mảnh phía sau, mỗi bản mới tải lại cả 44 MB.
+    cuts = []
+    o_ = 0
+    last = 0
+    for p_, d_ in items:
+        while o_ % 16: o_ += 1
+        a = FB + o_
+        hh = zlib.crc32(p_.encode()) % 40
+        if a - (FB + last) >= 4 * SLICE or (a - (FB + last) >= SLICE // 4 and hh == 0):
+            cuts.append(a); last = o_
+        o_ += len(d_)
     n = 1
-    for i in range(FB, len(pk), SLICE):
-        open(os.path.join(site, 'pck_%d.wasm' % n), 'wb').write(pk[i:i + SLICE]); n += 1
+    st = FB
+    for c in cuts + [len(pk)]:
+        if c > st:
+            open(os.path.join(site, 'pck_%d.wasm' % n), 'wb').write(pk[st:c]); n += 1
+        st = c
     B = '%08x' % (zlib.crc32(pk) & 0xffffffff)
     h2 = re.sub(r'"index\.pck": \d+', '"index.pck": %d' % len(pk), h)
     h2 = re.sub(r'\bNP=\d+', 'NP=%d' % n, h2)
