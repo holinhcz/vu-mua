@@ -64,6 +64,8 @@ func open() -> void:
 			G.mark()
 			return true,
 		"room": func(): return "%d/%d" % [G.kho_n(), G.kho_cap()],
+		# (bản 535) Giỏ cá / Chợ / Sổ cá / Cài đặt mở bảng khung Kho chung của vườn (ui_ccp.gd) thay bảng tự vẽ
+		"pan": func(kind: String, arg): _pan(g, kind, arg),
 		# (bản 534) câu cá bỏ cấp riêng: mở mồi theo cấp vườn, kinh nghiệm câu cộng vô vườn; giờ + thời tiết như chip đồng hồ vườn
 		"lv": func() -> int: return G.lv(),
 		"xp": func(n: int): G.add_xp(n, "cau"),
@@ -117,9 +119,52 @@ func open() -> void:
 	_modal = bool(tree.get_meta("ui_modal", false))
 	tree.set_meta("ui_modal", true)
 
+# ------------------------------------------------------------ (bản 535) bảng câu cá = khung Kho chung của vườn
+var _pvis := []
+var _player := 10
+func _pan(g, kind: String, arg) -> void:
+	var k := ""
+	match kind:
+		"basket": k = "gio"
+		"dex": k = "so"
+		"set": k = "set"
+		"shop": k = "do" if str(arg) == "gear" else "moi"
+	if k == "":
+		return
+	if ui.ccpp != null:
+		ui.ccpp.on_close = Callable()   # close_all() trong _pan_open đóng bảng cũ: khỏi trả lớp về giữa chừng
+	if _pvis.is_empty() and ui.layer != 110:
+		# lớp giao diện vườn (đang ẩn lúc câu cá) hiện lên TRÊN câu cá, chỉ chừa bảng: mọi thứ khác của vườn ẩn tạm
+		for c in ui.root.get_children():
+			if c is CanvasItem and c.visible:
+				_pvis.append(c)
+				c.visible = false
+		_player = ui.layer
+		ui.layer = 110
+		ui.visible = true
+	g.G.paused = true
+	var p = ui._pan_open("ccpp", "res://logic/ui_ccp.gd", [])
+	p.on_close = func(): _pan_end(g)
+	p.open2(g, k)
+
+func _pan_end(g) -> void:
+	for c in _pvis:
+		if is_instance_valid(c):
+			c.visible = true
+	_pvis = []
+	ui.layer = _player
+	if on:
+		ui.visible = false
+	if is_instance_valid(g):
+		g.G.paused = false
+		g.ui.hud_dirty()
+		g.save(true)
+
 func close() -> void:
 	if not on:
 		return
+	if ui.ccpp != null and ui.ccpp.on:
+		ui.ccpp.close()
 	on = false
 	for n in _vis:
 		if is_instance_valid(n):

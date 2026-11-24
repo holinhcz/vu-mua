@@ -42,6 +42,7 @@ var hrp = null               # bảng NGƯỜI LÀM THUÊ (ui_hr.gd)
 var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
 var ghp = null               # (bản 515) bảng GHE THƯƠNG HỒ (ui_gh.gd)
 var chop = null              # (bản 517) bảng CHỢ NỔI (ui_cho.gd)
+var ccpp = null              # (bản 535) bảng CÂU CÁ trên khung Kho (ui_ccp.gd): Giỏ cá, Mồi, Đồ nghề, Sổ cá, Cài đặt
 var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
 var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
 var clgp = null              # bảng CHUYỆN LÀNG (ui_clg.gd)
@@ -3638,7 +3639,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:

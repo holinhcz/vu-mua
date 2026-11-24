@@ -830,6 +830,9 @@ func _draw_fx(ci: Box) -> void:
 # ============================================================ hộp thoại
 # _mod: {kind, arg, w, title, sub, icon, tabs, body_h, anim}
 func _open(kind: String, arg = null) -> void:
+	if game.host != null and game.host.has("pan"):   # (bản 535) trong vườn: bảng khung Kho chung (ui_ccp.gd)
+		game.host.pan.call(kind, arg)
+		return
 	var was: bool = modal.visible and _mod.get("kind", "") == kind
 	var anim: float = _mod.get("anim", 0.0) if was else 0.0
 	var keep_scroll: float = body.scroll if was else 0.0
