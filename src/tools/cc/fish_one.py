@@ -14,21 +14,27 @@ SVG = os.path.join(SRC, 'godot', 'ui', 'svg', 'kh')
 KHO = {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_mevinh", "chot": "ca_chot", "tre": "ca_tre", "tom": "tom",
        "loc": "ca_loc", "he": "ca_he", "luon": "luon", "thatlat": "ca_thatlat", "bong": "ca_bong", "locbong": "ca_locbong", "chinh": "ca_chinh",
        "ho": "ca_ho", "tradau": "ca_tradau"}
+# (11-24 Link "vẽ ếch cá chép với tép") con của lờ / lọp / giăng câu trong vườn, không câu được ở bờ kênh:
+# chỉ có ô Kho (không chép vô gói hình câu cá). Gốc art/cc_fish: chep = ca_ve.py, tep = ca_ve2.py, ech = moi/ve_ech.py
+KHO_ONLY = {"chep": "ca_chep", "tep": "tep", "ech": "ech"}
 MAXW = 1200
 a = b = 0
-for fid, kid in KHO.items():
+for fid, kid in list(KHO.items()) + list(KHO_ONLY.items()):
     org = os.path.join(ART, fid + '.webp')
     cur = os.path.join(CC, fid + '.webp')
-    if not os.path.exists(org):
-        shutil.copy(cur, org)   # lần đầu: ảnh đang có = gốc
-    im = Image.open(org).convert('RGBA')
-    a += os.path.getsize(cur)
-    if im.width > MAXW:
-        pm = im.convert('RGBa').resize((MAXW, round(im.height * MAXW / im.width)), Image.LANCZOS).convert('RGBA')
+    if fid in KHO_ONLY:
+        im = Image.open(org).convert('RGBA')
     else:
+      if not os.path.exists(org):
+        shutil.copy(cur, org)   # lần đầu: ảnh đang có = gốc
+      im = Image.open(org).convert('RGBA')
+      a += os.path.getsize(cur)
+      if im.width > MAXW:
+        pm = im.convert('RGBa').resize((MAXW, round(im.height * MAXW / im.width)), Image.LANCZOS).convert('RGBA')
+      else:
         pm = im
-    pm.save(cur, 'WEBP', quality=90, method=6)
-    b += os.path.getsize(cur)
+      pm.save(cur, 'WEBP', quality=90, method=6)
+      b += os.path.getsize(cur)
     # ô Kho: cắt sát hình, đặt giữa ô vuông, lề 6%
     bb = im.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox()
     c = im.crop(bb).convert('RGBa')

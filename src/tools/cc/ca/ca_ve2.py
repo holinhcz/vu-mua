@@ -19,7 +19,7 @@ IDS = sys.argv[2:] or ['tom', 'dep', 'lon', 'non']
 os.makedirs(OUT, exist_ok=True)
 RES = 3.6   # chuẩn 6px, như ca_ve.py
 LIGHT = np.array([-.45, .62, .64]); LIGHT /= np.linalg.norm(LIGHT)
-PUFF = {'tom': .03, 'dep': .02, 'lon': .04, 'non': .05}      # bán kính phồng (đơn vị cá)
+PUFF = {'tep': .03, 'tom': .03, 'dep': .02, 'lon': .04, 'non': .05}      # bán kính phồng (đơn vị cá)
 cur = {'R': .04}
 
 _init = K.Sprite.__init__
@@ -183,6 +183,138 @@ def tom2():
     return sp.finish('#1a242a', 1.8)
 
 
+
+def tep2():
+    # TÉP ĐỒNG (11-24 Link "vẽ ếch cá chép với tép"): dáng tom2 nhưng vỏ trong ngà hồng lấm tấm nâu, chuỷ thẳng,
+    # không có 2 càng xanh dài: chỉ cặp chân càng mảnh có kẹp nhỏ
+    import random
+    sp = K.Sprite(scale=.58, cx=.03, cy=.56)
+    hc = K.hexc
+    BODY = '#d9b49a'; BACK = '#9a6248'; BELLY = '#f4e4d4'
+    blue = hc('#2f63b8'); blue_d = K.mix(blue, (0, 0, 0, 1), .45); blue_l = hc('#7fb0f0')
+    # trục bụng: từ sau vỏ đầu vồng lên rồi cụp xuống đuôi
+    AX = [(.57, .015), (.49, .052), (.405, .07), (.32, .062), (.24, .036), (.17, -.002), (.115, -.045)]
+    RW = [.07, .07, .066, .06, .052, .044, .036]
+    def tangent(i):
+        a = AX[max(0, i - 1)]; b = AX[min(len(AX) - 1, i + 1)]
+        dx, dy = a[0] - b[0], a[1] - b[1]; L = math.hypot(dx, dy); return dx / L, dy / L
+    def claw(c, far):
+        dy = .022 if far else 0.0; dx = -.03 if far else 0.0
+        col = K.mix(blue, (0, 0, 0, 1), .28) if far else blue
+        dk = K.mix(col, (0, 0, 0, 1), .45)
+        J = [(.8 + dx, -.045 + dy), (.9 + dx, -.1 + dy), (1.07 + dx, -.085 + dy), (1.2 + dx, -.045 + dy)]
+        W = [.034, .03, .026]
+        for i in range(3):
+            c.set_line_cap(1)
+            c.move_to(*J[i]); c.line_to(*J[i + 1]); c.set_source_rgba(*dk); c.set_line_width(W[i] + .008); c.stroke()
+            c.move_to(*J[i]); c.line_to(*J[i + 1]); c.set_source_rgba(*col); c.set_line_width(W[i]); c.stroke()
+        # gai nhỏ dọc khúc dưới (càng tôm càng xanh nhám)
+        for i in range(9):
+            t = (i + .5) / 9; p = K.lerp(J[2], J[3], t)
+            c.move_to(p[0], p[1] + .012); c.line_to(p[0] - .008, p[1] + .02)
+        c.set_source_rgba(*dk); c.set_line_width(.003); c.stroke()
+        # khớp cam
+        for p in J[1:3]:
+            c.arc(p[0], p[1], .013, 0, 6.3); c.set_source_rgba(*hc('#e0843a', .9 if not far else .6)); c.fill()
+        # bàn càng thon dài
+        palm = [(1.18 + dx, -.036 + dy), (1.26 + dx, -.008 + dy), (1.36 + dx, .006 + dy), (1.43 + dx, .002 + dy), (1.45 + dx, -.02 + dy),
+                (1.4 + dx, -.045 + dy), (1.3 + dx, -.06 + dy), (1.21 + dx, -.062 + dy)]
+        K.crpath(c, palm, True); c.set_source_rgba(*dk); c.set_line_width(.01); c.stroke_preserve(); c.set_source_rgba(*col); c.fill()
+        # 2 ngón hơi há
+        for pts in ([(1.42 + dx, .0 + dy), (1.5 + dx, .012 + dy), (1.58 + dx, .014 + dy), (1.61 + dx, .006 + dy), (1.5 + dx, -.006 + dy), (1.43 + dx, -.014 + dy)],
+                    [(1.43 + dx, -.03 + dy), (1.51 + dx, -.036 + dy), (1.59 + dx, -.026 + dy), (1.615 + dx, -.016 + dy), (1.51 + dx, -.05 + dy), (1.42 + dx, -.046 + dy)]):
+            K.crpath(c, pts, True); c.set_source_rgba(*dk); c.set_line_width(.008); c.stroke_preserve()
+            c.set_source_rgba(*K.mix(col, (1, 1, 1, 1), .1)); c.fill()
+        c.arc(1.607 + dx, .008 + dy, .007, 0, 6.3); c.arc(1.612 + dx, -.018 + dy, .007, 0, 6.3)
+        c.set_source_rgba(*hc('#e0843a', .95)); c.fill()
+    def pinc(c, far):
+        a = .6 if far else 1.0; o = .02 if far else 0
+        col = hc('#b08a72' if far else '#d8b09a', a)
+        K.barbel(c, [(.78 + o, -.04), (.84 + o, -.1), (.93 + o, -.12), (.99 + o, -.105)], .012, .008, col)
+        for pts in ([(.985 + o, -.1), (1.02 + o, -.09), (1.035 + o, -.098)], [(.985 + o, -.11), (1.02 + o, -.118), (1.035 + o, -.112)]):
+            K.barbel(c, pts, .007, .003, col)
+    def legs(c, far):
+        a = .55 if far else 1.0; o = .012 if far else 0
+        col = hc('#b08a72' if far else '#d0aa90', a)
+        for i in range(3):
+            x = .64 + i * .055 + o
+            K.barbel(c, [(x, -.04), (x + .03, -.085), (x + .015 + i * .01, -.14), (x + .03 + i * .012, -.16)], .011, .005, col)
+        for i in range(1, 6):    # chân bơi dưới mỗi đốt bụng
+            x, y = AX[i]; w = RW[i]
+            K.barbel(c, [(x, y - w * .85), (x - .01, y - w - .028), (x - .028, y - w - .04)], .012, .004, hc('#e6c8b2', .8 * a))
+    def antenna(c):
+        for pts, w in [([(.86, .03), (.72, .17), (.48, .28), (.2, .33), (-.06, .3)], .0045),
+                       ([(.87, .025), (.78, .2), (.58, .34), (.34, .42)], .004)]:
+            K.barbel(c, pts, w, .0015, hc('#7a4e30', .95))
+        for pts in ([(.88, .03), (.97, .075), (1.04, .085)], [(.88, .025), (.98, .045), (1.05, .045)]):
+            K.barbel(c, pts, .005, .002, hc('#7a5a3a', .95))
+    def tail(c):
+        x, y = AX[-1]; tx_, ty_ = tangent(len(AX) - 1)
+        ang = math.atan2(ty_, tx_) + math.pi      # tangent() chỉ về phía đầu, quạt đuôi quay ngược lại
+        c.save(); c.translate(x, y); c.rotate(ang)
+        # telson nhọn giữa + 4 cánh quạt xoè
+        for rot, L, wd in [(-.6, .15, .05), (-.28, .17, .055), (.28, .17, .055), (.6, .15, .05)]:
+            c.save(); c.rotate(rot)
+            K.crpath(c, [(0, wd * .4), (L * .55, wd), (L, wd * .45), (L * 1.02, -wd * .2), (L * .55, -wd * .7), (0, -wd * .4)], True)
+            c.set_source_rgba(*hc('#d8ae94', .9)); c.fill_preserve(); c.set_source_rgba(*hc('#6a3a26', .7)); c.set_line_width(.004); c.stroke()
+            for k in range(4):
+                c.move_to(.01, 0); c.line_to(L * .95, (k - 1.5) * wd * .35)
+            c.set_source_rgba(.4, .2, .12, .3); c.set_line_width(.002); c.stroke()
+            c.restore()
+        K.crpath(c, [(0, .026), (.11, .016), (.18, 0), (.11, -.016), (0, -.026)], True)
+        c.set_source_rgba(*hc('#dcb49a')); c.fill_preserve(); c.set_source_rgba(*hc('#6a3a26', .75)); c.set_line_width(.004); c.stroke()
+        c.restore()
+    def abdomen(c):
+        for i in range(len(AX) - 1, -1, -1):     # đốt sau vẽ trước, đốt trước chồng lên
+            x, y = AX[i]; w = RW[i]
+            tx_, ty_ = tangent(i); ang = math.atan2(ty_, tx_)
+            c.save(); c.translate(x, y); c.rotate(ang + math.pi)
+            L = .05 if i < 6 else .042
+            # đốt vỏ: lưng tròn + vạt hông thả xuống
+            K.crpath(c, [(-L, w * .78), (0, w), (L, w * .85), (L * 1.05, -w * .1), (L * .7, -w * .98), (-L * .6, -w * 1.0), (-L * 1.05, -w * .2)], True)
+            c.set_source(K.vgrad(c, w, -w, [(0, hc(BACK)), (.3, hc(BODY)), (.8, hc(BELLY)), (1, hc('#ecd2bc'))])); c.fill_preserve()
+            c.set_source_rgba(*hc('#5a2e1c', .7)); c.set_line_width(.004); c.stroke()
+            # đốm nâu li ti trên vỏ (tép đồng)
+            rr = random.Random(i * 7 + 3)
+            for k in range(9):
+                c.arc(rr.uniform(-L * .8, L * .8), rr.uniform(-w * .7, w * .85), rr.uniform(.0025, .005), 0, 6.3)
+                c.set_source_rgba(.42, .2, .1, .55); c.fill()
+            # vạch sẫm ngang đốt (sọc tôm)
+            c.move_to(-L * .3, w * .95); c.curve_to(-L * .1, w * .2, -L * .2, -w * .4, -L * .45, -w * .85)
+            c.set_source_rgba(.5, .22, .12, .28); c.set_line_width(.007); c.stroke()
+            c.restore()
+    def cara(c):
+        pts = [(.55, .072), (.66, .09), (.77, .084), (.84, .066), (.875, .05), (.88, .02), (.865, -.015), (.82, -.05), (.7, -.065), (.56, -.055), (.53, .0)]
+        K.crpath(c, pts, True)
+        c.set_source(K.vgrad(c, .09, -.065, [(0, hc(BACK)), (.38, hc(BODY)), (1, hc(BELLY))])); c.fill_preserve()
+        c.set_source_rgba(*hc('#5a2e1c', .75)); c.set_line_width(.004); c.stroke()
+        # rãnh vỏ đầu + mấy sọc mờ
+        c.move_to(.61, .07); c.curve_to(.66, .03, .72, .012, .8, .012); c.set_source_rgba(.45, .2, .1, .35); c.set_line_width(.005); c.stroke()
+        for i in range(3):
+            c.move_to(.62 + i * .06, .085); c.line_to(.64 + i * .06, -.05)
+        c.set_source_rgba(.5, .25, .15, .18); c.set_line_width(.007); c.stroke()
+        # chuỷ: lưỡi cong lên, răng cưa phía trên
+        K.crpath(c, [(.84, .06), (.92, .072), (1.0, .084), (1.035, .086), (.99, .07), (.91, .05), (.86, .045)], True)
+        c.set_source_rgba(*hc('#cfa286')); c.fill_preserve(); c.set_source_rgba(*hc('#5a2e1c', .8)); c.set_line_width(.0035); c.stroke()
+        for i in range(7):
+            x = .865 + i * .02; y = .062 + i * .0035
+            c.move_to(x, y); c.line_to(x + .005, y + .016); c.line_to(x + .014, y + .005)
+        c.set_source_rgba(*hc('#6a3a26', .9)); c.set_line_width(.003); c.stroke()
+        # mắt có cuống
+        c.set_line_cap(1); c.move_to(.84, .028); c.line_to(.875, .044); c.set_source_rgba(*hc('#a87a62')); c.set_line_width(.014); c.stroke()
+        c.arc(.88, .047, .017, 0, 6.3); c.set_source_rgba(.05, .05, .05, 1); c.fill()
+        c.arc(.874, .053, .0055, 0, 6.3); c.set_source_rgba(1, 1, 1, .9); c.fill()
+    sp.draw(lambda c: pinc(c, True))
+    sp.draw(lambda c: legs(c, True))
+    sp.draw(antenna)
+    sp.draw(tail)
+    sp.draw(abdomen)
+    sp.draw(lambda c: legs(c, False))
+    sp.draw(cara)
+    sp.draw(lambda c: pinc(c, False))
+    return sp.finish('#1a242a', 1.8)
+
+
 def crop(im):
     im = im.convert('RGBA')
     bb = im.getchannel('A').point(lambda q: 255 if q > 6 else 0).getbbox()
@@ -193,7 +325,7 @@ def crop(im):
 if __name__ == '__main__':
     for k in IDS:
         cur['R'] = PUFF[k]
-        im = tom2() if k == 'tom' else F.junk(k)
+        im = tom2() if k == 'tom' else tep2() if k == 'tep' else F.junk(k)
         im = crop(im)
         im.save(os.path.join(OUT, k + '.webp'), lossless=True, quality=100, method=6)
         im.save(os.path.join(OUT, k + '.png'))

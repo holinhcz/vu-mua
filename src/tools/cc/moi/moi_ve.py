@@ -15,12 +15,15 @@ IDS = sys.argv[2:] or ['trun', 'com', 'tep', 'chua', 'nhai', 'sung', 'cam']
 os.makedirs(OUT, exist_ok=True)
 U = 512            # khung vẽ (đơn vị), ảnh ra cỡ này (cắt sát)
 SS = 2             # vẽ gấp đôi rồi thu (khử răng cưa)
-N = U * SS
+SC = float(os.environ.get('MOI_SC', '1'))    # phóng to ảnh ra (toạ độ vẽ vẫn là khung 512): ve_ech.py dùng 3
+PX = SS * SC       # điểm ảnh lưới vẽ / 1 đơn vị
+N = int(round(U * PX))
+OW = int(round(U * SC))
 LIGHT = np.array([-.45, -.62, .64]); LIGHT /= np.linalg.norm(LIGHT)     # x phải, y XUỐNG, z ra mặt
 HALF = LIGHT + np.array([0, 0, 1.0]); HALF /= np.linalg.norm(HALF)
 _yy, _xx = np.mgrid[0:N, 0:N].astype(np.float32)
-X = (_xx + .5) / SS
-Y = (_yy + .5) / SS
+X = (_xx + .5) / PX
+Y = (_yy + .5) / PX
 
 
 def hexc(h):
@@ -38,7 +41,7 @@ def noise(scale, seed, octaves=3):
     r = np.random.RandomState(seed)
     out = np.zeros((N, N), np.float32); amp = 1.0; tot = 0
     for o in range(octaves):
-        s = scale * SS / (2 ** o)
+        s = scale * PX / (2 ** o)
         f = ndi.gaussian_filter(r.randn(N, N).astype(np.float32), max(.6, s))
         f /= (f.std() + 1e-6)
         out += f * amp; tot += amp; amp *= .5
@@ -47,7 +50,7 @@ def noise(scale, seed, octaves=3):
 
 def aa(sdf):
     """sdf (đơn vị, âm = trong) -> độ phủ mịn"""
-    return np.clip(.5 - sdf * SS, 0, 1)
+    return np.clip(.5 - sdf * PX, 0, 1)
 
 
 # ------------------------------------------------------------ hình cơ bản: trả (phủ, mặt cao h theo đơn vị)
@@ -65,13 +68,13 @@ def ellipse(cx, cy, rx, ry, rot=0.0, hk=1.0, flat=0.0):
 
 def poly_mask(pts):
     im = Image.new('L', (N, N), 0)
-    ImageDraw.Draw(im).polygon([(x * SS, y * SS) for x, y in pts], fill=255)
+    ImageDraw.Draw(im).polygon([(x * PX, y * PX) for x, y in pts], fill=255)
     return np.asarray(im).astype(np.float32) / 255
 
 
 def puff(mask, R, hk=1.0):
     """khối phồng từ 1 mặt nạ: mép bo tròn bán kính R (đơn vị), giữa phẳng"""
-    d = ndi.distance_transform_edt(mask > .5) / SS
+    d = ndi.distance_transform_edt(mask > .5) / PX
     t = np.clip(d / R, 0, 1)
     h = np.sqrt(1 - (1 - t) ** 2) * R * hk
     m = ndi.gaussian_filter(mask, .7)
@@ -88,8 +91,8 @@ def tube(pts, rads, n=None):
         a, b = P[i], P[i + 1]; ra, rb = R[i], R[i + 1]
         L = float(np.hypot(*(b - a))) + 1e-6
         rm = max(ra, rb) + 2
-        x0 = int(max(0, (min(a[0], b[0]) - rm) * SS)); x1 = int(min(N, (max(a[0], b[0]) + rm) * SS + 1))
-        y0 = int(max(0, (min(a[1], b[1]) - rm) * SS)); y1 = int(min(N, (max(a[1], b[1]) + rm) * SS + 1))
+        x0 = int(max(0, (min(a[0], b[0]) - rm) * PX)); x1 = int(min(N, (max(a[0], b[0]) + rm) * PX + 1))
+        y0 = int(max(0, (min(a[1], b[1]) - rm) * PX)); y1 = int(min(N, (max(a[1], b[1]) + rm) * PX + 1))
         if x1 <= x0 or y1 <= y0:
             acc += L; continue
         xs = X[y0:y1, x0:x1]; ys = Y[y0:y1, x0:x1]
@@ -141,7 +144,7 @@ class Pic:
         self.edge = np.zeros((N, N, 3), np.float32)    # màu viền theo chỗ
 
     def shade(self, h, base, amb=.42, dif=.78, spec=.06, sp_pow=18, rim=0.0, ao=None):
-        gy, gx = np.gradient(h * SS)
+        gy, gx = np.gradient(h * PX)
         nx, ny, nz = -gx, -gy, np.ones_like(h)
         ln = np.sqrt(nx * nx + ny * ny + nz * nz)
         nx, ny, nz = nx / ln, ny / ln, nz / ln
@@ -158,13 +161,13 @@ class Pic:
     def put(self, m, col, edge=None, line=.55, lw=1.3, contact=.38, cblur=7.0):
         """đặt 1 lớp: bóng tiếp xúc lên lớp dưới, rồi tô, rồi nét mép mảnh (màu tối của chính lớp)"""
         if contact and self.a.max() > 0:
-            sh = ndi.gaussian_filter(m, cblur * SS)
-            sh = np.roll(np.roll(sh, int(2.5 * SS), 0), int(1.5 * SS), 1)
+            sh = ndi.gaussian_filter(m, cblur * PX)
+            sh = np.roll(np.roll(sh, int(2.5 * PX), 0), int(1.5 * PX), 1)
             k = 1 - contact * sh * (1 - m)
             self.rgb *= k[..., None]
         ec = (col * .38) if edge is None else (np.broadcast_to(edge, col.shape))
         if line:
-            er = ndi.grey_erosion(m, size=(int(lw * 2 * SS) | 1, int(lw * 2 * SS) | 1))
+            er = ndi.grey_erosion(m, size=(int(lw * 2 * PX) | 1, int(lw * 2 * PX) | 1))
             ring = np.clip(m - er, 0, 1) * line
             col = col * (1 - ring[..., None]) + ec * ring[..., None]
         self.rgb = self.rgb * (1 - m[..., None]) + col * m[..., None]
@@ -180,21 +183,21 @@ class Pic:
     def save(self, name, ow=2.6):
         # viền ngoài mảnh: màu tối của chỗ sát mép (như cá), không đen đều
         a = self.a
-        w = ow * SS
+        w = ow * PX
         dil = ndi.grey_dilation(a, size=(int(w * 2) | 1, int(w * 2) | 1))
-        dil = ndi.gaussian_filter(dil, .6 * SS)
+        dil = ndi.gaussian_filter(dil, .6 * PX)
         ring = np.clip(dil - a, 0, 1)
-        num = ndi.gaussian_filter(self.edge * a[..., None], (3 * SS, 3 * SS, 0))
-        den = ndi.gaussian_filter(a, 3 * SS)[..., None] + 1e-4
+        num = ndi.gaussian_filter(self.edge * a[..., None], (3 * PX, 3 * PX, 0))
+        den = ndi.gaussian_filter(a, 3 * PX)[..., None] + 1e-4
         ec = np.clip(num / den * .8, 0, 1)
         rgb = self.rgb * a[..., None] + ec * ring[..., None]
         al = np.clip(a + ring, 0, 1)
         rgb = rgb / np.maximum(al[..., None], 1e-4)
         im = Image.fromarray(np.dstack([np.clip(rgb, 0, 1) * 255, al * 255]).astype(np.uint8), 'RGBA')
-        im = im.resize((U, U), Image.LANCZOS)
+        im = im.resize((OW, OW), Image.LANCZOS)
         bb = im.getchannel('A').point(lambda v: 255 if v > 3 else 0).getbbox()
-        pad = 6
-        im = im.crop((max(0, bb[0] - pad), max(0, bb[1] - pad), min(U, bb[2] + pad), min(U, bb[3] + pad)))
+        pad = int(6 * SC)
+        im = im.crop((max(0, bb[0] - pad), max(0, bb[1] - pad), min(OW, bb[2] + pad), min(OW, bb[3] + pad)))
         p = os.path.join(OUT, 'ic-%s.webp' % name)
         im.save(p, 'WEBP', lossless=True, quality=100, method=6)
         print(name, im.size, os.path.getsize(p))
@@ -213,7 +216,7 @@ def specks(seed, n, x0, y0, x1, y1, r0, r1, inside=None):
     for _ in range(n):
         x = rs.uniform(x0, x1); y = rs.uniform(y0, y1); r = rs.uniform(r0, r1)
         if inside is not None:
-            iy, ix = int(y * SS), int(x * SS)
+            iy, ix = int(y * PX), int(x * PX)
             if not (0 <= iy < N and 0 <= ix < N) or inside[iy, ix] < .9:
                 continue
         e, _ = ellipse(x, y, r * rs.uniform(.7, 1.3), r * rs.uniform(.7, 1.3), rs.uniform(0, 3.14))
@@ -412,7 +415,7 @@ def tep():
     base = base * (1 - .22 * groove)[..., None]
     # cơ quan trong (dạ dày sẫm thấy qua vỏ)
     gm, _ = ellipse(hx + 8, hy - 14, 26, 15, ang)
-    base = lerpc(base, hexc('#8c4a30'), ndi.gaussian_filter(gm, 5 * SS) * .45)
+    base = lerpc(base, hexc('#8c4a30'), ndi.gaussian_filter(gm, 5 * PX) * .45)
     c, _ = P.shade(h, base, amb=.45, dif=.72, spec=.14, sp_pow=22)
     P.put(m, c, edge=hexc('#8a3c26'), contact=.3)
     ex, ey = hx + fx * 46, hy + fy * 46 - 4
@@ -512,7 +515,7 @@ def nhai():
     b = lerpc(g_back, g_lite, sstep(-1, 1, (X - 256) / 140) * 0)
     # bụng vàng kem lộ ở giữa dưới
     bm, _ = ellipse(256, 338, 82, 66)
-    bm = ndi.gaussian_filter(bm, 6 * SS)
+    bm = ndi.gaussian_filter(bm, 6 * PX)
     c = skin(h, m, g_back, 40)
     cb, _ = P.shade(h, belly * (1 + .05 * noise(1.5, 41))[..., None], amb=.5, dif=.6)
     c = lerpc(c, cb, bm)
@@ -534,7 +537,7 @@ def nhai():
     c = skin(h, m, g_back, 80)
     # sọc sáng 2 bên lưng + họng sáng
     th, _ = ellipse(256, 268, 92, 26)
-    c = lerpc(c, lerpc(c, belly, .7), ndi.gaussian_filter(th, 4 * SS) * .8)
+    c = lerpc(c, lerpc(c, belly, .7), ndi.gaussian_filter(th, 4 * PX) * .8)
     # miệng: đường cong rộng
     my = 248 + 14 * (1 - ((X - 256) / 120) ** 2)
     mouth = np.exp(-((Y - my) / 1.5) ** 2) * (np.abs(X - 256) < 118) * m
@@ -665,5 +668,6 @@ def cam():
     return P.save('cam')
 
 
-for k in IDS:
-    globals()[k]()
+if __name__ == '__main__':
+    for k in IDS:
+        globals()[k]()
