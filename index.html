@@ -108,7 +108,7 @@ i.addEventListener('keyup',function(e){e.stopPropagation()});
 <script src="index.js?v=ffb22084"></script>
 <script>
 (function(){
-var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 45947840, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=45,WASM=38034280,PCK=45947840,B='ede150b3',EV='dfd3ae5f';
+var CFG={"args": [], "canvasResizePolicy": 2, "emscriptenPoolSize": 8, "ensureCrossOriginIsolationHeaders": false, "executable": "index", "experimentalVK": true, "fileSizes": {"index.pck": 45947840, "index.wasm": 38034280}, "focusCanvas": true, "gdextensionLibs": [], "godotPoolSize": 4},NP=42,WASM=38034280,PCK=45947840,B='025f6910',EV='dfd3ae5f';
 var msg=document.getElementById('msg'),fill=document.getElementById('fill'),st=document.getElementById('st');
 // The engine asks for index.wasm and index.pck. They are published as engine.wasm (gzip) and pck_<n>.wasm (slices),
 // so those two requests are answered here from the published pieces. Every file of a build carries ?v=<crc> so a
@@ -157,8 +157,15 @@ function made(k,mk){return csP.then(function(c){if(!c)return mk();var abs=new UR
   return TO(c.match(abs),4000,null).then(function(hit){if(hit)return hit;return mk().then(function(r){return r.blob().then(function(b){var t=r.headers.get('Content-Type');
     return TO(c.put(abs,new Response(b,{status:200,headers:{'Content-Type':t}})).then(function(){return TO(c.match(abs),4000,null)},function(){return null}),8000,null)
       .then(function(m){return m||new Response(b,{status:200,headers:{'Content-Type':t}})})})})})},function(){return mk()})}
+// (bản 548) mảnh gói làng cất theo crc (pk/<crc>), không theo số thứ tự: bản mới chỉ tải mảnh nào thật sự đổi. Mảnh nào treo
+// (mạng chập chờn, Brave) quá 90 giây thì bỏ, tải lại thẳng, tối đa 3 lần (trước: 1 mảnh treo là đứng luôn ở 89%)
+function piece(q,tr){tr=tr||0;var p='pck_'+q+'.wasm';return mfP.then(function(){var h=MF[p],url=p+(h?'?h='+h:'')+(tr?(h?'&':'?')+'r='+tr:'');
+  function get(){return TO(F0(url).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}),90000,null).then(function(b){if(!b)throw new Error('treo');return b})}
+  return csP.then(function(c){if(!c||!h||tr)return get();var key=BASE+'pk/'+h;
+    return TO(c.match(key),4000,null).then(function(hit){if(hit)return TO(hit.arrayBuffer(),8000,null).then(function(b){return b||get()});
+      return get().then(function(b){TO(c.put(key,new Response(b)),8000,null).catch(function(){});return b})})})}).catch(function(e){if(tr<3)return piece(q,tr+1);throw e})}
 var tidy=false;function tidyUp(){if(tidy)return;tidy=true;mfP.then(function(){csP.then(function(c){if(!c)return;var keep={};
-  Object.keys(MF).forEach(function(p){keep[new URL(p+'?h='+MF[p],location.href).href]=1});
+  Object.keys(MF).forEach(function(p){keep[new URL(p+'?h='+MF[p],location.href).href]=1;if(/^pck_\d+\.wasm$/.test(p))keep[BASE+'pk/'+MF[p]]=1});
   keep[new URL(rawKey(),location.href).href]=1;keep[new URL(pckKey(),location.href).href]=1;
   c.keys().then(function(ks){ks.forEach(function(q){if(!keep[q.url])c.delete(q)})})})})}
 // (bản 539) một thanh % chung: tải engine + gói làng = 0-90%, rồi "Đang mở làng" (trình duyệt dịch engine, Godot nạp gói) chạy tiếp 90-99%
@@ -168,7 +175,7 @@ function prog(){if(st.hidden)return;var pc;if(eD&&pD){if(!opT){opT=Date.now();(f
     pc=90+Math.round(9*(1-Math.exp(-(Date.now()-opT)/6000)));msg.textContent='Đang mở làng… '+pc+'%'}
   else{pc=Math.min(90,Math.round((gotE+gotP)/Math.max(1,WASM+PCK)*90));msg.textContent='Đang tải làng… '+pc+'%'}
   fill.style.width=pc+'%'}
-function counted(r){var n=0;return new Response(r.body.pipeThrough(new TransformStream({transform:function(ch,c){n+=ch.byteLength;gotE=n;prog();c.enqueue(ch)},
+function counted(r){var n=0;return new Response(r.body.pipeThrough(new TransformStream({transform:function(ch,c){n+=ch.byteLength;gotE=n;if(n>=WASM)eD=true;prog();c.enqueue(ch)},
   flush:function(){eD=true;prog()}})),{status:200,headers:{'Content-Type':'application/wasm'}})}
 window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
   if(/index\.wasm(\?|$)/.test(s))return mfP.then(function(){return made(rawKey(),function(){return kept('engine.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);
@@ -176,7 +183,7 @@ window.fetch=function(u,o){var s=typeof u=='string'?u:(u&&u.url)||'';
   // (bản 531) gói game: tải 6 miếng một lúc (trước: cả 77 miếng cùng lúc), thanh tải chạy theo từng miếng, mỗi miếng chỉ cất 1 lần
   // trong bộ nhớ trình duyệt (bỏ bản ghép 79 MB cất thêm: trước đó lúc đỉnh giữ ~3 bản gói trong RAM -> điện thoại đứng im)
   if(/index\.pck(\?|$)/.test(s))return mfP.then(function(){return new Promise(function(ok,no){var bs=new Array(NP),got=0,done=0,i=0,run=0,dead=false;
-    function nx(){while(!dead&&run<6&&i<NP){(function(q){run++;kept('pck_'+q+'.wasm').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer()}).then(function(b){
+    function nx(){while(!dead&&run<6&&i<NP){(function(q){run++;piece(q).then(function(b){
       bs[q]=b;got+=b.byteLength;done++;run--;gotP=got;prog();
       if(done==NP){pD=true;prog();var bl=new Blob(bs);bs=null;ok(new Response(bl,{status:200,headers:{'Content-Type':'application/octet-stream'}}))}else nx()},
       function(e){dead=true;no(e)})})(i++)}}
