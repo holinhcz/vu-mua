@@ -77,21 +77,21 @@ func _body() -> Array:
 	var s2: Dictionary = _merge(e, nx) if not nx.is_empty() else {}
 	var blk := []
 	var yy := 0.0
-	var iw := XW - 20.0   # (bản 551) 4 cột chia theo bề ngang thẻ: nhãn 38%, bậc này 26%, mũi tên 8%, bậc kế 28%
-	var c1 := X0 + 10.0 + iw * 0.38
-	var c2 := c1 + iw * 0.26
-	var c3 := c2 + iw * 0.08
+	var iw := XW - 20.0   # (bản 552) 4 cột: nhãn 46% (nhãn dài "Cá lóc, cá chép dễ vô"), bậc này 22%, mũi tên 7%, bậc kế 25%
+	var c1 := X0 + 10.0 + iw * 0.46
+	var c2 := c1 + iw * 0.22
+	var c3 := c2 + iw * 0.07
 	for r in _rows(s, s2):
-		blk.append(_dt(X0 + 10.0, yy, iw * 0.38 - 4.0, 16.0, _fitw(String(r[0]), 10.5, 700, iw * 0.38 - 4.0), 10.5, 700, SUB, "left"))
-		blk.append(_dt(c1, yy, iw * 0.26, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
+		blk.append(_dt(X0 + 10.0, yy, iw * 0.46 - 8.0, 16.0, _fitw(String(r[0]), 10.5, 700, iw * 0.46 - 8.0), 10.5, 700, SUB, "left"))
+		blk.append(_dt(c1, yy, iw * 0.22, 16.0, String(r[1]), 10.5, 800, BROWN, "left"))
 		if r.size() > 2:
-			blk.append(_dt(c2, yy, iw * 0.08, 16.0, "→", 10.5, 800, SUB))
-			blk.append(_dt(c3, yy, iw * 0.28, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
+			blk.append(_dt(c2, yy, iw * 0.07, 16.0, "→", 10.5, 800, SUB))
+			blk.append(_dt(c3, yy, iw * 0.25, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
 		yy += 17.0
 	yy += 4.0
 	var btns := []
 	if W.qk(t) > 0:   # (bản 551) camera tới cái đang đặt (ưu tiên cái có cá)
-		btns.append(["Tới chỗ", _goto.bind(t), "off"])
+		btns.append(["Tới chỗ", _goto.bind(t), "plain"])
 	if lk == "":
 		var full: bool = W.qk(t) >= int(s.max)
 		var free: bool = W.lo_free(t)

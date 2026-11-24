@@ -377,7 +377,12 @@ func _tchip(x: float, y: float, t: String, kind: String, col := BROWN, cb = null
 		c.act = cb
 	return [c, w]
 
-func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, off: xám
+func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, off: xám, plain: kem bấm được (bản 552)
+	if kind == "plain":
+		var p := _chip(x, y, w, h, "fut")
+		p.kids = [_dt(x, y, w, h, t, 11.0, 800, BROWN)]
+		p.act = cb
+		return p
 	if kind == "off":
 		var c := _chip(x, y, w, h, "miss")
 		c.kids = [_dt(x, y, w, h, t, 10.5, 700, "rgb(110, 104, 92)")]
