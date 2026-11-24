@@ -589,11 +589,11 @@ def seedling(fr, c, sz=1.0, kind=0, seed=0):
             p0 = top + V(0, 0, h_ * (.5 + .2 * b))
             p1 = p0 + V(math.cos(ang) * 1.3 * sz, math.sin(ang) * 1.3 * sz, .8 * sz)
             o.append(M(Line([tuple(p0), tuple(p1)], .1 * sz, 'go2'), col=hexc('#6a4a2a')))
-            for l in range(5):
-                a2 = ang + (l - 2) * .7
+            for l in range(3):
+                a2 = ang + (l - 1) * .9
                 o.append(leaf(p1 + V(0, 0, rs.uniform(-.3, .3) * sz), V(math.cos(a2), math.sin(a2), rs.uniform(-.1, .5)), 1.4 * sz, .7 * sz,
                               ['#7cc052', '#8ad060', '#6ab84a'][l % 3], bend=.15))
-        for l in range(4):
+        for l in range(3):
             a2 = l * 1.6
             o.append(leaf(top + V(0, 0, h_), V(math.cos(a2), math.sin(a2), .5), 1.3 * sz, .65 * sz, '#6aaa44', bend=.15))
         if kind == 4:
