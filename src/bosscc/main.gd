@@ -31,6 +31,7 @@ func _ready() -> void:
 	rng.seed = 7
 	ZOOM = get_viewport().get_visible_rect().size.y / 1040.0
 	_layout()
+	_pre_gnaw()
 	_ground()
 	ysort = Node2D.new(); ysort.y_sort_enabled = true; add_child(ysort)
 	_scenery()
@@ -51,34 +52,30 @@ func _shot(path: String) -> void:
 	get_tree().quit()
 
 # ---------------- bố cục ô (v2: boss ở nửa trên, ruộng chữ V sau lưng boss, nửa dưới toàn sân đất cho người đứng)
-const BACK := 19
-const BOSS_Y := 562.0     # chân boss (thế giới); màn: trên 200, giữa 720
-const PZ0 := 25
-const PZN := 10               # nửa dưới: sân đất cho người chơi đứng (lúc tắt bảng)           # ruộng chỉ là dải nền mỏng sau sân: ô có s+h <= BACK
+# v6 (Link 11-24 "xấu", ok hướng mới): khúc ruộng mới gặt. Nửa trên = ruộng (khối ô s,h <= RA, đỉnh nhọn chĩa xuống giữa màn),
+# boss đứng trên ruộng gặt còn gốc rạ, lúa chín chưa gặt bao quanh; nửa dưới = sân phơi lúa đất nện cho người chơi.
+const BOSS_Y := 562.0     # chân boss (thế giới); màn: trên 200, giữa 720, dưới 1240
+const RA := 23            # ruộng: ô s,h trong [RA-18, RA]; bờ cỏ ở RA+1
+var harvested := {}
+var gnaw := {}       # ô ruộng đã gặt (màu rạ)
 func at(x: float, y: float) -> Vector2:   # toạ độ thế giới -> (s, h) để đặt đồ
 	return Vector2((y / 16.0 - 1.0 + x / 32.0) * 0.5, (y / 16.0 - 1.0 - x / 32.0) * 0.5)
 func _layout() -> void:
 	for s in range(T0.x, T0.x + TN.x):
 		for h in range(T0.y, T0.y + TN.y):
-			var k := 3
-			var d := s + h
-			if d >= BACK + 2:                            # sân đánh: cỏ sân, mảng đất dưới chân boss, cỏ dại lấn 2 bên
+			var t := Vector2i(s, h)
+			var w0 := tile_pos(s, h)
+			var ey := pow(w0.x / 185.0, 2) + pow((w0.y - 1000.0) / 190.0, 2)
+			var k := 2 if ey <= 1.0 else (3 if ey > 1.7 else 0)  # sân phơi giữa, cỏ quanh, cỏ dại xa
+			if s <= RA and h <= RA and s >= RA - 18 and h >= RA - 18: k = 1
+			elif s <= RA + 1 and h <= RA + 1 and s >= RA - 19 and h >= RA - 19: k = 0   # bờ cỏ quanh ruộng
+			elif s + h < 2 * RA - 30: k = 3
+			kind[t] = k
+			if k == 1:
 				var w := tile_pos(s, h)
-				var e := pow(w.x / 150.0, 2) + pow((w.y - BOSS_Y - 6.0) / 70.0, 2)
-				k = 2 if e <= 1.0 else (3 if abs(w.x) > 180 and w.y < 700 else 0)
-			elif d == BACK + 1: k = 0                    # bờ cỏ
-			elif d >= BACK - 7: k = 1                    # dải ruộng nền
-			elif d == BACK - 8: k = 0
-			kind[Vector2i(s, h)] = k
-	# sân gạch cho người chơi đứng (nửa dưới), lát dg2_gach như đường làng, 7x7 ô
-	for s in range(PZ0, PZ0 + PZN):
-		for h in range(PZ0, PZ0 + PZN):
-			var m := 0
-			if s < PZ0 + PZN - 1: m |= 1
-			if s > PZ0: m |= 2
-			if h < PZ0 + PZN - 1: m |= 4
-			if h > PZ0: m |= 8
-			road[Vector2i(s, h)] = m
+				var e := pow(w.x / 200.0, 2) + pow((w.y - BOSS_Y) / 125.0, 2)
+				# gặt: quanh boss + dải sát bờ dưới (chừa lối từ sân phơi lên)
+				if e <= 1.0 or (s >= RA - 1 or h >= RA - 1) and w.y > 560.0: harvested[t] = true
 
 func _ground() -> void:
 	var ik := Image.create(TN.x, TN.y, false, Image.FORMAT_RGBA8)
@@ -87,6 +84,7 @@ func _ground() -> void:
 	for t in kind:
 		var q: Vector2i = t - T0
 		var c: Color = pal[rng.randi() % pal.size()]
+		if harvested.has(t) or gnaw.has(t): c = [Color8(196, 172, 98), Color8(188, 164, 92), Color8(202, 178, 104), Color8(192, 168, 96)][rng.randi() % 4]
 		c.a = float(kind[t] * 16) / 255.0
 		ik.set_pixelv(q, c)
 		if road.has(t):
@@ -94,6 +92,7 @@ func _ground() -> void:
 	var mat := ShaderMaterial.new(); mat.shader = load("res://arena.gdshader")
 	mat.set_shader_parameter("uK", ImageTexture.create_from_image(ik))
 	mat.set_shader_parameter("uRD", ImageTexture.create_from_image(ir))
+	mat.set_shader_parameter("uYE", Vector4(0, 1000, 185, 190) / Vector4(1, 1, 1, 1))
 	mat.set_shader_parameter("uT0", Vector2(T0)); mat.set_shader_parameter("uTN", Vector2(TN))
 	var arr := []
 	for f in ["n/dg2_dat.webp", "n/n2_codai.webp", "n/n2_co.webp", "n/n2_dat.webp", "n/dg2_gach.webp"]:
@@ -125,85 +124,59 @@ func put(p: String, fr: String, pos: Vector2, flip := false, parent: Node = null
 	(parent if parent else ysort).add_child(sp)
 	return sp
 
-func _scenery() -> void:
+func _pre_gnaw() -> void:     # ô lúa mép chỗ gặt bị gặm: quyết trước để nền tô màu rạ
+	var r3 := RandomNumberGenerator.new(); r3.seed = 11
 	for t in kind:
-		if kind[t] != 1: continue
-		var front: bool = t.x + t.y >= BACK - 1                     # hàng lúa sát sân: bị bầy cào cào ăn lốm đốm
+		if kind[t] != 1 or harvested.has(t): continue
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if harvested.has(t + d):
+				if r3.randf() < 0.45: gnaw[t] = true
+				break
+func _scenery() -> void:
+	# lúa chín chưa gặt trên ô ruộng chưa gặt; mép giáp chỗ gặt bị bầy cào cào gặm (ô trống / còn gốc)
+	for t in kind:
+		if kind[t] != 1 or harvested.has(t): continue
+		var w := tile_pos(t.x, t.y)
+		if w.y < 150 or w.y > 800 or abs(w.x) > 300: continue
 		var jit := Vector2(rng.randf_range(-3, 3), rng.randf_range(-1.5, 1.5))
-		if front and rng.randf() < 0.35:
-			if rng.randf() < 0.4: put("caytrong/lua", "dlua1", tile_pos(t.x, t.y) + jit, rng.randf() < 0.5)
+		if gnaw.has(t):
+			if rng.randf() < 0.5: put("caytrong/lua", "dlua1", w + jit, rng.randf() < 0.5)
 			continue
-		var blk := Vector2i(int(floor(t.x / 3.0)), int(floor((t.y - 1) / 3.0)))
-		var green := posmod(blk.x * 7 + blk.y * 13 + (blk.x * blk.y) % 5, 9) == 0
-		put("caytrong/lua", "dlua2" if green else "dlua3", tile_pos(t.x, t.y) + jit, rng.randf() < 0.5)
-	# 2 bên sân, sát mép màn (không chiếm chỗ đứng giữa): chòi canh trái, rơm phải, đá
-	# đồ dạt sát 2 mép màn, trên bờ cỏ (không chiếm sân đánh)
-	var pa := at(-212, 318); put("congtrinh/choi", "d0", tile_pos(pa.x, pa.y))
-	pa = at(200, 316); put("caylang/rom", "d0", tile_pos(pa.x, pa.y), true)
-	pa = at(232, 326); put("caylang/rom", "d2", tile_pos(pa.x, pa.y))
-	# bụi cỏ, lau, đá dạt 2 mép sân (giữa chừa trống cho boss)
-	var tk := []
-	var tr := 0
-	while tr < 3000 and tk.size() < 18:
-		tr += 1
-		var pp := Vector2(rng.randf_range(-250, 250), rng.randf_range(330, 720))
-		if abs(pp.x) < 150 + (40 if pp.y > 600 else 0): continue
-		var ok2 := true
-		for q in tk:
-			if q.distance_to(pp) < 44.0: ok2 = false; break
-		if not ok2: continue
-		tk.append(pp)
-		var fl2 := rng.randf() < 0.5
-		var r2 := rng.randf()
-		if r2 < 0.30: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), pp, fl2)
-		elif r2 < 0.50: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), pp, fl2)
-		elif r2 < 0.70: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), pp, fl2)
-		elif r2 < 0.86: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), pp, fl2)
-		else: put("trangtri/da_nho" if rng.randf() < 0.5 else "trangtri/da_nho_reu", "d%d" % rng.randi_range(0, 1), pp, fl2)
-	# hoa (godot/hoaco): từng khóm 3-5 cây cùng loại, khóm cách đều, loại xen nhau; ven sân boss, bờ ruộng, quanh sân người chơi
-	var HOA := ["h_cuc_vang", "h_mong_ga", "h_da_yen", "h_cuc_trang", "h_mai_dia", "h_ngu_sac", "h_van_tho", "h_sao_nhai", "h_mong_tay", "h_tim", "h_dua_can", "h_cuc_la_nho", "h_muoi_gio"]
-	var spots := []
-	for i in 6: spots.append(Vector2(-232 + i * 4, 360 + i * 62))     # mép trái sân boss
-	for i in 6: spots.append(Vector2(228 - i * 3, 380 + i * 60))      # mép phải
-	for x5 in [-205, 205]: spots.append(Vector2(x5, 352))   # góc bờ ruộng
-	for i in 10:                                                       # 4 cạnh sân gạch (khúc nằm trong màn)
-		var f2 := (i + 0.5) / 10.0
-		for e3 in [tile_pos(PZ0 - 0.9, PZ0 + f2 * PZN - 0.5), tile_pos(PZ0 + f2 * PZN - 0.5, PZ0 - 0.9), tile_pos(PZ0 + PZN - 0.1, PZ0 + f2 * PZN - 0.5), tile_pos(PZ0 + f2 * PZN - 0.5, PZ0 + PZN - 0.1)]:
-			if abs(e3.x) < 235 and e3.y < 1235: spots.append(e3)
+		put("caytrong/lua", "dlua3", w + jit, rng.randf() < 0.5)
+	# vài bụi lúa sót lẻ loi trên ruộng gặt (không đứng sát chân boss)
+	for t in harvested:
+		var w := tile_pos(t.x, t.y)
+		if abs(w.x) < 150 and abs(w.y - BOSS_Y) < 75: continue
+		if rng.randf() < 0.10: put("caytrong/lua", "dlua1", w + Vector2(rng.randf_range(-8, 8), rng.randf_range(-4, 4)), rng.randf() < 0.5)
+	# bờ cỏ: lau, bụi cỏ, bụi lá mọc thưa không đều + vài khóm hoa nhỏ
+	var HOA := ["h_cuc_vang", "h_mong_ga", "h_da_yen", "h_mai_dia", "h_van_tho", "h_cuc_trang"]
 	var hi := 0
-	for c in spots:
-		if abs(c.x) < 60 and c.y < 400: continue          # chừa chỗ sau đầu boss
-		var nm: String = HOA[hi % HOA.size()]; hi += 1
-		var n3 := rng.randi_range(3, 5)
-		for j in n3:
-			var o := Vector2(rng.randf_range(-16, 16), rng.randf_range(-7, 7))
-			put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], c + o, rng.randf() < 0.5)
-	# rơm rớt + lúa bị gặm quanh chân boss (trên mảng đất)
-	for i in 7:
-		var a2 := rng.randf() * TAU
-		var pp := Vector2(cos(a2) * rng.randf_range(90, 135), BOSS_Y + 6.0 + sin(a2) * rng.randf_range(35, 55))
-		put("caytrong/lua", "dlua1", pp, rng.randf() < 0.5)
-	# lũy tre, dừa, dừa nước sau ruộng (trên màn)
-	var taken := []
-	var tries := 0
-	while tries < 5000:
-		tries += 1
-		var s := rng.randf_range(T0.x, T0.x + TN.x); var h := rng.randf_range(T0.y, T0.y + TN.y)
-		var t := Vector2i(int(floor(s)), int(floor(h)))
-		if kind.get(t, 0) != 3: continue
-		var p := tile_pos(s - 0.5, h - 0.5)
-		if abs(p.x) > 340 or p.y < -60 or p.y > 300: continue
-		var ok := true
-		for q in taken:
-			if q.distance_to(p) < 62.0: ok = false; break
-		if not ok: continue
-		taken.append(p)
-		var fl := rng.randf() < 0.5
+	for i in 40:
+		var f := rng.randf()
+		var sd := rng.randf() < 0.5
+		var tp := tile_pos(RA + 1.0 + rng.randf_range(-0.25, 0.25), RA - 19 + f * 20.0) if sd else tile_pos(RA - 19 + f * 20.0, RA + 1.0 + rng.randf_range(-0.25, 0.25))
+		if abs(tp.x) > 260 or tp.y < 560: continue
+		if abs(tp.x) < 40: continue                      # lối lên ruộng ở giữa
 		var r := rng.randf()
-		if r < 0.45: put("caylang/tre", "d%d" % rng.randi_range(0, 3), p, fl)
-		elif r < 0.72: put("caytrai/dua", ["d00", "d01", "d10", "d11"][rng.randi() % 4], p, fl)
-		elif r < 0.88: put("caylang/duanuoc", "d%d" % rng.randi_range(0, 3), p, fl)
-		else: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), p, fl)
+		if r < 0.25: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+		elif r < 0.50: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+		elif r < 0.70: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+		elif r < 0.85: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), tp, rng.randf() < 0.5)
+		else:
+			var nm: String = HOA[hi % HOA.size()]; hi += 1
+			for j in 2: put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], tp + Vector2(rng.randf_range(-9, 9), rng.randf_range(-4, 4)), rng.randf() < 0.5)
+	# sân phơi: đụn rơm + chòi canh dạt 2 bên, đá nhỏ, bụi lau ở mép màn; giữa sân chừa trống cho người chơi
+	put("caylang/rom", "d0", Vector2(-205, 905))
+	put("caylang/rom", "d2", Vector2(-172, 930), true)
+	put("caylang/rom", "d1", Vector2(-218, 960))
+	put("congtrinh/choi", "d1", Vector2(200, 1010), true)
+	put("caylang/rom", "d3", Vector2(214, 860))
+	put("trangtri/da_nho", "d0", Vector2(-120, 1120))
+	put("trangtri/da_nho_reu", "d1", Vector2(150, 1160), true)
+	for p2 in [Vector2(-232, 1060), Vector2(-226, 1190), Vector2(236, 1130), Vector2(230, 1225), Vector2(-150, 1225), Vector2(120, 1236), Vector2(-240, 800), Vector2(242, 780)]:
+		var r := rng.randf()
+		if r < 0.5: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), p2, rng.randf() < 0.5)
+		else: put("caydai/bui_co", "d%d" % rng.randi_range(0, 3), p2, rng.randf() < 0.5)
 
 # ---------------- màn đánh (bố cục theo ảnh Link gửi 11-24): thanh lượt trên cùng, sân đánh (người chơi trái, boss phải),
 # nửa trên chỉ có boss (Link 11-24), hàng ô kỹ năng giữa màn, bảng ghép hình 7 cột dưới. Kỹ năng / bảng = chỗ giữ.

@@ -21,6 +21,7 @@ uniform vec3 rRG0 = vec3(0.9151, 0.901, 0.87);
 uniform vec3 rRO0 = vec3(-0.0535, -0.0526, -0.0498);
 uniform vec3 rG4 = vec3(1.0221, 0.9761, 0.9666);
 uniform vec3 rO4 = vec3(0.0148, -0.009, -0.0085);
+uniform vec4 uYE = vec4(0.0);   // sân phơi hình bầu dục: tâm x,y, bán kính x,y (thế giới); rx=0 tắt
 varying vec2 wp;
 void vertex() { wp = VERTEX; }
 
@@ -71,7 +72,9 @@ void fragment() {
 	vec2 uv = vec2(u, v);
 	float wv = zone(uv, 3) + (vno(wp / 23.0 + 34.6) * 0.7 + vno(wp / 8.5 + 6.6) * 0.3 - 0.5) * 0.84;
 	vec3 c = mix(cl, cw, softz(wv, pw));
-	float yv = zone(uv, 2) + (vno(wp / 23.0 + 69.2) * 0.9 + vno(wp / 8.5 + 13.2) * 0.1 - 0.5) * 0.6;
+	float yn = (vno(wp / 23.0 + 69.2) * 0.9 + vno(wp / 8.5 + 13.2) * 0.1 - 0.5);
+	float yv = zone(uv, 2) + yn * 0.6;
+	if (uYE.z > 0.0) { vec2 q = (wp - uYE.xy) / uYE.zw; yv = 1.5 - length(q) + yn * 0.28; }
 	c = mix(c, texture(uRA, vec3(wp / tY, 3.0)).rgb * gY + oY, softz(yv, pw));
 	vec2 tf = floor(uv);
 	ivec2 ti = ivec2(tf - uT0);
