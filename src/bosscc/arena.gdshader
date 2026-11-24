@@ -3,7 +3,7 @@ shader_type canvas_item;
 // paddy TH.pad rows + bunds, laid road dg2_dat), driven by a small per-tile map instead of the village data.
 uniform sampler2D uK : filter_nearest;   // RGB tile colour (paddy), A kind*16: 0 lawn, 1 paddy, 2 yard, 3 wild
 uniform sampler2D uRD : filter_nearest;  // R tier, G conn mask, B road kind
-uniform sampler2DArray uRA : repeat_enable, filter_linear_mipmap;   // 0 dg2_dat, 1 codai, 2 co, 3 n2_dat
+uniform sampler2DArray uRA : repeat_enable, filter_linear_mipmap;   // 0 dg2_dat, 1 codai, 2 co, 3 n2_dat, 4 dg2_gach
 uniform vec2 uT0;   // first tile index
 uniform vec2 uTN;   // tiles
 uniform vec3 gY = vec3(1.0173, 1.0118, 1.0097);
@@ -19,6 +19,8 @@ uniform vec3 rG0 = vec3(0.9783, 0.972, 0.9531);
 uniform vec3 rO0 = vec3(-0.0146, -0.016, -0.0197);
 uniform vec3 rRG0 = vec3(0.9151, 0.901, 0.87);
 uniform vec3 rRO0 = vec3(-0.0535, -0.0526, -0.0498);
+uniform vec3 rG4 = vec3(1.0221, 0.9761, 0.9666);
+uniform vec3 rO4 = vec3(0.0148, -0.009, -0.0085);
 varying vec2 wp;
 void vertex() { wp = VERTEX; }
 
@@ -114,9 +116,11 @@ void fragment() {
 			int m = int(rd.g * 255.0 + 0.5);
 			vec2 f = uv - tf;
 			float px = max(fwidth(u), 1e-5) * 0.7;
+			int rk = int(rd.b * 255.0 + 0.5);
 			vec3 tex = texture(uRA, vec3(wp / 112.0, 0.0)).rgb;
+			vec3 sur = rk == 4 ? texture(uRA, vec3(uv / 2.0, 4.0)).rgb * rG4 + rO4 : tex * rG0 + rO0;
 			c = mix(c, tex * rRG0 + rRO0, clamp(-rsd(f, m, 0.5) / px + 0.5, 0.0, 1.0));
-			c = mix(c, tex * rG0 + rO0, clamp(-rsd(f, m, 0.455) / px + 0.5, 0.0, 1.0));
+			c = mix(c, sur, clamp(-rsd(f, m, 0.455) / px + 0.5, 0.0, 1.0));
 		}
 	}
 	COLOR = vec4(clamp(c, 0.0, 1.0), 1.0);

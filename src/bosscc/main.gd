@@ -21,6 +21,7 @@ var boss_sh: Sprite2D
 var cam: Camera2D
 var shots := []
 var board: CanvasLayer
+var fight: CanvasLayer
 var btn: Button
 
 func tile_pos(s: float, h: float) -> Vector2:   # tâm ô (s, h)
@@ -38,6 +39,8 @@ func _ready() -> void:
 	var cp := OS.get_environment("CAMXY")
 	cam.position = Vector2(0, 720) if cp == "" else Vector2(float(cp.split(",")[0]), float(cp.split(",")[1]))
 	_hud()
+	fight.visible = OS.get_environment("BOARD") != ""
+	_toggle()
 	if OS.get_environment("SHOT") != "":
 		_shot(OS.get_environment("SHOT"))
 
@@ -48,7 +51,10 @@ func _shot(path: String) -> void:
 	get_tree().quit()
 
 # ---------------- bố cục ô (v2: boss ở nửa trên, ruộng chữ V sau lưng boss, nửa dưới toàn sân đất cho người đứng)
-const BACK := 19           # ruộng chỉ là dải nền mỏng sau sân: ô có s+h <= BACK
+const BACK := 19
+const BOSS_Y := 562.0     # chân boss (thế giới); màn: trên 200, giữa 720
+const PZ0 := 25
+const PZN := 10               # nửa dưới: sân đất cho người chơi đứng (lúc tắt bảng)           # ruộng chỉ là dải nền mỏng sau sân: ô có s+h <= BACK
 func at(x: float, y: float) -> Vector2:   # toạ độ thế giới -> (s, h) để đặt đồ
 	return Vector2((y / 16.0 - 1.0 + x / 32.0) * 0.5, (y / 16.0 - 1.0 - x / 32.0) * 0.5)
 func _layout() -> void:
@@ -58,12 +64,21 @@ func _layout() -> void:
 			var d := s + h
 			if d >= BACK + 2:                            # sân đánh: cỏ sân, mảng đất dưới chân boss, cỏ dại lấn 2 bên
 				var w := tile_pos(s, h)
-				var e := pow(w.x / 150.0, 2) + pow((w.y - 640.0) / 70.0, 2)
-				k = 2 if e <= 1.0 else (3 if abs(w.x) > 175 and w.y < 760 else 0)
+				var e := pow(w.x / 150.0, 2) + pow((w.y - BOSS_Y - 6.0) / 70.0, 2)
+				k = 2 if e <= 1.0 else (3 if abs(w.x) > 180 and w.y < 700 else 0)
 			elif d == BACK + 1: k = 0                    # bờ cỏ
 			elif d >= BACK - 7: k = 1                    # dải ruộng nền
 			elif d == BACK - 8: k = 0
 			kind[Vector2i(s, h)] = k
+	# sân gạch cho người chơi đứng (nửa dưới), lát dg2_gach như đường làng, 7x7 ô
+	for s in range(PZ0, PZ0 + PZN):
+		for h in range(PZ0, PZ0 + PZN):
+			var m := 0
+			if s < PZ0 + PZN - 1: m |= 1
+			if s > PZ0: m |= 2
+			if h < PZ0 + PZN - 1: m |= 4
+			if h > PZ0: m |= 8
+			road[Vector2i(s, h)] = m
 
 func _ground() -> void:
 	var ik := Image.create(TN.x, TN.y, false, Image.FORMAT_RGBA8)
@@ -75,13 +90,13 @@ func _ground() -> void:
 		c.a = float(kind[t] * 16) / 255.0
 		ik.set_pixelv(q, c)
 		if road.has(t):
-			ir.set_pixelv(q, Color(4.0 / 255.0, float(road[t]) / 255.0, 0.0, 1.0))
+			ir.set_pixelv(q, Color(4.0 / 255.0, float(road[t]) / 255.0, 4.0 / 255.0, 1.0))
 	var mat := ShaderMaterial.new(); mat.shader = load("res://arena.gdshader")
 	mat.set_shader_parameter("uK", ImageTexture.create_from_image(ik))
 	mat.set_shader_parameter("uRD", ImageTexture.create_from_image(ir))
 	mat.set_shader_parameter("uT0", Vector2(T0)); mat.set_shader_parameter("uTN", Vector2(TN))
 	var arr := []
-	for f in ["n/dg2_dat.webp", "n/n2_codai.webp", "n/n2_co.webp", "n/n2_dat.webp"]:
+	for f in ["n/dg2_dat.webp", "n/n2_codai.webp", "n/n2_co.webp", "n/n2_dat.webp", "n/dg2_gach.webp"]:
 		var im := Image.load_from_file("res://" + f); im.convert(Image.FORMAT_RGB8); im.generate_mipmaps(); arr.append(im)
 	var ta := Texture2DArray.new(); ta.create_from_images(arr)
 	mat.set_shader_parameter("uRA", ta)
@@ -129,7 +144,7 @@ func _scenery() -> void:
 	# bụi cỏ, lau, đá dạt 2 mép sân (giữa chừa trống cho boss)
 	var tk := []
 	var tr := 0
-	while tr < 3000 and tk.size() < 26:
+	while tr < 3000 and tk.size() < 18:
 		tr += 1
 		var pp := Vector2(rng.randf_range(-250, 250), rng.randf_range(330, 720))
 		if abs(pp.x) < 150 + (40 if pp.y > 600 else 0): continue
@@ -145,10 +160,28 @@ func _scenery() -> void:
 		elif r2 < 0.70: put("hoaco/bui_la", "dbui_la%d" % rng.randi_range(0, 3), pp, fl2)
 		elif r2 < 0.86: put("hoaco/c_xanh", "dc_xanh%d" % rng.randi_range(0, 3), pp, fl2)
 		else: put("trangtri/da_nho" if rng.randf() < 0.5 else "trangtri/da_nho_reu", "d%d" % rng.randi_range(0, 1), pp, fl2)
+	# hoa (godot/hoaco): từng khóm 3-5 cây cùng loại, khóm cách đều, loại xen nhau; ven sân boss, bờ ruộng, quanh sân người chơi
+	var HOA := ["h_cuc_vang", "h_mong_ga", "h_da_yen", "h_cuc_trang", "h_mai_dia", "h_ngu_sac", "h_van_tho", "h_sao_nhai", "h_mong_tay", "h_tim", "h_dua_can", "h_cuc_la_nho", "h_muoi_gio"]
+	var spots := []
+	for i in 6: spots.append(Vector2(-232 + i * 4, 360 + i * 62))     # mép trái sân boss
+	for i in 6: spots.append(Vector2(228 - i * 3, 380 + i * 60))      # mép phải
+	for x5 in [-205, 205]: spots.append(Vector2(x5, 352))   # góc bờ ruộng
+	for i in 10:                                                       # 4 cạnh sân gạch (khúc nằm trong màn)
+		var f2 := (i + 0.5) / 10.0
+		for e3 in [tile_pos(PZ0 - 0.9, PZ0 + f2 * PZN - 0.5), tile_pos(PZ0 + f2 * PZN - 0.5, PZ0 - 0.9), tile_pos(PZ0 + PZN - 0.1, PZ0 + f2 * PZN - 0.5), tile_pos(PZ0 + f2 * PZN - 0.5, PZ0 + PZN - 0.1)]:
+			if abs(e3.x) < 235 and e3.y < 1235: spots.append(e3)
+	var hi := 0
+	for c in spots:
+		if abs(c.x) < 60 and c.y < 400: continue          # chừa chỗ sau đầu boss
+		var nm: String = HOA[hi % HOA.size()]; hi += 1
+		var n3 := rng.randi_range(3, 5)
+		for j in n3:
+			var o := Vector2(rng.randf_range(-16, 16), rng.randf_range(-7, 7))
+			put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], c + o, rng.randf() < 0.5)
 	# rơm rớt + lúa bị gặm quanh chân boss (trên mảng đất)
 	for i in 7:
 		var a2 := rng.randf() * TAU
-		var pp := Vector2(cos(a2) * rng.randf_range(90, 135), 640 + sin(a2) * rng.randf_range(35, 55))
+		var pp := Vector2(cos(a2) * rng.randf_range(90, 135), BOSS_Y + 6.0 + sin(a2) * rng.randf_range(35, 55))
 		put("caytrong/lua", "dlua1", pp, rng.randf() < 0.5)
 	# lũy tre, dừa, dừa nước sau ruộng (trên màn)
 	var taken := []
@@ -189,6 +222,21 @@ func _bar(p: Vector2, w: float, f: float, col: Color) -> Control:     # thanh m�
 	c.add_child(_box(p, Vector2(w, 8), Color(0.15, 0.08, 0.04, 0.85), 4))
 	c.add_child(_box(p + Vector2(1.5, 1.5), Vector2((w - 3) * f, 5), col, 3))
 	return c
+func _toggle() -> void:        # nút bật/tắt màn đánh (tắt = thấy sân người chơi ở nửa dưới)
+	var W := get_viewport().get_visible_rect().size.x / K
+	var b := Button.new()
+	b.add_theme_font_override("font", font); b.add_theme_font_size_override("font_size", int(14 * K))
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new(); sb.bg_color = Color("#6a9a3a"); sb.set_corner_radius_all(int(12 * K))
+		sb.border_color = Color("#fff6e2"); sb.set_border_width_all(int(2 * K)); b.add_theme_stylebox_override(st, sb)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]: b.add_theme_color_override(c, Color("#fff6e2"))
+	b.size = Vector2(86, 30) * K; b.position = Vector2(W - 98, 62) * K
+	b.text = "Thoát" if fight.visible else "Vô đánh"
+	b.pressed.connect(func():
+		fight.visible = not fight.visible
+		b.text = "Thoát" if fight.visible else "Vô đánh")
+	board.add_child(b)
+
 func _hud() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	K = vs.y / 735.0
@@ -207,6 +255,7 @@ func _hud() -> void:
 	var bx := W * 0.5
 	cl.add_child(_bar(Vector2(bx - 60, 112), 120, 0.72, Color("#a066c9")))
 	var bn := _lb("Chúa Cào Cào", 14); bn.position = Vector2(bx - 46, 90) * K; cl.add_child(bn)
+	var fl3 := CanvasLayer.new(); fl3.layer = 6; add_child(fl3); fight = fl3; cl = fl3
 	# hàng ô kỹ năng
 	var cy := H * 0.505
 	for i in 4:
@@ -240,7 +289,7 @@ func _boss() -> void:
 	boss.face_base = float(OS.get_environment("FACEB")) if OS.get_environment("FACEB") != "" else 0.0
 	boss.auto_play = OS.get_environment("SHOT") == ""
 	boss_vp.add_child(boss)
-	var fp := at(0, 200 + 0.42 * 1040); var feet := tile_pos(fp.x, fp.y)
+	var fp := at(0, BOSS_Y); var feet := tile_pos(fp.x, fp.y)
 	# bóng mềm dưới bụng (như bóng tròn của ảnh cây trong làng)
 	var g := Gradient.new(); g.set_color(0, Color(0, 0, 0, 0.42)); g.set_color(1, Color(0, 0, 0, 0))
 	g.add_point(0.55, Color(0, 0, 0, 0.30))
