@@ -66,16 +66,16 @@ func _layout() -> void:
 			var t := Vector2i(s, h)
 			var w0 := tile_pos(s, h)
 			var ey := pow(w0.x / 185.0, 2) + pow((w0.y - 1000.0) / 190.0, 2)
-			var k := 2 if ey <= 1.0 else (3 if ey > 3.2 else 0)  # sân phơi giữa, cỏ quanh, cỏ dại xa
+			var k := 2 if ey <= 1.0 else 3  # sân phơi giữa, cỏ quanh, cỏ dại xa
 			if s <= RA and h <= RA and s >= RA - 18 and h >= RA - 18: k = 1
-			elif s <= RA + 2 and h <= RA + 2 and s >= RA - 20 and h >= RA - 20: k = 0   # bờ cỏ quanh ruộng (2 ô)
+			elif s <= RA + 2 and h <= RA + 2 and s >= RA - 20 and h >= RA - 20: k = 3   # bờ cỏ quanh ruộng (2 ô, cỏ dại như bờ làng)
 			elif s + h < 2 * RA - 30: k = 3
 			kind[t] = k
 			if k == 1:
 				var w := tile_pos(s, h)
 				var e := pow(w.x / 200.0, 2) + pow((w.y - BOSS_Y) / 125.0, 2)
 				# gặt: quanh boss + dải sát bờ dưới (chừa lối từ sân phơi lên)
-				if e <= 1.0 or (s >= RA - 1 or h >= RA - 1) and w.y > 560.0: harvested[t] = true
+				if e <= 0.92 + (fposmod(sin(s * 12.9898 + h * 78.233) * 43758.5453, 1.0) - 0.5) * 0.4 or (s >= RA - 1 or h >= RA - 1) and w.y > 560.0: harvested[t] = true
 
 func _ground() -> void:
 	var ik := Image.create(TN.x, TN.y, false, Image.FORMAT_RGBA8)
@@ -84,15 +84,21 @@ func _ground() -> void:
 	for t in kind:
 		var q: Vector2i = t - T0
 		var c: Color = pal[rng.randi() % pal.size()]
-		if harvested.has(t) or gnaw.has(t): c = Color8(194, 170, 98)
-		c.a = float(kind[t] * 16) / 255.0
+		var hv: bool = harvested.has(t) or gnaw.has(t)
+		if kind[t] == 1 and not hv:     # ô lúa sát chỗ gặt: nền rạ dưới bụi lúa, không lộ bậc thang xanh theo ô
+			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]:
+				if harvested.has(t + d) or gnaw.has(t + d): hv = true; break
+		if hv: c = Color8(194, 170, 98)
+		c.a = float((4 if hv else kind[t]) * 16) / 255.0
 		ik.set_pixelv(q, c)
 		if road.has(t):
 			ir.set_pixelv(q, Color(4.0 / 255.0, float(road[t]) / 255.0, 4.0 / 255.0, 1.0))
 	var mat := ShaderMaterial.new(); mat.shader = load("res://arena.gdshader")
 	mat.set_shader_parameter("uK", ImageTexture.create_from_image(ik))
 	mat.set_shader_parameter("uRD", ImageTexture.create_from_image(ir))
-	mat.set_shader_parameter("uYE", Vector4(0, 1000, 185, 190) / Vector4(1, 1, 1, 1))
+	mat.set_shader_parameter("uYE", Vector4(0, 1000, 185, 190))
+	mat.set_shader_parameter("uLP0", Vector4(26.6, 31.2, 29.0, 33.6))
+	mat.set_shader_parameter("uLP1", Vector4(31.2, 26.6, 33.6, 29.0))
 	mat.set_shader_parameter("uT0", Vector2(T0)); mat.set_shader_parameter("uTN", Vector2(TN))
 	var arr := []
 	for f in ["n/dg2_dat.webp", "n/n2_codai.webp", "n/n2_co.webp", "n/n2_dat.webp", "n/dg2_gach.webp"]:
@@ -126,11 +132,24 @@ func put(p: String, fr: String, pos: Vector2, flip := false, parent: Node = null
 
 func _pre_gnaw() -> void:     # ô lúa mép chỗ gặt bị gặm: quyết trước để nền tô màu rạ
 	var r3 := RandomNumberGenerator.new(); r3.seed = 11
+	for t in kind.keys():
+		if kind[t] != 1 or harvested.has(t): continue
+		var n := 0
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if kind.get(t + d, 0) == 1 and not harvested.has(t + d): n += 1
+		if n <= 1: harvested[t] = true
 	for t in kind:
 		if kind[t] != 1 or harvested.has(t): continue
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			if harvested.has(t + d):
-				if r3.randf() < 0.45: gnaw[t] = true
+				if r3.randf() < 0.55: gnaw[t] = true
+				break
+	var g1 := gnaw.duplicate()
+	for t in kind:     # vòng thứ 2: gặm lấn sâu chỗ có chỗ không, mép không còn thẳng theo ô
+		if kind[t] != 1 or harvested.has(t) or gnaw.has(t): continue
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if g1.has(t + d):
+				if r3.randf() < 0.35: gnaw[t] = true
 				break
 func _scenery() -> void:
 	# lúa chín chưa gặt trên ô ruộng chưa gặt; mép giáp chỗ gặt bị bầy cào cào gặm (ô trống / còn gốc)
@@ -144,6 +163,15 @@ func _scenery() -> void:
 			continue
 		var sp3 := put("caytrong/lua", "dlua3", w + jit + Vector2(0, rng.randf_range(-2, 2)), rng.randf() < 0.5)
 		sp3.scale *= rng.randf_range(0.82, 1.12)
+	# mép chỗ gặt lởm chởm: bụi lúa chín lấn ra ô gặt, cao thấp lệch nhau
+	for t in harvested:
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n2: Vector2i = t + d
+			if kind.get(n2, 0) == 1 and not harvested.has(n2) and not gnaw.has(n2) and rng.randf() < 0.55:
+				var w2 := tile_pos(t.x + d.x * 0.32 + rng.randf_range(-0.3, 0.3), t.y + d.y * 0.32 + rng.randf_range(-0.3, 0.3))
+				if abs(w2.x) < 140 and abs(w2.y - BOSS_Y) < 70: continue
+				var s4 := put("caytrong/lua", "dlua3" if rng.randf() < 0.7 else "dlua2", w2, rng.randf() < 0.5)
+				s4.scale *= rng.randf_range(0.7, 0.95)
 	# vài bụi lúa sót lẻ loi trên ruộng gặt (không đứng sát chân boss)
 	for t in harvested:
 		var w := tile_pos(t.x, t.y)
@@ -171,13 +199,11 @@ func _scenery() -> void:
 			var nm: String = HOA[hi % HOA.size()]; hi += 1
 			for k2 in 3: put("hoaco/" + nm, "d%s%d" % [nm, rng.randi_range(0, 3)], tp2 + Vector2(rng.randf_range(-12, 12), rng.randf_range(-5, 5)), rng.randf() < 0.5)
 	# sân phơi: đụn rơm + chòi canh dạt 2 bên, đá nhỏ, bụi lau ở mép màn; giữa sân chừa trống cho người chơi
-	put("caylang/rom", "d0", Vector2(-188, 900))
-	put("caylang/rom", "d2", Vector2(-160, 926), true)
-	put("congtrinh/choi", "d1", Vector2(172, 1040), true)
-	put("caylang/rom", "d3", Vector2(196, 880))
-	put("caylang/rom", "d1", Vector2(-176, 1150), true)
-	put("trangtri/da_nho", "d0", Vector2(-120, 1120))
-	put("trangtri/da_nho_reu", "d1", Vector2(150, 1160), true)
+	put("caylang/rom", "d0", Vector2(-205, 875))
+	put("caylang/rom", "d2", Vector2(-176, 900), true)
+	put("caylang/rom", "d3", Vector2(208, 880), true)
+	put("congtrinh/choi", "d1", Vector2(192, 660), true)      # chòi canh đứng trên bờ ruộng
+	put("trangtri/da_nho_reu", "d1", Vector2(182, 912), true)
 	for p2 in [Vector2(-232, 1060), Vector2(-226, 1190), Vector2(236, 1130), Vector2(230, 1225), Vector2(-150, 1225), Vector2(120, 1236), Vector2(-240, 800), Vector2(242, 780)]:
 		var r := rng.randf()
 		if r < 0.5: put("hoaco/c_lau", "dc_lau%d" % rng.randi_range(0, 3), p2, rng.randf() < 0.5)
@@ -269,8 +295,8 @@ func _boss() -> void:
 	boss_vp.add_child(boss)
 	var fp := at(0, BOSS_Y); var feet := tile_pos(fp.x, fp.y)
 	# bóng mềm dưới bụng (như bóng tròn của ảnh cây trong làng)
-	var g := Gradient.new(); g.set_color(0, Color(0, 0, 0, 0.42)); g.set_color(1, Color(0, 0, 0, 0))
-	g.add_point(0.55, Color(0, 0, 0, 0.30))
+	var g := Gradient.new(); g.set_color(0, Color(0.12, 0.08, 0.02, 0.62)); g.set_color(1, Color(0, 0, 0, 0))
+	g.add_point(0.5, Color(0.12, 0.08, 0.02, 0.42))
 	var gt := GradientTexture2D.new(); gt.gradient = g; gt.fill = GradientTexture2D.FILL_RADIAL
 	gt.fill_from = Vector2(0.5, 0.5); gt.fill_to = Vector2(1.0, 0.5); gt.width = 256; gt.height = 256
 	boss_sh = Sprite2D.new(); boss_sh.texture = gt; boss_sh.scale = Vector2(225.0, 74.0) / 256.0
