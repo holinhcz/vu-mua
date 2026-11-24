@@ -36,6 +36,10 @@ for fid, kid in list(KHO.items()) + list(KHO_ONLY.items()):
       pm.save(cur, 'WEBP', quality=90, method=6)
       b += os.path.getsize(cur)
     # ô Kho: cắt sát hình, đặt giữa ô vuông, lề 6%
+    # (11-24 Link "tôm càng gập càng cong xuống để ảnh to lên"): có art/cc_fish/<cá>_kho.webp thì ô Kho lấy bản đó
+    # (tôm càng gập xuống cho hình gọn vuông), câu cá vẫn giữ dáng nằm ngang để vẽ trên dây / quẫy
+    kk = os.path.join(ART, fid + '_kho.webp')
+    if os.path.exists(kk): im = Image.open(kk).convert('RGBA')
     bb = im.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox()
     c = im.crop(bb).convert('RGBa')
     s = 512 * .88 / max(c.width, c.height)

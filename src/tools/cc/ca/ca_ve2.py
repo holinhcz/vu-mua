@@ -66,8 +66,9 @@ def puff(img, px):
 # quạt đuôi xoè, vỏ đầu + chuỷ răng cưa cong lên, mắt có cuống, 2 râu dài vắt ra sau, 3 cặp chân bò có khớp dưới vỏ đầu,
 # chân bơi dưới bụng, 2 càng xanh dài mọc từ dưới vỏ đầu (khúc trên gập xuống, khúc dưới chĩa tới, bàn càng thon + 2 ngón).
 import math
+# (11-24) dáng càng gập này lưu art/cc_fish/tom_kho.webp (chỉ ô Kho); câu cá giữ art/cc_fish/tom.webp càng chĩa ngang (bản trước)
 def tom2():
-    sp = K.Sprite(scale=.58, cx=.03, cy=.56)
+    sp = K.Sprite(scale=.58, cx=.03, cy=.45, h=420)   # khung cao hơn: càng thõng xuống
     hc = K.hexc
     BODY = '#7fa8a6'; BACK = '#3e6266'; BELLY = '#c4d8cc'
     blue = hc('#2f63b8'); blue_d = K.mix(blue, (0, 0, 0, 1), .45); blue_l = hc('#7fb0f0')
@@ -78,34 +79,43 @@ def tom2():
         a = AX[max(0, i - 1)]; b = AX[min(len(AX) - 1, i + 1)]
         dx, dy = a[0] - b[0], a[1] - b[1]; L = math.hypot(dx, dy); return dx / L, dy / L
     def claw(c, far):
-        dy = .022 if far else 0.0; dx = -.03 if far else 0.0
+        # (11-24 Link "càng gập cong xuống để ảnh to lên"): càng không chĩa thẳng tới trước nữa mà vươn ra rồi
+        # gập cong xuống, bàn càng quặp ngược về dưới đầu (dáng chữ C) -> hình gọn gần vuông, ô Kho phóng to hơn ~1/3
+        dy = .035 if far else 0.0; dx = -.1 if far else 0.0
         col = K.mix(blue, (0, 0, 0, 1), .28) if far else blue
         dk = K.mix(col, (0, 0, 0, 1), .45)
-        J = [(.8 + dx, -.045 + dy), (.9 + dx, -.1 + dy), (1.07 + dx, -.085 + dy), (1.2 + dx, -.045 + dy)]
+        J = [(.8 + dx, -.045 + dy), (.95 + dx, -.07 + dy), (1.075 + dx, -.14 + dy), (1.115 + dx, -.255 + dy)]
         W = [.034, .03, .026]
         for i in range(3):
             c.set_line_cap(1)
             c.move_to(*J[i]); c.line_to(*J[i + 1]); c.set_source_rgba(*dk); c.set_line_width(W[i] + .008); c.stroke()
             c.move_to(*J[i]); c.line_to(*J[i + 1]); c.set_source_rgba(*col); c.set_line_width(W[i]); c.stroke()
-        # gai nhỏ dọc khúc dưới (càng tôm càng xanh nhám)
+        # gai nhỏ dọc khúc dưới, phía ngoài (càng tôm càng xanh nhám)
+        ex, ey = J[3][0] - J[2][0], J[3][1] - J[2][1]; el = math.hypot(ex, ey); ex, ey = ex / el, ey / el
+        nx, ny = -ey, ex
+        if nx < 0: nx, ny = -nx, -ny
         for i in range(9):
             t = (i + .5) / 9; p = K.lerp(J[2], J[3], t)
-            c.move_to(p[0], p[1] + .012); c.line_to(p[0] - .008, p[1] + .02)
+            q = (p[0] + nx * .012, p[1] + ny * .012)
+            c.move_to(*q); c.line_to(q[0] + nx * .008 - ex * .008, q[1] + ny * .008 - ey * .008)
         c.set_source_rgba(*dk); c.set_line_width(.003); c.stroke()
         # khớp cam
         for p in J[1:3]:
             c.arc(p[0], p[1], .013, 0, 6.3); c.set_source_rgba(*hc('#e0843a', .9 if not far else .6)); c.fill()
-        # bàn càng thon dài
-        palm = [(1.18 + dx, -.036 + dy), (1.26 + dx, -.008 + dy), (1.36 + dx, .006 + dy), (1.43 + dx, .002 + dy), (1.45 + dx, -.02 + dy),
-                (1.4 + dx, -.045 + dy), (1.3 + dx, -.06 + dy), (1.21 + dx, -.062 + dy)]
+        # bàn càng + 2 ngón: vẽ trong khung riêng gốc ở J[3], trục x theo hướng thõng xuống (hơi ngả ra sau)
+        c.save(); c.translate(*J[3]); c.rotate(math.atan2(-.89, -.45) if not far else math.atan2(-.5, -.86))
+        c.translate(-1.2, .045)
+        palm = [(1.18, -.036), (1.26, -.008), (1.36, .006), (1.43, .002), (1.45, -.02),
+                (1.4, -.045), (1.3, -.06), (1.21, -.062)]
         K.crpath(c, palm, True); c.set_source_rgba(*dk); c.set_line_width(.01); c.stroke_preserve(); c.set_source_rgba(*col); c.fill()
         # 2 ngón hơi há
-        for pts in ([(1.42 + dx, .0 + dy), (1.5 + dx, .012 + dy), (1.58 + dx, .014 + dy), (1.61 + dx, .006 + dy), (1.5 + dx, -.006 + dy), (1.43 + dx, -.014 + dy)],
-                    [(1.43 + dx, -.03 + dy), (1.51 + dx, -.036 + dy), (1.59 + dx, -.026 + dy), (1.615 + dx, -.016 + dy), (1.51 + dx, -.05 + dy), (1.42 + dx, -.046 + dy)]):
+        for pts in ([(1.42, .0), (1.5, .012), (1.58, .014), (1.61, .006), (1.5, -.006), (1.43, -.014)],
+                    [(1.43, -.03), (1.51, -.036), (1.59, -.026), (1.615, -.016), (1.51, -.05), (1.42, -.046)]):
             K.crpath(c, pts, True); c.set_source_rgba(*dk); c.set_line_width(.008); c.stroke_preserve()
             c.set_source_rgba(*K.mix(col, (1, 1, 1, 1), .1)); c.fill()
-        c.arc(1.607 + dx, .008 + dy, .007, 0, 6.3); c.arc(1.612 + dx, -.018 + dy, .007, 0, 6.3)
+        c.arc(1.607, .008, .007, 0, 6.3); c.arc(1.612, -.018, .007, 0, 6.3)
         c.set_source_rgba(*hc('#e0843a', .95)); c.fill()
+        c.restore()
     def legs(c, far):
         a = .55 if far else 1.0; o = .012 if far else 0
         col = hc('#56797e' if far else '#6f9496', a)
