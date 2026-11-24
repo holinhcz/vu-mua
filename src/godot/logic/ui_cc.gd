@@ -135,8 +135,8 @@ func _pan(g, kind: String, arg) -> void:
 		ui.ccpp.on_close = Callable()   # close_all() trong _pan_open đóng bảng cũ: khỏi trả lớp về giữa chừng
 	if _pvis.is_empty() and ui.layer != 110:
 		# lớp giao diện vườn (đang ẩn lúc câu cá) hiện lên TRÊN câu cá, chỉ chừa bảng: mọi thứ khác của vườn ẩn tạm
-		for c in ui.root.get_children():
-			if c is CanvasItem and c.visible:
+		for c in ui.root.get_children() + ui.get_children():   # cả nút nằm thẳng dưới lớp (nút Menu)
+			if c != ui.root and c is CanvasItem and c.visible:
 				_pvis.append(c)
 				c.visible = false
 		_player = ui.layer
