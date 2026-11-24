@@ -743,7 +743,10 @@ def stand_mat(fr, h, a):
     """chỗ đứng cầm lái: tấm ván lót + vạch mòn ngay trước máy"""
     L = h.L
     z = zt_at(h, a) - .2
-    return [M(Box(tuple(fr.w(a * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (2.4, 2.2, .14), 'go2', rr=.1), col=hexc('#6a4a2e'))]
+    o = [M(Box(tuple(fr.w(a * L, 0, z)), (fr.U, fr.Vv, (0, 0, 1)), (3.0, 2.6, .14), 'go2', rr=.1), col=hexc('#c8a870'))]   # chiếu đệm sáng màu
+    for e in (-1.8, 0, 1.8):   # nẹp lót chiếu
+        o.append(M(Box(tuple(fr.w(a * L + e, 0, z + .12)), (fr.U, fr.Vv, (0, 0, 1)), (.12, 2.5, .05), 'go2'), col=hexc('#8a6a40')))
+    return o
 
 
 def deck(fr, h, a0, a1, col=None):
@@ -1014,7 +1017,7 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
         zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
         co, zd = cabin(fr, h, -L * .6, -L * .1, 2.6, 9.5)
         objs += co
-        objs += deck(fr, h, .76, .9) + deck(fr, h, -.93, -.63)   # sạp lái rộng: chỗ đứng cầm lái
+        objs += deck(fr, h, .76, .9) + deck(fr, h, -.93, -.63, hexc('#a87a4a'))   # sạp lái rộng: chỗ đứng cầm lái
         objs += crates(fr, h, -L * .02, L * .5, zf, seed + 3)   # dừng trước cây bẹo .58L
         objs += beo(fr, .58 * CH * TILE, zf)
         objs += engine(fr, h) + stand_mat(fr, h, -.8)
@@ -1030,9 +1033,9 @@ def boat(kind, th=0.0, sgn=1.0, ax='u', mui_on=1, seed=0):
     h = paint(Hull(fr, L, Wb, 5.6, 4.9, 8.0, 5.0, t=.8), cs_['band'], 3.1, trim=cs_['trim'])
     objs.append(h)
     zf = max(float(h.prof(np.array([0.0]))[2][0] + (zt_at(h, 0) - h.prof(np.array([0.0]))[2][0]) * .42), .5)
-    objs += deck(fr, h, .78, .9) + deck(fr, h, -.93, -.72)   # sạp lái: chỗ đứng bán hàng / cầm lái
+    objs += deck(fr, h, .78, .9) + deck(fr, h, -.93, -.6, hexc('#a87a4a'))   # sạp lái: chỗ đứng bán hàng / cầm lái
     if mui_on and cs_['tarp']:
-        objs += awning(fr, h, -L * .86, -L * .5, zf, *cs_['tarp'])   # bạt che chỗ người đứng cầm lái / bán
+        objs += awning(fr, h, -L * .5, -L * .26, zf, *cs_['tarp'])   # bạt che chỗ người đứng cầm lái / bán
     objs += cho_load(fr, h, cs_['id'], zf, Wb, seed + 5)
     objs += beo(fr, .58 * CH * TILE, zf)
     objs += engine(fr, h, ['#c23b2b', '#2e5a8a', '#c23b2b', '#3a6a3a'][seed % 4]) + stand_mat(fr, h, -.8)
