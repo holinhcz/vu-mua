@@ -183,6 +183,7 @@ def face_ab(pos, f):
     a = np.where(f < 0.5, x, y); b = z.copy()
     a = np.where(f > 1.5, x, a)
     b = np.where(f > 1.5, ZL + LR * np.arctan2(z - ZL, np.where(np.abs(y) < 1e-6, 1e-6, y)) * 0 + LR * (math.pi / 2 - np.arctan2(y, np.maximum(z - ZL, 1e-6))) , b)
+    b = np.where(f > 3.5, y, b)                      # 4 = mặt nằm ngang (nắp phẳng, đáy): a=x b=y
     return a, b, x, y, z
 
 
@@ -645,11 +646,199 @@ def gio_tre(S, rng):
     sen_go(S, rng, (0, prof(0.5) + 0.2, 7.2), 3.0)            # thẻ gỗ khắc sen buộc mây trước giỏ
 
 
+# ================================================================== THIẾT KẾ ĐỒ CỔ NAM BỘ (Link chọn 11-25 22:13): bậc 2 hòm gỗ quai mây, 3 tráp sơn mài, 4 hòm thờ thếp vàng
+def box6(S, x0, x1, y0, y1, z0, z1, mat, prm1=0.0, bottom=False, top=True, n=1.0):
+    """hộp 6 mặt cạnh vuông, mỗi mặt đúng mã mặt cho vật liệu (0 trước/sau, 1 hông, 4 ngang)"""
+    nx = max(3, int((x1 - x0) * 1.2 * n)); ny = max(3, int((y1 - y0) * 1.2 * n)); nz = max(3, int((z1 - z0) * 1.2 * n))
+    grid(S, lambda U, V: np.stack([x0 + (x1 - x0) * U, np.full_like(U, y1), z0 + (z1 - z0) * V], -1), nx, nz, mat, (0, prm1, 0))
+    grid(S, lambda U, V: np.stack([x1 - (x1 - x0) * U, np.full_like(U, y0), z0 + (z1 - z0) * V], -1), nx, nz, mat, (0, prm1, 0))
+    grid(S, lambda U, V: np.stack([np.full_like(U, x1), y1 - (y1 - y0) * U, z0 + (z1 - z0) * V], -1), ny, nz, mat, (1, prm1, 0))
+    grid(S, lambda U, V: np.stack([np.full_like(U, x0), y0 + (y1 - y0) * U, z0 + (z1 - z0) * V], -1), ny, nz, mat, (1, prm1, 0))
+    if top: grid(S, lambda U, V: np.stack([x0 + (x1 - x0) * U, y0 + (y1 - y0) * V, np.full_like(U, z1)], -1), nx, ny, mat, (4, prm1, 0))
+    if bottom: grid(S, lambda U, V: np.stack([x0 + (x1 - x0) * V, y0 + (y1 - y0) * U, np.full_like(U, z0)], -1), ny, nx, mat, (4, prm1, 0))
+
+
+def tube_box(S, x0, x1, y0, y1, z0, z1, mat, prm1=0.0):
+    """thân hộp rỗng (4 vách + đáy trong) để mở nắp thấy lòng"""
+    box6(S, x0, x1, y0, y1, z0, z1, mat, prm1, top=False)
+    grid(S, lambda U, V: np.stack([x0 + (x1 - x0) * U, y0 + (y1 - y0) * V, np.full_like(U, z0 + 0.8)], -1), 10, 8, mat, (4, prm1, 0))
+
+
+def leg_quy(S, x, y, sx, sy, h, mat):
+    """chân quỳ: khúc cong ra ngoài rồi cuộn mũi (kiểu chân tráp, chân sập)"""
+    pts = [(x + sx * 0.9 * math.sin(t) ** 2, y + sy * 0.9 * math.sin(t) ** 2, h * (1 - t / (math.pi / 2))) for t in np.linspace(0, math.pi / 2, 8)]
+    for i, (p0, p1) in enumerate(zip(pts, pts[1:])):
+        tb(S, p0, p1, 0.95 - 0.06 * i, mat, nr=8, nl=2)
+    ell(S, (x + sx * 1.0, y + sy * 1.0, 0.45), 0.8, 0.8, 0.5, mat)
+
+
+def hom_go(S, rng):
+    """BẬC 2: hòm gỗ tràm nắp phẳng chờm ra, ván dọc ghép mộng, 4 cột góc vuông, chân đế cao, quai mây bện 2 hông, khoá đồng lá sen"""
+    global LA, LB, ZL, LR, WOODC
+    WOODC = '#94643c'
+    LA, LB, ZL = 14.5, 9.0, 13.5; LR = LB
+    K.FOOT = ((C0 - 16) / T, (C0 + 16) / T, (C0 - 10.5) / T, (C0 + 10.5) / T, 0.05)
+    MV = newmat(mat_van); MV2 = newmat(mat_son('#6e4428')); DONG = newmat(mat_kl('#c8964a', hammer=False))
+    SAT = newmat(mat_kl('#55585e'))
+    z0 = 2.4
+    obx(S, (-LA - 0.6, -LB - 0.6, 0.0), (2 * (LA + 0.6), 0, 0), (0, 2 * (LB + 0.6), 0), (0, 0, 1.0), MV2)       # đế
+    for sx in (1, -1):
+        for sy in (1, -1):
+            obx(S, (sx * (LA - 1.4) - 0.0 if sx > 0 else -LA, sy * (LB - 1.4) if sy > 0 else -LB, 1.0), (1.4, 0, 0), (0, 1.4, 0), (0, 0, z0 - 1.0), MV2)
+    tube_box(S, -LA, LA, -LB, LB, z0, ZL, MV)
+    for sx in (1, -1):                                           # 4 cột góc vuông lồi ra
+        for sy in (1, -1):
+            obx(S, (sx * LA - (0.8 if sx > 0 else 0.4), sy * LB - (0.8 if sy > 0 else 0.4), z0 - 0.2), (1.2, 0, 0), (0, 1.2, 0), (0, 0, ZL - z0 + 0.2), MV2)
+    for zz in (z0 + 0.6, ZL - 0.7):                              # nẹp ngang trên dưới
+        for sy in (1, -1): bar(S, (-LA, sy * LB, zz), (LA, sy * LB, zz), (0, sy, 0), 0.6, 0.35, MV2)
+        for sx in (1, -1): bar(S, (sx * LA, -LB, zz), (sx * LA, LB, zz), (sx, 0, 0), 0.6, 0.35, MV2)
+    box6(S, -LA - 1.0, LA + 1.0, -LB - 1.0, LB + 1.0, ZL + 0.02, ZL + 1.5, MV, bottom=True)       # nắp phẳng chờm
+    box6(S, -LA + 0.6, LA - 0.6, -LB + 0.6, LB - 0.6, ZL + 1.5, ZL + 2.3, MV)                    # gờ nổi giữa nắp
+    for sx in (1, -1):                                           # bọc góc đồng trên nắp
+        for sy in (1, -1):
+            obx(S, (sx * (LA + 1.05) - (2.4 if sx > 0 else 0), sy * (LB + 1.05) - (2.4 if sy > 0 else 0), ZL + 1.52), (2.4, 0, 0), (0, 2.4, 0), (0, 0, 0.12), DONG)
+    # khoá đồng lá sen: tấm lá sen tròn có gân + tai khoá
+    c = (0, LB + 0.4, ZL - 2.6)
+    disc(S, Pl(0, LB + 0.45, ZL - 2.6), rotv((0, 1, 0)), 2.6, DONG, nr=4, na=36)
+    tube(S, Pl(0, LB + 0.0, ZL - 2.6), Pl(0, LB + 0.45, ZL - 2.6), 2.6, DONG, nr=36, nl=2)
+    for k in range(9):
+        a = 2 * math.pi * k / 9 + 0.35
+        tube(S, Pl(0, LB + 0.6, ZL - 2.6), Pl(2.3 * math.cos(a), LB + 0.6, ZL - 2.6 + 2.3 * math.sin(a)), 0.14, DONG, nr=4, nl=2)
+    sen_logo(S, rng, (0, LB + 0.5, ZL - 2.3), 1.5, DONG)
+    obx(S, (-0.7, LB + 1.0, ZL - 1.0), (1.4, 0, 0), (0, 0.45, 0), (0, 0, 2.6), DONG)
+    keyhole_ = flat('#2a2018'); ell(S, (0, LB + 0.95, ZL - 4.3), 0.3, 0.1, 0.45, keyhole_)
+    for sx in (1, -1):                                           # quai mây bện 2 hông (3 sợi xoắn)
+        for j in range(3):
+            pts = [(sx * (LA + 1.0 + 1.9 * math.sin(t)), (3.0 + 0.25 * j) * math.cos(t), ZL - 4.0 + 0.3 * math.sin(t * 6 + j * 2.1)) for t in np.linspace(0, math.pi, 18)]
+            for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.32, M_RATTAN, nr=5, nl=2)
+        for sy in (1, -1):
+            for k in range(4): ell(S, (sx * (LA + 1.0), sy * 3.1, ZL - 4.0 - 0.6 + 0.4 * k), 0.5, 0.6, 0.3, M_ROPE, nu=4, nv_=8)
+    for sx in (1, -1):                                           # đinh đồng dọc cột góc
+        for sy in (1, -1):
+            for zz in np.linspace(z0 + 1.5, ZL - 1.5, 4): ell(S, (sx * (LA + 0.42), sy * (LB + 0.42), zz), 0.3, 0.3, 0.3, DONG)
+
+
+def trap(S, rng):
+    """BẬC 3: tráp sơn mài đựng trầu: hộp dẹt rộng, nắp chồng 2 tầng, sơn mài đen bóng mờ cẩn xà cừ trên nắp, viền thếp vàng, 4 chân quỳ, sen vàng giữa mặt trước"""
+    global LA, LB, ZL, LR
+    LA, LB, ZL = 15.0, 10.5, 9.5; LR = LB
+    K.FOOT = ((C0 - 16) / T, (C0 + 16) / T, (C0 - 11.5) / T, (C0 + 11.5) / T, 0.05)
+    DEN = newmat(mat_son('#2a1c16')); XC = newmat(mat_xacu('#2a1c16')); DO = newmat(mat_son('#8a2a1e'))
+    VF = newmat(mat_kl('#c0903a', hammer=False, streak=0.02, leaf=True)); VB = newmat(mat_kl('#e8b84a', hammer=False, streak=0.02, leaf=True))
+    z0 = 2.6
+    for sx in (1, -1):
+        for sy in (1, -1): leg_quy(S, sx * (LA - 1.6), sy * (LB - 1.6), sx, sy, z0 + 0.3, VF)
+    box6(S, -LA - 0.5, LA + 0.5, -LB - 0.5, LB + 0.5, z0 - 0.6, z0 + 0.4, DEN, bottom=True)
+    tube_box(S, -LA, LA, -LB, LB, z0 + 0.4, ZL, DEN)
+    for zz in (z0 + 0.4, ZL - 0.1):
+        for sy in (1, -1): bar(S, (-LA, sy * LB, zz), (LA, sy * LB, zz), (0, sy, 0), 0.25, 0.15, VB)
+        for sx in (1, -1): bar(S, (sx * LA, -LB, zz), (sx * LA, LB, zz), (sx, 0, 0), 0.25, 0.15, VB)
+    for sy in (1, -1):                                          # ô sơn son đỏ có khung vàng trên thân
+        for (u0, u1) in ((-LA + 1.2, -3.6), (3.6, LA - 1.2)):
+            y = sy * LB
+            grid(S, lambda U, V, u0=u0, u1=u1, y=y: np.stack([u0 + (u1 - u0) * U, np.full_like(U, y + 0.06 * (1 if y > 0 else -1)), (z0 + 1.6) + (ZL - z0 - 3.0) * V], -1), 20, 8, DO, (0, 0, 0), flip=(sy < 0))
+            pts = [(u0, y, z0 + 1.6), (u1, y, z0 + 1.6), (u1, y, ZL - 1.4), (u0, y, ZL - 1.4), (u0, y, z0 + 1.6)]
+            for a_, b_ in zip(pts, pts[1:]): bar(S, a_, b_, (0, sy, 0), 0.2, 0.2, VF)
+    box6(S, -LA - 0.6, LA + 0.6, -LB - 0.6, LB + 0.6, ZL + 0.02, ZL + 1.6, DEN, bottom=True)     # nắp chồng tầng 1
+    box6(S, -LA + 1.0, LA - 1.0, -LB + 1.0, LB - 1.0, ZL + 1.6, ZL + 2.6, XC, prm1=1.0)           # tầng 2: mặt cẩn xà cừ
+    for zz, e in ((ZL + 1.6, 0.6), (ZL + 2.6, -1.0), (ZL + 0.05, 0.6)):
+        for sy in (1, -1): bar(S, (-LA - e, sy * (LB + e), zz), (LA + e, sy * (LB + e), zz), (0, sy, 0), 0.22, 0.15, VB)
+        for sx in (1, -1): bar(S, (sx * (LA + e), -LB - e, zz), (sx * (LA + e), LB + e, zz), (sx, 0, 0), 0.22, 0.15, VB)
+    sen_logo(S, rng, (0, LB + 0.3, (z0 + ZL) / 2 + 0.4), 2.2, VB, mplate=DO, mring=VB, mgem=flat('#d0302a'), plate_r=3.0)
+    for sx in (1, -1):                                          # bọc góc vàng hình lá đề trên nắp
+        for sy in (1, -1):
+            ell(S, (sx * (LA + 0.1), sy * (LB + 0.1), ZL + 0.8), 1.3, 1.3, 0.95, VB)
+
+
+def hom_tho(S, rng):
+    """BẬC 4: hòm thờ thếp vàng: đế 3 tầng thót eo, chân quỳ cuộn, thân sơn son, mặt trước khung chạm lộng dây sen thếp vàng, nắp mái cong 2 tầng, 4 góc đầu đao cuộn, đỉnh búp sen có ngọc"""
+    global LA, LB, ZL, LR
+    LA, LB, ZL = 14.0, 9.5, 15.0; LR = LB
+    K.FOOT = ((C0 - 16.5) / T, (C0 + 16.5) / T, (C0 - 12) / T, (C0 + 12) / T, 0.05)
+    SON = newmat(mat_son('#b02a22')); SON2 = newmat(mat_son('#86201a'))
+    VF = newmat(mat_kl('#c8962e', hammer=False, streak=0.02, leaf=True)); VB = newmat(mat_kl('#f0c24e', hammer=False, streak=0.02, leaf=True))
+    JD = paint('#2e9c70'); PK = paint('#eeacbc')
+    for sx in (1, -1):
+        for sy in (1, -1): leg_quy(S, sx * (LA + 0.4), sy * (LB + 0.4), sx, sy, 1.9, VB)
+    box6(S, -LA - 1.6, LA + 1.6, -LB - 1.6, LB + 1.6, 1.4, 2.4, VF, bottom=True)                 # đế tầng 1
+    box6(S, -LA - 0.6, LA + 0.6, -LB - 0.6, LB + 0.6, 2.4, 3.2, SON2)                           # eo thót
+    box6(S, -LA - 1.1, LA + 1.1, -LB - 1.1, LB + 1.1, 3.2, 4.0, VF)                             # tầng 3
+    z0 = 4.0
+    tube_box(S, -LA, LA, -LB, LB, z0, ZL, SON)
+    for sx in (1, -1):                                          # 4 cột góc vàng
+        for sy in (1, -1):
+            obx(S, (sx * LA - (0.9 if sx > 0 else 0.4), sy * LB - (0.9 if sy > 0 else 0.4), z0), (1.3, 0, 0), (0, 1.3, 0), (0, 0, ZL - z0), VF)
+    # mặt trước: khung chạm lộng (thanh vàng ô vuông chéo + dây sen nổi), hông: ô khung
+    for sy in (1, -1):
+        y = sy * LB; u0, u1, v0, v1 = -LA + 1.6, LA - 1.6, z0 + 1.2, ZL - 1.6
+        pts = [(u0, y, v0), (u1, y, v0), (u1, y, v1), (u0, y, v1), (u0, y, v0)]
+        for a_, b_ in zip(pts, pts[1:]): bar(S, a_, b_, (0, sy, 0), 0.45, 0.5, VF)
+    u0, u1, v0, v1 = -LA + 1.6, LA - 1.6, z0 + 1.2, ZL - 1.6
+    for k in range(-6, 7):                                      # lưới hoa chanh chéo (chạm lộng)
+        x = k * 2.4
+        for d in (1, -1):
+            a0 = np.array([x, LB, v0]); dd = np.array([d * 1.0, 0, 1.0]) / math.sqrt(2)
+            ts = []
+            for t in np.linspace(0, 20, 2):
+                pass
+            p0 = a0.copy(); p1 = a0 + dd * (v1 - v0) * math.sqrt(2)
+            # cắt vào khung
+            if p1[0] > u1: p1 = p0 + dd * ((u1 - p0[0]) / dd[0])
+            if p1[0] < u0: p1 = p0 + dd * ((u0 - p0[0]) / dd[0])
+            if p0[0] < u0 or p0[0] > u1: continue
+            if np.linalg.norm(p1 - p0) > 0.5: bar(S, tuple(p0), tuple(p1), (0, 1, 0), 0.16, 0.25, VF)
+    vine(S, rng, Ffront, [(xx, (v0 + v1) / 2 + 2.2 * math.sin(xx * 0.55)) for xx in np.linspace(u0 + 0.8, u1 - 0.8, 9)], 0.32, VB, JD)
+    for xx in (-8.5, 8.5): flower(S, rng, Ffront, xx, (v0 + v1) / 2 + 0.6, 1.4, PK, VB)
+    sen_logo(S, rng, (0, LB + 0.6, (v0 + v1) / 2), 2.8, VB, mplate=SON2, mring=VB, mgem=flat('#d81c3a'), plate_r=3.8)
+    for sx in (1, -1):
+        y0 = LB - 1.2; pts = [(sx * LA, -y0, v0), (sx * LA, y0, v0), (sx * LA, y0, v1), (sx * LA, -y0, v1), (sx * LA, -y0, v0)]
+        for a_, b_ in zip(pts, pts[1:]): bar(S, a_, b_, (sx, 0, 0), 0.4, 0.45, VF)
+        flower(S, rng, lambda u, v, lift=0.0, sx=sx: (np.array([sx * (LA + lift), -u * sx, v]), np.array([0, -sx * 1.0, 0]), np.array([0, 0, 1.0]), np.array([sx * 1.0, 0, 0])), 0, (v0 + v1) / 2, 1.6, PK, VB)
+    for zz, e, mt in ((ZL - 0.8, 0.6, VF), (ZL - 0.1, 1.0, VB)):     # gờ miệng 2 lớp
+        rim_ring(S, zz - 0.7, zz, e, mt, w=1.2)
+    # nắp mái cong: tầng 1 hộp dẹt, tầng 2 mái cong võng xuống 4 phía, đầu đao cuộn ở 4 góc
+    box6(S, -LA - 1.4, LA + 1.4, -LB - 1.4, LB + 1.4, ZL + 0.02, ZL + 1.4, VF, bottom=True)
+    H2 = 3.6; ex, ey = LA + 1.0, LB + 1.0
+    def roof(U, V):
+        x = -ex + 2 * ex * U; y = -ey + 2 * ey * V
+        m = np.maximum(np.abs(x) / ex, np.abs(y) / ey)
+        z = ZL + 1.4 + H2 * (1 - m) ** 1.7 + 1.2 * (np.abs(x) / ex * np.abs(y) / ey) ** 4
+        return np.stack([x, y, z], -1)
+    grid(S, roof, 60, 44, SON, (4, 0, 0), flip=True)
+    for sx in (1, -1):                                          # đầu đao cuộn vàng 4 góc
+        for sy in (1, -1):
+            pts = [(sx * (ex + 0.3 * math.sin(t)), sy * (ey + 0.3 * math.sin(t)), ZL + 1.4 + 1.6 * t / math.pi + 0.6 * math.sin(t)) for t in np.linspace(0, math.pi, 8)]
+            for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.5, VB, nr=6, nl=2)
+            ell(S, (sx * ex, sy * ey, ZL + 3.2), 0.7, 0.7, 0.7, VB)
+    for sy in (1, -1):                                          # sống mái vàng 4 cạnh xuôi
+        pass
+    for sx in (1, -1):
+        for sy in (1, -1):
+            pass
+    topz = ZL + 1.4 + H2 - 0.2                                  # đỉnh búp sen + ngọc
+    for sy in (1, -1):                                          # diềm mái vàng chạy quanh mép
+        bar(S, (-ex, sy * ey, ZL + 1.45), (ex, sy * ey, ZL + 1.45), (0, sy, 0), 0.3, 0.3, VB)
+    for sx in (1, -1):
+        bar(S, (sx * ex, -ey, ZL + 1.45), (sx * ex, ey, ZL + 1.45), (sx, 0, 0), 0.3, 0.3, VB)
+    tb(S, (0, 0, topz - 0.3), (0, 0, topz + 0.8), 1.4, VF, nr=14, nl=2, cap=True)
+    for k in range(8):
+        a = 2 * math.pi * k / 8; d = np.array([math.cos(a), math.sin(a), 0.0])
+        ax_ = np.array([0, 0, 1.0]) + d * 0.45; ax_ = ax_ / np.linalg.norm(ax_)
+        ell(S, tuple(np.array([0, 0, topz + 1.9]) + d * 0.85), 1.7, 0.7, 0.3, VB, axes=(ax_, np.cross(ax_, d), d))
+    ell(S, (0, 0, topz + 3.0), 0.75, 0.75, 1.0, flat('#d81c3a'))
+
+
 def build(level, rng, with_props=True):
     global LA, LB, ZL, LR, WOODC
     S = Scene(); K.LIGHTS2.clear(); K.GLOWS[:] = []; K.GROUND_GLOW[:] = []
     if TIER == 11:
         gio_tre(S, rng)
+    elif TIER == 12:
+        hom_go(S, rng)
+    elif TIER == 13:
+        trap(S, rng)
+    elif TIER == 14:
+        hom_tho(S, rng)
     elif TIER == 1:
         LA, LB, ZL = 14.0, 9.0, 13.0; LR = LB
         K.FOOT = ((C0 - 15) / T, (C0 + 15) / T, (C0 - 10) / T, (C0 + 10) / T, 0.05)
