@@ -2,7 +2,8 @@
 # LỤC BÌNH (11-25 Link: ô Kho lục bình chưa có hình thật). Cùng kiểu tô từng điểm ảnh của mồi/cá (moi_ve.py),
 # sáng trên-trái, mờ không bóng loáng, viền mảnh màu tối của chỗ đó. Màu khớp lục bình trên bản đồ (thuysinh/luc_binh):
 # lá tròn xanh tươi có gân cong, cuống phình bọng xanh nhạt, chùm hoa tím nhạt (cánh trên có đốm tím đậm + chấm vàng),
-# rễ chùm tím nâu sẫm lông tơ thả xuống (cây vớt lên khỏi nước).
+# 11-25 Link: ICON thì không vẽ sáng tối 3D, viền mảnh, không vẽ rễ -> Flat: tô màu thật phẳng (không đổ sáng, không bóng
+# tiếp xúc), chi tiết chỉ bằng màu (gân lá, đốm hoa), viền mảnh màu tối của chỗ đó.
 # python3 ve_lucbinh.py OUTDIR   -> OUTDIR/luc_binh.webp (+ .png)
 import os, sys, math
 os.environ.setdefault('MOI_SC', '3.6')      # 6px chuẩn (như cá RES 3.6)
@@ -65,9 +66,8 @@ def petiole(P, a, b, r, seed):
     pts = bez(a, (a[0] + (mx - a[0]) * .6, a[1] + (my - a[1]) * .2 + 8), (mx + (b[0] - mx) * .4, my), b, 14)
     rad = [r * (.45 + .6 * math.sin(math.pi * min(1, t * 1.15)) ** .8) for t in np.linspace(0, 1, len(pts))]
     m, h, s, sd = tube(pts, rad)
-    base = lerpc(hexc('#a8d062'), hexc('#7cb444'), sstep(-1, 1, sd)) * (1 + .05 * noise(1.5, seed))[..., None]
+    base = np.broadcast_to(hexc('#9cc858'), sd.shape + (3,)).copy()
     stri = (.5 + .5 * np.cos(sd * 9)) ** 6                       # sọc dọc mảnh trên bọng
-    base = base * (1 - .03 * stri)[..., None]
     c, _ = P.shade(h, base, amb=.44, dif=.74, spec=.06, sp_pow=20)
     P.put(m, c, edge=hexc('#3e6a1e'), contact=.3, cblur=4)
 
@@ -83,9 +83,8 @@ def leaf(P, cx, cy, rx, ry, rot, tone=1.0, seed=0):
     rr = np.hypot(u - bu, v - bv)
     vein = (.5 + .5 * np.cos(ang * 17)) ** 18 * sstep(6, 26, rr) * (1 - sstep(.8, 1, np.hypot(u / rx, v / ry)))
     h = h - vein * .1
-    base = lerpc(hexc('#5aac3a'), hexc('#3e8a2a'), sstep(-.6, 1, v / ry)) * tone
-    base = lerpc(base, hexc('#86c450'), sstep(-1, -.2, -v / ry) * .25)
-    base = lerpc(base, hexc('#7cbc50'), vein * .18) * (1 + .05 * noise(2.5, seed))[..., None]
+    base = np.broadcast_to(hexc('#4ea436') * tone, v.shape + (3,)).copy()
+    base = lerpc(base, hexc('#82c254'), vein * .5)
     col, _ = P.shade(h, base, amb=.44, dif=.74, spec=.07, sp_pow=18)
     P.put(m, col, edge=hexc('#245414'), contact=.35, cblur=5)
 
@@ -99,14 +98,13 @@ def flower(P, cx, cy, R, rot, seed, rs):
         px, py = cx + math.cos(a) * rr * .55, cy + math.sin(a) * rr * .55
         m, h = ellipse(px, py, rr * .55, rr * .36, a, hk=.4)
         d = np.hypot((X - cx), (Y - cy)) / rr
-        base = lerpc(hexc('#a690dc'), hexc('#c8bcf0'), sstep(.2, 1.0, d))
+        base = lerpc(hexc('#a892e0'), hexc('#a892e0'), d)
         u = (X - cx) * math.cos(a) + (Y - cy) * math.sin(a)
         vv = -(X - cx) * math.sin(a) + (Y - cy) * math.cos(a)
         vein = (.5 + .5 * np.cos(vv / (rr * .07))) ** 8 * sstep(.2, .9, d) * .4
-        base = base * (1 - .08 * vein)[..., None]
         if top:
             bl, _ = ellipse(cx + math.cos(a) * rr * .5, cy + math.sin(a) * rr * .5, rr * .26, rr * .2, a)
-            base = lerpc(base, hexc('#5a3aa0'), ndi.gaussian_filter(bl, 1.2 * PX) * .9)
+            base = lerpc(base, hexc('#5a3aa0'), bl)
             ye, _ = ellipse(cx + math.cos(a) * rr * .5, cy + math.sin(a) * rr * .5, rr * .1, rr * .08, a)
             base = lerpc(base, hexc('#f2cc40'), ye)
         col, _ = P.shade(h, base, amb=.5, dif=.62, spec=.04)
@@ -116,10 +114,18 @@ def flower(P, cx, cy, R, rot, seed, rs):
     P.put(m, c, edge=hexc('#8a7030'), line=.3, lw=.6, contact=.15, cblur=2)
 
 
+class Flat(Pic):
+    """icon phẳng: màu thật, không sáng tối, không bóng tiếp xúc, nét mép mảnh"""
+    def shade(self, h, base, **k):
+        return np.clip(np.broadcast_to(base, h.shape + (3,)), 0, 1).astype(np.float32), None
+
+    def put(self, m, col, edge=None, line=.55, lw=1.3, contact=.38, cblur=7.0):
+        super().put(m, col, edge=edge, line=min(line, .7), lw=.75, contact=0)
+
+
 def luc_binh():
-    P = Pic()
+    P = Flat()
     rs = np.random.RandomState(7)
-    roots(P, rs)
     # lá + cuống phía sau (cuống phình bọng lộ rõ, lá tròn ở đầu cuống)
     def plant(a, b, r, rx, ry, tone, seed):
         dx, dy = b[0] - a[0], b[1] - a[1]; L = math.hypot(dx, dy); dx, dy = dx / L, dy / L
@@ -130,7 +136,7 @@ def luc_binh():
     plant((268, 346), (330, 230), 16, 35, 43, .92, 12)
     # cuống hoa + chùm hoa
     m, h, s, sd = tube([(256, 340), (258, 260), (262, 180), (266, 110)], [7, 6.5, 6, 5])
-    c, _ = P.shade(h, lerpc(hexc('#9ccc5a'), hexc('#6aa83a'), sstep(-1, 1, sd)), amb=.44, dif=.72)
+    c, _ = P.shade(h, hexc('#86bc4c'))
     P.put(m, c, edge=hexc('#3e6a1e'), contact=.25, cblur=4)
     fl = [(270, 62, 24, .1), (240, 84, 26, -.25), (298, 90, 26, .3), (258, 116, 28, -.05), (288, 138, 27, .2),
           (228, 132, 25, -.4), (252, 160, 27, .05), (304, 176, 24, .35)]
@@ -142,7 +148,7 @@ def luc_binh():
     # 2 bọng giữa phía trước (gốc), lá nhỏ ngả ra trước
     petiole(P, (250, 356), (234, 300), 20, 31)
     plant((262, 356), (282, 296), 19, 28, 34, 1.03, 32)
-    im = P.save('luc_binh_tmp', ow=2.2)
+    im = P.save('luc_binh_tmp', ow=1.0)
     os.replace(os.path.join(OUTDIR, 'ic-luc_binh_tmp.webp'), os.path.join(OUTDIR, 'luc_binh.webp'))
     im.save(os.path.join(OUTDIR, 'luc_binh.png'))
 
