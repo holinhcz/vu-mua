@@ -88,7 +88,7 @@ class Boat extends Node2D:
 		var mo: bool = v.G.motion_off()
 		if offers.size():   # món treo cây bẹo: bong bóng chung (Bong) treo dây mảnh ở 2 móc đầu đòn ngang + nút giữa sào; đã mua thì mờ
 			var hk := [_x(C * 0.58, -0.42, 73), _x(C * 0.58, 0.42, 73), _x(C * 0.58, 0, 48)]
-			var bs: float = v.farm.sign_le() * 0.8 / sc
+			var bs: float = v.farm.sign_le() / sc   # đúng cỡ bong bóng chung (farm._bub_sig: k = sign_le)
 			for i in offers.size():
 				var o: Dictionary = offers[i]
 				var F: Vector2 = hk[i % 3]
