@@ -5,7 +5,7 @@ const ZF := 40.0   # bờ bên kia cách 40 đơn vị
 const HOUR_PER_SEC := 1.0 / 30.0   # 30 giây là một giờ trong game, một ngày 12 phút
 
 const FISH := [
-	{"id": "ro", "name": "Cá rô đồng", "rar": 1, "w": [.08, .35], "cm": [12, 22], "base": 8, "kg": 60, "zone": [5, 14], "time": {"d": 1, "dd": 1.2, "n": .3}, "bait": {"trun": 1, "tep": .8, "com": .4}, "bite": "nhap", "win": .72, "P": .38, "st": 3, "jump": .1, "vis": .2,
+	{"id": "ro", "name": "Cá rô đồng", "rar": 1, "w": [.08, .35], "cm": [12, 22], "base": 8, "kg": 60, "zone": [5, 14], "time": {"d": 1, "dd": 1.2, "n": .3}, "bait": {"trun": 1, "tep": .8, "oc": .5, "com": .4}, "bite": "nhap", "win": .72, "P": .38, "st": 3, "jump": .1, "vis": .2,
 		"desc": "Rô đồng mùa nước nổi, chiên giòn chấm nước mắm me là hết sẩy."},
 	{"id": "sac", "name": "Cá sặc rằn", "rar": 1, "w": [.06, .3], "cm": [10, 20], "base": 6, "kg": 50, "zone": [5, 13], "time": {"d": 1, "dd": .8, "n": .2}, "bait": {"com": 1, "trun": .6}, "bite": "nhap", "win": .78, "P": .26, "st": 2.5, "jump": .05, "vis": .2,
 		"desc": "Phơi một nắng làm khô cá sặc, nướng lên thơm cả xóm."},
@@ -15,15 +15,15 @@ const FISH := [
 		"desc": "Mè vinh kho mía, xương nhiều mà ngọt thịt."},
 	{"id": "chot", "name": "Cá chốt", "rar": 1, "w": [.05, .2], "cm": [10, 18], "base": 8, "kg": 70, "zone": [6, 22], "time": {"d": .4, "dd": 1.2, "n": 1}, "bait": {"trun": 1, "chua": .8}, "bite": "nam", "win": .82, "P": .3, "st": 2.5, "jump": 0, "vis": .2,
 		"desc": "Cá chốt kho tộ, ăn với cơm nóng là ăn hoài."},
-	{"id": "tre", "name": "Cá trê vàng", "rar": 2, "w": [.2, 1], "cm": [20, 38], "base": 20, "kg": 60, "zone": [5, 13], "time": {"d": .2, "dd": .8, "n": 1}, "bait": {"chua": 1, "trun": .8}, "bite": "nam", "win": .9, "P": .56, "st": 4, "jump": 0, "vis": .32,
+	{"id": "tre", "name": "Cá trê vàng", "rar": 2, "w": [.2, 1], "cm": [20, 38], "base": 20, "kg": 60, "zone": [5, 13], "time": {"d": .2, "dd": .8, "n": 1}, "bait": {"chua": 1, "oc": .9, "trun": .8}, "bite": "nam", "win": .9, "P": .56, "st": 4, "jump": 0, "vis": .32,
 		"desc": "Trê vàng nướng chấm mắm gừng, dân nhậu mê."},
 	{"id": "tom", "name": "Tôm càng xanh", "rar": 2, "w": [.06, .3], "cm": [15, 30], "base": 25, "kg": 200, "zone": [5, 15], "time": {"d": .3, "dd": 1, "n": 1}, "bait": {"trun": 1, "com": .5, "chua": .4}, "bite": "nam", "win": 1.0, "P": .3, "st": 2.5, "jump": 0, "vis": .3,
 		"desc": "Tôm càng xanh nướng muối ớt, càng xanh lè như ngọc."},
-	{"id": "loc", "name": "Cá lóc đồng", "rar": 2, "w": [.4, 2.5], "cm": [30, 60], "base": 30, "kg": 70, "zone": [5, 15], "cover": 1, "time": {"d": .7, "dd": 1.4, "n": .4}, "bait": {"tep": 1, "nhai": .9, "trun": .3}, "bite": "keo", "win": .86, "P": .72, "st": 5, "jump": .35, "vis": .5,
+	{"id": "loc", "name": "Cá lóc đồng", "rar": 2, "w": [.4, 2.5], "cm": [30, 60], "base": 30, "kg": 70, "zone": [5, 15], "cover": 1, "time": {"d": .7, "dd": 1.4, "n": .4}, "bait": {"tep": 1, "oc": .9, "nhai": .9, "trun": .3}, "bite": "keo", "win": .86, "P": .72, "st": 5, "jump": .35, "vis": .5,
 		"desc": "Cá lóc nướng trui, cuốn bánh tráng rau sống, chấm mắm nêm."},
 	{"id": "he", "name": "Cá he đỏ đuôi", "rar": 2, "w": [.1, .6], "cm": [15, 30], "base": 18, "kg": 70, "zone": [8, 26], "time": {"d": 1, "dd": .8, "n": .2}, "bait": {"com": 1, "sung": .7}, "bite": "nhap", "win": .62, "P": .52, "st": 3.5, "jump": .3, "vis": .28,
 		"desc": "Vảy bạc ánh vàng, đuôi đỏ như lửa. Kho lạt cũng ngon."},
-	{"id": "luon", "name": "Lươn đồng", "rar": 2, "w": [.1, .6], "cm": [30, 60], "base": 22, "kg": 90, "zone": [4, 9], "time": {"d": .2, "dd": .8, "n": 1}, "bait": {"trun": 1, "chua": .9}, "bite": "nam", "win": .9, "P": .46, "st": 3.5, "jump": 0, "vis": .5,
+	{"id": "luon", "name": "Lươn đồng", "rar": 2, "w": [.1, .6], "cm": [30, 60], "base": 22, "kg": 90, "zone": [4, 9], "time": {"d": .2, "dd": .8, "n": 1}, "bait": {"trun": 1, "oc": 1, "chua": .9}, "bite": "nam", "win": .9, "P": .46, "st": 3.5, "jump": 0, "vis": .5,
 		"desc": "Lươn um lá nhàu, món ruột của dân miệt vườn."},
 	{"id": "thatlat", "name": "Cá thát lát cườm", "rar": 3, "w": [.5, 3], "cm": [35, 70], "base": 60, "kg": 80, "zone": [10, 28], "time": {"d": .3, "dd": 1.2, "n": 1}, "bait": {"tep": 1, "nhai": .5}, "bite": "keo", "win": .76, "P": .66, "st": 5, "jump": .15, "vis": .5,
 		"desc": "Thịt dai, quết chả chiên phồng. Chấm cườm đen viền trắng là dấu hiệu."},
@@ -52,12 +52,13 @@ const BAIT := {
 	"trun": {"name": "Trùn đất", "desc": "Mồi quốc dân, đào sau hè là có. Không tốn tiền.", "pack": 0, "price": 0, "lv": 1},
 	"com": {"name": "Cơm vo cám", "desc": "Cá ăn tạp mê: sặc, linh, mè vinh, he.", "pack": 10, "price": 12, "lv": 1},
 	"tep": {"name": "Tép sống", "desc": "Mồi sống cho cá dữ: lóc, bống tượng, thát lát.", "pack": 10, "price": 35, "lv": 2},
+	"oc": {"name": "Ốc gạo", "desc": "Ốc nhặt ngoài ruộng mùa nước nổi (xài chung Kho vườn). Cá trê, cá lóc, lươn mê.", "pack": 0, "price": 0, "lv": 1},
 	"chua": {"name": "Mồi chua", "desc": "Cám ủ chua, hôi mà cá trê, lươn, chình mê.", "pack": 10, "price": 40, "lv": 3},
 	"nhai": {"name": "Nhái con", "desc": "Mồi to dụ cá lóc bông, cá chình.", "pack": 5, "price": 70, "lv": 4},
 	"sung": {"name": "Trái sung chín", "desc": "Cá hô ăn trái cây rụng. Thả xa giữa kênh, ban ngày.", "pack": 5, "price": 120, "lv": 5},
 	"cam": {"name": "Cám rêu thơm", "desc": "Cá tra dầu ăn rêu. Thả xa giữa kênh, chiều tối.", "pack": 5, "price": 150, "lv": 6},
 }
-const BAIT_ORDER := ["trun", "com", "tep", "chua", "nhai", "sung", "cam"]
+const BAIT_ORDER := ["trun", "com", "tep", "oc", "chua", "nhai", "sung", "cam"]
 
 # (bản 536) giá đồ nghề x0,57 (tròn chục): cá bán theo giá Kho (thấp hơn giá giỏ cũ) -> số con phải câu để đổi giữ như cũ
 const ROD := [
@@ -98,7 +99,7 @@ const KHO := {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_m
 	"loc": "ca_loc", "he": "ca_he", "luon": "luon", "thatlat": "ca_thatlat", "bong": "ca_bong", "locbong": "ca_locbong", "chinh": "ca_chinh",
 	"ho": "ca_ho", "tradau": "ca_tradau"}
 # mồi xài chung số lượng với Kho vườn (bản gắn trong vườn): mã mồi câu cá -> món Kho
-const KHO_BAIT := {"tep": "tep"}
+const KHO_BAIT := {"tep": "tep", "oc": "oc"}
 const GEAR_KEYS := ["rod", "line", "flo", "luoi", "cage"]
 const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "luoi": "Lưỡi câu", "cage": "Giỏ đựng"}
 

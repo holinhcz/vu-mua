@@ -262,6 +262,7 @@ func _test_hook() -> void:
 			"ccc": if ui.ccp.game != null: ui.ccp.game.caught(preload("res://logic/cc/cc_data.gd").fish(String(a[1])), float(a[2]))   # (bản 540) thử: câu được 1 con
 			"ccd": push_error("QKDEX " + JSON.stringify(G.g.get("fish", {}).get("dex", {})) + " CC " + JSON.stringify(G.g.get("ccsv", {}).get("dex", {})))
 			"ccdo": if ui.ccp.game != null: ui.ccp._pan(ui.ccp.game, "shop", "gear"); if a.size() > 1 and ui.ccpp != null: ui.ccpp.sel = String(a[1]); ui.ccpp._redo()   # thử: bảng Đồ nghề câu cá (ccdo:luoi chọn món)
+			"ccmoi": if ui.ccp.game != null: ui.ccp._pan(ui.ccp.game, "shop", "bait"); if a.size() > 1 and ui.ccpp != null: ui.ccpp.sel = String(a[1]); ui.ccpp._redo()   # thử: bảng Mồi câu (ccmoi:oc)
 			"ccq": if ui.ccp.game != null: ui.ccp.game.close_game()   # (bản 540) thử: thoát câu cá
 			"lot": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 3000; G.w_all.WCA.lo_place(a[1] if a.size() > 1 else "lo")   # (bản 541) thử: mua + bấm Đặt lờ
 			"landall": for k9 in farm.PC.G0: G.g.land[k9] = 1   # thử: mở hết khu đất
