@@ -352,3 +352,15 @@ if __name__ == '__main__':
     if sys.argv[1] == 'prev':
         n = 'n' in sys.argv[3:]
         K.render(1, n, 'b', ss=int(os.environ.get('BE_SS', '2'))).save(sys.argv[2])
+    elif sys.argv[1] == 'atlas':                               # python3 benoi3d.py atlas OUTDIR
+        import json
+        out = sys.argv[2]; os.makedirs(out, exist_ok=True); sc = float(K.PXU); BB = K.BB; fr = {}
+        for k in (0,):
+            for n in (0, 1):
+                im = K.render(1, bool(n), 'b', ss=2); bb = im.getbbox(); im = im.crop(bb)
+                key = '0' + ('n' if n else 'd')
+                im.save(os.path.join(out, key + '.png'), optimize=True)
+                fr[key] = dict(file=key + '.png', w=im.width, h=im.height, ox=round(BB[0] + bb[0] / sc, 2), oy=round(BB[1] + bb[1] / sc, 2),
+                               gw=round(im.width / sc, 2), gh=round(im.height / sc, 2))
+                print(key, im.size, flush=True)
+        json.dump(dict(px_per_unit=sc, name='Bè nổi', fw=2, fd=2, water_z=0.0, frames=fr), open(os.path.join(out, 'atlas.json'), 'w'), indent=1, ensure_ascii=False)
