@@ -27,6 +27,7 @@ K.ZF = 0.0
 K.INSIDE_K = 0.3
 C0 = 0.5 * T                       # tâm rương (đơn vị game), giữa ô
 TIER = 1
+LIDZ = None
 ROT = 0.0                          # xoay quanh trục đứng (độ) để xem mô hình nhiều góc
 
 
@@ -609,7 +610,8 @@ def tier_rich(S, rng, t):
 def gio_tre(S, rng):
     """BẬC 1 kiểu đồ cổ Nam Bộ: giỏ tre đan tròn có nắp chụp, miệng + đáy niềng tre bện mây, quai mây 2 bên, núm nắp bằng gáo dừa, thẻ gỗ khắc sen"""
     global LA, LB, ZL, LR
-    R0, H = 10.5, 15.5; LA = LB = R0; ZL = H; LR = R0
+    global LIDZ
+    R0, H = 10.5, 15.5; LA = LB = R0; ZL = H; LR = R0; LIDZ = H - 1.3
     K.FOOT = ((C0 - 12) / T, (C0 + 12) / T, (C0 - 12) / T, (C0 + 12) / T, 0.5)
     def prof(zf):                                   # thân phình giữa, thót đáy
         return R0 * (0.84 + 0.2 * np.sin(np.pi * (0.15 + 0.75 * zf)))

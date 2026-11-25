@@ -64,7 +64,7 @@ for k in range(len(S.P)):
         nrm = nn * sg
     kind = getattr(fn, 'kind', None) or R.KIND.get(m, 'go')
     cz = P[T].mean(1)[:, 2]
-    lid = cz > R.ZL + 0.02
+    lid = cz > (R.LIDZ if R.LIDZ is not None else R.ZL + 0.02)
     for flag in (False, True):
         sel = lid == flag
         if not sel.any(): continue
