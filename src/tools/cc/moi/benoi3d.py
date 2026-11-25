@@ -1,7 +1,7 @@
 # Bè nổi (nhà bè trên sông, 2x2 ô) dựng bằng ĐÚNG bộ vẽ công trình/xưởng của game (kho3d + bến ghe + chuồng + lò bánh):
 # Link 2026-11-25 "dm mày đã đúng style vẽ của công trình nhà xưởng của game chưa?" (bản nháp trước vẽ bằng bộ ghe câu cá, sai).
 # CHẠY Ở: nong-trai-chung/src/benoi/benoi3d.py (cần các bộ src/lobanh, coixay, lobanhmi, chuongga, benghe, kho, dendau, ruongmuoi, pxr, choi, den cạnh nó); đây là bản chép.
-#  - phao: 4 hàng phuy sắt cũ nằm dọc u, nửa chìm dưới nước (mặt nước z 0)
+#  - phao: 4 bó tre gai lớn buộc mây nằm dọc u, nửa chìm dưới nước (mặt nước z 0) (v3: bỏ phuy, toàn tre/tràm/lá)
 #  - đà tràm tròn gác ngang phuy, sàn = từng ống tre tròn (như bến ghe)
 #  - chòi lá: 4 cột tràm, vách phên tre đan + nẹp tre, mái lá 2 mái (K.roof: từng lá, nẹp tre, bó nóc buộc mây), đầu hồi lá
 #  - ít đồ, đồ TO: lu nước nắp gỗ + gáo (lò bánh), chõng ống tre + nón lá, ô lồng cá có lan can tre, giỏ cá,
@@ -41,7 +41,7 @@ K.FOOT = (0.05, 1.95, 0.05, 1.95, 0.04)
 BG.D = 0
 
 # ------------------------------------------------------------------ layout (ô / đơn vị)
-PR, PZ = 4.8, 1.1                              # phuy: bán kính, tâm trên mặt nước
+PR, PZ = 4.8, 1.1                              # chiều cao bó tre phao (giữ số cũ của phuy để cao độ sàn không đổi)
 ZB = PZ + PR + 0.85                            # tâm đà tràm
 ZD = ZB + 0.85 + 1.15                          # mặt sàn tre
 ROWS = (0.2, 0.72, 1.3, 1.8)                   # hàng phuy (v)
@@ -115,39 +115,83 @@ K.NORECV = getattr(K, 'NORECV', set()) | {M_RIP}
 def rip_line(S, p0, p1, n=None):
     """vệt nước nhạt mảnh quanh vật nằm trên nước (như vòng gợn quanh cột bến ghe), đứt đoạn"""
     p0 = np.asarray(p0, float); p1 = np.asarray(p1, float); L = np.linalg.norm(p1 - p0); n = n or max(2, int(L / 2.2))
-    tube(S, p0, p1, 0.17, M_RIP, nr=3, nl=max(2, n))
+    d = (p1 - p0) / L; side = np.array([-d[1], d[0], 0.0]); m = max(3, int(L / 7)); k = 0
+    while k < m:                                                # từng đoạn gợn ngắn, hơi lượn, có chỗ đứt
+        t0 = k / m; t1 = min(1.0, (k + 0.82) / m)
+        a = p0 + (p1 - p0) * t0 + side * 0.22 * math.sin(k * 2.1); b = p0 + (p1 - p0) * t1 + side * 0.22 * math.sin(k * 2.1 + 1.3)
+        tube(S, a, b, 0.16, M_RIP, nr=3, nl=2); k += 1
 
 
-def phuy(S, rng, u0, u1, v):
-    x0, x1, y = u0 * T, u1 * T, v * T; L = x1 - x0; th0 = -math.asin(PZ / PR); s = rng.random()
+def mat_trephao(uv, prm, pos, nrm):
+    """tre gai già làm phao: tre cũ ngả xám, chân ngâm nước sẫm + rêu xanh sát mặt nước"""
+    col, n = MATS[M_OLDBAMBOO](uv, prm, pos, nrm)
+    z = pos[:, 2]; x = pos[:, 0]
+    col = col * 0.74 + hexc('#8c8450')[None] * 0.2
+    wet = 1 - smooth(0.4, 1.9 + 0.7 * vnoise(x * 0.3, prm[:, 0] * 9, 2.0), z)
+    col = col * (1 - 0.45 * wet)[:, None] + hexc('#46502c')[None] * (0.2 * wet)[:, None]
+    return np.clip(col, 0, 1), n
+
+
+def mat_trecut(uv, prm, pos, nrm):
+    """đầu ống tre cưa ngang: thành tre vàng nhạt, ruột rỗng tối"""
+    y, z = pos[:, 1] - prm[:, 1], pos[:, 2] - prm[:, 2]; r = np.hypot(y, z) / np.maximum(prm[:, 0], 1e-6)
+    col = hexc('#cdb684')[None] * (0.86 + 0.16 * vnoise(y * 3, z * 3, 4.0))[:, None]
+    col = col * (1 - 0.16 * np.exp(-((r - 0.72) / 0.06) ** 2))[:, None] * (0.8 + 0.2 * smooth(0.2, 0.9, r))[:, None]   # cưa ngay mắt tre: đặc, vòng thớ
+    hole = smooth(0.3, 0.2, r)
+    col = col * (1 - hole)[:, None] + hexc('#4a3a26')[None] * hole[:, None]
+    wet = 1 - smooth(0.4, 1.6, pos[:, 2])
+    col = col * (1 - 0.4 * wet)[:, None]
+    return np.clip(col, 0, 1), nrm
+
+
+M_TREPHAO, M_TRECUT = 883, 884
+MATS.update({M_TREPHAO: mat_trephao, M_TRECUT: mat_trecut})
+
+
+def culm(S, rng, x0, x1, y, zc, r):
+    """một cây tre lớn nằm dọc u; phần chìm dưới mặt nước (z < 0) không dựng"""
+    L = x1 - x0; th0 = -math.asin(min(1.0, zc / r)) if zc < r else -math.pi / 2
+    span = math.pi - 2 * th0; s = rng.random(); dz = 0.25 * (rng.random() - 0.5)
     def F(U, V):
-        th = th0 + V * (math.pi - 2 * th0); f = U / L
-        rr = PR * (1 + 0.035 * (np.exp(-((f - 0.3) / 0.02) ** 2) + np.exp(-((f - 0.7) / 0.02) ** 2)) + 0.02 * (np.exp(-(f / 0.02) ** 2) + np.exp(-((1 - f) / 0.02) ** 2)))
-        return np.stack([x0 + U, y + rr * np.cos(th), PZ + rr * np.sin(th)], -1)
-    S.grid(F, 44, 18, M_PHUY, (s, L, 0), 0.0, uvr=((0, L), (0, 1)))
-    for xe in (x0 + 0.45, x1 - 0.45):
+        th = th0 + V * span
+        zz = zc + r * np.sin(th) + dz * (U / L - 0.5) * (zc >= r)
+        return np.stack([x0 + U, y + r * np.cos(th), zz], -1)
+    S.grid(F, max(6, int(L / 5)), 12, M_TREPHAO, (s, rng.random(), 0), 0.0, uvr=((0, L), (0, 1)), close_v=(zc >= r))
+    for xe in (x0, x1):
         def Fc(U, V, xe=xe):
-            th = th0 + V * (math.pi - 2 * th0)
-            return np.stack([np.full_like(U, xe), y + U * PR * np.cos(th), U * (PZ + PR * np.sin(th))], -1)
-        S.grid(Fc, 6, 18, M_PHUYCAP, (s, y, 0), 0.0, uvr=((0, 1), (0, 1)))
-    w = PR * math.cos(th0) + 0.5
-    for sg in (-1, 1): rip_line(S, (x0, y + sg * w, 0.12), (x1, y + sg * w, 0.12))
-    rip_line(S, (x1 + 0.4, y - w, 0.12), (x1 + 0.4, y + w, 0.12), n=4)
+            th = th0 + V * span; zb = max(0.0, zc - r) if zc < r else zc
+            yb = y
+            return np.stack([np.full_like(U, xe), yb + U * (y + r * np.cos(th) - yb), zb + U * (zc + r * np.sin(th) - zb)], -1)
+        S.grid(Fc, 5, 12, M_TRECUT, (r, y, zc), 0.0, uvr=((0, 1), (0, 1)))
+
+
+def bo_tre(S, rng, u0, u1, v):
+    """phao = bó 5 cây tre gai lớn (3 dưới nửa chìm, 2 trên), buộc mây từng khúc"""
+    y = v * T; r = 2.25
+    for (dy, zc) in ((-4.3, 0.55), (0.0, 0.45), (4.3, 0.55), (-2.15, 4.15), (2.15, 4.15)):
+        a = u0 * T - 1.6 * rng.random(); b = u1 * T + 1.6 * rng.random()
+        culm(S, rng, a, b, y + dy, zc, r * (0.94 + 0.12 * rng.random()))
+    n = max(2, int(round((u1 - u0) / 0.42)))
+    for k in range(n):                                          # đai mây ôm bó tre
+        x = (u0 + (u1 - u0) * (k + 0.5) / n) * T + 1.2
+        pts = [(-6.75, 0.3), (-6.6, 1.9), (-4.4, 5.3), (-2.15, 6.6), (0.0, 5.6), (2.15, 6.6), (4.4, 5.3), (6.6, 1.9), (6.75, 0.3)]
+        for j in range(2):
+            for (p0, p1) in zip(pts, pts[1:]):
+                tube(S, (x + j * 0.55, y + p0[0], p0[1]), (x + j * 0.55, y + p1[0], p1[1]), 0.24, M_RATTAN, nr=4, nl=2)
+    w = 4.3 + 2.18 + 0.3
+    for sg in (-1, 1): rip_line(S, (u0 * T - 1, y + sg * w, 0.12), (u1 * T + 1, y + sg * w, 0.12))
+    rip_line(S, (u1 * T + 1.9, y - w + 0.6, 0.12), (u1 * T + 1.9, y + w - 0.6, 0.12), n=4)
 
 
 def floats(S, rng):
     for v in ROWS:
-        segs = ((0.08, 0.66), (0.71, 1.29), (1.34, 1.92)) if v != ROWS[2] else ((0.08, 0.54), (0.59, 1.08))
-        for (a, b) in segs: phuy(S, rng, a, b, v)
-    for u in BEAMS:                                             # đà tràm gác ngang các hàng phuy
+        if v != ROWS[2]: bo_tre(S, rng, 0.06, 1.94, v)
+        else: bo_tre(S, rng, 0.06, 1.08, v)
+    for u in BEAMS:                                             # đà tràm gác ngang các bó tre
         ctube(S, P(u, 0.03, ZB), P(u, 1.97, ZB + 0.1 * (rng.random() - 0.5)), 0.85, M_TRAM, prm=(rng.random(), 0, 0), nr=8, nl=14)
-    for v in (ROWS[0], ROWS[3]):                                # dây buộc phuy vào đà (mây) ở 2 hàng ngoài
-        for u in BEAMS[:1] + BEAMS[1:4]:
-            c = P(u, v, 0)
-            for k in range(8):
-                a0 = 0.15 + k * (math.pi - 0.3) / 8; a1 = a0 + (math.pi - 0.3) / 8
-                rr = PR + 0.3
-                tube(S, (c[0] + 0.9, c[1] + rr * math.cos(a0), PZ + rr * math.sin(a0)), (c[0] + 0.9, c[1] + rr * math.cos(a1), PZ + rr * math.sin(a1)), 0.2, M_ROPE, nr=4, nl=2)
+        for v in ROWS:
+            if v == ROWS[2] and u > 1.1: continue
+            CG.lash(S, P(u, v, ZB - 0.2), 1.15)
 
 
 def deck(S, rng):
@@ -280,13 +324,17 @@ def neo(S, rng):
     m2 = BG.post(S, rng, 1.84, -0.1, 22.0, r=1.5); BG.wind(S, m2 - np.array([0, 0, 22.0 - 13.0]), 1.7, 0, 3)
     BG.rope(S, m1 - np.array([0, 0, 25.0 - 15.6]), P(0.1, 1.97, ZB + 0.6), 1.6, r=0.3, n=8)
     BG.rope(S, m2 - np.array([0, 0, 22.0 - 13.6]), P(1.9, 0.03, ZB + 0.9), 1.4, r=0.3, n=8)
-    BG.wind(S, P(0.1, 1.9, ZB - 0.85), 0.0, 0, 0)
-    for v in (0.92, 1.1):                                       # thang tre ở mép phải
-        tube(S, P(2.0, v, 0.0), P(1.985, v, ZD + 5.0), 0.6, M_DECK, prm=(rng.random(), 0.5, 0), nr=7, nl=6)
-        BG.ripple(S, P(2.0, v, 0.0), 1.2, n=10)
-    for z in (2.6, 5.4, 8.6):
-        tube(S, P(2.0, 0.89, z), P(2.0, 1.13, z + 0.1), 0.48, M_DECK, prm=(rng.random(), 0.4, 0), nr=6, nl=3)
-        for v in (0.92, 1.1): CG.lash(S, P(2.0, v, z), 0.7)
+    # thang tre: chân cắm nước ngoài mép, tựa nghiêng vào đầu sàn, 2 tay vịn buộc mây vào cây tre mép sàn
+    f_u, t_u, zt = 2.1, 1.955, ZD + 6.5
+    def lp(v, z): return P(f_u + (t_u - f_u) * z / zt, v, z)
+    ctube(S, P(1.975, 0.84, ZD + 0.75), P(1.975, 1.18, ZD + 0.75), 0.7, M_DECK, prm=(rng.random(), 0.3, 0), nr=8, nl=5)   # cây tre nẹp mép sàn giữ đầu thang
+    for v in (0.92, 1.1):
+        ctube(S, lp(v, 0.0), lp(v, zt), 0.62, M_DECK, prm=(rng.random(), 0.5, 0), nr=7, nl=7)
+        BG.ripple(S, lp(v, 0.0), 1.25, n=12)
+        CG.lash(S, lp(v, ZD + 0.75), 0.95)
+    for z in (2.4, 5.0, 7.6):
+        ctube(S, lp(0.895, z), lp(1.125, z + 0.08), 0.48, M_DECK, prm=(rng.random(), 0.4, 0), nr=6, nl=3)
+        for v in (0.92, 1.1): CG.lash(S, lp(v, z), 0.72)
 
 
 def build(level, rng, with_props=True):
