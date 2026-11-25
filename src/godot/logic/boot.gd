@@ -264,6 +264,7 @@ func _test_hook() -> void:
 			"ccq": if ui.ccp.game != null: ui.ccp.game.close_game()   # (bản 540) thử: thoát câu cá
 			"lot": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 3000; G.w_all.WCA.lo_place(a[1] if a.size() > 1 else "lo")   # (bản 541) thử: mua + bấm Đặt lờ
 			"landall": for k9 in farm.PC.G0: G.g.land[k9] = 1   # thử: mở hết khu đất
+			"camg": var B9 = G.w_all.GHV.cho + G.w_all.GHV.xus.map(func(x): return x.b) + ([G.w_all.GHV.ghe] if G.w_all.GHV.ghe != null else []); var b9 = null; for q9 in B9: if q9 != null and q9.visible: b9 = q9; if b9 != null: ui.main.cam = Vector2(farm.en(b9.p.x, b9.p.y), farm.nn(b9.p.x, b9.p.y)) - ui.main.get_viewport_rect().size / ui.main.zoom / 2   # thử: camera tới ghe
 			"camt": var m8 = ui.main; m8.cam = Vector2(farm.en(float(a[1]), float(a[2])), farm.nn(float(a[1]), float(a[2]))) - m8.get_viewport_rect().size / m8.zoom / 2   # thử: camera tới ô
 			"dbg2": push_error("QKD ids " + str(G.lang.objs().map(func(o): return String(o.id)).filter(func(x): return "kho" in x or "nha" in x)) + " meo " + str(farm.song._meo_pos()) + " has " + str(G.w_all.WCA.cc().meo) + " cg " + str(G.w_all.WCA.cg()) + " sea " + str(G.season()) + " wx " + G.troi.wx() + " h " + str(G.w_all.WCA._d0()) + " night " + str(G.night))
 			"lopo": G.g.pc.lv = maxi(int(G.g.pc.lv), 20); G.g.coins = int(G.g.coins) + 9000; for m8 in ["tre", "may", "cuoc", "luoi", "phao"]: G.mat_add(m8, 12)
