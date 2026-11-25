@@ -232,7 +232,7 @@ def spool(t):
     o = []
     R, H, rc, ft = {1: (4.2, 6.0, 3.2, .6), 2: (4.7, 6.6, 3.6, .7), 3: (5.2, 7.0, 4.0, .8), 4: (5.8, 7.6, 4.5, .95)}[t]
     fl, ln, k, lr = {1: ('#c08a4e', '#e4ecee', 4.0, .1), 2: ('#c0442e', '#94c4de', 3.4, .13),
-                     3: ('#9a6a40', '#5aa060', 2.8, .17), 4: ('#80522e', '#e0c27a', 1.4, .26)}[t]
+                     3: ('#9a6a40', '#5aa060', 2.8, .17), 4: ('#d4aa72', '#9a6a3c', 1.4, .26)}[t]
     for z0 in (0.0, H + ft):    # 2 vành ống
         o.append(M(Tube((0, 0, z0), (0, 0, 1), ft, [(0, R), (1, R)], 'gox'), col=fl))
         o.append(M(Torus((0, 0, z0 + ft / 2), (0, 0, 1), R, ft / 2, 'gox'), col=fl))
@@ -253,7 +253,7 @@ def spool(t):
     c = Tube((0, 0, ft), (0, 0, 1), H, [(0, rc), (.5, rc + .15), (1, rc)], 'cuon' if t < 4 else 'ben')
     c.col = hexc(ln); c.k = k
     if t == 4:
-        c.dk = hexc('#a04a2a')
+        c.dk = hexc('#5a3a1e')
     o.append(c)
     # đầu dây: từ mặt cuộn phía trước vòng xuống, gài vô khía mép vành dưới, có gút nhỏ
     a0 = math.atan2(float(HF[1]), float(HF[0])) + .35
@@ -375,7 +375,116 @@ def cage(t):
     return Scene(o)
 
 
-BUILD = {'line': spool, 'flo': float_, 'hook': hook, 'cage': cage}
+
+# ------------------------------------------------------------ cần câu (icon, khớp ảnh cần trong game can/can0-3 + ongcuoc0-3)
+def rod(t):
+    """cần xéo trong mặt phẳng quay về camera: cán dưới trái, ngọn trên phải; ống cước gắn dưới cán; dây buông từ ngọn"""
+    o = []
+    A = pl(-9.6, .6); Tp = pl(9.4, 19.6)
+    d = nz(Tp - A); L = float(np.linalg.norm(Tp - A))
+    dn = nz(RT - Z)                                   # vuông góc cần, phía dưới
+    p = lambda s, off=0.0: A + d * s + dn * off
+    G1 = {1: 6.0, 2: 6.2, 3: 6.6, 4: 7.2}[t]          # hết cán
+    R0 = {1: .8, 2: .86, 3: .86, 4: .92}[t]
+    S0 = G1 - .2
+    ss = np.linspace(S0, L, 9)
+    rad = lambda s: R0 * .8 - (R0 * .8 - .21) * ((s - S0) / (L - S0)) ** .85
+    rr = [rad(s) for s in ss]
+    LL = L - S0
+    tt = lambda s: (s - S0) / LL
+    if t == 1:      # cần trúc vàng ngà, đốt nổi
+        col, nodes = '#dcc480', 3.3
+        bands = [(tt(S0 + nodes * (k + .5)) - .006, tt(S0 + nodes * (k + .5)) + .006, '#a88a4a') for k in range(6)] + [(.975, 1, '#4a3420')]
+    elif t == 2:    # tre già ám khói: nâu, đốt sẫm, loang
+        col, nodes = '#a86a3a', 2.9
+        bands = [(tt(S0 + nodes * (k + .5)) - .012, tt(S0 + nodes * (k + .5)) + .012, '#4e2c16') for k in range(7)] + [(.975, 1, '#2e1e14')]
+    elif t == 3:    # câu lục sơn mài đỏ: khoanh đen ở mỗi khoen
+        col, nodes = '#c03a2a', None
+        bands = [(.975, 1, '#2a1a16')]
+    else:           # cần ông Năm gỗ mun, chỉ vàng quấn từng cặp
+        col, nodes = '#45322a', None
+        bands = [(.975, 1, '#d8a838')]
+    guides = {1: [], 2: [], 3: [.18, .36, .54, .72, .88], 4: [.14, .29, .44, .59, .74, .88]}[t]
+    for g in guides:
+        if t == 3:
+            bands.append((g - .012, g + .012, '#2a1a16'))
+        else:
+            bands += [(g - .022, g - .012, '#e0b040'), (g + .012, g + .022, '#e0b040')]
+    b = M(Line([tuple(p(s)) for s in ss], rr, 'band', nodes=nodes), col=col, sp=.25 if t < 3 else .4, pw=40)
+    b.bands = bands
+    o.append(b)
+    # khoen dẫn dây (bậc 3-4)
+    gc = hexc('#c4ccd2') if t == 3 else hexc('#d8a838')
+    ring = []
+    for g in guides:
+        s = S0 + g * LL; rg = .34 - .1 * g
+        c = p(s, rad(s) + .32 + rg)
+        o.append(met(Line([tuple(p(s, rad(s) * .6)), tuple(c - dn * rg)], .07, 'met'), gc, sp=.5, pw=50))
+        o.append(met(Torus(tuple(c), tuple(HF), rg, .065, 'met'), gc, sp=.5, pw=50))
+        ring.append(c)
+    # khâu đồng nối khúc
+    for g in {1: [], 2: [], 3: [.27, .63], 4: [.37, .67]}[t]:
+        s = S0 + g * LL
+        o.append(met(Tube(tuple(p(s - .35)), tuple(d), .7, [(0, rad(s) + .09), (1, rad(s) + .07)], 'met'), hexc('#d8a838'), sp=.5, pw=40))
+    # cán
+    gcol, gmat, gk = {1: ('#6e4a2a', 'cuon', 3.0), 2: ('#d8b070', 'cuon', 1.7), 3: ('#8a4628', 'met', 0), 4: ('#2e2220', 'cuon', 3.2)}[t]
+    gr = M(Tube(tuple(p(.6)), tuple(d), G1 - .6, [(0, R0), (.5, R0 * 1.04), (1, R0 * .9)], gmat), col=hexc(gcol), sp=.15, pw=20)
+    if gk:
+        gr.k = gk
+    else:
+        gr.ns = 3
+    o.append(gr)
+    if t == 3:      # cán da: đường chỉ khâu trắng dọc cán
+        st = M(Line([tuple(p(s, -R0 * .96)) for s in np.linspace(1.0, G1 - .4, 2)], .07, 'band'), col='#8a4628')
+        st.bands = [(k / 14, (k + .55) / 14, '#f0e6cc') for k in range(14)]
+        o.append(st)
+    if t == 4:      # chỉ vàng quấn cán
+        for s in (1.6, 2.0, G1 - 1.0, G1 - .6):
+            o.append(met(Torus(tuple(p(s)), tuple(d), R0 * 1.0, .09, 'met'), GOLD, sp=.5, pw=40))
+    # đuôi cán
+    if t < 3:
+        o.append(M(Ball(tuple(p(.55)), R0 * 1.12, 'gox'), col=hexc('#7a4e2c' if t == 1 else '#5a3820')))
+    else:
+        o.append(met(Tube(tuple(p(-.2)), tuple(d), .9, [(0, R0 * 1.1), (1, R0 * 1.12)], 'met'), hexc('#d8a838'), sp=.5, pw=40))
+        o.append(met(Ball(tuple(p(-.2)), R0 * 1.0, 'met', sq=(1, 1, 1)), hexc('#c89430'), sp=.5, pw=40))
+    for s in ((G1,) if t < 3 else (.75, G1)):   # khâu đầu cán
+        o.append(met(Torus(tuple(p(s)), tuple(d), R0 * .98, .1, 'met'), hexc('#d8a838') if t > 2 else hexc('#3a2618'), sp=.4, pw=40))
+    # ống cước gắn dưới cán (ongcuoc0-3: gỗ, gỗ sẫm, bạc 6 lỗ, đồng 5 lỗ)
+    Rr = {1: 2.0, 2: 2.1, 3: 1.9, 4: 2.3}[t]
+    sr = G1 - 2.2
+    C = p(sr, R0 + Rr * .9) + HF * .9
+    rc_ = {1: '#b0743e', 2: '#6e4426', 3: '#c8d0d6', 4: '#d8a838'}[t]
+    if t < 3:
+        o.append(M(Tube(tuple(C - HF * .4), tuple(HF), .8, [(0, Rr), (1, Rr)], 'gox'), col=hexc(rc_)))
+        o.append(M(Torus(tuple(C + HF * .4), tuple(HF), Rr - .15, .15, 'gox'), col=hexc(rc_) * .8))
+    else:
+        o.append(met(Tube(tuple(C - HF * .4), tuple(HF), .8, [(0, Rr), (1, Rr)], 'met'), hexc(rc_), sp=.45, pw=40))
+        o.append(met(Torus(tuple(C + HF * .4), tuple(HF), Rr - .15, .15, 'met'), hexc(rc_) * .85, sp=.45, pw=40))
+    nh = {1: 4, 2: 4, 3: 6, 4: 5}[t]; hr = {1: .5, 2: .5, 3: .32, 4: .42}[t]
+    for k in range(nh):
+        a = k / nh * 2 * math.pi + .4
+        hc = C + HF * .41 + (RT * math.cos(a) + Z * math.sin(a)) * Rr * .56
+        o.append(M(Tube(tuple(hc - HF * .02), tuple(HF), .04, [(0, hr), (1, hr)], 'met'), col=hexc('#3a2a1e'), sp=0, pw=10))
+    o.append(met(Tube(tuple(C + HF * .4), tuple(HF), .3, [(0, Rr * .26), (1, Rr * .22)], 'met'), hexc('#e0b448' if t != 3 else '#e8c060'), sp=.5, pw=40))
+    kc = C + HF * .4 + (RT * math.cos(-.5) + Z * math.sin(-.5)) * Rr * .8
+    o.append(M(Line([tuple(kc), tuple(kc + HF * .7)], .13, 'met'), col=hexc('#3a2a1e')))
+    o.append(M(Ball(tuple(kc + HF * .95), .36, 'gox'), col=hexc('#4a2e1c')))
+    o.append(met(Line([tuple(p(sr, R0 * .7)), tuple(C - HF * .3)], .22, 'met'), hexc('#5a4a3e') if t < 3 else hexc('#d8a838'), sp=.3, pw=30))
+    # dây cước: từ ống lên dọc cần (qua khoen) tới ngọn, rồi buông xuống
+    lc = '#eef2f0'
+    pts = [C + HF * .45 + (RT * math.cos(.9) + Z * math.sin(.9)) * Rr * .95]
+    if ring:
+        pts += ring
+    else:
+        pts += [p(s, rad(s) + .1) for s in np.linspace(G1 + 1.5, L - .5, 5)]
+    pts.append(p(L))
+    o.append(M(Line([tuple(q) for q in pts], .045, 'day'), col=lc))
+    o.append(M(Line(soft(p(L), pl(7.6, 7.0), n=18, amp=.5, waves=.5, ph=.4), .05, 'day'), col=lc))
+    if t > 2:
+        o.append(met(Torus(tuple(p(L - .1, .3)), tuple(HF), .2, .06, 'met'), gc, sp=.5, pw=50))
+    return Scene(o)
+
+BUILD = {'rod': rod, 'line': spool, 'flo': float_, 'hook': hook, 'cage': cage}
 
 if __name__ == '__main__':
     OUT = sys.argv[1]
