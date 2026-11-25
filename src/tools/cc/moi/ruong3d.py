@@ -68,7 +68,7 @@ def albedo_r(obj, P):
         c = col[None] * (.94 + .08 * g)[:, None]
         return c * (1 - .12 * (np.exp(-(fv / .04) ** 2) + np.exp(-((1 - fv) / .04) ** 2)))[:, None]
     if k == 'xacu':                           # sơn mài đen, khảm xà cừ: hoa 4 cánh so le, nhị vàng, trong khung
-        c = np.broadcast_to(hexc('#221a1a'), (n, 3)).copy() * (.95 + .08 * vnoise(P, 2, 83))[:, None]
+        c = np.broadcast_to(col, (n, 3)).copy() * (.93 + .1 * vnoise(P, 2, 83))[:, None]
         cu, cv = 2.7, 2.6
         uu = u / cu; vv = v / cv; row = np.floor(vv); uu = uu + .5 * (row % 2)
         du = ((uu % 1.0) - .5) * cu; dv = ((vv % 1.0) - .5) * cv
@@ -77,7 +77,7 @@ def albedo_r(obj, P):
         dot = pr < .2
         lf = (np.abs(np.abs(du) - np.abs(dv)) < .1) & (pr > .82) & (pr < 1.1)       # 4 lá nhỏ giữa các hoa
         w = .5 + .5 * np.sin(u * .9 + v * 1.3)
-        pearl = hexc('#d8e2de')[None] * (1 - .45 * w)[:, None] + hexc('#e2bcd2')[None] * (.3 * w)[:, None] + hexc('#acd8c4')[None] * (.18 * w)[:, None]
+        pearl = hexc('#f4f2ea')[None] * (1 - .45 * w)[:, None] + hexc('#f0c8dc')[None] * (.3 * w)[:, None] + hexc('#c4ecdc')[None] * (.18 * w)[:, None]
         c = np.where((petal & obj.inlay(x, y, z, lid))[:, None], pearl, c)
         c = np.where((lf & obj.inlay(x, y, z, lid))[:, None], pearl * .85, c)
         c = np.where((dot & obj.inlay(x, y, z, lid))[:, None], D.GOLD[None], c)
@@ -162,90 +162,126 @@ def handle(o, L, H, col, r=1.3, rr=.26):
         o.append(met(tor, hexc(col)))
 
 
-# ------------------------------------------------------------ 4 bậc
+# ------------------------------------------------------------ điểm nhấn
+def medal(o, c, Rm, col, gem, ring=None, np_=10):
+    """huy hiệu khoá hoa sen: đĩa kim loại, vòng cánh sen nổi, hột đá giữa, lỗ khoá dưới hột"""
+    o.append(met(Tube(tuple(c), tuple(FN), .4, [(0, Rm), (1, Rm * .92)], 'met'), hexc(col)))
+    for k in range(np_):
+        a = 2 * math.pi * (k + .5) / np_
+        p = c + FN * .35 + (LN * math.cos(a) + Z * math.sin(a)) * Rm * .78
+        o.append(met(Ball(tuple(p), Rm * .2, 'met', sq=(1, 1, 1)), hexc(col)))
+    o.append(met(Torus(tuple(c + FN * .42), tuple(FN), Rm * .5, Rm * .09, 'met'), hexc(col)))
+    o.append(M(Ball(tuple(c + FN * .55 + Z * Rm * .1), Rm * .34, 'cam', sq=(1, 1, 1)), col=gem, sp=.35, pw=50))
+    o.append(M(Box(tuple(c + FN * .45 - Z * Rm * .45), AX, (Rm * .07, .05, Rm * .14), 'met', rr=.04), col='#24160e'))
+    if ring:
+        for k in range(np_):
+            a = 2 * math.pi * k / np_
+            p = c + FN * .3 + (LN * math.cos(a) + Z * math.sin(a)) * Rm * 1.08
+            o.append(M(Ball(tuple(p), Rm * .1, 'cam'), col=ring, sp=.3, pw=40))
+
+
+def bow(o, c, col, k=1.0):
+    """nơ quà: 2 quai vải, nút giữa, 2 đuôi"""
+    for sx in (1, -1):
+        o.append(M(Torus(tuple(c + LN * sx * 1.35 * k + Z * .35 * k), tuple(FN * .8 + LN * sx * .2), 1.0 * k, .6 * k, 'cam'), col=col, sp=.15, pw=20))
+        o.append(M(Line([tuple(c), tuple(c + LN * sx * 1.1 * k - Z * 2.1 * k + FN * .3), tuple(c + LN * sx * 1.6 * k - Z * 3.2 * k + FN * .4)], .38 * k, 'cam'), col=col, sp=.15, pw=20))
+    o.append(M(Ball(tuple(c + FN * .15), .7 * k, 'cam', sq=(1, 1, 1)), col=col, sp=.15, pw=20))
+
+
+def ribbon(o, L, Dp, H, Rl, col, w=.6):
+    """dải ruy băng quà ôm ngang giữa thân + nắp"""
+    o.append(M(Box(tuple(W(0, Dp + .1, H / 2)), AX, (w, .12, H / 2), 'cam', rr=.06), col=col, sp=.15, pw=20))
+    pts = [tuple(W(0, (Rl + .16) * math.cos(t), H + (Rl + .16) * math.sin(t))) for t in np.linspace(0, math.pi, 22)]
+    for dx in (-w * .5, w * .5):
+        o.append(M(Line([tuple(V(*p) + LN * dx) for p in pts], .26, 'cam'), col=col, sp=.15, pw=20))
+
+
+# ------------------------------------------------------------ 4 bậc (v2 11-25: màu tươi, mỗi bậc 1 điểm nhấn, bậc cao nhất = đỏ son thếp vàng)
+D.CLIFT, D.CSAT = 1.0, 1.3          # Link "màu tái nhạt": màu sơn đậm + tươi hơn (không đụng đèn)
+
+
 def ruong(t):
     o = []
-    if t == 1:      # tre đan, nắp đan, 2 nẹp tre + mây buộc, quai mây, chốt gỗ xỏ khuy mây
+    if t == 1:      # tre đan vàng rơm, nẹp tre xanh, buộc mây, NƠ ĐỎ quà
         L, Dp, H = 8.0, 5.4, 7.2
-        Rl = body(o, L, Dp, H, 'dan', '#d6b874', lidcol='#ceae68', sp=.05, pw=10)
-        for sy in (1, -1):        # nẹp tre ôm miệng thân + mép nắp
-            o.append(M(Line([tuple(W(-L - .1, sy * (Dp + .15), H - .35)), tuple(W(L + .1, sy * (Dp + .15), H - .35))], .42, 'gox'), col='#c09a58'))
-            o.append(M(Line([tuple(W(-L - .1, sy * (Dp + .15), .35)), tuple(W(L + .1, sy * (Dp + .15), .35))], .42, 'gox'), col='#b08c4c'))
-        for x in (-L * .55, L * .55):
+        Rl = body(o, L, Dp, H, 'dan', '#e6b850', lidcol='#e0b04a', sp=.05, pw=10)
+        for sy in (1, -1):
+            for zz in (H - .35, .35):
+                o.append(M(Line([tuple(W(-L - .1, sy * (Dp + .15), zz)), tuple(W(L + .1, sy * (Dp + .15), zz))], .44, 'gox'), col='#7aa83e'))
+        for x in (-L * .62, L * .62):
             pts = [tuple(W(x, (Rl + .22) * math.cos(a), H + (Rl + .22) * math.sin(a))) for a in np.linspace(0, math.pi, 22)]
-            o.append(M(Line(pts, .3, 'may')))
+            o.append(M(Line(pts, .3, 'may'), col='#8a4a24'))
             for sy in (1, -1):
-                o.append(M(Line([tuple(W(x, sy * (Dp + .25), H - .1)), tuple(W(x, sy * (Dp + .25), .2))], .3, 'may')))
-        lid_trim(o, L, H, Rl, '#b8924e', r=.38, mat='gox')
-        o.append(M(Torus(tuple(W(0, Rl + .5, H + .35)), tuple(LN), .75, .2, 'may')))                 # khuy mây trên nắp
-        o.append(M(Torus(tuple(W(0, Dp + .5, H - 1.2)), tuple(LN), .7, .2, 'may')))                  # khuy mây trên thân
-        o.append(M(Line([tuple(W(-1.3, Dp + .95, H - .45)), tuple(W(1.3, Dp + .95, H - .45))], .3, 'gox'), col='#8a6234'))   # chốt gỗ xỏ ngang
-        for sx in (1, -1):      # quai mây 2 đầu
+                o.append(M(Line([tuple(W(x, sy * (Dp + .25), H - .1)), tuple(W(x, sy * (Dp + .25), .2))], .3, 'may'), col='#8a4a24'))
+        lid_trim(o, L, H, Rl, '#6e9c38', r=.4, mat='gox')
+        ribbon(o, L, Dp, H, Rl, '#e03a2c', w=.9)
+        bow(o, W(0, Dp + .7, H + .3), '#e03a2c', k=1.35)
+        for sx in (1, -1):
             pts = [tuple(W(sx * (L + .3 + 1.0 * math.sin(a)), 1.6 * math.cos(a), H * .66 + .4 * math.sin(a))) for a in np.linspace(0, math.pi, 12)]
-            o.append(M(Line(pts, .3, 'may')))
-    elif t == 2:    # gỗ tràm ván ghép, 2 đai sắt ôm thân + nắp, bọc góc sắt, bản lề, khoá móc sắt
+            o.append(M(Line(pts, .3, 'may'), col='#8a4a24'))
+    elif t == 2:    # gỗ tràm nâu đỏ, đai sắt, KHOÁ ĐỒNG TO hình khiên + đinh đồng
         L, Dp, H = 8.6, 5.6, 7.6
-        Rl = body(o, L, Dp, H, 'van', '#b4854e', sp=.08, pw=12)
-        IRON = '#5c5a56'
-        for x in (-L * .55, L * .55):
+        Rl = body(o, L, Dp, H, 'van', '#c8783a', sp=.08, pw=12)
+        IRON, BR = '#565a62', '#e0a23a'
+        for x in (-L * .58, L * .58):
             strap_body(o, x, Dp, H, .55, IRON)
             strap_lid(o, x, H, Rl, .34, IRON)
-            for zz in (1.4, H - 1.0):
-                for sy in (1, 1):
-                    o.append(met(Ball(tuple(W(x, Dp + .4, zz)), .26, 'met'), hexc('#3e3c38')))      # đinh tán
+            for zz in (1.3, H * .5, H - 1.0):
+                o.append(met(Ball(tuple(W(x, Dp + .38, zz)), .3, 'met'), hexc(BR)))
         corner_caps(o, L, Dp, H, IRON)
-        lid_trim(o, L, H, Rl, '#4e4c48', r=.3)
-        o.append(met(Box(tuple(W(0, Dp + .3, H - .6)), AX, (1.1, .2, 1.3), 'met', rr=.12), hexc(IRON)))       # bản khoá
-        o.append(met(Box(tuple(W(0, Rl + .35, H + .45)), AX, (.5, .22, 1.0), 'met', rr=.1), hexc(IRON)))      # tai khoá trên nắp
-        o.append(met(Torus(tuple(W(0, Dp + .75, H - 1.4)), tuple(FN), .8, .22, 'met'), hexc('#4a4844')))      # khoen
-        o.append(met(Box(tuple(W(0, Dp + .8, H - 2.6)), AX, (.85, .4, .75), 'met', rr=.25), hexc('#4a4844')))   # ổ khoá móc
-        o.append(M(Box(tuple(W(0, Dp + 1.22, H - 2.75)), AX, (.12, .05, .3), 'met', rr=.03), col='#1a1816'))
-        handle(o, L, H, '#4e4c48', r=1.1)
-    elif t == 3:    # sơn đỏ, bọc góc + đai đồng, khoá tròn đồng, quai đồng, chân gỗ
+        lid_trim(o, L, H, Rl, '#4a4e56', r=.3)
+        c = W(0, Dp + .25, H - .9)
+        o.append(met(Box(tuple(c), AX, (2.3, .24, 2.4), 'met', rr=.8), hexc(BR)))                          # bản khoá khiên đồng
+        o.append(met(Torus(tuple(c + FN * .26), tuple(FN), 1.9, .18, 'met'), hexc('#b07a28')))
+        for sx in (1, -1):
+            for sz in (1, -1): o.append(met(Ball(tuple(c + FN * .26 + LN * sx * 1.55 + Z * sz * 1.6), .3, 'met'), hexc('#b07a28')))
+        o.append(met(Box(tuple(W(0, Rl + .3, H + .5)), AX, (.6, .24, 1.0), 'met', rr=.12), hexc(BR)))
+        o.append(met(Torus(tuple(c + FN * .75 - Z * .7), tuple(LN), .85, .24, 'met'), hexc('#3e4248')))       # khoen sắt
+        o.append(met(Box(tuple(c + FN * .95 - Z * 2.1), AX, (1.1, .45, .95), 'met', rr=.3), hexc('#3e4248')))   # ổ khoá móc
+        o.append(M(Box(tuple(c + FN * 1.41 - Z * 2.2), AX, (.13, .05, .36), 'met', rr=.03), col='#14120e'))
+        handle(o, L, H, IRON, r=1.1)
+    elif t == 3:    # sơn xanh ngọc, đai + bọc góc vàng đồng, HUY HIỆU SEN vàng hột đỏ
         L, Dp, H = 9.0, 5.8, 7.8
-        feet(o, L, Dp, '#6a3820')
-        Rl = body(o, L, Dp, H, 'son', '#b0322a', sp=.18, pw=30)
-        BR = '#b88a3c'
+        feet(o, L, Dp, '#d8a038', metal=True)
+        Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.18, pw=30)
+        BR = '#e2a83a'
         for x in (-L * .6, L * .6):
-            strap_body(o, x, Dp, H, .6, BR)
-            strap_lid(o, x, H, Rl, .36, BR)
+            strap_body(o, x, Dp, H, .62, BR)
+            strap_lid(o, x, H, Rl, .38, BR)
         corner_caps(o, L, Dp, H, BR, s=2.0)
-        lid_trim(o, L, H, Rl, BR, r=.34)
+        lid_trim(o, L, H, Rl, BR, r=.36)
         for sy in (1, -1):
-            o.append(met(Box(tuple(W(0, sy * (Dp + .12), .35)), AX, (L - .2, .14, .32), 'met', rr=.08), hexc(BR)))     # nẹp chân đồng
-        c = W(0, Dp + .32, H - 1.4)
-        o.append(met(Tube(tuple(c), tuple(FN), .35, [(0, 2.0), (1, 1.85)], 'met'), hexc('#c8983e')))        # khoá tròn
-        o.append(met(Torus(tuple(c + FN * .35), tuple(FN), 1.6, .2, 'met'), hexc('#987030')))
-        o.append(M(Box(tuple(c + FN * .4 + Z * .25), AX, (.22, .05, .3), 'met', rr=.1), col='#2a1a10'))      # lỗ khoá
-        o.append(M(Box(tuple(c + FN * .4 - Z * .35), AX, (.1, .05, .4), 'met', rr=.04), col='#2a1a10'))
-        o.append(met(Box(tuple(W(0, Rl + .3, H + .35)), AX, (.6, .2, .9), 'met', rr=.12), hexc(BR)))        # tai nắp
+            o.append(met(Box(tuple(W(0, sy * (Dp + .12), .35)), AX, (L - .2, .14, .32), 'met', rr=.08), hexc(BR)))
+        medal(o, W(0, Dp + .22, H - .9), 2.2, BR, '#e0302a')
+        o.append(met(Box(tuple(W(0, Rl + .3, H + .45)), AX, (.6, .22, .9), 'met', rr=.12), hexc(BR)))
         handle(o, L, H, BR, r=1.3)
-    else:           # sơn mài đen khảm xà cừ, viền + đai thếp vàng, khoá vàng hột đỏ, chân vàng
+    else:           # sơn son ĐỎ thếp vàng, khảm xà cừ trong khung vàng, HUY HIỆU vàng to hột ruby + vòng ngọc, núm sen
         L, Dp, H = 9.4, 6.0, 8.0
-        GD = '#f0c448'
-        feet(o, L, Dp, '#c89a30', metal=True)
-        Rl = body(o, L, Dp, H, 'xacu', '#221a1a', sp=.15, pw=40)
-        def inl(x, y, z, lid):          # vùng khảm: trong khung vàng ở thân, giữa 2 đai ở nắp
-            if lid is not None: return ((np.abs(x) < L * .5 - .9) | ((np.abs(x) > L * .5 + .9) & (np.abs(x) < L - .9))) & ~((np.abs(x) < 1.3) & (y > 0) & (z < H + Rl * .7))
+        GD = '#f2b636'
+        feet(o, L, Dp, GD, metal=True)
+        Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.15, pw=40)
+        def inl(x, y, z, lid):
+            if lid is not None: return ((np.abs(x) < L * .5 - .9) | ((np.abs(x) > L * .5 + .9) & (np.abs(x) < L - .9))) & ~((np.abs(x) < 1.6) & (y > 0) & (z < H + Rl * .75))
             band = (z > 1.75) & (z < H - 1.55)
-            return band & (((np.abs(x) < L * .5 - 1.0) & ~((np.abs(x) < 2.3) & (z > H - 4.2))) | ((np.abs(x) > L * .5 + 1.0) & (np.abs(x) < L - 1.6)) | (np.abs(np.abs(x) - L) < .1) & (np.abs(y) < Dp - 1.6))
-        Rl = Dp
+            return band & (((np.abs(x) < L * .5 - 1.0) & ~(np.abs(x) < 3.4)) | ((np.abs(x) > L * .5 + 1.0) & (np.abs(x) < L - 1.6)) | (np.abs(np.abs(x) - L) < .1) & (np.abs(y) < Dp - 1.6))
         for ob in o:
             if getattr(ob, 'rk', None) == 'xacu': ob.inlay = inl
         for x in (-L * .5, L * .5):
-            strap_body(o, x, Dp, H, .65, GD)
-            strap_lid(o, x, H, Rl, .4, GD)
-        corner_caps(o, L, Dp, H, GD, s=2.2)
-        lid_trim(o, L, H, Rl, GD, r=.36)
-        for sy in (1, -1):              # khung chỉ vàng quanh ô khảm
+            strap_body(o, x, Dp, H, .7, GD)
+            strap_lid(o, x, H, Rl, .44, GD)
+        corner_caps(o, L, Dp, H, GD, s=2.3)
+        lid_trim(o, L, H, Rl, GD, r=.4)
+        for sy in (1, -1):
             for zz in (1.2, H - 1.0):
-                o.append(met(Box(tuple(W(0, sy * (Dp + .1), zz)), AX, (L - .3, .12, .16), 'met', rr=.06), hexc(GD)))
-        c = W(0, Dp + .32, H - 1.5)
-        o.append(met(Box(tuple(c), AX, (1.6, .3, 1.9), 'met', rr=.5), hexc('#e6bc48')))                    # bản khoá vàng
-        o.append(M(Ball(tuple(c + FN * .45 + Z * .55), .55, 'cam', sq=(1, .6, 1)), col='#c42a2a', sp=.4, pw=60))   # hột đỏ
-        o.append(M(Box(tuple(c + FN * .35 - Z * .7), AX, (.16, .05, .35), 'met', rr=.06), col='#2a1a10'))
-        o.append(met(Box(tuple(W(0, Rl + .3, H + .4)), AX, (.7, .22, 1.0), 'met', rr=.15), hexc(GD)))
-        o.append(met(Ball(tuple(W(0, 0, H + Rl + .55)), .7, 'met', sq=(1, 1, .8)), hexc(GD)))               # núm vàng trên đỉnh nắp
+                o.append(met(Box(tuple(W(0, sy * (Dp + .1), zz)), AX, (L - .3, .12, .18), 'met', rr=.06), hexc(GD)))
+        for sx in (1, -1):              # ngọc xanh trên 4 bọc góc trước
+            for zc in (1.25, H - 1.2):
+                o.append(M(Ball(tuple(W(sx * (L - 1.0), Dp + .45, zc)), .42, 'cam'), col='#1aa878', sp=.35, pw=50))
+        medal(o, W(0, Dp + .22, H - 1.2), 2.9, GD, '#d81c3a', ring='#f4f0e6', np_=12)
+        o.append(met(Box(tuple(W(0, Rl + .3, H + .5)), AX, (.8, .24, 1.1), 'met', rr=.15), hexc(GD)))
+        top = W(0, 0, H + Rl + .25)                                                                          # núm búp sen vàng trên đỉnh
+        o.append(met(Tube(tuple(top - Z * .2), tuple(Z), .5, [(0, 1.3), (1, 1.0)], 'met'), hexc(GD)))
+        o.append(met(Ball(tuple(top + Z * 1.0), .95, 'met', sq=(1, 1, 1.35)), hexc(GD)))
         handle(o, L, H, GD, r=1.4)
     return Scene(o)
 
