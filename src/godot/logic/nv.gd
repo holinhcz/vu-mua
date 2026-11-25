@@ -523,8 +523,8 @@ func _e8(p: int) -> String:
 			for m in ["van", "dinh", "gach"]:
 				S0(m, 1)
 			return "+1 ván gỗ, đinh sắt, gạch nung" + C8(4)
-	x0(2)
-	return "+2 sen đỏ" + C8(6)
+	x0(1)   # (11-25) 2 -> 1: bớt sen free
+	return "+1 sen đỏ" + C8(6)
 
 func oY() -> int:   # rương năng động mở được
 	var a := r5()
@@ -770,8 +770,8 @@ func wk_chest(i: int) -> void:
 			bp(1)
 			r = "+" + G.fmt_n(x) + " xu, bùa +50% EXP 1 ngày"
 		_:
-			x0(5)
-			r = deco(week()) + ", +5 sen đỏ"
+			x0(3)   # (11-25) 5 -> 3
+			r = deco(week()) + ", +3 sen đỏ"
 	G.toast.emit("Quà tuần mốc " + str(wk_p(i)) + ": " + r + ".")
 	G.mark()
 
