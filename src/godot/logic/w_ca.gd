@@ -332,7 +332,7 @@ func book_ns() -> Array:   # xo: nông sản
 func book_tc() -> Array:   # dT: trái cây, sản vật
 	return (WC.Mv if WC != null else []) + ["mat_ong", "dien_dien", "bong_sung", "keo_neo", "luc_binh"]
 
-const TS_THEM := ["ca_keo", "oc", "oc_buou", "tep", "cua", "ech"]   # (11-25) bãi bùn + lờ / lọp: vô tab Thủy sản
+const TS_THEM := ["ca_keo", "oc", "oc_buou", "tep", "cua", "ech", "muc", "ghe_bien"]   # (11-25) bãi bùn + lờ / lọp: vô tab Thủy sản
 func book_ts() -> Array:   # Bộ sưu tập > Thủy sản: cá câu + cá chép + đồ mò bãi bùn, lờ lọp
 	var out := Wcc.duplicate()
 	for t in TS_THEM:

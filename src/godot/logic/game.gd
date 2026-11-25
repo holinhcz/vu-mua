@@ -1600,7 +1600,7 @@ func bf(t: String, a := 0) -> int:   # Bf: cấp mở món t (cây, trái, chu�
 
 # cấp có chỗ kiếm đồ không trồng / không chế biến (0 = chỉ tính khi có trong kho)
 const SRC_FROM := {"fish": 5, "bun": 1, "song": 1, "vit": 7}   # câu cá cấp 5, bãi bùn / ven sông, thả vịt cấp 7
-const SRC_LV := {"luon": 7, "cua": 7, "ech": 7, "muc": 4}       # lờ, lọp, giăng câu cấp 7; mực mua ở ghe chợ nổi cấp 4
+const SRC_LV := {"luon": 7, "cua": 7, "ech": 7, "muc": 4, "ghe_bien": 4}       # lờ, lọp, giăng câu cấp 7; mực mua ở ghe chợ nổi cấp 4
 func _src_lv(t: String) -> int:
 	if SRC_LV.has(t):
 		return SRC_LV[t]
@@ -1608,10 +1608,12 @@ func _src_lv(t: String) -> int:
 
 const WHERE_F := {"ga": "Nuôi gà, lượm ở chuồng gà", "cuu": "Nuôi cừu ở chuồng cừu", "bo": "Nuôi bò ở chuồng bò", "heo": "Nuôi heo ở chuồng heo", "de": "Nuôi dê ở chuồng dê",
 	"vit": "Thả vịt ra ao", "tree": "Hái ở cây ăn trái", "fish": "Câu cá, đặt lờ lọp", "bun": "Mò bãi bùn lúc nước ròng", "song": "Hái ven sông mùa nước nổi",
-	"ao": "Kéo lưới ao cá nhà", "ong": "Lấy mật tổ ong rừng tràm", "dog": "Chó đánh hơi trong vườn", "bao": "Dọn cây đổ, mua ở bếp", "nghe": "Làm ở bảng Nghề"}
+	"ong": "Lấy mật tổ ong rừng tràm", "dog": "Chó đánh hơi trong vườn", "bao": "Dọn cây đổ, mua ở bếp", "nghe": "Làm ở bảng Nghề"}
 func where(t: String) -> String:   # (bản 492, chung) chỗ kiếm một món, một câu ngắn (Thư nhà, Thiên tai...)
 	if D.crops.has(t):
 		return "Trồng ngoài ruộng"
+	if t == "muc" or t == "ghe_bien":   # (11-25) đồ biển: chỉ mua ở ghe đồ bếp chợ nổi
+		return "Mua ở ghe đồ bếp chợ nổi"
 	var f := String(item(t).get("from", ""))
 	if WHERE_F.has(f):
 		return WHERE_F[f]
