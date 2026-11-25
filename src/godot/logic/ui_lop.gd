@@ -93,6 +93,15 @@ func _body() -> Array:
 			blk.append(_dt(c3, yy, iw * 0.25, 16.0, String(r[2]), 10.5, 800, GRN if r[3] else BROWN, "left"))
 		yy += 17.0
 	yy += 4.0
+	var cs: Array = (e.c as Array).duplicate()   # (11-25) ra được gì: nhiều tới ít
+	cs.sort_custom(func(p, q): return float(p[1]) > float(q[1]))
+	var rn := []
+	for c in cs:
+		rn.append(G.item_name(String(c[0])).to_lower() + (" (mùa nước nổi)" if String(c[0]) == "ca_linh" else ""))
+	var rt := "Ra được: " + ", ".join(rn) + (". Đặt ở sông Vàm có thêm cá kèo." if t == "lo" else ".")
+	var RP: Array = _para(X0 + 10.0, yy, XW - 20.0, rt, 10.0, 600, BROWN, 13.0)
+	blk.append_array(RP[0])
+	yy += float(RP[1]) + 6.0
 	var btns := []
 	if W.qk(t) > 0:   # (bản 551) camera tới cái đang đặt (ưu tiên cái có cá)
 		btns.append(["Tới chỗ", _goto.bind(t), "plain"])
