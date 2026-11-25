@@ -106,8 +106,8 @@ def albedo_mui(obj, P):
 B.albedo = albedo_mui
 
 
-def boat(seed=0):
-    fr = Frame(0.0, 1.0, 'u')                      # u = trục 2 ô (thế giới +y, màn hình xuống phải), mũi +u
+def boat(seed=0, k=0):
+    fr = Frame(k * math.pi / 2, 1.0, 'u')   # k = hướng: 0 mũi +r (2x1), 1 mũi +o (1x2), 2 mũi -r, 3 mũi -o                      # u = trục 2 ô (thế giới +y, màn hình xuống phải), mũi +u
     L = .92 * TILE                                   # nửa dài thân
     h = Hull(fr, L, .21 * TILE, wz(-1.5) * -1, wz(6), 10 * ZK, 10 * ZK, t=.55, mat='nan')
     h.band = hexc('#d9402f' if seed % 2 == 0 else '#2f7fb5'); h.bw = 2.6; h.line = '#8a5a32'; h.trim = '#8a5a32'
@@ -132,13 +132,14 @@ def boat(seed=0):
     o.append(M(Mui(fr, h, u0 - .3, u0 + .4, htop + .25, inset=.6, th=.65, mat='go2'), col=hexc('#7a5230')))   # vành mép mui 2 đầu
     o.append(M(Mui(fr, h, u1 - .4, u1 + .3, htop + .25, inset=.6, th=.65, mat='go2'), col=hexc('#7a5230')))
     # sào cắm mũi (xuống nước), đầu sào tre
-    ap = .74; vp = w_at(h, ap) + .95                  # sào cắm sát mạn mũi (phía xa, không che thuyền), buộc vào nẹp mép
-    a0 = fr.w(ap * L, vp, wz(-6) - 2); a1 = fr.w(ap * L + 4.0, vp + .6, wz(44))
+    fs = 1.0 if float(fr.Vv @ V(1, 1, 0)) < 0 else -1.0   # mạn xa camera (camera ở phía +x +y)
+    ap = .74; vp = fs * (w_at(h, ap) + .95)           # sào cắm sát mạn mũi (phía xa, không che thuyền), buộc vào nẹp mép
+    a0 = fr.w(ap * L, vp, wz(-6) - 2); a1 = fr.w(ap * L + 4.0, vp + fs * .6, wz(44))
     o.append(M(Line([tuple(a0), tuple(a1)], [.75, .62], 'coc', nodes=7.0), col=hexc('#d3bf6a'), dk=hexc('#8a7c44')))
     zr = zt_at(h, ap)
     pr = a0 + (a1 - a0) * ((zr - a0[2]) / (a1[2] - a0[2]))
     o.append(M(Torus(tuple(pr), (0, 0, 1), .95, .26, 'day'), col=hexc('#c8a466')))
-    o.append(M(Line([tuple(pr), tuple(fr.w(ap * L, w_at(h, ap) - .2, zr))], .22, 'day'), col=hexc('#c8a466')))
+    o.append(M(Line([tuple(pr), tuple(fr.w(ap * L, fs * (w_at(h, ap) - .2), zr))], .22, 'day'), col=hexc('#c8a466')))
     o += G.stem(fr, h, '#8a5a32', .8)
     # cọc buộc đuôi + dây lên thuyền
     sx, sy = fr.w(-1.06 * TILE, -.34 * TILE, 0)[:2]      # trục o của ô = -Vv
@@ -159,12 +160,12 @@ def boat(seed=0):
     return Scene(o)
 
 
-def shadow(im, anc, pu):
+def shadow(im, anc, pu, k=0):
     """bóng mềm thân thuyền trên mặt nước (như bản cũ: elip 40 x 9.5 nghiêng .46 dưới tâm), nới khung cho đủ"""
     from PIL import Image, ImageDraw, ImageFilter
     ax, ay = anc[0], anc[1] + WZ * pu                 # neo game (px)
     cx, cy = ax - 1 * pu, ay + 2.5 * pu
-    rx, ry, rot = 40 * pu, 9.5 * pu, .46
+    rx, ry, rot = 40 * pu, 9.5 * pu, (.46 if k % 2 == 0 else -.46)
     ex = math.hypot(rx * math.cos(rot), ry * math.sin(rot)); ey = math.hypot(rx * math.sin(rot), ry * math.cos(rot))
     pad = int(3 * pu)
     x0 = int(min(0, cx - ex - pad)); y0 = int(min(0, cy - ey - pad))
@@ -189,12 +190,14 @@ if __name__ == '__main__':
     ap = os.path.join(OUT, 'atlas.json')
     if os.path.exists(ap):
         meta = json.load(open(ap)); meta["px_per_unit"] = pu
-    for sd in [int(a) for a in (sys.argv[2:] or '0123')]:
-        (im, imw), anc = B.render(boat(sd), 'd%d' % sd)
-        imw, anc = shadow(imw, anc, pu)
-        imw.save(os.path.join(OUT, 'd%d.png' % sd))
-        ay = anc[1] + WZ * pu                         # neo game = tâm 2 ô ở z web 0 (dưới mặt nước 2.4)
-        meta["frames"]['d%d' % sd] = {"file": 'd%d.png' % sd, "w": imw.width, "h": imw.height,
-                                     "ox": round(-anc[0] / pu, 2), "oy": round(-ay / pu, 2), "gw": round(imw.width / pu, 2), "gh": round(imw.height / pu, 2)}
-        print(sd, meta["frames"]['d%d' % sd], flush=True)
+    # tên: <màu>_<hướng>: do = đỏ (kiểu 0: chèo + cuộn dây), xanh = xanh (kiểu 1: thêm giỏ cá); hướng 0-3 như boat(k)
+    for key in (sys.argv[2:] or ['do_0']):
+        mau, hk = key.split('_'); hk = int(hk); sd = 0 if mau == 'do' else 1
+        (im, imw), anc = B.render(boat(sd, hk), key)
+        imw, anc = shadow(imw, anc, pu, hk)
+        imw.save(os.path.join(OUT, key + '.webp'), lossless=True, quality=100, method=6)
+        ay = anc[1] + WZ * pu
+        meta["frames"][key] = {"file": key + '.webp', "w": imw.width, "h": imw.height, "fw": 2 if hk % 2 == 0 else 1, "fd": 1 if hk % 2 == 0 else 2,
+                               "ox": round(-anc[0] / pu, 2), "oy": round(-ay / pu, 2), "gw": round(imw.width / pu, 2), "gh": round(imw.height / pu, 2)}
+        print(key, meta["frames"][key], flush=True)
         json.dump(meta, open(ap, 'w'), indent=1)
