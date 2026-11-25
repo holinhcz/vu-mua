@@ -4043,6 +4043,7 @@ func ng_up_msg() -> String:   # ngUpMsg
 	NGMSG = ""
 	return m
 
+const NG_SUC := 2.0   # (11-25) sức mỗi món nghề (như đi câu một lần)
 func tk(id: String) -> void:   # Tk: nhân vật về nhà làm một món nghề
 	var gx = nghe_by_id(id)
 	if gx == null or not _tr(t6().get(id)):
@@ -4053,9 +4054,13 @@ func tk(id: String) -> void:   # Tk: nhân vật về nhà làm một món ngh�
 	var F = G.lang.F if G.lang != null else null
 	if F == null or F.has_job("nghe"):   # l4
 		return
+	if float(G.g.pc.en) < NG_SUC:   # (11-25) làm nghề tốn sức: hết sức thì ăn hoặc ngủ
+		_ta("Mệt quá làm nghề không nổi. Ăn uống hoặc về nhà ngủ lấy lại sức đã.")
+		return
 	var run := func() -> bool:
-		if not q_s(gx):
+		if not q_s(gx) or float(G.g.pc.en) < NG_SUC:
 			return false
+		G.use_en(NG_SUC)
 		for x in gx["in"]:
 			G.g.barn[String(x[0])] = _barn(x[0]) - int(x[1])
 		var oid := ng_made(String(gx.id))
