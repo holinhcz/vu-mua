@@ -431,6 +431,14 @@ func _sbub_sync() -> void:
 			want["vit"] = ["trung_vit", vit.position + Vector2(0, -30), {"type": "vit", "k": "vit"}]
 		if meo != null and is_instance_valid(meo) and meo.hungry:
 			want["meo"] = ["ca_ro", meo.position + Vector2(0, -38), {"type": "meo", "k": "meo"}]
+		if G.lang != null:   # (11-25) lò gạch có gạch chín: bong bóng viên gạch, chạm là ra lấy
+			for o in G.lang.objs():
+				if o is Dictionary and (o.get("id") == "logach" or o.get("id") == "logach2"):
+					var gk: String = G.w_all.WX.lg_key(o)
+					if G.w_all.WX.lg_left(gk) == 0.0:
+						var cx: float = float(o.gx) + float(o.get("fw", 2)) / 2.0
+						var cy: float = float(o.gy) + float(o.get("fd", 2)) / 2.0
+						want["g:" + gk] = ["gach", Vector2(F.en(cx, cy), F.nn(cx, cy) - 92.0), {"type": "lgb", "k": gk, "x": cx, "y": float(o.gy) + float(o.get("fd", 2)) + 0.3}]
 	for k in sbubs.keys():
 		if not want.has(k):
 			sbubs[k][0].queue_free()
@@ -675,6 +683,10 @@ func tap(h: Dictionary) -> void:
 		var ns = G.w_all.WCAU.ext.get("Ns")
 		if ns is Callable and ns.is_valid():
 			ns.call({"type": "lo", "key": k})
+		return
+	if h.type == "lgb":   # (11-25) chạm bong bóng gạch chín: ra lò lấy gạch
+		var gk := String(h.k)
+		G.w_all._job("lgx" + gk, [float(h.x), float(h.y)], 0.5, func() -> bool: return G.w_all.WX.lg_take(gk))
 		return
 	if h.type == "lo":   # (bản 546) vòng nút Thăm / Gỡ (rm_don)
 		F.ui.dn_open({"lo": k})

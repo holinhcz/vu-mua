@@ -54,7 +54,7 @@ func _sig() -> String:
 	for c in ds:
 		if c.st == "xay":
 			tl.append(int(maxf(0.0, (W._n(c.te) - W._now()) / 60000.0)))
-	return JSON.stringify([tab, W.ut_s(), W.ct_s(), G.g.coins, W._barn("cui"), W._barn("lua"), W._barn("nhang"), W._r0().get("gach"), W._vr(), tl])
+	return JSON.stringify([tab, W.ut_s(), W.ct_s(), G.g.coins, W._barn("cui"), W._barn("lua"), W._barn("nhang"), G.mat_n("gach"), W._vr(), tl])
 
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
@@ -184,7 +184,7 @@ func _ut() -> Array:
 		y += 42.0 + 6.0
 	y += GG - 6.0
 	# mới đây
-	out.append_array(_sq(y, "Mới đây", "Việc nào làm lên, làm xuống uy tín. Giúp bà con, đi đám, góp hợp tác xã là lên uy tín."))
+	out.append_array(_sq(y, "Mới đây", "Việc nào làm lên, làm xuống uy tín. Giúp bà con, đi đám, góp cúng đình là lên uy tín."))
 	y += 16.0 + GG
 	if o.lg.is_empty():
 		out.append(_dt(X0, y, XW, 16.0, "Chưa có gì. Giúp bà con, đi đám là lên uy tín.", 11.0, 700, SUB, "left"))

@@ -155,6 +155,8 @@ func fp(t: Dictionary) -> String:   # fp
 		return "[b]" + nm.substr(0, 1).to_upper() + nm.substr(1) + "[/b]\nChạm để dọn, được " + str(int(G.lang.C.Nd.get(oid, 5))) + " xu."
 	if ty == "sap":
 		return "[b]Sạp bán hàng[/b]\nBày hàng trong kho bán cho khách. Chạm để xem và nâng sạp."
+	if ty == "logach":
+		return "[b]Lò gạch[/b]\nNung đất sét với củi ra gạch nung. Chạm để nung, lấy gạch."
 	if ty == "khohang":
 		return "[b]Kho hàng[/b]\nHàng trong kho bày trên kệ. Chạm để mở kho."
 	if ty == "paddy":

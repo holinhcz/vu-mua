@@ -273,7 +273,7 @@ func bS(t: Dictionary) -> bool:   # bS: chỗ bãi bùn này con nước này đ
 
 # Bãi bùn lúc nước ròng (v6, bản 176): ô nước sát hai bờ khúc sông đã mua lộ bùn, mỗi bờ 4 chỗ rải đều; chỗ đổi theo con nước.
 # Mỗi chỗ có một thứ để mò: cá kèo, ốc, ốc bươu, tép, lục bình.
-const BUN_K := ["ca_keo", "oc", "oc_buou", "tep", "luc_binh"]
+const BUN_K := ["ca_keo", "oc", "oc_buou", "tep", "luc_binh", "dat_set"]   # (11-25) thêm đất sét cho lò gạch
 var _v6_sig := ""
 var _v6 := []
 func v6() -> Array:   # [{gx, gy, x, y, k, key, ph}]
@@ -309,7 +309,7 @@ func gk(t: String) -> bool:   # gk: mò bãi bùn
 	var e: int
 	if k == "oc_buou":
 		e = 2 + randi() % 3
-	elif k == "tep" or k == "oc" or k == "luc_binh":
+	elif k == "tep" or k == "oc" or k == "luc_binh" or k == "dat_set":
 		e = 3 + randi() % 3
 	else:   # cá kèo (11-25: 2-3 con, trước 1-2)
 		e = 2 + randi() % 2
@@ -329,3 +329,44 @@ func IK(t: float) -> void:   # IK: báo nước ròng mỗi con nước
 	if a and int(_x("O0", [], 0)) and G.g.get("tdh") != n and String(_x("bdMode", [], "off")) == "off":
 		G.g.tdh = n
 		G.get_tree().create_timer(1.2).timeout.connect(func(): G.toast.emit("Nước ròng! Sông Vàm lộ bãi bùn hai bên bờ. Ra bắt cá kèo, mò ốc, vớt lục bình đi."))
+
+
+# ------------------------------------------------------------------ (11-25) LÒ GẠCH: nung đất sét + củi ra gạch nung (kho vật liệu g.mats.gach)
+# Mỗi lò một mẻ: LG_IN -> LG_OUT viên sau LG_T giây. Lưu g.lg {"gx,gy": {at}} (at = lúc bắt đầu nung, ms).
+const LG_IN := [["dat_set", 4], ["cui", 2]]
+const LG_OUT := 3
+const LG_T := 1800.0
+func lg_key(o: Dictionary) -> String:
+	return str(int(o.gx)) + "," + str(int(o.gy))
+func _lg() -> Dictionary:
+	if not (G.g.get("lg") is Dictionary):
+		G.g.lg = {}
+	return G.g.lg
+func lg_left(k: String) -> float:   # giây còn nung; -1 = lò trống; 0 = gạch chín
+	var e = _lg().get(k)
+	if not (e is Dictionary):
+		return -1.0
+	return maxf(0.0, LG_T - (G._now_ms() - float(e.at)) / 1000.0)
+func lg_ok() -> bool:   # đủ đất sét, củi
+	for c in LG_IN:
+		if int(G.g.barn.get(String(c[0]), 0)) < int(c[1]):
+			return false
+	return true
+func lg_start(k: String) -> bool:
+	if lg_left(k) >= 0.0 or not lg_ok():
+		return false
+	for c in LG_IN:
+		G.g.barn[String(c[0])] = int(G.g.barn.get(String(c[0]), 0)) - int(c[1])
+	_lg()[k] = {"at": G._now_ms()}
+	G.toast.emit("Bỏ đất sét vô lò, nhóm củi nung gạch. Chừng " + str(int(LG_T / 60.0)) + " phút gạch chín.")
+	G.mark()
+	return true
+func lg_take(k: String) -> bool:
+	if lg_left(k) != 0.0:
+		return false
+	_lg().erase(k)
+	G.mat_add("gach", LG_OUT)
+	G.toast.emit("Ra lò " + str(LG_OUT) + " viên gạch nung, cất vô kho vật liệu.")
+	G.vib(10)
+	G.mark()
+	return true

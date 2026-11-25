@@ -20,7 +20,7 @@ const TNC := {   # màu chip theo loại thiên tai (nhạt như dòng việc S�
 const TNIC := {"bao": "giong", "lu": "mua", "han": "han"}   # hình thời tiết của bảng Trời đất
 const FIRE := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><path d=\"M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2.5 1.2-4 2.5-5.5C10 9.5 10.5 11 12 11.5 11 8 11.5 5 12 2z\" fill=\"rgb(236,96,48)\" stroke=\"rgb(180,60,30)\" stroke-width=\"1\"/><path d=\"M12 13c1.2 1.4 2.5 2.4 2.5 4a2.5 2.5 0 0 1-5 0c0-1.5 1.2-2.6 2.5-4z\" fill=\"rgb(255,206,90)\"/></svg>"
 const GERM := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\"><g stroke=\"rgb(120,80,170)\" stroke-width=\"1.6\" stroke-linecap=\"round\"><path d=\"M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1\"/></g><circle cx=\"12\" cy=\"12\" r=\"5.5\" fill=\"rgb(176,140,220)\" stroke=\"rgb(120,80,170)\" stroke-width=\"1.2\"/><circle cx=\"10.3\" cy=\"10.8\" r=\"1.2\" fill=\"rgb(120,80,170)\"/><circle cx=\"13.6\" cy=\"13.4\" r=\"0.9\" fill=\"rgb(120,80,170)\"/></svg>"
-const SRC := {"cui": "Củi: chặt cây, dọn bụi trên ruộng ra củi.", "gach": "Gạch nung: thư bạn bè gửi, hợp tác xã chia.", "lua": "Lúa: gặt ruộng lúa.", "xu": "Xu: bán hàng, giao đơn."}   # chỗ kiếm đồ (câu báo khi chạm đồ thiếu)
+const SRC := {"cui": "Củi: chặt cây, dọn bụi trên ruộng ra củi.", "gach": "Gạch nung: nung ở lò gạch, thư bạn bè gửi kèm.", "lua": "Lúa: gặt ruộng lúa.", "xu": "Xu: bán hàng, giao đơn."}   # chỗ kiếm đồ (câu báo khi chạm đồ thiếu)
 const RIC := {"gach": "svg:res://ui/svg/mat/gach.svg"}   # hình đồ cần lạ (còn lại: "xu" đồng xu, mã món Kho)
 
 func _ck(kind: String) -> Array:
@@ -51,7 +51,7 @@ func step(dt: float) -> void:   # tnRender mỗi giây
 		_build()
 
 func _sig() -> String:
-	return JSON.stringify([tab, ctx, W.tn_s(), G.g.coins, G.g.barn, W._r0().get("gach"), W._vr(), W.tn_ok()])
+	return JSON.stringify([tab, ctx, W.tn_s(), G.g.coins, G.g.barn, G.mat_n("gach"), W._vr(), W.tn_ok()])
 
 func _build() -> void:
 	sig = _sig()

@@ -260,6 +260,8 @@ func chop(k: String) -> bool:   # uk: cưa cây ngã ra 3–5 bó củi, trồng
 		G.toast.emit("Cây đang cháy âm ỉ, đợi tắt hẳn rồi dọn.")
 		return false
 	var r := 3 + randi() % 3
+	if not G.kho_fit(r):   # (11-25) Kho đầy thì chưa cưa (như thu hoạch ruộng)
+		return false
 	G.g.barn["cui"] = int(G.g.barn.get("cui", 0)) + r
 	a.fell[k] = {"s": "grow", "at": now(), "p": -1}
 	ver += 1
