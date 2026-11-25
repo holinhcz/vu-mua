@@ -235,6 +235,7 @@ func _test_hook() -> void:
 			"dd": ui.dd_open(a[1] if a.size() > 1 else "")
 			"toast": G.toast.emit(":".join(a.slice(1)))   # thử câu báo
 			"vl": var H: Array = G.w_all.WL.bl(); if H.size(): ui.vl_open(int(H[0].u))
+			"xfo": G.g.work[String(a[1])] = {"b": 1, "q": [], "r": {}}; ui.xf_open(String(a[1]))   # thử: mở xưởng a[1] (xfo:bepcui)
 			"xw2": for k in ["ruong", "mill"]: G.g.work[k] = {"b": 1, "q": [], "r": {}}   # test: có Ruộng muối, Cối xay
 			"ng": ui.ng_open(a[1] if a.size() > 1 else "")
 			"nglearn": G.w_all.WL.t6()[a[1]] = 1; G.mark()
