@@ -52,6 +52,60 @@ def albedo_nan(obj, P):
 B.albedo = albedo_nan
 
 
+class Mui:
+    """mui nan ÔM THEO MẠN: mặt cắt nửa elip, chân vòm chạy theo mép cong (thân thon + vểnh 2 đầu), nóc ngang bằng.
+    ở mỗi u: nửa rộng = rộng thân - lùi vào (nằm trong nẹp mép), chân = mép thân, cao tới nóc htop"""
+    def __init__(s, fr, h, u0, u1, htop, inset=.75, th=.45, mat='mui2'):
+        s.fr = fr; s.h = h; s.u0 = u0; s.u1 = u1; s.ht = htop; s.ins = inset; s.th = th; s.mat = mat
+        s.bound = (fr.w((u0 + u1) / 2, 0, htop * .6), (u1 - u0) / 2 + 14)
+
+    def geo(s, P):
+        u, v, z = s.fr.loc(P)
+        a = np.clip(u / s.h.L, -1, 1)
+        w, zt, zb = s.h.prof(a)
+        wi = np.maximum(w - s.ins, .5); zb_ = zt - .15
+        hh = np.maximum(s.ht - zb_, 1.0)
+        x = v / wi; y = (z - zb_) / hh
+        k = np.sqrt(x * x + y * y)
+        return u, v, z, wi, zb_, hh, x, y, k
+
+    def sdf(s, P):
+        u, v, z, wi, zb_, hh, x, y, k = s.geo(P)
+        d = np.abs(k - 1) * np.minimum(wi, hh) * .8 - s.th / 2
+        d = np.maximum(d, zb_ - z)
+        d = np.maximum(d, np.maximum(s.u0 - u, u - s.u1))
+        return d
+
+    def local(s, P):
+        u, v, z, wi, zb_, hh, x, y, k = s.geo(P)
+        return u, np.arctan2(np.maximum(y, 0), x), k
+
+
+_prev2 = B.albedo
+
+
+def albedo_mui(obj, P):
+    if obj.mat == 'mui2':     # tấm nan đan mắt cáo (chéo 2 chiều), viền tre ở 2 đầu mui + chân mui
+        u, ang, k = obj.local(P)
+        sarc = ang * 9.0
+        W0 = 1.25
+        p = (u + sarc) / W0; q = (u - sarc) / W0
+        ip = np.floor(p); iq = np.floor(q); fp = p - ip; fq = q - iq
+        top = ((ip + iq) % 2) == 0
+        f = np.where(top, fp, fq); kk = np.where(top, ip, iq)
+        edge = np.exp(-((f - .5) / .36) ** 8)
+        tone = (B.hsh(kk * 2.3 + top * 5) - .5) * .2
+        c = hexc('#d4ae6c')[None] * (.74 + .32 * edge[:, None] + tone[:, None] + .08 * (vnoise(P, 1.5, 41) - .5)[:, None])
+        rim = (np.minimum(u - obj.u0, obj.u1 - u) < .9) | (ang < .09) | (ang > np.pi - .09)
+        c = np.where(rim[:, None], hexc('#8a6234')[None] * (.9 + .15 * edge[:, None]), c)
+        inside = k < 1.0
+        return np.where(inside[:, None], c * .82, c)
+    return _prev2(obj, P)
+
+
+B.albedo = albedo_mui
+
+
 def boat(seed=0):
     fr = Frame(0.0, 1.0, 'u')                      # u = trục 2 ô (thế giới +y, màn hình xuống phải), mũi +u
     L = .92 * TILE                                   # nửa dài thân
@@ -65,20 +119,27 @@ def boat(seed=0):
         for sd in (-1, 1):
             o.append(M(Torus(tuple(fr.w(aa * L, sd * (w_at(h, aa) - .1), zt_at(h, aa) - .15)), tuple(fr.U), .55, .17, 'may'), col=hexc('#7a5230')))
     o += thwarts(fr, h, (-.62, .62), '#8a5a32')
-    # mui nan: vòm cao, chân vòm ngồi trên mép
-    R = .2 * TILE; rz = 3.0
-    zb_ = zt0 - .2
-    A = fr.w(-.5 * TILE, 0, zb_ + rz)
-    t = Tube(tuple(A), tuple(fr.U), TILE, [(0, R), (.5, R * 1.02), (1, R * .97)], 'dan', shell=.45, open0=True, open1=True, wv=(34, .12))
-    M(t, col=hexc('#cfa868'), sp=.05)
-    o.append(Cut(t, tuple(fr.w(0, 0, zb_)), (0, 0, -1)))
-    for k in range(7):                               # vành tre ôm vòm
-        uu = (-.5 + k / 6) * TILE
-        tr = M(Torus(tuple(fr.w(uu, 0, zb_ + rz)), tuple(fr.U), R + .25, .32, 'go2'), col=hexc('#8a6234'))
-        o.append(Cut(tr, tuple(fr.w(0, 0, zb_)), (0, 0, -1)))
+    # mui nan ôm mạn: chân vòm ngồi trong nẹp mép, theo mép cong; nóc ngang
+    u0, u1 = -.5 * TILE, .5 * TILE
+    htop = zt0 + 12.0
+    o.append(Mui(fr, h, u0, u1, htop))
+    for k in range(7):                               # vành tre ôm vòm, chân vành buộc vào mép
+        uu = u0 + .45 + (u1 - u0 - .9) * k / 6
+        o.append(M(Mui(fr, h, uu - .32, uu + .32, htop + .3, inset=.55, th=.7, mat='go2'), col=hexc('#8a6234')))
+        aa = uu / L
+        for sd in (-1, 1):
+            o.append(M(Torus(tuple(fr.w(uu, sd * (w_at(h, aa) - .45), zt_at(h, aa) - .05)), tuple(fr.U), .55, .2, 'may'), col=hexc('#6a4424')))
+    o.append(M(Mui(fr, h, u0 - .3, u0 + .4, htop + .25, inset=.6, th=.65, mat='go2'), col=hexc('#7a5230')))   # vành mép mui 2 đầu
+    o.append(M(Mui(fr, h, u1 - .4, u1 + .3, htop + .25, inset=.6, th=.65, mat='go2'), col=hexc('#7a5230')))
     # sào cắm mũi (xuống nước), đầu sào tre
-    a0 = fr.w(.69 * TILE, 0, wz(-6)); a1 = fr.w(.84 * TILE, 0, wz(44))
+    ap = .74; vp = w_at(h, ap) + .95                  # sào cắm sát mạn mũi (phía xa, không che thuyền), buộc vào nẹp mép
+    a0 = fr.w(ap * L, vp, wz(-6) - 2); a1 = fr.w(ap * L + 4.0, vp + .6, wz(44))
     o.append(M(Line([tuple(a0), tuple(a1)], [.75, .62], 'coc', nodes=7.0), col=hexc('#d3bf6a'), dk=hexc('#8a7c44')))
+    zr = zt_at(h, ap)
+    pr = a0 + (a1 - a0) * ((zr - a0[2]) / (a1[2] - a0[2]))
+    o.append(M(Torus(tuple(pr), (0, 0, 1), .95, .26, 'day'), col=hexc('#c8a466')))
+    o.append(M(Line([tuple(pr), tuple(fr.w(ap * L, w_at(h, ap) - .2, zr))], .22, 'day'), col=hexc('#c8a466')))
+    o += G.stem(fr, h, '#8a5a32', .8)
     # cọc buộc đuôi + dây lên thuyền
     sx, sy = fr.w(-1.06 * TILE, -.34 * TILE, 0)[:2]      # trục o của ô = -Vv
     o.append(B.stake(sx, sy, wz(-4) - 3, wz(13), .8, nodes=5.5))
