@@ -8,9 +8,9 @@ extends RefCounted
 # ProjectSettings.load_resource_pack() -> res://ui/img/cc/... đọc được như thường. Lần sau mở máy: đọc file đã lưu, khỏi tải.
 
 const GAME := preload("res://logic/cc/cc_game.gd")
-const CC_V := "c04ba4c4"     # crc gói hình (mk_ccpack.py in ra)
+const CC_V := "7c9cd0e7"     # crc gói hình (mk_ccpack.py in ra)
 const CC_N := 2        # số miếng l/cc_<i>.wasm
-const CC_SIZE := 10293692     # tổng số byte
+const CC_SIZE := 10964992     # tổng số byte
 static var _packed := false
 static var _ld: CanvasLayer = null
 static var _lab: Label = null
