@@ -534,8 +534,11 @@ func cast_at(sx: float, sy: float) -> void:
 		z = rod.range
 		ui.toast("%s chỉ quăng tới đây thôi" % rod.name, "info")
 	z = maxf(z, L.zEdge + 1.6)
-	if (S.bait == "sung" or S.bait == "cam") and z < 18.0:   # (11-25) mồi cá quý: cá hô / tra dầu ở giữa kênh (20-34)
-		ui.toast("Mồi này phải thả xa giữa kênh" + ("" if float(rod.range) >= 27.0 else ", cần câu bậc 3 trở lên"), "info")
+	# (11-25) mồi cá quý: cá hô ở xa nhất (~30+, cần bậc 4), tra dầu từ 20 (cần bậc 2)
+	var zq := 30.0 if S.bait == "sung" else (20.0 if S.bait == "cam" else 0.0)
+	if zq > 0.0 and z < zq:
+		var bq := 3 if S.bait == "sung" else 1
+		ui.toast("Mồi này phải thả xa giữa kênh" + ("" if S.rod >= bq else ", cần câu bậc %d trở lên" % (bq + 1)), "info")
 	var acc: float = rod.acc * (.4 + z / 25)
 	x += rnd(-acc, acc) * .5
 	z += rnd(-acc, acc) * .5
@@ -566,7 +569,8 @@ func bite_table(x: float, z: float, hour: float, bait: String) -> Array:
 	for f in D.FISH:
 		var w: float = D.RAR_W[f.rar]
 		if f.has("junk"):   # (11-25) mồi cá quý (sung, cám rêu) ít vướng rác: trước rác gấp ~7 lần cá tra dầu
-			out.append([f, w * (.5 if spot != null else 1.0) * (.12 if bait == "sung" or bait == "cam" else 1.0)])
+			var jz := lerpf(1.0, .5, clampf((z - 14.0) / 20.0, 0.0, 1.0))   # (11-25) ngoài xa rác thưa dần (34: còn nửa)
+			out.append([f, w * jz * (.5 if spot != null else 1.0) * (.12 if bait == "sung" else (.05 if bait == "cam" else 1.0))])
 			continue
 		var b: float = f.bait.get(bait, 0)
 		if not b:

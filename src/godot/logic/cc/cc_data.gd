@@ -55,8 +55,8 @@ const BAIT := {
 	"oc": {"name": "Ốc gạo", "desc": "Ốc nhặt ngoài ruộng mùa nước nổi (xài chung Kho vườn). Cá trê, cá lóc, lươn mê.", "pack": 0, "price": 0, "lv": 1},
 	"chua": {"name": "Mồi chua", "desc": "Cám ủ chua, hôi mà cá trê, lươn, chình mê.", "pack": 10, "price": 40, "lv": 3},
 	"nhai": {"name": "Nhái con", "desc": "Mồi to dụ cá lóc bông, cá chình.", "pack": 5, "price": 70, "lv": 4},
-	"sung": {"name": "Trái sung chín", "desc": "Cá hô ăn trái cây rụng. Thả xa giữa kênh, ban ngày. Cần câu bậc 3 trở lên mới quăng tới.", "pack": 5, "price": 120, "lv": 5},
-	"cam": {"name": "Cám rêu thơm", "desc": "Cá tra dầu ăn rêu. Thả xa giữa kênh, chiều tối. Cần câu bậc 3 trở lên mới quăng tới.", "pack": 5, "price": 150, "lv": 6},
+	"sung": {"name": "Trái sung chín", "desc": "Cá hô ăn trái cây rụng. Thả xa giữa kênh, ban ngày. Cần câu bậc 4 mới quăng tới chỗ cá hô.", "pack": 5, "price": 120, "lv": 5},
+	"cam": {"name": "Cám rêu thơm", "desc": "Cá tra dầu ăn rêu. Thả xa giữa kênh, chiều tối. Cần câu bậc 2 trở lên mới quăng tới.", "pack": 5, "price": 150, "lv": 6},
 }
 const BAIT_ORDER := ["trun", "com", "tep", "oc", "chua", "nhai", "sung", "cam"]
 
