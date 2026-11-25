@@ -130,7 +130,7 @@ def albedo_do(obj, P):
         a = np.abs(((u + v) % 1.0) - .5); b = np.abs(((u - v) % 1.0) - .5)
         st = (np.maximum(a, b) > .40)
         knot = (a > .40) & (b > .40)
-        c = np.where(st[:, None], obj.col[None], hexc('#2c4a3a')[None])
+        c = np.where(st[:, None], obj.col[None], hexc('#3e6a52')[None])
         return np.where(knot[:, None], obj.col[None] * .8, c)
     if m == 'met':      # kim loại có màu riêng (sắt, thép, đồng, vàng)
         return obj.col[None] * (.86 + .28 * vnoise(P, getattr(obj, 'ns', 1.5), 68))[:, None]
@@ -139,7 +139,7 @@ def albedo_do(obj, P):
 
 B.albedo = albedo_do
 # 11-25 Link "icon chỗ khuất tối sáng lên chút": icon sáng hơn ghe - nền cao, bóng đổ nhạt, lòng ống bớt tối
-B.LT.update(amb=.56, sky=.14, dif=.42, shmin=.65, aop=.45, expo=1.0, inner=.3, spec=.3, tone=.8)   # 11-25 08:09 Link "vẽ cùng 1 độ sáng, bên sáng đéo gì sáng lóe": ánh sáng dịu, không cháy trắng
+B.LT.update(amb=.62, sky=.14, dif=.42, shmin=.7, aop=.4, expo=float(os.environ.get("EXPO", "1.25")), inner=.25, spec=.3, tone=.8)   # 11-25 08:09 Link "vẽ cùng 1 độ sáng, bên sáng đéo gì sáng lóe": ánh sáng dịu, không cháy trắng
 
 
 def met(o, col, sp=.6, pw=40, ns=1.5):
@@ -180,8 +180,8 @@ def hook(t):
     o = []
     if t == 1:      # sắt rèn tay: đen xám, đầu dẹt, buộc chỉ đỏ + dây cước
         pts, rr, barb, p = hook_pts(1.25)
-        o.append(met(Line([tuple(q) for q in pts], rr, 'met'), hexc('#5a5650'), sp=.18, pw=18, ns=4))
-        o.append(met(Ball(tuple(p(0, 7.2)), .55 * 1.25, 'met', sq=(1, 1, .6)), hexc('#5a5650'), sp=.18, pw=18))
+        o.append(met(Line([tuple(q) for q in pts], rr, 'met'), hexc('#6e6a62'), sp=.18, pw=18, ns=4))
+        o.append(met(Ball(tuple(p(0, 7.2)), .55 * 1.25, 'met', sq=(1, 1, .6)), hexc('#6e6a62'), sp=.18, pw=18))
         for k in range(6):
             o.append(M(Torus(tuple(p(0, 5.2 + k * .32)), (0, 0, 1), .48, .2, 'day'), col='#c83228'))
         o.append(M(Line(soft(p(0, 7.3), p(0, 15.5)), .12, 'day'), col='#e8ecea'))
@@ -225,7 +225,7 @@ def spool(t):
     o = []
     R, H, rc, ft = {1: (4.2, 6.0, 3.2, .6), 2: (4.7, 6.6, 3.6, .7), 3: (5.2, 7.0, 4.0, .8), 4: (5.8, 7.6, 4.5, .95)}[t]
     fl, ln, k, lr = {1: ('#c9a06a', '#e4ecee', 4.0, .1), 2: ('#c0442e', '#94c4de', 3.4, .13),
-                     3: ('#7a5230', '#5aa060', 2.8, .17), 4: ('#5a3820', '#c8a060', 1.4, .26)}[t]
+                     3: ('#9a6a40', '#5aa060', 2.8, .17), 4: ('#80522e', '#c8a060', 1.4, .26)}[t]
     for z0 in (0.0, H + ft):    # 2 vành ống
         o.append(M(Tube((0, 0, z0), (0, 0, 1), ft, [(0, R), (1, R)], 'gox'), col=fl))
         o.append(M(Torus((0, 0, z0 + ft / 2), (0, 0, 1), R, ft / 2, 'gox'), col=fl))
@@ -288,7 +288,7 @@ def float_(t):
         o.append(b)
         for k in range(4):     # chỉ quấn chân
             o.append(M(Torus((0, 0, 1.4 + k * .26), (0, 0, 1), .34, .13, 'day'), col='#2a6a8a'))
-        bq = Ell((0, 0, 7.0), (Z, RT, HF), (3.2, 1.25, 1.25), 'bandz'); bq.col = hexc('#1f7a6e')   # bấc sơn xanh lông công
+        bq = Ell((0, 0, 7.0), (Z, RT, HF), (3.2, 1.25, 1.25), 'bandz'); bq.col = hexc('#2a9a88')   # bấc sơn xanh lông công
         bq.bands = [(4.0, 4.4, '#d8a838'), (6.0, 6.25, '#1e3a7a'), (7.0, 7.4, '#d8a838'), (7.75, 8.0, '#1e3a7a'), (9.6, 10.0, '#d8a838')]
         o.append(M(bq, sp=.3, pw=30))
         for zz in (3.75, 10.25):
@@ -343,7 +343,7 @@ def cage(t):
         o.append(M(Line(arc(V(0, 0, L * .86) + RT * 3.7, V(0, 0, L * .86) - RT * 3.7, 5.2), .3, 'day'), col='#b89a62'))
     elif t == 3:    # lồng lưới: lưới cước xanh, khoanh vòng nhựa, dây rút miệng
         L = 16.0
-        n = M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.4), (1, 5.4)], 'luoi', shell=.18, open1=True), col=hexc('#4aa06a'))
+        n = M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.4), (1, 5.4)], 'luoi', shell=.18, open1=True), col=hexc('#5abc7c'))
         o.append(n)
         for zz in (.15, L * .33, L * .66, L - .1):
             o.append(M(Torus((0, 0, zz), (0, 0, 1), 5.5, .3, 'cam'), col='#2e7a4a', sp=.5, pw=40))
@@ -354,11 +354,11 @@ def cage(t):
         o.append(M(Ball(tuple(V(0, 0, L + .2) + HF * 5.5), .5, 'cam', sq=(1, 1, 1.3)), col='#d8a838'))   # chốt dây rút
     else:           # rọ mây sơn dầu: thân trống đan, 3 đai đồng, nắp gỗ có núm, khoá đồng, quai mây
         L = 13.5
-        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.6), (.2, 6.6), (.5, 7.0), (.8, 6.6), (1, 5.9)], 'dan2', shell=.5, open1=True, wv=(60, .05)), col=hexc('#9a6436'), sp=.3, pw=40))
+        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.6), (.2, 6.6), (.5, 7.0), (.8, 6.6), (1, 5.9)], 'dan2', shell=.5, open1=True, wv=(60, .05)), col=hexc('#b67a46'), sp=.3, pw=40))
         for zz, rr in ((.4, 5.75), (L * .5, 7.12), (L - .3, 6.0)):
             o.append(met(Torus((0, 0, zz), (0, 0, 1), rr, .34, 'met'), hexc('#d8a838'), sp=.85, pw=60))
         o.append(M(Tube((0, 0, L - .1), (0, 0, 1), .9, [(0, 6.25), (.6, 6.25), (1, 5.4)], 'gox'), col='#a8743e', sp=.2, pw=30))   # nắp gỗ có vân
-        o.append(M(Torus((0, 0, L + .3), (0, 0, 1), 6.25, .3, 'gox'), col='#5a3a20'))   # gờ nắp sẫm
+        o.append(M(Torus((0, 0, L + .3), (0, 0, 1), 6.25, .3, 'gox'), col='#7a5030'))   # gờ nắp sẫm
         o.append(M(Tube((0, 0, L + .8), (0, 0, 1), .8, [(0, 2.4), (1, 2.2)], 'gox'), col='#7a4c28', sp=.2, pw=30))
         o.append(met(Ball((0, 0, L + 1.9), .9, 'met', sq=(1, 1, .7)), hexc('#d8a838'), sp=.9, pw=70))      # núm nắp
         o.append(met(Box(tuple(V(0, 0, L - 1.0) + HF * 6.15), (RT, HF, Z), (.8, .18, 1.2), 'met', rr=.12), hexc('#d8a838'), sp=.9, pw=70))   # khoá
