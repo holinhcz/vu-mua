@@ -110,7 +110,7 @@ class Boat extends Node2D:
 		if say != "" and say_al > 0.0:   # câu rao
 			_pill(Vector2(0, -110.0), say, 10.0, Color(1, 1, 1, 0.95 * say_al), Color(0x2a / 255.0, 0x4a / 255.0, 0x3a / 255.0, say_al), le, f, 14.0, 18.0, 9.0)
 		if lbl != "":   # bảng giờ ghe thương hồ
-			_pill(Vector2(0, -112.0), lbl, 11.0, Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.95) if lbl_red else Color(40 / 255.0, 90 / 255.0, 60 / 255.0, 0.92), Color.WHITE, le, f, 16.0, 20.0, 10.0)
+			_pill(Vector2(0, -96.0), lbl, 11.0, Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.95) if lbl_red else Color(40 / 255.0, 90 / 255.0, 60 / 255.0, 0.92), Color.WHITE, le, f, 16.0, 20.0, 10.0)
 	func _pill(at: Vector2, s0: String, fs: float, bg: Color, fg: Color, le: float, f: Font, pad: float, h: float, r: float) -> void:
 		if f == null:
 			return
@@ -254,7 +254,7 @@ func _ghe(W) -> void:   # yg() mặc định: ghe thương hồ
 	var q: Array = W.WGH.vx()
 	b.p = Vector2(float(q[0]), float(q[1]))
 	b.al = float(A.al)
-	b.sc = 1.0
+	b.sc = 1.6   # ghe thương hồ (ghe thu hàng) to hơn ghe chợ (1,25)
 	b.s = 1.0
 	b.ax = String(A.ax)
 	b.th = W.WGH.th()
