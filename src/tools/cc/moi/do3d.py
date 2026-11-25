@@ -125,7 +125,7 @@ def albedo_do(obj, P):
 
 B.albedo = albedo_do
 # 11-25 Link "icon chỗ khuất tối sáng lên chút": icon sáng hơn ghe - nền cao, bóng đổ nhạt, lòng ống bớt tối
-B.LT.update(amb=.62, sky=.22, shmin=.62, aop=.4, expo=1.25, inner=.3)
+B.LT.update(amb=.56, sky=.14, dif=.42, shmin=.65, aop=.45, expo=1.0, inner=.3, spec=.3, tone=.8)   # 11-25 08:09 Link "vẽ cùng 1 độ sáng, bên sáng đéo gì sáng lóe": ánh sáng dịu, không cháy trắng
 
 
 def met(o, col, sp=.6, pw=40, ns=1.5):

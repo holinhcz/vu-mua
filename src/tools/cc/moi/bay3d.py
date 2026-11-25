@@ -322,7 +322,7 @@ class Scene:
 
 
 # thông số sáng (tool khác giữ mặc định; ghe3d chỉnh riêng)
-LT = dict(amb=.34, sky=.16, dif=.78, shmin=0.0, aop=1.0, expo=1.0, inner=.66)
+LT = dict(amb=.34, sky=.16, dif=.78, shmin=0.0, aop=1.0, expo=1.0, inner=.66, spec=1.0, tone=0.0)
 
 
 def render(scene, name, water=True):
@@ -389,7 +389,7 @@ def render(scene, name, water=True):
             spk[m] = getattr(o, 'sp', d0[0]); pwk[m] = getattr(o, 'pw', d0[1]); emk[m] = getattr(o, 'emit', 0)
     lam = np.clip(N @ LIGHT, 0, 1)
     H_ = nz(LIGHT - FWD)
-    spec = np.clip(N @ H_, 0, 1) ** pwk * spk
+    spec = np.clip(N @ H_, 0, 1) ** pwk * spk * LT['spec']
     sky = .5 + .5 * N[:, 2]
     shl = LT['shmin'] + (1 - LT['shmin']) * sh          # bóng đổ không đen kịt (mặc định 0 = như cũ)
     aol = ao ** LT['aop']
@@ -397,6 +397,8 @@ def render(scene, name, water=True):
     lum = lum * (1 - LT['inner'] * inner) * LT['expo']
     col = alb * lum[:, None] + spec[:, None] * sh[:, None] * (1 - inner)[:, None]
     col = col * (1 - emk[:, None]) + alb * emk[:, None]        # đèn: tự sáng
+    if LT['tone']:   # nén sáng mềm: nâng chỗ tối, chỗ sáng không cháy trắng
+        col = col * (1 + LT['tone']) / (1 + col * LT['tone'])
     col = np.clip(col, 0, 1)
     rgb = np.zeros((n, 3), F32); a = np.zeros(n, F32); z = np.zeros(n, F32); dep = np.full(n, 1e3, F32)
     rgb[idx] = col; a[idx] = 1; z[idx] = P[:, 2]; dep[idx] = t[idx]
