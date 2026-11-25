@@ -3592,8 +3592,6 @@ func t4(t: int, a: String, n: bool) -> bool:   # t4: làm việc a ở ô t (n =
 		var r := String(e.c)
 		G.g.barn[r] = _barn(r) + 2 + (1 if randf() < 0.12 else 0)   # l7
 		G._drop("harvest", t)
-		if r.begins_with("lua") or r.begins_with("nep"):
-			G._drop("rice", t)
 		WR.z4(t, r, false)
 		G.w_all.WCA.kl_harvest("crop", r, {"p": e, "id": r})   # klHarvest (người làm thuê gặt: KLW)
 		G.g.harvested = _i(G.g.get("harvested")) + 1

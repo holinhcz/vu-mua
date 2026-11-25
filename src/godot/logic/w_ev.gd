@@ -115,7 +115,7 @@ func _d7_give(i: int) -> String:   # $I[i].f()
 			G.nv.bp(2)
 			return "10 sen đỏ và bùa +50% EXP 2 ngày (cất trong Kho, mục Đồ dùng)"
 		5:
-			var t := D9([["then", 3], ["bao", 3], ["ton", 3]])
+			var t := D9([["van", 3], ["dinh", 3], ["gach", 3]])
 			G.g.enBank = int(G.g.get("enBank", 0)) + 3
 			return t + " và 3 phần cơm hồi sức (cất trong Kho)"
 		6:
@@ -425,7 +425,7 @@ func QI(t: int) -> void:   # QI: nhận quà điểm danh ngày t
 		2:
 			G.nv.x0(5)
 		3:
-			for m in ["then", "bao", "ton"]:
+			for m in ["van", "dinh", "gach"]:
 				G.nv.S0(m, 3)
 		4:
 			G.nv.bp(1)

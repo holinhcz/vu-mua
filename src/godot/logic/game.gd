@@ -145,6 +145,12 @@ func _migrate(s: Dictionary) -> Dictionary:
 	if s.get("barn") is Dictionary and s.barn.has("ca_koi"):   # (bản 544) bỏ cá koi (cá chép vàng): bán theo giá cũ 150 xu / con
 		s.coins = int(s.get("coins", 0)) + 150 * maxi(0, int(s.barn.ca_koi))
 		s.barn.erase("ca_koi")
+	if s.get("mats") is Dictionary:   # (11-25) bỏ 6 vật liệu kho, sạp: quy 1:1 sang 9 vật liệu chung
+		for o in MAT_GOP:
+			if s.mats.has(o):
+				var nw: String = MAT_GOP[o]
+				s.mats[nw] = mini(999, int(s.mats.get(nw, 0)) + maxi(0, int(s.mats[o])))
+				s.mats.erase(o)
 	var f := _fresh()
 	for k in f.keys():
 		if not s.has(k):
@@ -732,8 +738,6 @@ func harvest(i: int) -> bool:   # Xu
 	var c: String = a.c
 	g.barn[c] = int(g.barn.get(c, 0)) + n
 	_drop("harvest", i)
-	if c.begins_with("lua") or c.begins_with("nep"):
-		_drop("rice", i)
 	g.harvested = int(g.harvested) + 1
 	if w_all != null:   # klHarvest: lâu lâu ra trái khủng
 		w_all.WCA.kl_harvest("crop", c, {"p": a, "id": c})
@@ -788,14 +792,20 @@ func open_plot(i: int) -> bool:   # iy + hw
 	mark()
 	return true
 
+func drop_roll(key: String, m := 1.0) -> String:   # (11-25) mọi việc cùng tỉ lệ (rate), trúng thì ra 1 món ngẫu nhiên trong nhóm của việc đó
+	var nh = D.drop.get("viec", {}).get(key)
+	if nh == null or randf() >= float(D.drop.get("rate", 0.0)) * m:
+		return ""
+	var L: Array = D.drop.nhom[nh]
+	var id: String = L[randi() % L.size()]
+	mat_add(id, 1)
+	return id
+
 func _drop(key: String, i: int) -> void:
 	# No(): vật liệu nâng sao rơi ra khi làm việc
-	var L = D.drop.get(key, [])
-	for r in L:
-		if randf() < float(r[1]):
-			var id: String = r[0]
-			mat_add(id, 1)
-			float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.2, "+1 " + item_name(id))
+	var id := drop_roll(key)
+	if id != "":
+		float_text.emit(cells[i].gx + 0.5, cells[i].gy + 0.2, "+1 " + item_name(id))
 
 # sâu (uW): mỗi 70–140 giây ban ngày, nếu ít hơn 2 ô có sâu
 func _bug_step(t: float) -> void:
@@ -1137,7 +1147,9 @@ static func fmt_k(v: int) -> String:   # ry: 12,3k
 const KHO_VP := [0, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500]   # vp: sức chứa theo sao
 const KHO_LV := [0, 1, 3, 7, 12, 18, 25, 35, 48, 62, 80]              # p8: cấp cần
 const KHO_XU := [0, 0, 100, 300, 700, 1500, 3000, 5500, 9000, 14000, 22000]   # CJ
-const KHO_M := [null, null, [1, 1, 0], [2, 2, 1], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 6], [8, 8, 8], [10, 10, 10], [12, 12, 12]]   # EJ then/bao/ton
+const MAT_GOP := {"then": "dinh", "bao": "van", "ton": "gach", "bat": "la", "bang": "van", "can": "tre"}   # vật liệu cũ -> vật liệu chung
+const KHO_MAT := ["van", "dinh", "gach"]   # (11-25) nâng kho xài ván, đinh, gạch (bỏ then cài, bao bố, tấm tôn)
+const KHO_M := [null, null, [1, 1, 0], [2, 2, 1], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 6], [8, 8, 8], [10, 10, 10], [12, 12, 12]]   # EJ theo KHO_MAT
 const KHO_CA := [0, 0, 2, 3, 5, 6, 7, 8, 10, 12, 15]   # CA: sen đỏ mỗi cấp nâng sớm
 const KHO_SA := 8   # SA: nâng sớm tối đa 8 cấp
 signal kho_full(n: int, cap: int)   # lL: bảng "Kho đầy rồi!"
@@ -1164,6 +1176,20 @@ func mat_n(t: String) -> int:   # ul
 	var m = g.get("mats", {})
 	return int(m.get(t, 0)) if m is Dictionary else 0
 
+const MAT_ROI := {"harvest": "thu hoạch, gặt lúa", "collect": "thu chuồng", "work": "làm xưởng", "chop": "cưa cây ngã", "clear": "dọn cây cỏ",
+	"lo": "thăm lờ lọp, giăng câu", "deliver": "giao đơn", "help": "giúp làng", "trip": "đi chuyến", "fish": "câu cá"}
+func mat_where(ms: Array) -> String:   # "Cây tre, dây mây rơi khi dọn cây cỏ, cưa cây ngã, thu chuồng." (bảng nang_cap/roi_vat_lieu)
+	var w := []
+	var vc: Dictionary = D.drop.get("viec", {})
+	for k in vc:
+		for c in D.drop.nhom[vc[k]]:
+			if ms.has(String(c)) and MAT_ROI.has(k) and not w.has(MAT_ROI[k]):
+				w.append(MAT_ROI[k])
+	var nm: String = ", ".join(ms.map(func(m): return item_name(String(m)).to_lower()))
+	return (nm.substr(0, 1).to_upper() + nm.substr(1)) + " rơi khi " + ", ".join(w) + "."
+
+const MAT_DUNG := {"ruong": "nâng sao ô ruộng", "chuong": "nâng sao chuồng", "xuong": "nâng sao xưởng, nâng kho", "cau": "làm đồ câu"}
+
 func mat_add(t: String, a: int) -> void:   # S0 (tối đa 999)
 	if not (g.get("mats") is Dictionary):
 		g.mats = {}
@@ -1172,7 +1198,7 @@ func mat_add(t: String, a: int) -> void:   # S0 (tối đa 999)
 func kho_need(t: int) -> Dictionary:   # Z4
 	var m := []
 	var q: Array = KHO_M[t]
-	var ids := ["then", "bao", "ton"]
+	var ids: Array = KHO_MAT
 	for j in 3:
 		if int(q[j]) > 0:
 			m.append([ids[j], int(q[j])])
@@ -1909,15 +1935,9 @@ func buy_lack(items: Array) -> bool:   # L1 "ok": bù phần thiếu bằng sen 
 	return true
 
 func _drop_at(key: String, at: Vector2) -> void:
-	var L = D.drop.get(key, [])
-	var got := []
-	for r in L:
-		if randf() < float(r[1]):
-			var id: String = r[0]
-			mat_add(id, 1)
-			got.append(item_name(id))
-	if not got.is_empty():
-		float_text.emit(at.x, at.y - 0.3, "+1 " + ", +1 ".join(got))
+	var id := drop_roll(key)
+	if id != "":
+		float_text.emit(at.x, at.y - 0.3, "+1 " + item_name(id))
 
 func _ord_step(t: float) -> void:
 	_slot_t -= t

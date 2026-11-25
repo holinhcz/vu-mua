@@ -181,7 +181,7 @@ func _sbtn(b: Dictionary) -> Dictionary:   # nút chip Kho cỡ nhỏ: chữ 11
 func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiêu đề phần
 	return _dt(X0 + 2.0, y, XW - 4.0, 13.0, _fitw(t, 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left")
 
-const E8D := {20: "Túi xu", 40: "2 vật liệu nâng sao", 60: "Túi xu, 1 phần cơm hồi sức", 80: "Then cài, bao bố, tấm tôn", 100: "2 sen đỏ"}   # quà trong rương năng động (nv.gd _e8)
+const E8D := {20: "Túi xu", 40: "2 vật liệu nâng sao", 60: "Túi xu, 1 phần cơm hồi sức", 80: "Ván gỗ, đinh sắt, gạch nung", 100: "1 sen đỏ"}   # quà trong rương năng động (nv.gd _e8)
 # thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận, tên quà, quà bên trong]]; trả [khối, cao]
 func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Array:   # g: chip tên -> hàng hình
 	var out := []
@@ -318,7 +318,7 @@ func _week() -> Array:
 	var L := []
 	for i in N.NVWCH.size():
 		var dc0: Array = N.deco_of(N.week())
-		var wd := ["Túi xu", "3 sen đỏ, then cài, bao bố, tấm tôn", "Xu, bùa +50% kinh nghiệm 1 ngày", String(dc0[1]) + ", 5 sen đỏ"]
+		var wd := ["Túi xu", "3 sen đỏ, ván gỗ, đinh sắt, gạch nung", "Xu, bùa +50% kinh nghiệm 1 ngày", String(dc0[1]) + ", 3 sen đỏ"]
 		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i), String(N.NVWCH[i].n), String(wd[i])])
 	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
 	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
@@ -330,12 +330,12 @@ func _week() -> Array:
 	var dc: Array = N.deco_of(N.week())
 	var lt: String = (str(int(floor(left / 86400.0))) + " ngày" if left >= 86400.0 else N.ao(left))
 	var qc := _chip(X0, y, XW, RH, "fire_l")   # cam lửa như chip Chuỗi
-	qc.act = _dsay.bind("Mốc " + str(N.wk_p(0)) + ": túi xu · Mốc " + str(N.wk_p(1)) + ": 3 sen đỏ, then cài, bao bố, tấm tôn · Mốc " + str(N.wk_p(2)) + ": xu, bùa +50% EXP 1 ngày · Mốc " + str(N.wk_p(3)) + ": " + String(dc[1]).to_lower() + ", 5 sen đỏ.")
+	qc.act = _dsay.bind("Mốc " + str(N.wk_p(0)) + ": túi xu · Mốc " + str(N.wk_p(1)) + ": 3 sen đỏ, ván gỗ, đinh sắt, gạch nung · Mốc " + str(N.wk_p(2)) + ": xu, bùa +50% EXP 1 ngày · Mốc " + str(N.wk_p(3)) + ": " + String(dc[1]).to_lower() + ", 3 sen đỏ.")
 	out.append(qc)
 	out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, "kh:" + String({"noibanhtet": "banh_tet"}.get(String(dc[0]), "long_den"))))
 	var rtw: float = Box.text_w("còn " + lt, 10.0, 600) + 4.0
 	var qw := XW - 46.0 - rtw - 10.0
-	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Mốc " + str(top) + ": " + String(dc[1]) + " + 5 sen đỏ", 11.5, 800, qw), 11.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Mốc " + str(top) + ": " + String(dc[1]) + " + 3 sen đỏ", 11.5, 800, qw), 11.5, 800, BROWN, "left"))
 	var tcc := _chip(X0 + XW - 8.0 - rtw - 6.0, y + (RH - 20.0) * 0.5, rtw + 6.0, 20.0, "info")
 	tcc.kids = [_dt(X0 + XW - 8.0 - rtw - 6.0, y + (RH - 20.0) * 0.5, rtw + 6.0, 20.0, "còn " + lt, 10.0, 700, "rgb(52, 92, 140)")]
 	out.append(tcc)

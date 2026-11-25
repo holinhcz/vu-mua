@@ -485,7 +485,7 @@ func _lang() -> Dictionary:   # R0
 		L.cg = {}
 	return L
 
-const OO := ["rom", "phan", "voi", "van", "dinh", "gach", "tre", "la", "may", "bat", "bang", "can"]
+const OO := ["rom", "phan", "voi", "van", "dinh", "gach", "tre", "la", "may"]
 
 func _mat_n(m: String) -> String:
 	return String(G.item_name(m)).to_lower()
@@ -520,11 +520,11 @@ func _e8(p: int) -> String:
 			en_bank()
 			return "+" + G.fmt_n(x) + " xu, 1 phần cơm hồi sức" + C8(4)
 		80:
-			for m in ["then", "bao", "ton"]:
+			for m in ["van", "dinh", "gach"]:
 				S0(m, 1)
-			return "+1 then cài, bao bố, tấm tôn" + C8(4)
-	x0(2)
-	return "+2 sen đỏ" + C8(6)
+			return "+1 ván gỗ, đinh sắt, gạch nung" + C8(4)
+	x0(1)   # (11-25) 2 -> 1: bớt sen free
+	return "+1 sen đỏ" + C8(6)
 
 func oY() -> int:   # rương năng động mở được
 	var a := r5()
@@ -761,17 +761,17 @@ func wk_chest(i: int) -> void:
 			r = "+" + G.fmt_n(x) + " xu"
 		1:
 			x0(3)
-			for m in ["then", "bao", "ton"]:
+			for m in ["van", "dinh", "gach"]:
 				S0(m, 1)
-			r = "+3 sen đỏ, +1 then cài, bao bố, tấm tôn"
+			r = "+3 sen đỏ, +1 ván gỗ, đinh sắt, gạch nung"
 		2:
 			var x := v0(4000 + 200 * jr())
 			coins(x)
 			bp(1)
 			r = "+" + G.fmt_n(x) + " xu, bùa +50% EXP 1 ngày"
 		_:
-			x0(5)
-			r = deco(week()) + ", +5 sen đỏ"
+			x0(3)   # (11-25) 5 -> 3
+			r = deco(week()) + ", +3 sen đỏ"
 	G.toast.emit("Quà tuần mốc " + str(wk_p(i)) + ": " + r + ".")
 	G.mark()
 
@@ -818,14 +818,14 @@ func w9() -> Array:
 	st = []
 	for v in [2, 3, 4, 5, 6, 7, 8, 9, 10]:
 		st.append({"t": "Nâng kho lên " + str(v) + "★", "m": v, "f": "kho"})
-	L.append({"k": "kho", "n": "Kho", "g": ["then", "bao", "ton"], "steps": st})
+	L.append({"k": "kho", "n": "Kho", "g": ["van", "dinh", "gach"], "steps": st})
 	st = []
 	for a in [["d", 5], ["s", 2], ["d", 20], ["d", 50], ["s", 3], ["d", 100], ["d", 250], ["s", 4], ["d", 500], ["s", 5], ["d", 1000]]:
 		if a[0] == "d":
 			st.append({"t": "Giao " + G.fmt_n(a[1]) + " đơn hàng", "m": a[1], "f": "deliv"})
 		else:
 			st.append({"t": "Nâng sạp lên " + str(a[1]) + "★", "m": a[1], "f": "sap"})
-	L.append({"k": "sap", "n": "Sạp & đơn", "g": ["bat", "bang", "can"], "steps": st})
+	L.append({"k": "sap", "n": "Sạp & đơn", "g": ["tre", "la", "van"], "steps": st})
 	_w9 = L
 	return L
 
@@ -1019,7 +1019,7 @@ func DL() -> int:   # phiên chợ: vé từ năng động
 	return int(s.ve)
 
 const HI := [
-	{"id": "mk", "n": "Vật liệu kho", "d": "1 then cài, 1 bao bố, 1 tấm tôn", "c": 6, "ic": "crate"},
+	{"id": "mk", "n": "Vật liệu kho", "d": "1 ván gỗ, 1 đinh sắt, 1 gạch nung", "c": 6, "ic": "crate"},
 	{"id": "mr", "n": "Gói vật liệu", "d": "3 vật liệu ngẫu nhiên", "c": 5, "ic": "crate"},
 	{"id": "ng", "n": "2 sen đỏ", "d": "đổi tối đa 3 lần mỗi phiên", "c": 8, "max": 3, "ic": "pearl"},
 	{"id": "xp", "n": "Bùa +50% EXP 1 ngày", "d": "+50% kinh nghiệm, cất trong kho", "c": 10, "max": 2, "ic": "bua"},
@@ -1045,7 +1045,7 @@ func sY(tid: String) -> void:   # đổi vé chợ
 	s.buy[tid] = int(s.buy.get(tid, 0)) + 1
 	match tid:
 		"mk":
-			for m in ["then", "bao", "ton"]:
+			for m in ["van", "dinh", "gach"]:
 				S0(m, 1)
 		"mr":
 			var ms := _rand_mats()
@@ -1098,7 +1098,7 @@ func FI(kind: String, i: int) -> void:   # quà hội làng: d = trong ngày, t 
 			msg = "+" + G.fmt_n(b) + " xu"
 		elif i == 1:
 			x0(3)
-			for m in ["then", "bao", "ton"]:
+			for m in ["van", "dinh", "gach"]:
 				S0(m, 2)
 			msg = "+3 sen đỏ, 6 vật liệu kho"
 		else:
@@ -1119,7 +1119,7 @@ func hY(i: int) -> void:   # quà tiêu sen đỏ
 	match i:
 		0: coins(1000)
 		1:
-			for m in ["then", "bao", "ton", "then", "bao"]:
+			for m in ["van", "dinh", "gach", "van", "dinh"]:
 				S0(m, 1)
 		2:
 			bp(3)

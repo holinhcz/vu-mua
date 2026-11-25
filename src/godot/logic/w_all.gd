@@ -221,18 +221,11 @@ func qi(a: String) -> void:   # lớp bọc qi: thi đua tuần của xã (m9) t
 		WH.m9(1)
 
 func No(k: String, a = 1.0, pos = null) -> void:   # No: vật liệu rơi (Lu = nang_cap/roi_vat_lieu)
-	var e = G.D.drop.get(k)
-	if not (e is Array):
-		return
 	var m := float(a) if (a is float or a is int) and float(a) != 0.0 else 1.0
-	var r := []
-	for c in e:
-		if randf() < float(c[1]) * m:
-			G.mat_add(String(c[0]), 1)
-			r.append(G.item_name(String(c[0])))
-	if not r.is_empty():
+	var id: String = G.drop_roll(k, m)
+	if id != "":
 		var p: Vector2 = _v2(pos) if pos != null else G.ppos
-		G.float_text.emit(p.x, p.y - 0.3, "+1 " + ", +1 ".join(r))
+		G.float_text.emit(p.x, p.y - 0.3, "+1 " + G.item_name(id))
 
 static func _v2(p) -> Vector2:
 	if p is Vector2:

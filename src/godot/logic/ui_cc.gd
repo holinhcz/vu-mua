@@ -120,11 +120,10 @@ func open() -> void:
 					f.dex[kid] = {"n": 1, "best": kg}
 				if G.w_all != null:
 					G.w_all.WCA.tc().seen[kid] = 1
-			var got := []   # (bản 547) vật liệu đồ câu rơi như câu cũ (nang_cap/roi_vat_lieu "fish": phao, cước, lưỡi câu)
-			for c in G.D.drop.get("fish", []):
-				if randf() < float(c[1]):
-					G.mat_add(String(c[0]), 1)
-					got.append(G.item_name(String(c[0])))
+			var got := []   # vật liệu đồ câu (nang_cap/roi_vat_lieu "fish": phao, cước, lưỡi câu)
+			var di: String = G.drop_roll("fish")
+			if di != "":
+				got.append(G.item_name(di))
 			G.mark()
 			return got,
 	}

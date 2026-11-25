@@ -514,7 +514,7 @@ func clear_hu(o: Dictionary) -> int:   # _v: dọn cây rừng / cỏ hoang lấ
 	G.g.clr[o.key] = 1
 	var a := int(C.Nd.get(o.id, 5))
 	G.g.coins += a
-	if G.w_all != null:   # No("clear"): dọn cây có khi rơi tre, mây, cuốc (vật liệu nâng sao)
+	if G.w_all != null:   # No("clear"): dọn cây có khi rơi tre, mây, lá dừa (vật liệu nâng sao)
 		G.w_all.No("clear", 1, [o.gx + 0.5, o.gy + 0.5])
 	G.vib(10)
 	if o.id == "tram":
