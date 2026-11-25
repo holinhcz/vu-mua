@@ -89,19 +89,18 @@ def albedo_r(obj, P):
     x, y, z = loc(P); k = obj.rk; n = len(P)
     if k == 'kl':                             # kim loại: mặt búa gõ lấm tấm, trầy sáng, gỉ/xỉn ở chỗ khuất
         dimp = vnoise(P, 5.5, 91); fine = vnoise(P, 13.0, 93)
-        c = c * (.74 + .34 * dimp + .14 * fine)[:, None]
+        c = c * (.92 + .08 * dimp + .06 * fine)[:, None]
         sc = scratches(P, 95, .7, 40.0)
         c = c * (1 - .55 * sc)[:, None] + np.minimum(obj.col * 1.45, 1)[None] * (.55 * sc)[:, None]
         pat = sstep(.6, .85, vnoise(P, 2.4, 92)) * .45 * (.5 + .5 * vnoise(P, 7, 94))
-        pc = getattr(obj, 'pat', None)
-        if pc is not None: c = c * (1 - pat)[:, None] + pc[None] * pat[:, None]
+        pat = 0
         if obj.col[0] > .8 and obj.col[1] > .55:   # vàng / đồng vàng: chấm đột (punch) li ti + vệt đánh bóng sáng
             dots = sstep(.72, .8, vnoise(P, 22.0, 108))
             c = c * (1 - .22 * dots)[:, None]
             eng = (np.abs(np.sin((x + y) * 2.6 + z * 1.3)) > .955) | (np.abs(np.sin((x - y) * 2.6 - z * 1.3)) > .955)   # chạm chéo trám
             c = np.where(eng[:, None], c * .66, c)
             amb = vnoise(P, .8, 110)
-            c = c * (1 - .18 * amb)[:, None] + hexc('#b8741c')[None] * (.18 * amb)[:, None]
+
             pol = sstep(.55, .9, vnoise(P * V(1, 1, 3), 1.2, 109))
             c = c * (1 - .18 * pol)[:, None] + np.minimum(obj.col * 1.25, 1)[None] * (.18 * pol)[:, None]
         if getattr(obj, 'crack', False):      # vàng thếp: rạn chân chim mảnh
@@ -111,24 +110,19 @@ def albedo_r(obj, P):
     if k in ('son', 'xacu', 'van', 'hoivan'):
         if k in ('son', 'xacu'):              # sơn: thớ gỗ hằn dưới sơn, rạn nhỏ, bụi đọng
             g = .5 + .5 * np.sin(x * .9 + vnoise(P * V(1, 1, 4), .8, 97) * 7 + z * .3)
-            c = c * (.92 + .12 * g)[:, None]
-            cr = (np.abs(vnoise(P, 16.0, 98) - .5) < .02) & (vnoise(P, 2.5, 106) > .55)
-            c = np.where(cr[:, None], c * .78, c)
-        sc = scratches(P, 99, .45, 30.0)
-        c = c * (1 - .22 * sc)[:, None]
+            c = c * (.96 + .06 * g)[:, None]
+
         ed = edge_dist(obj, x, y, z)
         if ed is not None:                    # mòn cạnh: sơn sờn lộ gỗ / gỗ bóng sáng ở cạnh
             wn = vnoise(P, 2.2, 100)
             wear = sstep(.42, .05, ed + .2 * (wn - .5)) * sstep(.45, .7, wn)
             wc = getattr(obj, 'wearc', None)
-            if wc is not None: c = c * (1 - .6 * wear)[:, None] + wc[None] * (.6 * wear)[:, None]
-        sp = sstep(.72, .86, vnoise(P, 6.5, 101)) * .18                                   # đốm xỉn nhỏ
-        return c * (1 - sp)[:, None]
+            if wc is not None and wc.mean() > c.mean() * .9: c = c * (1 - .5 * wear)[:, None] + wc[None] * (.5 * wear)[:, None]
+        return c
     if k == 'dan':                            # nan tre: sợi xơ dọc nan, đầu nan sờn
         fib = vnoise(P * V(1, 1, 1), 9.0, 102)
         c = c * (.9 + .16 * fib)[:, None]
-        burn = sstep(.68, .85, vnoise(P, 1.6, 103)) * .2                                   # nan ám khói / ngả màu
-        return c * (1 - burn)[:, None]
+        return c
     if k == 'tre':                            # cây tre tròn: mắt tre mỗi đốt, sọc xơ dọc, đầu đốt ngả vàng
         _, sl = obj.seg(P); seg = getattr(obj, 'node', 3.2)
         f = (sl / seg) % 1.0; i = np.floor(sl / seg)
@@ -178,11 +172,11 @@ def albedo_r0(obj, P):
         g = vnoise(np.stack([u * .25, v * 2.2 + iv * 5, iv], 1).astype(F32), 1.0, 81)
         g2 = .5 + .5 * np.sin(u * 1.1 + g * 6 + iv * 2)
         gl = np.abs(np.sin(v * 9.0 + g * 2.2 + iv * 3.1 + .9 * np.sin(u * .45 + iv)))          # vân gỗ chạy dọc ván, uốn quanh mắt
-        dark = sstep(.93, .995, gl) * .2 + sstep(.6, .9, vnoise(np.stack([u * .6, v * 6 + iv * 9, iv], 1).astype(F32), 1.0, 86)) * .12
-        c = col[None] * ((.84 + .22 * (hsh(iv * 5.3 + 2) - .5)) * (.88 + .16 * g2 + .1 * g) * (1 - dark))[:, None]
+        dark = sstep(.93, .995, gl) * .2 
+        c = col[None] * ((.84 + .22 * (hsh(iv * 5.3 + 2) - .5)) * (.9 + .12 * g2) * (1 - dark))[:, None]
         gap = np.exp(-(fv / .05) ** 2) + np.exp(-((1 - fv) / .05) ** 2)
         knot = np.exp(-(((u - 3 - iv * 4.7) % 11 - 5.5) ** 2 + ((fv - .5) * pw) ** 2) / .35)
-        c = c * (1 - .5 * np.clip(gap, 0, 1))[:, None] * (1 - .35 * knot)[:, None]
+        c = c * (1 - .5 * np.clip(gap, 0, 1))[:, None]
         return c
     if k == 'son':                            # sơn đỏ trên gỗ: mịn, hơi thấy thớ, khe ván rất mờ
         pw = 2.6; fv = (v / pw) % 1.0
