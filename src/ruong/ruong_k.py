@@ -229,10 +229,10 @@ def mat_xacu(col):
     def f(uv, prm, pos, nrm):
         cc, n = base_f(uv, prm, pos, nrm)
         a, b, x, y, z = face_ab(pos, prm[:, 0])
-        cu = 4.2; uu = a / cu; vv = b / cu; row = np.floor(vv); uu = uu + 0.5 * (row % 2)
+        cu = 6.4; uu = a / cu; vv = b / cu; row = np.floor(vv); uu = uu + 0.5 * (row % 2)
         du = ((uu % 1.0) - 0.5) * cu; dv = ((vv % 1.0) - 0.5) * cu
         pa = np.arctan2(dv, du); pr = np.hypot(du, dv)
-        pet = (pr < 1.05 * (0.45 + 0.55 * np.abs(np.cos(pa * 2.5)))) & (pr > 0.3)
+        pet = (pr < 1.25 * (0.4 + 0.6 * np.abs(np.cos(pa * 2.5)))) & (pr > 0.32)
         dot = pr < 0.24
         w = 0.5 + 0.5 * np.sin(x * 1.3 + z * 0.9 + y)
         pc = pearl[None] * (1 - 0.3 * w)[:, None] + pink[None] * (0.18 * w)[:, None] + mint[None] * (0.12 * (1 - w))[:, None]
@@ -372,31 +372,32 @@ def stem(S, F, pts, r, mat, lift=0.25):
 
 
 def fish(S, rng, u, v, d, sc, mat, meye):
-    """cá lóc chạm nổi trên nắp: thân dài tròn, đầu bẹt, vây lưng dài, vây hậu môn, đuôi tròn, mắt"""
+    """cá lóc chạm nổi trên nắp: đầu bẹt to, thân tròn thon dần, vây lưng + vây hậu môn là màng dài liền, đuôi quạt tròn, nắp mang, mắt"""
     F = Flid
-    def P_(du, dv, lift):
+    def P_(du, dv, lift=0.3):
         return F(u + d * du * sc, v + dv * sc / LR, lift)
-    p, tu, tv, n = P_(0, 0, 0.3); t = tu * d; b = np.cross(n, t)
-    ell(S, tuple(p + n * 0.3 * sc), 2.2 * sc, 0.62 * sc, 0.55 * sc, mat, axes=(t, b, n), nu=8, nv_=14)
-    p2 = P_(2.2, 0, 0.3)[0]
-    ell(S, tuple(p2 + n * 0.25 * sc), 0.75 * sc, 0.55 * sc, 0.42 * sc, mat, axes=(t, b, n), nu=6, nv_=12)
-    for du in np.linspace(1.3, -1.8, 9):                      # vây lưng: chuỗi tia
-        q = P_(du, 0.62, 0.3)[0]; q2 = P_(du - 0.25, 1.05, 0.3)[0]
-        tube(S, Pl(*q), Pl(*q2), 0.12 * sc, mat, nr=4, nl=2)
-    stem(S, F, [(u + d * du * sc, v + 1.05 * sc / LR) for du in np.linspace(1.05, -2.05, 8)], 0.14 * sc, mat, 0.35)
-    for du in np.linspace(-0.2, -1.8, 6):
-        q = P_(du, -0.6, 0.3)[0]; q2 = P_(du - 0.2, -0.95, 0.3)[0]
-        tube(S, Pl(*q), Pl(*q2), 0.11 * sc, mat, nr=4, nl=2)
-    pt = P_(-2.5, 0, 0.3)[0]                                   # đuôi tròn
-    ell(S, tuple(pt + n * 0.1), 0.75 * sc, 0.8 * sc, 0.16 * sc, mat, axes=(t, b, n), nu=5, nv_=12)
-    for a in np.linspace(-0.9, 0.9, 5):
-        q = P_(-2.4 - 0.7 * math.cos(a), 0.75 * math.sin(a), 0.4)[0]
-        tube(S, Pl(*pt), Pl(*q), 0.09 * sc, mat, nr=4, nl=2)
-    pe = P_(2.45, 0.2, 0.75)[0]
-    ell(S, tuple(pe), 0.16 * sc, 0.16 * sc, 0.12 * sc, meye, nu=4, nv_=8)
-    pf = P_(1.2, -0.5, 0.5)[0]                                 # vây ngực
+    p, tu, tv, n = P_(0, 0); t = tu * d; b = np.cross(n, t)
+    def blob(du, dv, rx, ry, rz, lift=0.3, m=mat):
+        q = P_(du, dv, lift)[0]
+        ell(S, tuple(q + n * rz * 0.45), rx * sc, ry * sc, rz * sc, m, (rng.random(), 0, 0), axes=(t, b, n), nu=7, nv_=12)
+    blob(1.9, 0, 0.95, 0.66, 0.42)                 # đầu bẹt
+    blob(0.8, 0, 1.25, 0.7, 0.6)                   # thân trước
+    blob(-0.6, 0, 1.3, 0.6, 0.52)                  # thân giữa
+    blob(-1.8, 0, 0.9, 0.42, 0.38)                 # cuống đuôi
+    blob(0.0, 0.72, 2.2, 0.2, 0.14)                # vây lưng màng dài
+    blob(-1.0, -0.6, 1.1, 0.16, 0.12)              # vây hậu môn
+    q = P_(-2.9, 0)[0]                             # đuôi quạt tròn
+    ell(S, tuple(q + n * 0.08), 0.75 * sc, 0.72 * sc, 0.12 * sc, mat, axes=(t, b, n), nu=5, nv_=14)
+    for a_ in np.linspace(-0.8, 0.8, 5):           # tia đuôi nổi
+        q2 = P_(-2.6 - 0.85 * math.cos(a_), 0.75 * math.sin(a_), 0.45)[0]
+        tube(S, Pl(*P_(-2.4, 0, 0.45)[0]), Pl(*q2), 0.08 * sc, mat, nr=4, nl=2)
+    gill = [P_(1.35 + 0.15 * math.cos(a_), 0.55 * math.sin(a_), 0.3 + 0.55 * sc * math.cos(a_ * 0.8))[0] for a_ in np.linspace(-1.2, 1.2, 7)]
+    for g0, g1 in zip(gill, gill[1:]): tube(S, Pl(*g0), Pl(*g1), 0.09 * sc, mat, nr=4, nl=2)
+    pe = P_(2.25, 0.3, 0.3 + 0.62 * sc)[0]
+    ell(S, tuple(pe), 0.15 * sc, 0.15 * sc, 0.1 * sc, meye, nu=4, nv_=8)
+    pf = P_(1.0, -0.6, 0.55)[0]                    # vây ngực
     dd = -t * 0.6 - b * 0.8; dd = dd / np.linalg.norm(dd)
-    ell(S, tuple(pf + dd * 0.4 * sc), 0.5 * sc, 0.2 * sc, 0.1 * sc, mat, axes=(dd, np.cross(n, dd), n), nu=4, nv_=8)
+    ell(S, tuple(pf + dd * 0.35 * sc), 0.5 * sc, 0.22 * sc, 0.1 * sc, mat, axes=(dd, np.cross(n, dd), n), nu=4, nv_=8)
 
 
 def waves(S, u0, u1, v, sc, mat):
@@ -530,8 +531,8 @@ def tier_rich(S, rng, t):
             stem(S, Ffront, [(uc, 4.0), (uc + 0.6, 6.5), (uc, 9.0)], 0.3, SG)
             pad(S, rng, Ffront, uc, 4.6, 2.0, LF)
             flower(S, rng, Ffront, uc, 9.4, 1.5, PK, VB)
-        waves(S, -xs + 1.6, xs - 1.6, 0.5, 1.5, WV)
-        fish(S, rng, -1.2, 0.98, 1, 1.45, VB, EYE); fish(S, rng, 1.4, 1.62, -1, 1.25, VB, EYE)
+        waves(S, -xs + 1.6, xs - 1.6, 0.45, 1.6, WV)
+        fish(S, rng, -0.6, 1.12, 1, 2.0, VB, EYE)
         for sx in (1, -1):
             uc = sx * (xs + LA) / 2
             stem(S, Flid, [(uc, 0.6), (uc - 0.5, 0.95), (uc, 1.35)], 0.28, SG)
