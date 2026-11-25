@@ -7,6 +7,7 @@ extends RefCounted
 const Css = preload("res://ui/css.gd")
 const Box = preload("res://ui/box.gd")
 const Tre = preload("res://ui/tre.gd")
+const Sen = preload("res://ui/sen.gd")
 
 static var _cache := {}
 
@@ -93,6 +94,7 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var R: Array = n.r
 	var z := float(n.get("z", 1.0))
 	n = _tre(n, z)   # (bản 294) khung tre chung bằng ảnh
+	n = _sen_giay(n)   # (11-25) nền giấy sen của khung chung
 	var tick: bool = String(n.get("text", "")) == "✓"
 	if tick:   # (bản 300) dấu tích: ảnh chung ui/img/bong/tick.png (ô tròn xanh + tích trắng) thay chữ ✓ (Nunito không có)
 		n = n.duplicate()
@@ -119,6 +121,12 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 		b.pic(Css.svg_tex(Css.img_svg("res://ui/img/bong/tick.png"), ts, ts), Rect2((float(R[2]) - ts) * 0.5, (float(R[3]) - ts) * 0.5, ts, ts))
 	if n.has("tre"):   # (bản 295) cả khung tre chung một ảnh (ui/tre.gd)
 		b.pic(Tre.texture(float(n.tre[0]), float(n.tre[1])), Rect2(0, 0, R[2], R[3]))
+	if n.has("sen"):   # (11-25) khung sen chung (ui/sen.gd): ảnh tràn ra ngoài hộp (hoa, chóp, dây tua)
+		var sf: Array = Sen.frame(float(n.sen[0]), float(n.sen[1]))
+		b._kids.clip_contents = false
+		b.pic(sf[0], sf[1])
+	if n.has("sengiay"):
+		b.pic(Sen.paper(float(n.sengiay[0]), float(n.sengiay[1])), Rect2(0, 0, R[2], R[3]))
 	if n.has("pic"):   # hình chụp sẵn (canvas bản web) ở res://ui/img/...
 		var pt: Texture2D = Css.image(String(n.pic))
 		if pt != null:
@@ -337,9 +345,17 @@ static func _tre(n: Dictionary, z: float) -> Dictionary:
 	var o2: Dictionary = n.duplicate()
 	o2.css = n.css.duplicate()
 	o2.css["border-radius"] = str(Tre.R) + "px"
+	var sen := Sen.use(float(n.r[2]), float(n.r[3]))
 	var nk := []
 	for k in kids:
 		var cl := String(k.get("cls", "")).split(" ")
+		if cl.has("u2hoa") and sen:   # khung sen: hoa sen đã vẽ trong góc khung
+			continue
+		if cl.has("phd") and sen:     # nút đóng: chỗ bấm trùng nút đỏ vẽ sẵn trong góc khung
+			var hd: Dictionary = k.duplicate(true)
+			_sen_close(hd, n.r)
+			nk.append(hd)
+			continue
 		if cl.has("u2tre") or cl.has("u2hoa"):
 			nk.append(k)
 		else:
@@ -348,6 +364,42 @@ static func _tre(n: Dictionary, z: float) -> Dictionary:
 			nk.append(k2)
 	o2.kids = nk
 	return o2
+
+static func _sen_close(n: Dictionary, B: Array) -> void:   # #pClose trong khung sen: trong suốt, dời vào nút vẽ sẵn
+	if String(n.get("id", "")) == "pClose":
+		var q := Sen.close_rect(float(B[2]))
+		n.r = [float(B[0]) + q.position.x, float(B[1]) + q.position.y, q.size.x, q.size.y]
+		n.css = n.css.duplicate()
+		n.css["background-image"] = "none"
+		n.css["box-shadow"] = "none"
+		n.css["background-color"] = "rgba(0, 0, 0, 0)"
+		n.text = ""
+		n.erase("tr")
+		n.kids = []
+		return
+	for k in n.get("kids", []):
+		_sen_close(k, B)
+	for k in n.get("kids", []):   # header bọc nút: theo chỗ mới
+		if String(k.get("id", "")) == "pClose":
+			n.r = k.r.duplicate()
+
+static func _sen_giay(n: Dictionary) -> Dictionary:   # .pbody (nền giấy vân lá của khung chung) -> giấy sen (ảnh dưới nội dung)
+	var cl := String(n.get("cls", "")).split(" ")
+	if (cl.has("khdock") or cl.has("u2vd")) and String(n.css.get("background-image", "")).begins_with("url("):   # dải dưới Kho: bỏ vân lá cũ, lộ giấy sen (sóng hồng)
+		var o2: Dictionary = n.duplicate()
+		o2.css = n.css.duplicate()
+		o2.css["background-image"] = "none"
+		o2.css["background-color"] = "rgba(0, 0, 0, 0)"
+		return o2
+	if n.has("sengiay") or not String(n.get("cls", "")).split(" ").has("pbody") or not Sen.use(float(n.r[2]), float(n.r[3])):
+		return n
+	var o: Dictionary = n.duplicate()
+	o.css = n.css.duplicate()
+	o.css["background-image"] = "none"
+	o.css["background-color"] = "rgba(0, 0, 0, 0)"
+	var g := {"tag": "i", "id": "", "cls": "sengiay", "z": n.get("z", 1.0), "css": {}, "r": n.r.duplicate(), "kids": [], "sengiay": [float(n.r[2]), float(n.r[3])]}
+	o.kids = [g] + n.get("kids", [])
+	return o
 
 static func _tre_round(k: Dictionary, B: Array) -> void:
 	# mọi lớp có nền chạm góc hộp (nền giấy, dải dưới Kho...) bo đúng góc đó theo Tre.R: không lòi ra ngoài vòng tre

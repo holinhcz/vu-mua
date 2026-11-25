@@ -1878,6 +1878,9 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
+		var bp := Snap.find(n, "primary")   # (11-25) khung sen: nút Bán hết nhích lên, chừa chóp đỏ giữa đáy khung
+		if not bp.is_empty():
+			Snap._move(bp, Vector2(0, -7))
 		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
 			var vg := Snap.find(n, "u2vg")
 			var vk: Array = vg.get("kids", [])

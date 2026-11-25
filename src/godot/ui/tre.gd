@@ -5,6 +5,7 @@ extends RefCounted
 # không còn khe giữa các mảnh (vẽ từng mảnh ở toạ độ lẻ thì máy làm tròn hở 1 điểm ảnh, lộ nền kem thành vạch trắng).
 # Snap.build gọi frame() cho mọi .u2tre và bar() cho mọi thanh tre ngang: một khung cho cả game.
 const Css = preload("res://ui/css.gd")
+const Sen = preload("res://ui/sen.gd")
 const T := 7.0     # dày tre (css px)
 const S := 3.0     # bóng đổ vào lòng bảng
 const R := 16.0    # bo góc ngoài = bo góc nền hộp
@@ -91,4 +92,6 @@ static func frame(r: Array, z: float) -> Array:   # khung quanh hộp r (tràn r
 	var y: float = float(r[1]) - 1.5
 	var w: float = float(r[2]) + 3.0
 	var h: float = float(r[3]) + 3.0
+	if Sen.use(float(r[2]), float(r[3])):   # (11-25) hộp lớn: khung sen chung (ui/sen.gd)
+		return [{"tag": "i", "id": "", "cls": "sen-khung", "z": z, "css": {"position": "absolute"}, "r": [float(r[0]), float(r[1]), float(r[2]), float(r[3])], "kids": [], "sen": [float(r[2]), float(r[3])]}]
 	return [{"tag": "i", "id": "", "cls": "tre-khung", "z": z, "css": {"position": "absolute"}, "r": [x, y, w, h], "kids": [], "tre": [w, h]}]
