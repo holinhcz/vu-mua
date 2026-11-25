@@ -25,8 +25,10 @@ static func meta() -> Dictionary:
 				M[grp][n] = M[grp][n].map(func(v): return float(v) * S)
 	return M
 
+const ON := false   # (11-25) tắt: cắt ảnh chưa đạt, làm lại mẫu cho Link duyệt rồi mới bật
+
 static func use(w: float, h: float) -> bool:
-	return w >= USE_W and h >= USE_H
+	return ON and w >= USE_W and h >= USE_H
 
 static func _px() -> float:
 	return clampf(ceilf(Css.K), 2.0, 4.0)
