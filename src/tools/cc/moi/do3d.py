@@ -137,9 +137,16 @@ def albedo_do(obj, P):
     return _prev(obj, P)
 
 
-B.albedo = albedo_do
+# 11-25 08:47 Link "vẽ màu sáng lên chứ không phải tăng đèn": nâng màu sơn (albedo) tươi + sáng, đèn giữ nguyên
+CLIFT = float(os.environ.get("CLIFT", ".75")); CSAT = float(os.environ.get("CSAT", "1.3"))
+def albedo_lift(obj, P):
+    c = np.clip(albedo_do(obj, P), 0, 1)
+    l = (c * np.array([.299, .587, .114], dtype=c.dtype)).sum(1, keepdims=True)
+    c = np.clip(l + (c - l) * CSAT, 0, 1)
+    return (c ** CLIFT).astype(F32)
+B.albedo = albedo_lift
 # 11-25 Link "icon chỗ khuất tối sáng lên chút": icon sáng hơn ghe - nền cao, bóng đổ nhạt, lòng ống bớt tối
-B.LT.update(amb=.62, sky=.14, dif=.42, shmin=.7, aop=.4, expo=float(os.environ.get("EXPO", "1.25")), inner=.25, spec=.3, tone=.8)   # 11-25 08:09 Link "vẽ cùng 1 độ sáng, bên sáng đéo gì sáng lóe": ánh sáng dịu, không cháy trắng
+B.LT.update(amb=.56, sky=.14, dif=.42, shmin=.65, aop=.45, expo=1.0, inner=.3, spec=.3, tone=.8)   # 11-25 08:09 Link "vẽ cùng 1 độ sáng, bên sáng đéo gì sáng lóe": ánh sáng dịu, không cháy trắng
 
 
 def met(o, col, sp=.6, pw=40, ns=1.5):
