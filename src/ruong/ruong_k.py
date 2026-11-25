@@ -81,7 +81,7 @@ def mat_mo(uv, prm, pos, nrm):
 
 M_DAN, M_GO, M_MO = 950, 951, 952
 MATS.update({M_DAN: mat_dan, M_GO: mat_go, M_MO: mat_mo})
-TINT = np.array([1.0, 1.0, 1.0]); GOC = '#b8783c'
+TINT = np.array([1.0, 1.0, 1.0]); GOC = '#b8783c'; WOODC = '#b8743c'
 
 
 # ------------------------------------------------------------------ hình khối
@@ -174,18 +174,447 @@ def rotv(v):
     return (math.cos(a) * x - math.sin(a) * y, math.sin(a) * x + math.cos(a) * y, z)
 
 
-def build(level, rng, with_props=True):
+# ================================================================== bộ chung cho bậc 2-4 (v2 11-25 Link "Làm")
+def face_ab(pos, f):
+    """toạ độ trên mặt (đơn vị game): 0 trước/sau a=x b=z, 1 hông a=y b=z, 2 nắp a=x b=cung"""
+    x, y, z = loc(pos)
+    a = np.where(f < 0.5, x, y); b = z.copy()
+    a = np.where(f > 1.5, x, a)
+    b = np.where(f > 1.5, ZL + LR * np.arctan2(z - ZL, np.where(np.abs(y) < 1e-6, 1e-6, y)) * 0 + LR * (math.pi / 2 - np.arctan2(y, np.maximum(z - ZL, 1e-6))) , b)
+    return a, b, x, y, z
+
+
+def mat_van(uv, prm, pos, nrm):
+    """ván gỗ tràm ghép ngang: mỗi ván 1 tông, thớ gỗ chạy dọc ván (vân sáng/tối nhẹ, uốn quanh mắt), khe ván"""
+    a, b, x, y, z = face_ab(pos, prm[:, 0])
+    pw = 2.5; iv = np.floor(b / pw); fv = b / pw - iv
+    h = hash1(iv, prm[:, 0] * 3 + 1, 4.0)
+    g = vnoise(a * 0.15 + h * 9, b * 2.4, 2.0)
+    vein = 0.5 + 0.5 * np.sin(b * 11 + g * 5 + a * 0.08 + h * 6)
+    base = hexc(WOODC)[None] * ((0.84 + 0.24 * h) * (0.93 + 0.1 * vein) * (0.95 + 0.06 * vnoise(a * 2.5, b * 9, 7.0)))[:, None]
+    gap = smooth(0.0, 0.06, fv) * smooth(1.0, 0.94, fv)
+    base = base * (0.55 + 0.45 * gap)[:, None]
+    s_ = (fv - 0.5) * 2
+    n = bump(nrm, np.array([[0, 0, 1.0]]), -s_, 0.18)
+    return np.clip(base, 0, 1), n
+
+
+def mat_kl(col, hammer=True, streak=0.05):
+    c = hexc(col)
+    def f(uv, prm, pos, nrm):
+        x, y, z = loc(pos)
+        t = 0.94 + streak * np.sin((x + y) * 9 + z * 3) * 0.5
+        if hammer:                                   # mặt kim loại rèn: từng vết búa tròn nhỏ (đổi tông nhẹ, không vệt tối)
+            cx = np.floor((x + y) / 0.9); cz = np.floor(z / 0.9)
+            t = t * (0.95 + 0.1 * hash1(cx, cz, 5.0))
+        return np.clip(c[None] * t[:, None], 0, 1), nrm
+    return f
+
+
+def mat_son(col, wood=True):
+    c = hexc(col)
+    def f(uv, prm, pos, nrm):
+        a, b, x, y, z = face_ab(pos, prm[:, 0])
+        iv = np.floor(b / 2.5); hv = hash1(iv, 3.0, 2.0)
+        warm = np.array([1.04, 0.99, 0.92]); cool = np.array([0.97, 1.0, 1.04])
+        tint = warm[None] * hv[:, None] + cool[None] * (1 - hv)[:, None]
+        br = 0.97 + 0.04 * np.sin(b * 5 + vnoise(a * 0.3, b * 2, 3.0) * 4) + 0.03 * vnoise(a * 0.2, b * 0.5, 8.0)
+        return np.clip(c[None] * tint * br[:, None], 0, 1), nrm
+    return f
+
+
+def mat_xacu(col):
+    c = hexc(col); pearl = hexc('#f2ece0'); pink = hexc('#f0c6d4'); mint = hexc('#c6e8da')
+    base_f = mat_son(col)
+    def f(uv, prm, pos, nrm):
+        cc, n = base_f(uv, prm, pos, nrm)
+        a, b, x, y, z = face_ab(pos, prm[:, 0])
+        cu = 4.2; uu = a / cu; vv = b / cu; row = np.floor(vv); uu = uu + 0.5 * (row % 2)
+        du = ((uu % 1.0) - 0.5) * cu; dv = ((vv % 1.0) - 0.5) * cu
+        pa = np.arctan2(dv, du); pr = np.hypot(du, dv)
+        pet = (pr < 1.05 * (0.45 + 0.55 * np.abs(np.cos(pa * 2.5)))) & (pr > 0.3)
+        dot = pr < 0.24
+        w = 0.5 + 0.5 * np.sin(x * 1.3 + z * 0.9 + y)
+        pc = pearl[None] * (1 - 0.3 * w)[:, None] + pink[None] * (0.18 * w)[:, None] + mint[None] * (0.12 * (1 - w))[:, None]
+        ins = prm[:, 1] > 0.5
+        cc = np.where((pet & ins)[:, None], pc, cc)
+        cc = np.where((dot & ins)[:, None], hexc('#e8b444')[None] * np.ones_like(cc), cc)
+        return np.clip(cc, 0, 1), n
+    return f
+
+
+_MID = [960]
+def newmat(fn):
+    m = _MID[0]; _MID[0] += 1; MATS[m] = fn; return m
+
+
+def obx(S, o, a, b, c, mat, prm=(0, 0, 0)):
+    K.obox(S, Pl(*o), rotv(a), rotv(b), rotv(c), mat, prm)
+
+
+def bar(S, p0, p1, nrm, w, h, mat, prm=(0, 0, 0)):
+    """thanh vuông cạnh sắc từ p0 tới p1 (toạ độ rương), nằm trên mặt có pháp tuyến nrm, rộng 2w, nổi h"""
+    p0 = np.asarray(p0, float); p1 = np.asarray(p1, float); d = p1 - p0; L = np.linalg.norm(d)
+    if L < 1e-6: return
+    t = d / L; n = np.asarray(nrm, float); n = n - t * np.dot(n, t); n = n / np.linalg.norm(n); s_ = np.cross(n, t)
+    o = p0 - s_ * w - t * w * 0.5
+    obx(S, tuple(o), tuple(t * (L + w)), tuple(s_ * 2 * w), tuple(n * h), mat, prm)
+
+
+def arc_bar(S, x, w, h, mat, prm=(0, 0, 0), n=20, R=None):
+    R = R or LR
+    ts = np.linspace(0, math.pi, n)
+    for t0, t1 in zip(ts, ts[1:]):
+        p0 = np.array([x, R * math.cos(t0), ZL + R * math.sin(t0)]); p1 = np.array([x, R * math.cos(t1), ZL + R * math.sin(t1)])
+        tm = (t0 + t1) / 2
+        bar(S, p0, p1, (0, math.cos(tm), math.sin(tm)), w, h, mat, prm)
+
+
+def box_body(S, mat_wall, lidmat=None, prm1=0.0):
+    a, b, h = LA, LB, ZL
+    lm = lidmat or mat_wall
+    grid(S, lambda U, V: np.stack([-a + 2 * a * U, np.full_like(U, b), h * V], -1), 30, 16, mat_wall, (0, prm1, 0))
+    grid(S, lambda U, V: np.stack([np.full_like(U, a), b - 2 * b * U, h * V], -1), 20, 16, mat_wall, (1, prm1, 0))
+    grid(S, lambda U, V: np.stack([a - 2 * a * U, np.full_like(U, -b), h * V], -1), 30, 16, mat_wall, (0, prm1, 0))
+    grid(S, lambda U, V: np.stack([np.full_like(U, -a), -b + 2 * b * U, h * V], -1), 20, 16, mat_wall, (1, prm1, 0))
+    grid(S, lambda U, V: np.stack([-a + 2 * a * U, LR * np.cos(V * math.pi), ZL + LR * np.sin(V * math.pi)], -1), 30, 28, lm, (2, prm1, 0))
+    for sx in (1, -1):
+        def end(U, V, sx=sx):
+            t = V * math.pi
+            return np.stack([np.full_like(U, sx * a), U * LR * np.cos(t), ZL + U * LR * np.sin(t)], -1)
+        grid(S, end, 8, 22, lm, (1, prm1, 0), flip=(sx < 0))
+
+
+def sen_logo(S, rng, c, s, mpet, mplate=None, mring=None, mgem=None, plate_r=None):
+    """LOGO SEN khối nổi hướng ra trước (+y): đĩa nền + vành, 7 cánh, 2 lá đế, gương sen, hột"""
+    cx, cy, cz = c
+    if mplate is not None:
+        pr = plate_r or s * 1.5
+        disc(S, Pl(cx, cy + 0.5, cz), rotv((0, 1, 0)), pr, mplate, (0, 0, 0), nr=4, na=40)
+        tube(S, Pl(cx, cy - 0.1, cz), Pl(cx, cy + 0.5, cz), pr, mplate, nr=40, nl=2)
+        if mring is not None:
+            for k in range(40):
+                t0, t1 = 2 * math.pi * k / 40, 2 * math.pi * (k + 1.05) / 40
+                bar(S, (cx + pr * math.cos(t0), cy + 0.5, cz + pr * math.sin(t0)), (cx + pr * math.cos(t1), cy + 0.5, cz + pr * math.sin(t1)), (0, 1, 0), 0.32, 0.45, mring)
+    base = np.array([cx, cy + 0.8, cz - s * 0.6])
+    for ang, ln_, w in ((0, 1.05, 0.32), (25, 0.95, 0.29), (-25, 0.95, 0.29), (50, 0.8, 0.26), (-50, 0.8, 0.26), (77, 0.6, 0.22), (-77, 0.6, 0.22)):
+        t = math.radians(ang); d = np.array([math.sin(t), 0, math.cos(t)]); pp = np.array([math.cos(t), 0, -math.sin(t)])
+        cc = base + d * s * ln_ * 0.55 + np.array([0, 0.35 * s * (1 - abs(ang) / 90), 0])
+        ell(S, tuple(cc), s * ln_ * 0.56, s * w, s * 0.22, mpet, (rng.random(), 0, 0), axes=(d, pp, np.array([0, 1.0, 0])))
+    for sx in (1, -1):
+        d = np.array([sx, 0, 0.3]) / math.hypot(1, 0.3); pp = np.array([-0.3 * sx, 0, 1]) / math.hypot(1, 0.3)
+        ell(S, tuple(base + np.array([sx * s * 0.66, 0.2, -s * 0.12])), s * 0.62, s * 0.17, s * 0.18, mpet, (rng.random(), 1, 0), axes=(d, pp, np.array([0, 1.0, 0])))
+    if mgem is not None:
+        ell(S, tuple(base + np.array([0, 0.75 * s, s * 0.5])), s * 0.24, s * 0.22, s * 0.24, mgem)
+
+
+
+def on_lid(x, t, lift=0.0):
+    R = LR + lift
+    return np.array([x, R * math.cos(t), ZL + R * math.sin(t)]), np.array([0, math.cos(t), math.sin(t)]), np.array([0, -math.sin(t), math.cos(t)])
+
+
+def frond(S, rng, x0, x1, t0, t1, mat):
+    """tàu lá dừa nước chạm nổi trên nắp: sống lá cong + lá chét xiên 2 bên, nhỏ dần về ngọn"""
+    n = 16; pts = []
+    for i in range(n):
+        f = i / (n - 1); x = x0 + (x1 - x0) * f; t = t0 + (t1 - t0) * f + 0.12 * math.sin(math.pi * f)
+        p, nr, tv = on_lid(x, t, 0.25); pts.append((p, nr, tv))
+    for (p0, _, _), (p1, _, _) in zip(pts, pts[1:]): tb(S, tuple(p0), tuple(p1), 0.28, mat, nr=6, nl=2)
+    for i in range(1, n - 1):
+        p, nr, tv = pts[i]; d = pts[i + 1][0] - p; d = d / np.linalg.norm(d); f = i / (n - 1); ln_ = 1.9 * (1 - 0.55 * f)
+        for sg in (1, -1):
+            dd = d * 0.55 + tv * sg * 0.83; dd = dd / np.linalg.norm(dd); pp = np.cross(nr, dd)
+            ell(S, tuple(p + dd * ln_ * 0.55 + nr * 0.15), ln_ * 0.55, 0.26, 0.17, mat, (rng.random(), 0, 0), axes=(dd, pp, nr), nu=6, nv_=8)
+
+
+# ------------------------------------------------------------------ chạm nổi khối thật trên mặt (bậc 3-4)
+def Ffront(u, v, lift=0.0):
+    return np.array([u, LB + lift, v]), np.array([1.0, 0, 0]), np.array([0, 0, 1.0]), np.array([0, 1.0, 0])
+
+
+def Flid(u, v, lift=0.0):              # v = góc trên cung nắp (0 = mép trước, pi/2 = đỉnh)
+    p, n, tv = on_lid(u, v, lift)
+    return p, np.array([1.0, 0, 0]), tv, n
+
+
+def petal(S, rng, F, u, v, ang, ln_, w, th, mat, lift=0.2, dv_scale=1.0):
+    p, tu, tv, n = F(u, v, lift)
+    d = tu * math.cos(ang) + tv * math.sin(ang); pp = np.cross(n, d)
+    ell(S, tuple(p + d * ln_ * 0.5 + n * th * 0.3), ln_ * 0.52, w, th, mat, (rng.random(), 0, 0), axes=(d, pp, n), nu=6, nv_=9)
+
+
+def flower(S, rng, F, u, v, sc, mpet, mmid, dv=1.0):
+    """bông sen nở 2 tầng cánh + gương sen"""
+    for ang, l, w in ((90, 1.3, .4), (58, 1.15, .37), (122, 1.15, .37), (25, .95, .33), (155, .95, .33)):
+        petal(S, rng, F, u, v, math.radians(ang), l * sc, w * sc, .24 * sc, mpet, lift=0.15)
+    for ang in (75, 105):
+        petal(S, rng, F, u, v + 0.0, math.radians(ang), .8 * sc, .28 * sc, .34 * sc, mpet, lift=0.35)
+    p, tu, tv, n = F(u, v, 0.3)
+    ell(S, tuple(p + tv * 0.2 * sc + n * 0.2 * sc), .38 * sc, .28 * sc, .3 * sc, mmid, axes=(tu, tv, n), nu=5, nv_=8)
+
+
+def pad(S, rng, F, u, v, r, mat):
+    """lá sen: đĩa dẹt + mép cuộn + gân toả"""
+    p, tu, tv, n = F(u, v, 0.15)
+    ell(S, tuple(p), r, r * 0.8, 0.22, mat, axes=(tu, tv, n), nu=4, nv_=16)
+    for k in range(9):
+        a = 2 * math.pi * k / 9 + 0.3
+        q = F(u + r * 0.9 * math.cos(a), v + r * 0.72 * math.sin(a) / (LR if F is Flid else 1.0), 0.3)[0]
+        tube(S, Pl(*(p + n * 0.15)), Pl(*q), 0.13, mat, nr=4, nl=2)
+    rim = [F(u + r * math.cos(a), v + r * 0.8 * math.sin(a) / (LR if F is Flid else 1.0), 0.32)[0] for a in np.linspace(0.4, 2 * math.pi - 0.4, 18)]
+    for q0, q1 in zip(rim, rim[1:]): tube(S, Pl(*q0), Pl(*q1), 0.2, mat, nr=4, nl=2)
+
+
+def stem(S, F, pts, r, mat, lift=0.25):
+    q = [F(u, v, lift)[0] for (u, v) in pts]
+    for a, b in zip(q, q[1:]): tube(S, Pl(*a), Pl(*b), r, mat, nr=5, nl=2)
+
+
+def fish(S, rng, u, v, d, sc, mat, meye):
+    """cá lóc chạm nổi trên nắp: thân dài tròn, đầu bẹt, vây lưng dài, vây hậu môn, đuôi tròn, mắt"""
+    F = Flid
+    def P_(du, dv, lift):
+        return F(u + d * du * sc, v + dv * sc / LR, lift)
+    p, tu, tv, n = P_(0, 0, 0.3); t = tu * d; b = np.cross(n, t)
+    ell(S, tuple(p + n * 0.3 * sc), 2.2 * sc, 0.62 * sc, 0.55 * sc, mat, axes=(t, b, n), nu=8, nv_=14)
+    p2 = P_(2.2, 0, 0.3)[0]
+    ell(S, tuple(p2 + n * 0.25 * sc), 0.75 * sc, 0.55 * sc, 0.42 * sc, mat, axes=(t, b, n), nu=6, nv_=12)
+    for du in np.linspace(1.3, -1.8, 9):                      # vây lưng: chuỗi tia
+        q = P_(du, 0.62, 0.3)[0]; q2 = P_(du - 0.25, 1.05, 0.3)[0]
+        tube(S, Pl(*q), Pl(*q2), 0.12 * sc, mat, nr=4, nl=2)
+    stem(S, F, [(u + d * du * sc, v + 1.05 * sc / LR) for du in np.linspace(1.05, -2.05, 8)], 0.14 * sc, mat, 0.35)
+    for du in np.linspace(-0.2, -1.8, 6):
+        q = P_(du, -0.6, 0.3)[0]; q2 = P_(du - 0.2, -0.95, 0.3)[0]
+        tube(S, Pl(*q), Pl(*q2), 0.11 * sc, mat, nr=4, nl=2)
+    pt = P_(-2.5, 0, 0.3)[0]                                   # đuôi tròn
+    ell(S, tuple(pt + n * 0.1), 0.75 * sc, 0.8 * sc, 0.16 * sc, mat, axes=(t, b, n), nu=5, nv_=12)
+    for a in np.linspace(-0.9, 0.9, 5):
+        q = P_(-2.4 - 0.7 * math.cos(a), 0.75 * math.sin(a), 0.4)[0]
+        tube(S, Pl(*pt), Pl(*q), 0.09 * sc, mat, nr=4, nl=2)
+    pe = P_(2.45, 0.2, 0.75)[0]
+    ell(S, tuple(pe), 0.16 * sc, 0.16 * sc, 0.12 * sc, meye, nu=4, nv_=8)
+    pf = P_(1.2, -0.5, 0.5)[0]                                 # vây ngực
+    dd = -t * 0.6 - b * 0.8; dd = dd / np.linalg.norm(dd)
+    ell(S, tuple(pf + dd * 0.4 * sc), 0.5 * sc, 0.2 * sc, 0.1 * sc, mat, axes=(dd, np.cross(n, dd), n), nu=4, nv_=8)
+
+
+def waves(S, u0, u1, v, sc, mat):
+    w = 2.4 * sc; u = u0
+    while u + w <= u1 + 0.01:
+        stem(S, Flid, [(u + w * f, v + 0.9 * sc * math.sin(math.pi * f) / LR) for f in np.linspace(0, 1, 9)], 0.22 * sc, mat, 0.25)
+        cx, cy = u + w * 0.6, v + 0.85 * sc / LR
+        stem(S, Flid, [(cx + 0.55 * sc * (1 - a / 7) * math.cos(a), cy + 0.55 * sc * (1 - a / 7) * math.sin(a) / LR) for a in np.linspace(0, 5.5, 10)], 0.15 * sc, mat, 0.3)
+        u += w
+
+
+def vine(S, rng, F, pts, r, mstem, mleaf, every=2):
+    q = []
+    for i in range(len(pts) - 1):
+        (ua, va), (ub, vb) = pts[i], pts[i + 1]
+        for f in np.linspace(0, 1, 6)[:-1]: q.append((ua + (ub - ua) * f, va + (vb - va) * f))
+    q.append(pts[-1]); stem(S, F, q, r, mstem)
+    for i in range(1, len(q) - 1, every):
+        (ua, va), (ub, vb) = q[i], q[i + 1]
+        pa = F(ua, va)[0]; pb = F(ub, vb)[0]; d = pb - pa; L = np.linalg.norm(d)
+        if L < 1e-6: continue
+        d = d / L; p, tu, tv, n = F(ua, va, 0.2); sg = 1 if (i // every) % 2 else -1
+        dd = d * 0.5 + np.cross(n, d) * sg * 0.87; dd = dd / np.linalg.norm(dd)
+        ell(S, tuple(p + dd * 0.8 + n * 0.1), 0.85, 0.32, 0.2, mleaf, (rng.random(), 0, 0), axes=(dd, np.cross(n, dd), n), nu=5, nv_=8)
+
+
+def frames_panel(S, xr, zr, w, h, mat):
+    """khung nổi quanh các ô mặt trước/sau + hông + ô nắp"""
+    for sy in (1, -1):
+        for (u0, u1) in xr:
+            y = sy * LB; pts = [(u0, y, zr[0]), (u1, y, zr[0]), (u1, y, zr[1]), (u0, y, zr[1]), (u0, y, zr[0])]
+            for a, b in zip(pts, pts[1:]): bar(S, a, b, (0, sy, 0), w, h, mat)
+    for sx in (1, -1):
+        x = sx * LA; y0 = LB - 1.4; pts = [(x, -y0, zr[0]), (x, y0, zr[0]), (x, y0, zr[1]), (x, -y0, zr[1]), (x, -y0, zr[0])]
+        for a, b in zip(pts, pts[1:]): bar(S, a, b, (sx, 0, 0), w, h, mat)
+    for (u0, u1) in xr:
+        for t in (0.35, math.pi - 0.35):
+            p0 = on_lid(u0, t)[0]; p1 = on_lid(u1, t)[0]; bar(S, p0, p1, on_lid(0, t)[1], w, h, mat)
+        for uu in (u0, u1):
+            ts = np.linspace(0.35, math.pi - 0.35, 16)
+            for t0, t1 in zip(ts, ts[1:]):
+                bar(S, on_lid(uu, t0)[0], on_lid(uu, t1)[0], on_lid(0, (t0 + t1) / 2)[1], w, h, mat)
+
+
+def flat(col):
+    c = hexc(col)
+    return newmat(lambda uv, prm, pos, nrm: (np.tile(c, (len(uv), 1)), nrm))
+
+
+def paint(col):
+    """sơn tay trên khối chạm: đậm nhạt theo mảng, chỗ sơn mỏng sáng hơn (không vệt tối)"""
+    c = hexc(col); lt = c * 0.65 + 0.35
+    def f(uv, prm, pos, nrm):
+        g = vnoise(pos[:, 0] * 0.6, pos[:, 1] * 0.6 + pos[:, 2] * 0.6, 3.0)
+        m = np.clip((g - 0.45) * 1.8, 0, 1) * 0.4
+        return np.clip(c[None] * (1 - m)[:, None] + lt[None] * m[:, None], 0, 1), nrm
+    return newmat(f)
+
+
+def tier_rich(S, rng, t):
     global LA, LB, ZL, LR
+    if t == 3:
+        LA, LB, ZL = 16.0, 10.0, 14.0
+        BODY, LEDGE = '#1a8f7c', '#12705f'; GF, GB = '#c08a2c', '#ecb846'
+    else:
+        LA, LB, ZL = 16.6, 10.4, 14.4
+        BODY, LEDGE = '#c21e26', '#961820'; GF, GB = '#cf962c', '#f6c84a'
+    LR = LB
+    K.FOOT = ((C0 - LA - 1.5) / T, (C0 + LA + 1.5) / T, (C0 - LB - 1.5) / T, (C0 + LB + 1.5) / T, 0.05)
+    MB = newmat(mat_son(BODY) if t == 3 else mat_xacu(BODY)); ML = newmat(mat_son(LEDGE))
+    VF = newmat(mat_kl(GF, hammer=False, streak=0.02)); VB = newmat(mat_kl(GB, hammer=False, streak=0.02))
+    box_body(S, MB, prm1=1.0)
+    for z0, z1, e in ((0.0, 1.0, 0.9), (1.0, 2.0, 0.5), (ZL - 1.4, ZL, 0.6)):
+        obx(S, (-LA - e, -LB - e, z0), (2 * (LA + e), 0, 0), (0, 2 * (LB + e), 0), (0, 0, z1 - z0), ML)
+    for z in (1.0, 2.0, ZL - 1.4, ZL):                              # chỉ vàng viền gờ
+        for sy in (1, -1):
+            e = 0.95 if z <= 1.0 else (0.55 if z <= 2.0 else 0.65)
+            bar(S, (-LA - e, sy * (LB + e), z), (LA + e, sy * (LB + e), z), (0, sy, 0), 0.18, 0.12, VF)
+        for sx in (1, -1):
+            e = 0.95 if z <= 1.0 else (0.55 if z <= 2.0 else 0.65)
+            bar(S, (sx * (LA + e), -LB - e, z), (sx * (LA + e), LB + e, z), (sx, 0, 0), 0.18, 0.12, VF)
+    xs = LA * (0.6 if t == 3 else 0.5)
+    xr = [(-xs + 1.4, xs - 1.4), (xs + 1.4, LA - 1.3), (-LA + 1.3, -xs - 1.4)]
+    frames_panel(S, xr, (3.0, ZL - 2.4), 0.3, 0.35, VF)
+    for x in (-xs, xs):                                             # đai vàng vuông
+        for sy in (1, -1):
+            obx(S, (x - 1.0, LB if sy > 0 else -LB - 0.45, 2.0), (2.0, 0, 0), (0, 0.45, 0), (0, 0, ZL - 3.4), VF)
+        arc_bar(S, x, 1.0, 0.45, VF, n=24)
+    for sx in (1, -1):                                              # viền 2 đầu nắp + bọc góc + chân
+        arc_bar(S, sx * (LA - 0.6), 0.6, 0.4, VF, n=24)
+        for sy in (1, -1):
+            for z0 in (2.0, ZL - 4.6):
+                obx(S, (sx * LA - (3.2 if sx > 0 else 0), LB if sy > 0 else -LB - 0.4, z0), (3.2, 0, 0), (0, 0.4, 0), (0, 0, 3.2), VF)
+                obx(S, (sx * LA if sx > 0 else -LA - 0.4, sy * LB - (3.2 if sy > 0 else 0), z0), (0.4, 0, 0), (0, 3.2, 0), (0, 0, 3.2), VF)
+            ell(S, (sx * (LA - 1.6), sy * (LB - 1.6), -0.1), 1.6, 1.6, 1.1, VB)
+    for sy in (1, -1): bar(S, (-LA, sy * LB, ZL + 0.3), (LA, sy * LB, ZL + 0.3), (0, sy, 0), 0.45, 0.4, VF)
+    for sx in (1, -1):                                              # quai vàng 2 hông: đĩa hoa thị + vòng
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            ell(S, (sx * (LA + 0.3), 1.3 * math.cos(a), ZL * 0.62 + 1.3 * math.sin(a)), 0.3, 0.5, 0.5, VB)
+        ell(S, (sx * (LA + 0.3), 0, ZL * 0.62), 0.35, 1.1, 1.1, VF)
+        pts = [(sx * (LA + 0.9), 1.4 * math.cos(q), ZL * 0.62 - 2.2 * math.sin(q)) for q in np.linspace(0, math.pi, 14)]
+        for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.34, VB, nr=6, nl=2)
+    # LOGO SEN to trên đĩa
+    if t == 3:
+        sen_logo(S, rng, (0, LB + 0.9, ZL - 2.6), 2.8, VB, mplate=newmat(mat_son('#8e1c18')), mring=VB, mgem=flat('#e0302a'), plate_r=4.0)
+    else:
+        sen_logo(S, rng, (0, LB + 0.9, ZL - 2.8), 3.1, VB, mplate=newmat(mat_son('#12352c')), mring=VB, mgem=flat('#d81c3a'), plate_r=4.5)
+        PEARL = flat('#f2eee6')
+        for k in range(18):
+            a = 2 * math.pi * k / 18
+            ell(S, (5.05 * math.cos(a), LB + 1.5, ZL - 2.8 + 5.05 * math.sin(a)), 0.32, 0.32, 0.32, PEARL)
+        JADE = flat('#22a070')
+        for sx in (1, -1):
+            for zc in (3.6, ZL - 3.6): ell(S, (sx * (LA - 1.6), LB + 0.5, zc), 0.6, 0.5, 0.6, JADE)
+        top = (0, 0, ZL + LR + 0.2)                                     # núm búp sen trên đỉnh
+        tb(S, top, (0, 0, ZL + LR + 1.0), 1.3, VF, nr=14, nl=2, cap=True)
+        ell(S, (0, 0, ZL + LR + 2.6), 0.8, 0.8, 1.9, VB)
+        for k in range(6):
+            a = 2 * math.pi * k / 6; d = np.array([math.cos(a), math.sin(a), 0.0])
+            ax_ = np.array([0, 0, 1.0]) + d * 0.4; ax_ = ax_ / np.linalg.norm(ax_)
+            ell(S, tuple(np.array([0, 0, ZL + LR + 2.1]) + d * 0.75), 1.5, 0.6, 0.3, VB, axes=(ax_, np.cross(ax_, d), d))
+    ob = (-1.2, LB + 0.3, ZL - 0.5)                                 # tai khoá
+    obx(S, ob, (2.4, 0, 0), (0, 0.6, 0), (0, 0, 2.6), VF)
+    # CHẠM NỔI miền Tây, sơn tay nhiều màu
+    if t == 3:
+        PK, LF, SG, WV = paint('#de7c96'), paint('#58a04c'), paint('#3e7c38'), paint('#ece6d2')
+        EYE = flat('#201810')
+        for sx in (1, -1):
+            uc = sx * (xs + LA) / 2
+            stem(S, Ffront, [(uc, 4.0), (uc + 0.6, 6.5), (uc, 9.0)], 0.3, SG)
+            pad(S, rng, Ffront, uc, 4.6, 2.0, LF)
+            flower(S, rng, Ffront, uc, 9.4, 1.5, PK, VB)
+        waves(S, -xs + 1.6, xs - 1.6, 0.5, 1.5, WV)
+        fish(S, rng, -1.2, 0.98, 1, 1.45, VB, EYE); fish(S, rng, 1.4, 1.62, -1, 1.25, VB, EYE)
+        for sx in (1, -1):
+            uc = sx * (xs + LA) / 2
+            stem(S, Flid, [(uc, 0.6), (uc - 0.5, 0.95), (uc, 1.35)], 0.28, SG)
+            pad(S, rng, Flid, uc, 0.65, 1.9, LF); flower(S, rng, Flid, uc, 1.4, 1.3, PK, VB)
+    else:
+        PK, JD = paint('#eeacbc'), paint('#2e9c70')
+        for sx in (1, -1):
+            uc = sx * (xs + LA) / 2
+            vine(S, rng, Ffront, [(uc, 3.6), (uc - sx * 0.9, 6.0), (uc, 8.6)], 0.25, VB, JD)
+            pad(S, rng, Ffront, uc, 4.4, 1.7, JD)
+            flower(S, rng, Ffront, uc, 9.5, 1.4, PK, VB)
+        vine(S, rng, Flid, [(xx, 0.92 + 0.22 * math.sin(xx * 0.75)) for xx in np.linspace(-xs + 1.8, xs - 1.8, 9)], 0.3, VB, JD)
+        for (uu, vv) in ((-4.2, 1.45), (4.2, 1.45)): flower(S, rng, Flid, uu, vv, 1.45, PK, VB)
+        pad(S, rng, Flid, 0, 1.25, 1.6, JD)
+        for sx in (1, -1):
+            uc = sx * (xs + LA) / 2
+            pad(S, rng, Flid, uc, 0.65, 1.6, JD); flower(S, rng, Flid, uc, 1.35, 1.2, PK, VB)
+            vine(S, rng, Flid, [(uc, 0.7), (uc - sx * 0.6, 1.0), (uc, 1.3)], 0.22, VB, JD, every=3)
+
+
+def build(level, rng, with_props=True):
+    global LA, LB, ZL, LR, WOODC
     S = Scene(); K.LIGHTS2.clear(); K.GLOWS[:] = []; K.GROUND_GLOW[:] = []
     if TIER == 1:
         LA, LB, ZL = 14.0, 9.0, 13.0; LR = LB
         K.FOOT = ((C0 - 15) / T, (C0 + 15) / T, (C0 - 10) / T, (C0 + 10) / T, 0.05)
         body_dan(S); frame_tre(S, rng)
-        sen_go(S, rng, (0, LB + 0.6, 5.8), 3.5)
+        sen_go(S, rng, (0, LB + 0.6, 5.9), 4.2)
         tb(S, (-2.4, LB + 1.9, ZL + 1.6), (2.4, LB + 1.9, ZL + 1.6), 0.75, M_TRAM, (0.4, 0, 0), cap=True)      # chốt gỗ ngang mép nắp
         for sx in (1, -1):                                          # quai mây 2 hông
             pts = [(sx * (LA + 1.0 + 2.0 * math.sin(t)), 3.0 * math.cos(t), ZL * 0.62 + 1.0 * math.sin(t)) for t in np.linspace(0, math.pi, 12)]
             for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.55, M_RATTAN, nr=6, nl=2)
+
+    elif TIER == 2:                 # gỗ tràm ván ghép, đế + gờ miệng, đai sắt rèn, bọc góc sắt, đinh đồng, KHOÁ KHIÊN ĐỒNG có SEN nổi, khoá móc
+        WOODC = '#b8743c'
+        LA, LB, ZL = 15.0, 9.6, 13.5; LR = LB
+        K.FOOT = ((C0 - 16.5) / T, (C0 + 16.5) / T, (C0 - 11) / T, (C0 + 11) / T, 0.05)
+        MV = newmat(mat_van); SAT = newmat(mat_kl('#5c6068')); SAT2 = newmat(mat_kl('#4a4e56'))
+        DONG = newmat(mat_kl('#d4a046', hammer=False)); DONG2 = newmat(mat_kl('#b88430', hammer=False))
+        GOV = newmat(mat_kl('#9a5a2a', hammer=False, streak=0.1))
+        box_body(S, MV)
+        for z0, z1, e in ((0.0, 1.4, 0.7), (ZL - 1.3, ZL, 0.55)):        # đế + gờ miệng (ván dày lồi ra, cạnh vuông)
+            obx(S, (-LA - e, -LB - e, z0), (2 * (LA + e), 0, 0), (0, 2 * (LB + e), 0), (0, 0, z1 - z0), MV, (0, 0, 0))
+        xs = LA * 0.6
+        for x in (-xs, xs):                                              # 2 đai sắt rèn: ôm thân trước/sau + vòng qua nắp
+            for sy in (1, -1):
+                obx(S, (x - 0.95, LB if sy > 0 else -LB - 0.35, 1.4), (1.9, 0, 0), (0, 0.35, 0), (0, 0, ZL - 2.7), SAT)
+            arc_bar(S, x, 0.95, 0.35, SAT, n=22)
+            for zz in (1.9, ZL * 0.5, ZL - 2.1):                         # đinh đồng tán trên đai
+                ell(S, (x, LB + 0.4, zz), 0.42, 0.3, 0.42, DONG)
+            for t in (0.5, 1.1, math.pi / 2, math.pi - 1.1):
+                ell(S, (x, (LR + 0.4) * math.cos(t), ZL + (LR + 0.4) * math.sin(t)), 0.4, 0.4, 0.4, DONG)
+        for sx in (1, -1):                                               # bọc góc sắt chữ L + viền 2 đầu nắp
+            for sy in (1, -1):
+                for z0 in (0.0, ZL - 3.2):
+                    obx(S, (sx * LA - (2.6 if sx > 0 else 0) + (0 if sx > 0 else 0), sy * LB - (0.3 if sy < 0 else 0), z0), (2.6 * (1 if sx > 0 else -1) if False else 2.6, 0, 0), (0, 0.3, 0), (0, 0, 3.2), SAT2)
+                    obx(S, (sx * LA - (0.3 if sx < 0 else 0), sy * LB - (2.6 if sy > 0 else 0), z0), (0.3, 0, 0), (0, 2.6, 0), (0, 0, 3.2), SAT2)
+            arc_bar(S, sx * (LA - 0.5), 0.55, 0.35, SAT2, n=22)
+        for sy in (1, -1): bar(S, (-LA, sy * LB, ZL + 0.25), (LA, sy * LB, ZL + 0.25), (0, sy, 0), 0.4, 0.4, SAT2)
+        # khoá khiên đồng + sen nổi + khoá móc sắt
+        c = (0, LB + 0.35, ZL - 1.6)
+        obx(S, (-2.9, LB + 0.55, ZL - 5.4), (5.8, 0, 0), (0, 0.45, 0), (0, 0, 6.2), DONG2)
+        for k in range(28):
+            t0, t1 = 2 * math.pi * k / 28, 2 * math.pi * (k + 1.05) / 28
+            bar(S, (2.5 * math.cos(t0), LB + 1.0, ZL - 2.2 + 2.5 * math.sin(t0)), (2.5 * math.cos(t1), LB + 1.0, ZL - 2.2 + 2.5 * math.sin(t1)), (0, 1, 0), 0.25, 0.3, DONG)
+        sen_logo(S, rng, (0, LB + 0.9, ZL - 1.9), 2.5, DONG)
+        for sx in (1, -1):
+            for zz in (ZL - 4.9, ZL + 0.3):
+                ell(S, (sx * 2.4, LB + 1.05, zz), 0.35, 0.25, 0.35, DONG)
+        obx(S, (-0.9, LB + 0.05, ZL - 0.3), (1.8, 0, 0), (0, 0.5, 0), (0, 0, 2.4), DONG2)      # tai khoá trên nắp
+        pts = [(1.05 * math.cos(t), LB + 1.3, ZL - 6.0 + 1.3 * math.sin(t) + 0.4) for t in np.linspace(0, math.pi, 10)]
+        for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.32, SAT, nr=6, nl=2)                 # quai khoá móc
+        obx(S, (-1.5, LB + 1.1, ZL - 8.6), (3.0, 0, 0), (0, 1.1, 0), (0, 0, 2.7), SAT2)
+        ell(S, (0, LB + 2.25, ZL - 7.5), 0.22, 0.1, 0.22, newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#2a2220'), (len(uv), 1)), nrm)))
+        for sx in (1, -1):                                              # quai sắt 2 hông
+            ell(S, (sx * (LA + 0.2), 0, ZL * 0.62), 0.35, 1.6, 1.6, SAT2)
+            pts = [(sx * (LA + 0.75), 1.6 * math.cos(t), ZL * 0.62 - 2.4 * math.sin(t)) for t in np.linspace(0, math.pi, 12)]
+            for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.32, SAT, nr=6, nl=2)
+        # chạm nổi gỗ trên nắp: tàu lá dừa nước 2 bên khoá
+        for sx in (1, -1):
+            frond(S, rng, sx * 3.6, sx * (LA - 1.5), 0.55, 1.15, GOV)
+    else:
+        tier_rich(S, rng, TIER)
     return S, (S.ns, S.ns)
 
 
