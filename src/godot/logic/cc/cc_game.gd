@@ -152,8 +152,8 @@ func _load() -> void:
 		if host.has("bait"):
 			for k in D.KHO_BAIT:
 				S.baits[k] = int(host.bait.call(D.KHO_BAIT[k]))
-	for k in ["xu", "xp", "lv", "rod", "line", "flo", "cage", "sound", "music", "tut"]:
-		S[k] = int(S[k])
+	for k in ["xu", "xp", "lv", "rod", "line", "flo", "luoi", "cage", "sound", "music", "tut"]:
+		S[k] = int(S.get(k, 0))
 	S.luck = float(S.luck)
 	S.hour = float(S.hour)
 	if not (S.baits is Dictionary):
@@ -180,7 +180,7 @@ func _load() -> void:
 		S.stats = {"casts": 0, "catches": 0, "snaps": 0}
 	for k in ["casts", "catches", "snaps"]:
 		S.stats[k] = int(S.stats.get(k, 0))
-	for k in ["rod", "line", "flo", "cage"]:
+	for k in D.GEAR_KEYS:
 		S[k] = clampi(S[k], 0, D.gear(k).size() - 1)
 	if not D.BAIT.has(str(S.bait)):
 		S.bait = "trun"
@@ -583,6 +583,8 @@ func bite_table(x: float, z: float, hour: float, bait: String) -> Array:
 			w *= 1.25
 		if f.rar >= 3:
 			w *= 1 + S.luck * .04
+			if host != null and host.has("free"):   # trong vườn bỏ giỏ: món "giỏ đựng" = cá hiếm dễ dính
+				w *= float(D.CAGE[S.cage].rare)
 			if host != null and host.has("rare"):
 				w *= float(host.rare.call())   # vườn: bùa "Tay câu đỏ" (dễ câu cá quý) + nâng câu của hệ thống
 		if w > 0.0005:
@@ -791,8 +793,6 @@ func reel_back() -> void:
 func start_fight(perfect: bool) -> void:
 	var f: Dictionary = G.fish.f
 	var ex: float = 1.6 if f.rar >= 3 else 2.2
-	if host != null and host.has("free"):   # (bản 537) trong vườn bỏ giỏ: món "giỏ đựng" = cá to dễ dính hơn (mỗi bậc bớt độ cong)
-		ex = maxf(1.0, ex - 0.4 * int(S.cage))
 	var w: float = f.w[0] + (f.w[1] - f.w[0]) * pow(randf(), ex)
 	var k: float = (w - f.w[0]) / (f.w[1] - f.w[0] if f.w[1] != f.w[0] else 1.0)
 	G.hook = {"f": f, "w": w, "size": .8 + .45 * k, "P": f.P * (.85 + .35 * k), "st0": f.st * (.8 + .5 * k), "x": G.fl.x, "vx": 0.0, "beh": "calm", "bt": .6, "surf": 0.0, "wk": 0.0}
@@ -875,7 +875,7 @@ func fight_update(dt: float) -> void:
 			ui.hint("Giữ để kéo vô!")
 	else:
 		G.slack = maxf(0, G.slack - dt * 2)
-	if G.slack > 2.8 and not f.has("junk"):
+	if G.slack > 2.8 * float(D.LUOI[S.luoi].hold) and not f.has("junk"):   # lưỡi tốt: cá bám lâu hơn
 		lost_fish("Dây chùng quá, cá sút lưỡi!")
 		return
 	var z: float = L.zEdge + G.dist

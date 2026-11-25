@@ -75,12 +75,22 @@ const LINE := [
 const FLO := [
 	{"name": "Phao lông nhím", "desc": "Phao truyền thống, nhạy vừa.", "win": 1, "glow": 0},
 	{"name": "Phao lông công", "desc": "Nhạy hơn: có thêm thời gian để giật.", "win": 1.18, "glow": 0, "price": 280, "need": {"loc": 1}},
-	{"name": "Phao đèn đêm", "desc": "Đầu phao phát sáng, câu đêm thấy rõ, nhạy nhất.", "win": 1.28, "glow": 1, "price": 540, "need": {"tre": 2}},
+	{"name": "Phao đèn đêm", "desc": "Đầu phao phát sáng, câu đêm thấy rõ.", "win": 1.28, "glow": 1, "price": 540, "need": {"tre": 2}},
+	{"name": "Phao sơn mài khảm xà cừ", "desc": "Đầu đèn vàng, nhạy nhất: cá rỉa nhẹ cũng thấy.", "win": 1.38, "glow": 1, "price": 1400, "need": {"locbong": 1, "thatlat": 1}},
 ]
+# cap: sức chứa (bản chơi riêng); rare: trong vườn (không giỏ, cá vô Kho) giỏ = cá hiếm (rar >= 3) dễ dính hơn
 const CAGE := [
-	{"name": "Giỏ tre nhỏ", "desc": "Đựng được 8 con.", "cap": 8},
-	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "price": 170},
-	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "price": 680, "need": {"luon": 2}},
+	{"name": "Giỏ tre nhỏ", "desc": "Đựng được 8 con.", "cap": 8, "rare": 1.0},
+	{"name": "Giỏ tre lớn", "desc": "Đựng được 16 con.", "cap": 16, "rare": 1.15, "price": 170, "need": {"ro": 2}},
+	{"name": "Lồng lưới", "desc": "Đựng được 30 con, cá sống lâu.", "cap": 30, "rare": 1.3, "price": 680, "need": {"luon": 2}},
+	{"name": "Rọ mây sơn dầu đai đồng", "desc": "Đựng được 50 con, nắp gỗ kín.", "cap": 50, "rare": 1.5, "price": 1500, "need": {"chinh": 1, "luon": 2}},
+]
+# lưỡi câu (11-25): hold = dây chùng bao lâu cá mới sút lưỡi (x 2,8 giây)
+const LUOI := [
+	{"name": "Lưỡi sắt rèn", "desc": "Lưỡi sắt rèn buộc chỉ đỏ, dây chùng chút là cá sút.", "hold": 1.0},
+	{"name": "Lưỡi thép có ngạnh", "desc": "Có ngạnh + chì: cá dính chắc hơn khi dây chùng.", "hold": 1.3, "price": 180, "need": {"linh": 3}},
+	{"name": "Lưỡi đôi đồng", "desc": "Hai lưỡi đồng + khoá xoay, cá vặn mình khó sút.", "hold": 1.6, "price": 700, "need": {"bong": 1, "he": 1}},
+	{"name": "Lưỡi chùm 3 mạ vàng", "desc": "Ba lưỡi mạ vàng, cá dính là khó thoát.", "hold": 2.0, "price": 2200, "need": {"ho": 1, "chinh": 1}},
 ]
 # cá câu được -> món trong Kho Nông Trại (g.barn) (bản gắn trong vườn: nút "Vô Kho"). Link 11-23 "nối đủ": cả 16 loài,
 # 10 món mới khai trong godot/data/che_bien/vat_pham.json + icon ui/svg/kh/<món>.svg (tools/cc/kho/ca_kho_svg.py). Rác không vô Kho.
@@ -89,8 +99,8 @@ const KHO := {"ro": "ca_ro", "sac": "ca_sac", "linh": "ca_linh", "mevinh": "ca_m
 	"ho": "ca_ho", "tradau": "ca_tradau"}
 # mồi xài chung số lượng với Kho vườn (bản gắn trong vườn): mã mồi câu cá -> món Kho
 const KHO_BAIT := {"tep": "tep"}
-const GEAR_KEYS := ["rod", "line", "flo", "cage"]
-const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "cage": "Giỏ đựng"}
+const GEAR_KEYS := ["rod", "line", "flo", "luoi", "cage"]
+const GEAR_NAME := {"rod": "Cần câu", "line": "Dây câu", "flo": "Phao", "luoi": "Lưỡi câu", "cage": "Giỏ đựng"}
 
 static var BY := {}
 
@@ -99,6 +109,7 @@ static func gear(k: String) -> Array:
 		"rod": return ROD
 		"line": return LINE
 		"flo": return FLO
+		"luoi": return LUOI
 	return CAGE
 
 static func fish(id: String) -> Dictionary:
@@ -186,5 +197,5 @@ static func is_dusk_dawn(h: float) -> bool:
 	return (h >= 5 and h < 8) or (h >= 16.8 and h < 19.6)
 
 static func def_save() -> Dictionary:
-	return {"xu": 60, "xp": 0, "lv": 1, "bait": "trun", "baits": {"trun": 999, "com": 10}, "rod": 0, "line": 0, "flo": 0, "cage": 0,
+	return {"xu": 60, "xp": 0, "lv": 1, "bait": "trun", "baits": {"trun": 999, "com": 10}, "rod": 0, "line": 0, "flo": 0, "luoi": 0, "cage": 0,
 		"basket": [], "dex": {}, "luck": 0.0, "hour": 6.4, "sound": 1, "music": 1, "tut": 0, "stats": {"casts": 0, "catches": 0, "snaps": 0}}
