@@ -138,7 +138,7 @@ def albedo_do(obj, P):
 
 
 # 11-25 08:47 Link "vẽ màu sáng lên chứ không phải tăng đèn": nâng màu sơn (albedo) tươi + sáng, đèn giữ nguyên
-CLIFT = float(os.environ.get("CLIFT", ".75")); CSAT = float(os.environ.get("CSAT", "1.3"))
+CLIFT = float(os.environ.get("CLIFT", ".87")); CSAT = float(os.environ.get("CSAT", "1.2"))
 def albedo_lift(obj, P):
     c = np.clip(albedo_do(obj, P), 0, 1)
     l = (c * np.array([.299, .587, .114], dtype=c.dtype)).sum(1, keepdims=True)
@@ -202,9 +202,9 @@ def hook(t):
     elif t == 3:    # lưỡi đôi đồng: 2 lưỡi quay lưng chung thân, khoá xoay
         for fl in (1, -1):
             pts, rr, barb, p = hook_pts(1.25, flip=fl)
-            o.append(met(Line([tuple(q) for q in pts], rr, 'met'), hexc('#c08440'), sp=.7, pw=50))
-            o.append(met(Line([tuple(q) for q in barb], [.2, .04], 'met'), hexc('#c08440'), sp=.7, pw=50))
-        o.append(met(Torus(tuple(p(0, 7.45)), tuple(HF), .6, .17, 'met'), hexc('#c08440'), sp=.7, pw=50))
+            o.append(met(Line([tuple(q) for q in pts], rr, 'met'), hexc('#c87a30'), sp=.7, pw=50))
+            o.append(met(Line([tuple(q) for q in barb], [.2, .04], 'met'), hexc('#c87a30'), sp=.7, pw=50))
+        o.append(met(Torus(tuple(p(0, 7.45)), tuple(HF), .6, .17, 'met'), hexc('#c87a30'), sp=.7, pw=50))
         o.append(met(Ball(tuple(p(0, 8.75)), .5, 'met', sq=(1, 1, 1.8)), hexc('#9aa0a4'), sp=.8, pw=60))   # khoá xoay
         for zz in (7.95, 9.55):
             o.append(met(Torus(tuple(p(0, zz)), tuple(RT), .4, .13, 'met'), hexc('#9aa0a4'), sp=.8, pw=60))
@@ -231,8 +231,8 @@ def spool(t):
     """cuộn cước lên bậc: ống to dần, vành dày + chi tiết hơn; đầu dây gài khía vành, không móc lưỡi"""
     o = []
     R, H, rc, ft = {1: (4.2, 6.0, 3.2, .6), 2: (4.7, 6.6, 3.6, .7), 3: (5.2, 7.0, 4.0, .8), 4: (5.8, 7.6, 4.5, .95)}[t]
-    fl, ln, k, lr = {1: ('#c9a06a', '#e4ecee', 4.0, .1), 2: ('#c0442e', '#94c4de', 3.4, .13),
-                     3: ('#9a6a40', '#5aa060', 2.8, .17), 4: ('#80522e', '#c8a060', 1.4, .26)}[t]
+    fl, ln, k, lr = {1: ('#c08a4e', '#e4ecee', 4.0, .1), 2: ('#c0442e', '#94c4de', 3.4, .13),
+                     3: ('#9a6a40', '#5aa060', 2.8, .17), 4: ('#80522e', '#e0c27a', 1.4, .26)}[t]
     for z0 in (0.0, H + ft):    # 2 vành ống
         o.append(M(Tube((0, 0, z0), (0, 0, 1), ft, [(0, R), (1, R)], 'gox'), col=fl))
         o.append(M(Torus((0, 0, z0 + ft / 2), (0, 0, 1), R, ft / 2, 'gox'), col=fl))
@@ -253,7 +253,7 @@ def spool(t):
     c = Tube((0, 0, ft), (0, 0, 1), H, [(0, rc), (.5, rc + .15), (1, rc)], 'cuon' if t < 4 else 'ben')
     c.col = hexc(ln); c.k = k
     if t == 4:
-        c.dk = hexc('#7a5e34')
+        c.dk = hexc('#a04a2a')
     o.append(c)
     # đầu dây: từ mặt cuộn phía trước vòng xuống, gài vô khía mép vành dưới, có gút nhỏ
     a0 = math.atan2(float(HF[1]), float(HF[0])) + .35
@@ -283,7 +283,7 @@ def float_(t):
         o.append(b)
         for k in range(4):
             o.append(M(Torus((0, 0, 1.0 + k * .28), (0, 0, 1), .42, .15, 'day'), col='#c83228'))
-        bq = Ell((0, 0, 6.6), (Z, RT, HF), (2.9, 1.15, 1.15), 'bandz'); bq.col = hexc('#d8b47a')   # bấc
+        bq = Ell((0, 0, 6.6), (Z, RT, HF), (2.9, 1.15, 1.15), 'bandz'); bq.col = hexc('#d29a5a')   # bấc
         bq.bands = [(4.0, 4.5, '#3a2a1e'), (8.7, 9.2, '#3a2a1e')]
         o.append(M(bq, sp=.3, pw=30))
         for zz in (3.85, 9.35):   # chỉ quấn 2 đầu bấc
@@ -332,7 +332,7 @@ def cage(t):
     o = []
     if t == 1:      # giỏ tre nhỏ dáng bầu, cổ thắt, hom tre ở miệng, dây đeo
         L = 13.0
-        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 3.6), (.12, 4.9), (.42, 5.4), (.7, 4.3), (.85, 2.3), (1, 2.7)], 'dan2', shell=.4, open1=True, wv=(40, .05))))
+        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 3.6), (.12, 4.9), (.42, 5.4), (.7, 4.3), (.85, 2.3), (1, 2.7)], 'dan2', shell=.4, open1=True, wv=(40, .05)), col=hexc('#d0b46c')))
         o.append(Tube((0, 0, L - 2.6), (0, 0, 1), 2.7, [(0, .7), (1, 2.5)], 'hom', shell=.25, open0=True, open1=True, wv=(16, .1)))
         for zz, rr in ((.3, 3.75), (L - .2, 2.7), (L * .85, 2.3)):
             o.append(M(Torus((0, 0, zz), (0, 0, 1), rr, .32, 'may')))
@@ -341,7 +341,7 @@ def cage(t):
         o.append(M(Line(arc(V(0, 0, L * .85) + RT * 2.6, V(0, 0, L * .85) - RT * 2.6, 4.2), .22, 'day'), col='#c8b07a'))
     elif t == 2:    # giỏ tre lớn: bụng rộng, 3 đai mây, hom, quai dây gai
         L = 15.0
-        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.0), (.15, 6.8), (.45, 7.3), (.72, 6.0), (.86, 3.2), (1, 3.6)], 'dan2', shell=.45, open1=True, wv=(52, .05)), col=hexc('#c8a466')))
+        o.append(M(Tube((0, 0, 0), (0, 0, 1), L, [(0, 5.0), (.15, 6.8), (.45, 7.3), (.72, 6.0), (.86, 3.2), (1, 3.6)], 'dan2', shell=.45, open1=True, wv=(52, .05)), col=hexc('#b8864a')))
         o.append(Tube((0, 0, L - 3.0), (0, 0, 1), 3.1, [(0, .9), (1, 3.4)], 'hom', shell=.28, open0=True, open1=True, wv=(18, .1)))
         for zz, rr in ((.3, 5.15), (L * .45, 7.45), (L * .86, 3.25), (L - .2, 3.6)):
             o.append(M(Torus((0, 0, zz), (0, 0, 1), rr, .36, 'may')))
