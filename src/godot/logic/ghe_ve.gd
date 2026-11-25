@@ -9,7 +9,6 @@ extends Node2D
 const Snap = preload("res://ui/snap.gd")
 const Css = preload("res://ui/css.gd")
 const BongNuoc = preload("res://logic/bong_nuoc.gd")
-const Bong = preload("res://logic/bong.gd")
 
 var farm
 var G
@@ -37,6 +36,7 @@ class Boat extends Node2D:
 	var lbl := ""        # bảng giờ ghe thương hồ
 	var lbl_red := false
 	var piv: Node2D
+	var bubs := []       # bong bóng chung của làng (farm Bubble) treo món đơn hàng
 	var spr: Sprite2D
 	var top: Node2D
 	var tt := 0.0
@@ -74,6 +74,7 @@ class Boat extends Node2D:
 		piv.rotation = l
 		top.position = Vector2(0, o)
 		top.queue_redraw()
+		bub_sync()
 	func _x(Y: float, Lt: float, Ft: float) -> Vector2:   # x(): toạ độ trên ghe -> màn hình (hướng, góc sông)
 		var u9 := s * Y
 		var v9 := Lt
@@ -84,21 +85,44 @@ class Boat extends Node2D:
 			v9 = u9 * s9 + v9 * c9
 			u9 = w9
 		return Vector2((u9 - v9) * 32.0, (u9 + v9) * 16.0 - Ft)
+	func _hang(i: int) -> Array:   # món i: [móc, đầu dây] (toạ độ top) — 2 đầu đòn ngang cây bẹo + nút giữa sào
+		var F: Vector2 = [_x(C * 0.58, -0.42, 73), _x(C * 0.58, 0.42, 73), _x(C * 0.58, 0, 48)][i % 3]
+		var ln := 4.0 if i % 3 == 2 else 6.0
+		var fa := 0.0 if v.G.motion_off() else sin(tt * 1.6 + i * 1.3) * 0.12
+		return [F, F + Vector2(sin(fa) * ln, cos(fa) * ln)]
+	func bub_sync() -> void:   # bong bóng chung (như sbubs song_ve): kind ripe, id món; đã mua thì mờ
+		var Fm = v.farm
+		while bubs.size() > offers.size():
+			bubs.pop_back().queue_free()
+		while bubs.size() < offers.size():
+			var b = Fm.get_script().Bubble.new()
+			b.fnt = Fm.fnt
+			b.farm = Fm
+			b.z_index = 40
+			Fm.add_child(b)
+			bubs.append(b)
+		var tt0 := Time.get_ticks_msec() / 1000.0
+		for i in bubs.size():
+			var b = bubs[i]
+			b.kind = "ripe"
+			b.id = String(offers[i].id)
+			b.text = ""
+			b.can = true
+			b.visible = al > 0.0
+			b.modulate.a = al * (0.3 if int(offers[i].get("done", 0)) else 1.0)
+			Fm._bub_sig(b)
+			b.global_position = top.to_global(_hang(i)[1] + Vector2(0, 10.0 * float(b.k) / sc))
+			if not v.G.motion_off():
+				Fm._bub_set(b, tt0)
+	func _exit_tree() -> void:
+		for b in bubs:
+			b.queue_free()
+		bubs = []
 	func _top_draw() -> void:
 		var mo: bool = v.G.motion_off()
-		if offers.size():   # món treo cây bẹo: bong bóng chung (Bong) treo dây mảnh ở 2 móc đầu đòn ngang + nút giữa sào; đã mua thì mờ
-			var hk := [_x(C * 0.58, -0.42, 73), _x(C * 0.58, 0.42, 73), _x(C * 0.58, 0, 48)]
-			var bs: float = v.farm.sign_le() / sc   # đúng cỡ bong bóng chung (farm._bub_sig: k = sign_le)
-			for i in offers.size():
-				var o: Dictionary = offers[i]
-				var F: Vector2 = hk[i % 3]
-				var ln := 4.0 if i % 3 == 2 else 6.0
-				var fa := 0.0 if mo else sin(tt * 1.6 + i * 1.3) * 0.12
-				var R := F + Vector2(sin(fa) * ln, cos(fa) * ln)
-				var a := al * (0.3 if int(o.get("done", 0)) else 1.0)
-				top.draw_line(F, R, Color8(0x6e, 0x52, 0x30, int(200 * a)), 0.3 / sc, true)
-				var hinh: Texture2D = v.farm.ui.item_ic(String(o.id), Bong.CAO * bs * v.farm.main.zoom * sc) if v.farm.ui != null else null
-				Bong.ve(top, R + Vector2(0, 10.0 * bs), bs, hinh, false, Bong.CAO, a)
+		for i in mini(offers.size(), bubs.size()):   # dây mảnh từ móc tới bong bóng
+			var e: Array = _hang(i)
+			top.draw_line(e[0], e[1], Color8(0x6e, 0x52, 0x30, int(200 * al)), 0.3 / sc, true)
 		var le: float = v.farm.sign_le()
 		var f: Font = v.farm.fnt
 		if tag != "":   # Lh: bảng tên trên ghe
