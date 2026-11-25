@@ -366,6 +366,15 @@ func _draw_hud(ci: Box) -> void:
 	A.svg(ci, "coin", Rect2(xr.position.x + 4, xr.get_center().y - ics / 2 - 1, ics, ics))
 	A.text(ci, xs, xr.position.x + 4 + ics + 6, xr.get_center().y - 1, fs, A.F_BROWN, 0, 800)
 	_pop(ci)
+	# (11-25) phước: dưới ô xu, chạm xem giải thích
+	var pt := "Phước %d/10" % int(floor(float(S.luck)))
+	var pr := Rect2(12, top + ph + 8, 4 + ics * .8 + 6 + A.tw(pt, fs * .85, 800) + 12, ph * .8)
+	met(ci, pr, pr.size.y / 2, ci.pressed("phuoc"))
+	A.svg(ci, "phuoc", Rect2(pr.position.x + 5, pr.get_center().y - ics * .4, ics * .8, ics * .8))
+	A.text(ci, pt, pr.position.x + 5 + ics * .8 + 6, pr.get_center().y - 1, fs * .85, A.F_BROWN, 0, 800)
+	ci.items.append({"r": pr, "id": "phuoc", "tap": func():
+		_ui_tap()
+		toast("Phước %d: cá hiếm dễ dính hơn %d%%. Vớt rác, thả cá để tăng; câu được cá hiếm tốn 2 phước." % [int(S.luck), int(floor(float(S.luck))) * 4], "info")})
 	# cấp + thanh kinh nghiệm (bản 534: chỉ bản chơi riêng; trong vườn câu cá dùng cấp vườn, khỏi hiện)
 	if game.host == null:
 		_hud_lv(ci, xr, top, ph, n)
@@ -1793,7 +1802,7 @@ func _draw_card(ci: Box) -> void:
 	var desc := A.wrap(f.desc, 14, 600, cw - 32)
 	var acts := []
 	if junk:
-		acts.append(["Bỏ thùng rác · +phước", "", "junk", ""])
+		acts.append(["Bỏ thùng rác", "", "junk", ""])
 	else:
 		if not full:
 			acts.append(["Vô Kho" if vk else "Bỏ giỏ", "", "keep", "" if vk else "basket"])
@@ -1932,7 +1941,7 @@ func _draw_card(ci: Box) -> void:
 		match id:
 			"junk":
 				game.snd.ui()
-				toast("Kênh sạch thêm chút, phước tăng!", "good")
+				toast("Kênh sạch thêm chút, +1 phước", "good")
 				_card_done()
 			"keep":
 				game.snd.ui()
@@ -1961,7 +1970,7 @@ func _draw_card(ci: Box) -> void:
 			"free":
 				game.snd.ui()
 				S.luck = minf(10, S.luck + .5)
-				toast("Thả cá về sông, may mắn tăng", "good")
+				toast("Thả cá về sông, +0,5 phước", "good")
 				game.fx_splash(0, game.L.zEdge + 1, .6)
 				_card_done()
 	for row in rows_b:

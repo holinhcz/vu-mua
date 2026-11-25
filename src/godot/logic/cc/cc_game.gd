@@ -563,8 +563,8 @@ func bite_table(x: float, z: float, hour: float, bait: String) -> Array:
 	var out := []
 	for f in D.FISH:
 		var w: float = D.RAR_W[f.rar]
-		if f.has("junk"):
-			out.append([f, w * (.5 if spot != null else 1.0)])
+		if f.has("junk"):   # (11-25) mồi cá quý (sung, cám rêu) ít vướng rác: trước rác gấp ~7 lần cá tra dầu
+			out.append([f, w * (.5 if spot != null else 1.0) * (.12 if bait == "sung" or bait == "cam" else 1.0)])
 			continue
 		var b: float = f.bait.get(bait, 0)
 		if not b:
@@ -955,6 +955,8 @@ func caught(f: Dictionary, w: float) -> void:
 	var cm := int(round(f.cm[0] + (f.cm[1] - f.cm[0]) * clampf((w - f.w[0]) / (f.w[1] - f.w[0] if f.w[1] != f.w[0] else 1.0), 0, 1)))
 	var xp := 2 if f.has("junk") else int(round(4 + f.rar * 7 + minf(20, w * 3)))
 	add_xp(xp)
+	if not f.has("junk") and int(f.rar) >= 3:   # (11-25) phước hao: câu được cá hiếm tốn 2
+		S.luck = maxf(0.0, S.luck - 2.0)
 	if f.has("junk"):
 		S.luck = minf(10, S.luck + 1)
 	elif host != null and host.has("caught"):
