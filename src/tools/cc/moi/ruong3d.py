@@ -231,10 +231,25 @@ def met(o, col, ns=1.5):
 
 
 # ------------------------------------------------------------ phần dựng chung
+# v8 11-25 Link "góc cạnh hơn": gờ, khung, đai = thanh VUÔNG cạnh sắc (không ống tròn)
+def bars(o, pts, nrm, w, h, col, mat='met'):
+    """thanh tiết diện chữ nhật nối các điểm; nrm(p) = pháp tuyến hướng ra; w = nửa bề ngang, h = nửa dày"""
+    pts = [V(*p) for p in pts]
+    for a, b in zip(pts[:-1], pts[1:]):
+        d = b - a; ln_ = float(np.linalg.norm(d))
+        if ln_ < 1e-4: continue
+        t = d / ln_; n = nrm((a + b) / 2); n = nz(n - t * float(np.dot(n, t))); bb = nz(np.cross(n, t))
+        bx = Box(tuple((a + b) / 2 + n * h), (tuple(t), tuple(bb), tuple(n)), (ln_ / 2 + w * .35, w, h), mat, rr=.025)
+        o.append(met(bx, hexc(col)) if mat == 'met' else M(bx, col=col))
+
+
+def radial(H):
+    return lambda p: V(0, 0, 0) + nz(p - W(0, 0, H) - LN * float(np.dot(p - W(0, 0, H), LN)))
+
 def body(o, L, Dp, H, mat, col, lidmat=None, lidcol=None, Rl=None, deco=None, wearc=None, **kw):
     """thân hộp (nửa dài L, nửa sâu Dp, cao H) + nắp vòm nửa trụ bán kính Rl (mặc định = Dp) dọc thân"""
     Rl = Rl or Dp
-    bx = R(Box(tuple(W(0, 0, H / 2)), AX, (L, Dp, H / 2), 'ruong', rr=.35), mat, hexc(col), **kw)
+    bx = R(Box(tuple(W(0, 0, H / 2)), AX, (L, Dp, H / 2), 'ruong', rr=.12), mat, hexc(col), **kw)
     if deco: bx.panels, bx.linec = deco
     bx.ext = (L, Dp, H)
     if wearc: bx.wearc = hexc(wearc)
@@ -249,15 +264,14 @@ def body(o, L, Dp, H, mat, col, lidmat=None, lidcol=None, Rl=None, deco=None, we
 
 
 def strap_lid(o, x, H, Rl, r, col, mat='met', n=24, lift=.2):
-    pts = [tuple(W(x, (Rl + lift) * math.cos(t), H + (Rl + lift) * math.sin(t))) for t in np.linspace(0, math.pi, n)]
-    s = Line(pts, r, mat)
-    o.append(met(s, hexc(col)) if mat == 'met' else M(s, col=col))
+    pts = [W(x, (Rl + lift - r * .5) * math.cos(t), H + (Rl + lift - r * .5) * math.sin(t)) for t in np.linspace(0, math.pi, n)]
+    bars(o, pts, radial(H), r * 1.25, r * .5, col, mat)
 
 
 def strap_body(o, x, Dp, H, w, col, t=.22):
     """đai dẹt ôm mặt trước + 2 hông? (chỉ mặt trước và mặt sau, quấn qua đáy)"""
     for sy in (1, -1):
-        o.append(met(Box(tuple(W(x, sy * (Dp + t * .5), H / 2)), AX, (w, t, H / 2 + .05), 'met', rr=.08), hexc(col)))
+        o.append(met(Box(tuple(W(x, sy * (Dp + t * .5), H / 2)), AX, (w, t, H / 2 + .05), 'met', rr=.02), hexc(col)))
 
 
 def corner_caps(o, L, Dp, H, col, s=1.6, t=.25):
@@ -265,8 +279,8 @@ def corner_caps(o, L, Dp, H, col, s=1.6, t=.25):
     for sx in (1, -1):
         for sy in (1, -1):
             for zc in (s * .5 + .1, H - s * .5 - .05):
-                o.append(met(Box(tuple(W(sx * (L - s * .45), sy * (Dp + t * .5), zc)), AX, (s * .5, t, s * .5), 'met', rr=.1), hexc(col)))
-                o.append(met(Box(tuple(W(sx * (L + t * .5), sy * (Dp - s * .45), zc)), AX, (t, s * .5, s * .5), 'met', rr=.1), hexc(col)))
+                o.append(met(Box(tuple(W(sx * (L - s * .45), sy * (Dp + t * .5), zc)), AX, (s * .5, t, s * .5), 'met', rr=.025), hexc(col)))
+                o.append(met(Box(tuple(W(sx * (L + t * .5), sy * (Dp - s * .45), zc)), AX, (t, s * .5, s * .5), 'met', rr=.025), hexc(col)))
 
 
 def feet(o, L, Dp, col, h=1.0, metal=False):
@@ -281,8 +295,7 @@ def lid_trim(o, L, H, Rl, col, r=.32, mat='met'):
     for sx in (1, -1):
         strap_lid(o, sx * (L - .05), H, Rl, r, col, mat, lift=.05)
     for sy in (1, -1):
-        e = Line([tuple(W(-L, sy * (Rl + .1), H + .1)), tuple(W(L, sy * (Rl + .1), H + .1))], r, mat)
-        o.append(met(e, hexc(col)) if mat == 'met' else M(e, col=col))
+        bars(o, [W(-L, sy * (Rl - r * .2), H + r * .6), W(L, sy * (Rl - r * .2), H + r * .6)], lambda p, sy=sy: FN * sy, r * .8, r * .55, col, mat)
 
 
 def handle(o, L, H, col, r=1.3, rr=.26):
@@ -312,7 +325,7 @@ def layout(L, Dp, H, xs):
 def ledges(o, L, Dp, H, col, linec=None, hv=True, base=True):
     """đế 2 tầng + gờ miệng thân (có hồi văn), mỗi tầng lồi ra tạo rãnh bóng"""
     def strip(C, h, zr, cc):
-        b = R(Box(tuple(C), AX, h, 'ruong', rr=.12), 'hoivan' if (hv and linec is not None) else 'son', hexc(cc), sp=.15, pw=30)
+        b = R(Box(tuple(C), AX, h, 'ruong', rr=.03), 'hoivan' if (hv and linec is not None) else 'son', hexc(cc), sp=.15, pw=30)
         b.zr = zr; b.linec = hexc(linec) if linec else hexc(cc)
         o.append(b)
     if base:
@@ -324,23 +337,23 @@ def ledges(o, L, Dp, H, col, linec=None, hv=True, base=True):
 def frames(o, lay, col, r=.17, mat='met', lidf=True):
     """khung nổi (gờ) quanh từng ô: thân trước + sau + 2 hông, và ô trên nắp"""
     L, Dp, H, Rl, xr, zr, lv = lay
-    def ln(pts):
-        e = Line([tuple(p) for p in pts], r, mat)
-        o.append(met(e, hexc(col)) if mat == 'met' else M(e, col=col))
+    w, h = r * 1.15, r * .8
+    def ln(pts, nf):
+        bars(o, pts, nf, w, h, col, mat)
     for sy in (1, -1):
         for (u0, u1) in xr:
-            y = sy * (Dp + .1)
-            ln([W(u0, y, zr[0]), W(u1, y, zr[0]), W(u1, y, zr[1]), W(u0, y, zr[1]), W(u0, y, zr[0])])
+            y = sy * Dp
+            ln([W(u0, y, zr[0]), W(u1, y, zr[0]), W(u1, y, zr[1]), W(u0, y, zr[1]), W(u0, y, zr[0])], lambda p, sy=sy: FN * sy)
     for sx in (1, -1):
-        x = sx * (L + .1); y0 = Dp - .9
-        ln([W(x, -y0, zr[0]), W(x, y0, zr[0]), W(x, y0, zr[1]), W(x, -y0, zr[1]), W(x, -y0, zr[0])])
+        x = sx * L; y0 = Dp - .9
+        ln([W(x, -y0, zr[0]), W(x, y0, zr[0]), W(x, y0, zr[1]), W(x, -y0, zr[1]), W(x, -y0, zr[0])], lambda p, sx=sx: LN * sx)
     if lidf:
         for (u0, u1) in xr:
             for vv in lv:
-                th = vv / Rl; p = lambda xx: W(xx, (Rl + .1) * math.cos(th), H + (Rl + .1) * math.sin(th))
-                ln([p(u0), p(u1)])
+                th = vv / Rl; p = lambda xx: W(xx, (Rl - .02) * math.cos(th), H + (Rl - .02) * math.sin(th))
+                ln([p(u0), p(u1)], radial(H))
             for uu in (u0, u1):
-                ln([W(uu, (Rl + .1) * math.cos(t), H + (Rl + .1) * math.sin(t)) for t in np.linspace(lv[0] / Rl, lv[1] / Rl, 14)])
+                ln([W(uu, (Rl - .02) * math.cos(t), H + (Rl - .02) * math.sin(t)) for t in np.linspace(lv[0] / Rl, lv[1] / Rl, 14)], radial(H))
 
 
 def lotus(o, c, s, col, mat='met', vein=None, gem=None, plate=None, plate_r=None, ring=None):
@@ -472,11 +485,11 @@ class Carve:
             return F(u + d * du * sc, v + dv * sc)
         def bod(du):          # thân uốn sóng nhẹ
             return .18 * math.sin(du * 1.4)
-        # thân: chuỗi elip nối nhau theo đường cong
-        for du, r in ((1.0, .5), (.45, .55), (-.15, .52), (-.75, .45), (-1.3, .34), (-1.75, .24)):
-            p, tu, tv, n = P(du, bod(du)); t = tu * d
-            b = nz(np.cross(n, t))
-            s.put(Ell(tuple(p + n * r * .3 * sc), (tuple(t), tuple(b), tuple(n)), (.48 * sc, r * sc, r * .55 * sc), s.mat), col)
+        # thân: 1 khối dài thon dẹt (không chia đốt, đỡ giống con sâu), uốn theo đường cong
+        p, tu, tv, n = P(-.25, bod(-.25)); t = tu * d; b = nz(np.cross(n, t))
+        s.put(Ell(tuple(p + n * .12 * sc), (tuple(t), tuple(b), tuple(n)), (1.75 * sc, .46 * sc, .2 * sc), s.mat, bend=-.03), col)
+        p, tu, tv, n = P(-1.6, bod(-1.6)); t = tu * d; b = nz(np.cross(n, t))
+        s.put(Ell(tuple(p + n * .08 * sc), (tuple(t), tuple(b), tuple(n)), (.6 * sc, .26 * sc, .13 * sc), s.mat), col)
         # đầu bẹt + miệng
         p, tu, tv, n = P(1.55, bod(1.55)); t = tu * d; b = nz(np.cross(n, t))
         s.put(Ell(tuple(p + n * .16 * sc), (tuple(t), tuple(b), tuple(n)), (.5 * sc, .44 * sc, .26 * sc), s.mat), col)
@@ -534,13 +547,13 @@ class Carve:
     def pad(s, F, u, v, r, col=None):
         """lá sen: đĩa có khía chữ V, mép cuộn nổi, gân toả dày từ rốn lá"""
         p, tu, tv, n = F(u, v)
-        s.put(Ell(tuple(p + n * .08), (tuple(tu), tuple(tv), tuple(n)), (r, r * .8, .1), s.mat), col)
+        s.put(Ell(tuple(p + n * .04), (tuple(tu), tuple(tv), tuple(n)), (r, r * .8, .06), s.mat), col)
         gap = .35
         rim = [(u + r * .97 * math.cos(a), v + r * .78 * math.sin(a)) for a in np.linspace(math.pi * 1.5 + gap, math.pi * 3.5 - gap, 26)]
-        s.stem(F, rim, .1, col)
-        s.stem(F, [rim[0], (u, v)], .08, col); s.stem(F, [rim[-1], (u, v)], .08, col)
+        s.stem(F, rim, .15, col)
+        s.stem(F, [rim[0], (u, v)], .12, col); s.stem(F, [rim[-1], (u, v)], .12, col)
         for a in np.linspace(math.pi * 1.5 + gap + .3, math.pi * 3.5 - gap - .3, 9):
-            s.stem(F, [(u, v), (u + r * .55 * math.cos(a) - .08 * math.sin(a), v + r * .44 * math.sin(a)), (u + r * .92 * math.cos(a), v + r * .74 * math.sin(a))], .07, col)
+            s.stem(F, [(u, v), (u + r * .55 * math.cos(a) - .08 * math.sin(a), v + r * .44 * math.sin(a)), (u + r * .92 * math.cos(a), v + r * .74 * math.sin(a))], .11, col)
         s.ball(F, u, v, .16, .8, col)
 
     def vine(s, F, pts, col=None, leafc=None, r=.16, every=2):
@@ -620,11 +633,11 @@ def ruong(t):
         o.append(met(Box(tuple(c + FN * .95 - Z * 3.3), AX, (1.05, .45, .9), 'met', rr=.3), hexc('#3e4248')))
         keyhole(o, c + FN * 1.42 - Z * 3.3, .9)
         handle(o, L, H, IRON, r=1.1)
-        C = Carve(o, '#b0662c', mat='gox', metal=False)                    # chạm nổi gỗ: chùm dừa + tàu lá dừa nước
+        C = Carve(o, '#eeae62', mat='gox', metal=False)                    # chạm nổi gỗ: chùm dừa + tàu lá dừa nước
         Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
         for sx in (1, -1):
-            C.dua(Ff, sx * (xs + L) / 2, 3.2, sc=.62, nut='#a85e28')
-            C.dua(Fl, sx * (xs + L) / 2, 4.2, sc=.6, nut='#a85e28')
+            C.dua(Ff, sx * (xs + L) / 2, 3.2, sc=.62, nut='#6a3214')
+            C.dua(Fl, sx * (xs + L) / 2, 4.2, sc=.6, nut='#6a3214')
         C.frond(Fs, -4.4, 1.8, 4.4, 2.4, bow=.5, n=9, ln=1.2)
         C.frond(Fl, -4.0, 2.6, 4.0, 3.2, bow=1.0, n=10, ln=1.6)
         C.frond(Fl, 4.0, 6.8, -4.0, 6.2, bow=-1.0, n=10, ln=1.6)
@@ -632,39 +645,41 @@ def ruong(t):
         L, Dp, H = 9.0, 5.8, 7.8
         xs = L * .6; lay = layout(L, Dp, H, xs)
         feet(o, L, Dp, '#d8a038', metal=True)
-        BR = '#e2a83a'
+        BR = '#c98c2c'; GB = '#f8c848'
         PAT[tuple(np.round(hexc(BR), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#c89030'), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#d8a038'), 3))] = hexc('#8a7a3a')
+        PAT[tuple(np.round(hexc(GB), 3))] = hexc('#a07a2a')
         Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.18, pw=30, deco=(lay, hexc(BR)), wearc='#7cc8b8')
         ledges(o, L, Dp, H, '#0e7466', linec=BR)
-        frames(o, lay, '#c89030')
+        frames(o, lay, '#b87c24')
         for x in (-xs, xs):
             strap_body(o, x, Dp, H, .62, BR)
             strap_lid(o, x, H, Rl, .38, BR)
         corner_caps(o, L, Dp, H, BR, s=2.0)
         lid_trim(o, L, H, Rl, BR, r=.36)
         c = W(0, Dp + .25, H - 1.3)
-        lotus(o, c, 2.25, BR, vein='#9a6a1c', gem='#e0302a', plate='#8a1c16', plate_r=2.9)
+        lotus(o, c, 2.25, GB, vein='#9a6a1c', gem='#e0302a', plate='#8a1c16', plate_r=2.9)
         keyhole(o, c + FN * .5 - Z * 1.85, .8)
         o.append(met(Box(tuple(W(0, Rl + .3, H + .45)), AX, (.6, .22, .9), 'met', rr=.12), hexc(BR)))
         handle(o, L, H, BR, r=1.3)
-        C = Carve(o, '#e6ae3e')                                              # chạm nổi thếp vàng: cá lóc vượt sóng, sen súng
+        C = Carve(o, GB)                                                     # chạm nổi sơn màu: cá lóc vàng vượt sóng, sen hồng, lá sen xanh
         Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
+        PK, LF, SG, WV = '#f2789a', '#46a84e', '#2e7e3a', '#e6f6ee'
         for sx in (1, -1):
-            C.pad(Ff, sx * (xs + L) / 2, 2.2, 1.1)
-            C.flower(Ff, sx * (xs + L) / 2, 4.5, sc=1.15)
-            C.stem(Ff, [(sx * (xs + L) / 2, 4.2), (sx * (xs + L) / 2 + .25, 3.1), (sx * (xs + L) / 2, 2.3)], .14)
-        C.waves(Fs, -4.6, 4.6, 1.5, sc=.95)
-        C.waves(Fl, -4.0, 4.0, 2.2, sc=1.1)
+            C.stem(Ff, [(sx * (xs + L) / 2, 4.2), (sx * (xs + L) / 2 + .25, 3.1), (sx * (xs + L) / 2, 2.3)], .14, col=SG)
+            C.pad(Ff, sx * (xs + L) / 2, 2.2, 1.1, col=LF)
+            C.flower(Ff, sx * (xs + L) / 2, 4.5, sc=1.15, petal=PK)
+        C.waves(Fs, -4.6, 4.6, 1.5, sc=.95, col=WV)
+        C.waves(Fl, -4.0, 4.0, 2.2, sc=1.1, col=WV)
         C.fish(Fl, -.4, 4.0, d=1, sc=1.25); C.fish(Fl, .6, 6.4, d=-1, sc=1.05)
         for sx in (1, -1):
-            C.pad(Fl, sx * (xs + L) / 2, 3.0, 1.1); C.flower(Fl, sx * (xs + L) / 2, 5.4, sc=1.0)
-            C.stem(Fl, [(sx * (xs + L) / 2, 5.0), (sx * (xs + L) / 2 - sx * .3, 4.0), (sx * (xs + L) / 2, 3.0)], .12)
+            C.stem(Fl, [(sx * (xs + L) / 2, 5.0), (sx * (xs + L) / 2 - sx * .3, 4.0), (sx * (xs + L) / 2, 3.0)], .12, col=SG)
+            C.pad(Fl, sx * (xs + L) / 2, 3.0, 1.1, col=LF); C.flower(Fl, sx * (xs + L) / 2, 5.4, sc=1.0, petal=PK)
     else:           # sơn son ĐỎ thếp vàng: ô khung vàng khảm xà cừ, gờ hồi văn vàng, LOGO SEN VÀNG TO hột ruby trên đĩa đỏ + vòng ngọc, núm búp sen
         L, Dp, H = 9.4, 6.0, 8.0
         xs = L * .5; lay = layout(L, Dp, H, xs)
-        GD = '#f2b636'
+        GD = '#d8982a'; GB = '#ffd24a'
         feet(o, L, Dp, GD, metal=True)
-        CRACK.add(tuple(np.round(hexc(GD), 3))); PAT[tuple(np.round(hexc(GD), 3))] = hexc('#c08a28')
+        PAT[tuple(np.round(hexc(GD), 3))] = hexc('#a87420'); PAT[tuple(np.round(hexc(GB), 3))] = hexc('#c89a30')
         Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.15, pw=40, deco=(lay, hexc(GD)), wearc='#7a2416')
         ledges(o, L, Dp, H, '#9a141c', linec=GD)
         frames(o, lay, GD, r=.2)
@@ -677,34 +692,34 @@ def ruong(t):
             for zc in (1.45, H - 1.25):
                 o.append(M(Ball(tuple(W(sx * (L - 1.0), Dp + .45, zc)), .42, 'cam'), col='#1aa878', sp=.35, pw=50))
         c = W(0, Dp + .28, H - 1.45)
-        lotus(o, c, 2.6, GD, vein='#b07a18', gem='#d81c3a', plate='#10302a', plate_r=3.3, ring='#f4f0e6')
+        lotus(o, c, 2.6, GB, vein='#b07a18', gem='#d81c3a', plate='#10302a', plate_r=3.3, ring='#f4f0e6')
         keyhole(o, c + FN * .55 - Z * 2.15, .9)
         o.append(met(Box(tuple(W(0, Rl + .3, H + .5)), AX, (.8, .24, 1.1), 'met', rr=.15), hexc(GD)))
         top = W(0, 0, H + Rl + .25)
         o.append(met(Tube(tuple(top - Z * .2), tuple(Z), .5, [(0, 1.3), (1, 1.0)], 'met'), hexc(GD)))
-        o.append(met(Ell(tuple(top + Z * 1.2), (tuple(LN), tuple(FN), tuple(Z)), (.55, .55, 1.25), 'met'), hexc(GD)))
+        o.append(met(Ell(tuple(top + Z * 1.2), (tuple(LN), tuple(FN), tuple(Z)), (.55, .55, 1.25), 'met'), hexc(GB)))
         for k in range(6):                                       # cánh búp sen ôm nụ
             a = 2 * math.pi * k / 6; d = LN * math.cos(a) + FN * math.sin(a)
             ax_ = nz(Z + d * .35); pp = nz(np.cross(ax_, d))
-            o.append(met(Ell(tuple(top + Z * .95 + d * .5), (tuple(ax_), tuple(pp), tuple(d)), (1.05, .42, .2), 'met'), hexc(GD)))
+            o.append(met(Ell(tuple(top + Z * .95 + d * .5), (tuple(ax_), tuple(pp), tuple(d)), (1.05, .42, .2), 'met'), hexc(GB)))
         handle(o, L, H, GD, r=1.4)
         for ob in o:
             if getattr(ob, 'rk', None) == 'xacu': ob.noinlay = True
-        C = Carve(o, GD)                                                       # chạm lộng kiểu tủ thờ Nam Bộ: dây sen, lá sen, bông sen cẩn xà cừ
+        C = Carve(o, GB)                                                       # chạm lộng kiểu tủ thờ Nam Bộ: dây sen vàng, lá ngọc bích, bông sen xà cừ hồng phấn
         Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
-        PE = '#f2eee2'
+        PE, JD = '#f7b2c4', '#22a878'
         for sx in (1, -1):
             uc = sx * (xs + L) / 2
-            C.pad(Ff, uc, 2.3, .9)
-            C.vine(Ff, [(uc, 2.3), (uc - sx * .4, 3.3), (uc, 4.2)], leafc=PE, r=.12, every=3)
+            C.vine(Ff, [(uc, 2.3), (uc - sx * .4, 3.3), (uc, 4.2)], leafc=JD, r=.12, every=3)
+            C.pad(Ff, uc, 2.3, .9, col=JD)
             C.flower(Ff, uc, 4.7, sc=1.1, petal=PE)
-        C.vine(Fs, [(-4.6, 1.9), (-2.5, 2.6), (0, 2.0), (2.5, 2.6), (4.6, 1.9)], r=.13)
-        C.vine(Fl, [(-4.2, 3.4), (-2.6, 4.6), (-1.2, 3.0), (0, 3.6), (1.2, 3.0), (2.6, 4.6), (4.2, 3.4)], leafc=PE, r=.16)
+        C.vine(Fs, [(-4.6, 1.9), (-2.5, 2.6), (0, 2.0), (2.5, 2.6), (4.6, 1.9)], leafc=JD, r=.13)
+        C.vine(Fl, [(-4.2, 3.4), (-2.6, 4.6), (-1.2, 3.0), (0, 3.6), (1.2, 3.0), (2.6, 4.6), (4.2, 3.4)], leafc=JD, r=.16)
         C.flower(Fl, -2.6, 5.3, sc=1.2, petal=PE); C.flower(Fl, 2.6, 5.3, sc=1.2, petal=PE)
-        C.pad(Fl, 0, 5.6, 1.0); C.pad(Fl, -3.9, 6.6, .8); C.pad(Fl, 3.9, 6.6, .8)
+        C.pad(Fl, 0, 5.6, 1.0, col=JD); C.pad(Fl, -3.9, 6.6, .8, col=JD); C.pad(Fl, 3.9, 6.6, .8, col=JD)
         for sx in (1, -1):
             uc = sx * (xs + L) / 2
-            C.flower(Fl, uc, 5.0, sc=.85, petal=PE); C.pad(Fl, uc, 2.6, .8)
+            C.flower(Fl, uc, 5.0, sc=.85, petal=PE); C.pad(Fl, uc, 2.6, .8, col=JD)
     return Scene(o)
 
 
