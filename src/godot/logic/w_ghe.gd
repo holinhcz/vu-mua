@@ -82,7 +82,7 @@ func tT(t: Dictionary) -> Dictionary:   # tT: chỗ ghe đậu cạnh bến {c, 
 		for r in range(int(t.gy) - 2, int(t.gy) + int(t.fd) + 2):
 			if inn.call(e, r) or not _px(e, r):
 				continue
-			for hh in [["u", 1, 0], ["v", 0, 1]]:
+			for hh in [["u", 1, 0]]:   # sông Vàm chạy theo trục u (x): ghe luôn nằm dọc sông, chạy từ trên sông vào, bến xoay hướng nào cũng vậy
 				var p: int = hh[1]
 				var d: int = hh[2]
 				var v := _px(e - p, r - d) + _px(e + p, r + d)
@@ -103,9 +103,9 @@ func tT(t: Dictionary) -> Dictionary:   # tT: chỗ ghe đậu cạnh bến {c, 
 		elif id == "ben3":
 			a = {"c": [float(t.gx) + float(t.fw) / 2.0, float(t.gy) - 0.5], "ax": "u"}
 		elif id == "ben4":
-			a = {"c": [float(t.gx) - 0.5, float(t.gy) + float(t.fd) / 2.0], "ax": "v"}
+			a = {"c": [float(t.gx) - 0.5, float(t.gy) + float(t.fd) / 2.0], "ax": "u"}
 		else:
-			a = {"c": [float(t.gx) + float(t.fw) + 0.5, float(t.gy) + float(t.fd) / 2.0], "ax": "v"}
+			a = {"c": [float(t.gx) + float(t.fw) + 0.5, float(t.gy) + float(t.fd) / 2.0], "ax": "u"}
 	return a
 
 # ------------------------------------------------------------------ thùng hàng (ft, j)
@@ -294,14 +294,14 @@ func step(dt: float) -> void:
 # ------------------------------------------------------------------ chỗ ghe, chạm ghe
 func vx() -> Array:   # vx: chỗ ghe (đang trôi vào / ra theo trục)
 	var t: Array = Ae.c
-	var a: float = float(t[0]) + (Ae.off if Ae.ax == "u" else 0.0)
-	var n: float = float(t[1]) + (Ae.off if Ae.ax == "v" else 0.0)
-	if Ae.ax == "u" and G.w_all.WSG != null:
+	var a: float = float(t[0]) + Ae.off   # trôi dọc sông (trục u) từ thượng nguồn vào
+	var n: float = float(t[1])
+	if G.w_all.WSG != null:
 		n += G.w_all.WSG.c(a) - G.w_all.WSG.c(float(t[0]))
 	return [a, n]
 
 func th() -> float:   # góc ghe theo dòng sông (trục u)
-	if Ae.ax != "u" or G.w_all.WSG == null:
+	if G.w_all.WSG == null:
 		return 0.0
 	return atan(G.w_all.WSG.sl(vx()[0]))
 
