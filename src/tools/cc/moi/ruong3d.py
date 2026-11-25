@@ -181,10 +181,24 @@ def albedo_r0(obj, P):
     if k == 'son':                            # sơn đỏ trên gỗ: mịn, hơi thấy thớ, khe ván rất mờ
         pw = 2.6; fv = (v / pw) % 1.0
         g = vnoise(np.stack([u * .3, v * 2, u * 0], 1).astype(F32), 1.0, 82)
-        c = col[None] * (.94 + .08 * g)[:, None]
+        iv = np.floor(v / pw); hv = hsh(iv * 4.1 + 7)                                   # mỗi ván dưới sơn lệch tông ấm/lạnh
+        warm = np.array([1.05, .99, .9], F32); cool = np.array([.95, 1.0, 1.05], F32)
+        tint = warm[None] * hv[:, None] + cool[None] * (1 - hv)[:, None]
+        br = .985 + .03 * np.sin(v * 21 + g * 5 + iv)                                     # vệt cọ quét dọc ván
+        c = col[None] * tint * ((.92 + .1 * g) * br)[:, None]
         return c * (1 - .12 * (np.exp(-(fv / .04) ** 2) + np.exp(-((1 - fv) / .04) ** 2)))[:, None]
-    if k == 'xacu' and getattr(obj, 'noinlay', False):
-        return col[None] * (.95 + .05 * vnoise(P, 2, 83))[:, None]
+    if k == 'xacu' and getattr(obj, 'noinlay', False):           # sơn son: lớp sơn tay dày mỏng, đổi tông ấm/lạnh theo mảng, vệt cọ
+        g = vnoise(np.stack([u * .35, v * 1.6, u * 0], 1).astype(F32), 1.0, 86); g2 = vnoise(P, .4, 87)
+        warm = np.array([1.05, .97, .88], F32); cool = np.array([.96, 1.0, 1.06], F32)
+        tint = warm[None] * g2[:, None] + cool[None] * (1 - g2)[:, None]
+        br = .985 + .03 * np.sin(u * 17 + g * 6)
+        return col[None] * tint * ((.92 + .1 * g) * br)[:, None]
+    if k == 'tay':                            # chạm khắc sơn tay: màu loang đậm nhạt theo khối (đầu cánh đậm, gốc nhạt), không vệt tối
+        g = vnoise(P, 1.3, 88); g2 = vnoise(P, 3.0, 89)
+        lt = col * .6 + .4                                                                   # pha trắng = chỗ sơn mỏng lộ lót
+        mix = np.clip((g - .35) * 1.6, 0, 1) * .45
+        c = col[None] * (1 - mix)[:, None] + lt[None] * mix[:, None]
+        return c * (.93 + .1 * g2)[:, None]
     if k == 'xacu':                           # sơn mài đen, khảm xà cừ: hoa 4 cánh so le, nhị vàng, trong khung
         c = np.broadcast_to(col, (n, 3)).copy() * (.93 + .1 * vnoise(P, 2, 83))[:, None]
         cu, cv = 2.05, 2.0
@@ -225,7 +239,7 @@ CRACK = set()
 
 
 def met(o, col, ns=1.5):
-    o = M(o, col=col, sp=.4, pw=50); o.mat = 'ruong'; o.rk = 'kl'; o.ns = ns
+    o = M(o, col=col, sp=.22, pw=28); o.mat = 'ruong'; o.rk = 'kl'; o.ns = ns   # v9 Link 'như đồ nhựa': vàng thếp mờ
     key = tuple(np.round(o.col, 3)); o.pat = PAT.get(key); o.crack = key in CRACK
     return o
 
@@ -313,7 +327,7 @@ def handle(o, L, H, col, r=1.3, rr=.26):
 
 
 # ------------------------------------------------------------ gờ, rãnh, logo hoa sen (v3 11-25 Link "logo hoa sen đâu / màu trơn trụi / gờ rãnh đâu")
-D.CLIFT, D.CSAT = 1.0, 1.3          # Link "màu tái nhạt": màu sơn đậm + tươi hơn (không đụng đèn)
+D.CLIFT, D.CSAT = 1.0, 1.12          # Link "màu tái nhạt": màu sơn đậm + tươi hơn (không đụng đèn)
 
 
 def layout(L, Dp, H, xs):
@@ -441,7 +455,7 @@ class Carve:
     def put(s, ob, col=None):
         col = col or s.col
         if s.metal and col == s.col: s.o.append(met(ob, hexc(col)))
-        else: s.o.append(M(ob, col=col, sp=.12, pw=25))
+        else: s.o.append(R(ob, 'tay', hexc(col), sp=.04, pw=8))
 
     def leaf(s, F, u, v, ang, ln, wd, th=.2, col=None, bend=-.06):
         p, tu, tv, n = F(u, v); t = nz(tu * math.cos(ang) + tv * math.sin(ang)); b = nz(np.cross(n, t))
@@ -648,7 +662,7 @@ def ruong(t):
         BR = '#c98c2c'; GB = '#f8c848'
         PAT[tuple(np.round(hexc(BR), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#c89030'), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#d8a038'), 3))] = hexc('#8a7a3a')
         PAT[tuple(np.round(hexc(GB), 3))] = hexc('#a07a2a')
-        Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.18, pw=30, deco=(lay, hexc(BR)), wearc='#7cc8b8')
+        Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.05, pw=10, deco=(lay, hexc(BR)), wearc='#7cc8b8')
         ledges(o, L, Dp, H, '#0e7466', linec=BR)
         frames(o, lay, '#b87c24')
         for x in (-xs, xs):
@@ -663,7 +677,7 @@ def ruong(t):
         handle(o, L, H, BR, r=1.3)
         C = Carve(o, GB)                                                     # chạm nổi sơn màu: cá lóc vàng vượt sóng, sen hồng, lá sen xanh
         Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
-        PK, LF, SG, WV = '#f2789a', '#46a84e', '#2e7e3a', '#e6f6ee'
+        PK, LF, SG, WV = '#e0809a', '#5a9a4c', '#3e7a38', '#e8e4d0'
         for sx in (1, -1):
             C.stem(Ff, [(sx * (xs + L) / 2, 4.2), (sx * (xs + L) / 2 + .25, 3.1), (sx * (xs + L) / 2, 2.3)], .14, col=SG)
             C.pad(Ff, sx * (xs + L) / 2, 2.2, 1.1, col=LF)
@@ -680,7 +694,7 @@ def ruong(t):
         GD = '#d8982a'; GB = '#ffd24a'
         feet(o, L, Dp, GD, metal=True)
         PAT[tuple(np.round(hexc(GD), 3))] = hexc('#a87420'); PAT[tuple(np.round(hexc(GB), 3))] = hexc('#c89a30')
-        Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.15, pw=40, deco=(lay, hexc(GD)), wearc='#7a2416')
+        Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.05, pw=10, deco=(lay, hexc(GD)), wearc='#7a2416')
         ledges(o, L, Dp, H, '#9a141c', linec=GD)
         frames(o, lay, GD, r=.2)
         for x in (-xs, xs):
@@ -707,7 +721,7 @@ def ruong(t):
             if getattr(ob, 'rk', None) == 'xacu': ob.noinlay = True
         C = Carve(o, GB)                                                       # chạm lộng kiểu tủ thờ Nam Bộ: dây sen vàng, lá ngọc bích, bông sen xà cừ hồng phấn
         Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
-        PE, JD = '#f7b2c4', '#22a878'
+        PE, JD = '#eeb0bc', '#3a9a74'
         for sx in (1, -1):
             uc = sx * (xs + L) / 2
             C.vine(Ff, [(uc, 2.3), (uc - sx * .4, 3.3), (uc, 4.2)], leafc=JD, r=.12, every=3)
