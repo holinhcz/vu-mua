@@ -377,9 +377,9 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 		var bb := _vis_bb(id)   # [x0, y0, x1, y1] phần có hình, theo 1 cạnh ảnh
 		var vw: float = bb[2] - bb[0]
 		var vh: float = maxf(0.05, bb[3] - bb[1])
-		var s2 := 30.0
+		var s2 := 36.0   # (11-25) món, trái cây, nông sản to ra (trước 30)
 		if vw / vh > 1.3:
-			s2 = clampf(minf((w - 8.0) / maxf(0.05, vw), 32.0 / vh), 30.0, 56.0)
+			s2 = clampf(minf((w - 8.0) / maxf(0.05, vw), 32.0 / vh), 36.0, 56.0)
 		ic = _icx(x + w * 0.5, y + 21.0 - ((bb[1] + bb[3]) * 0.5 - 0.5) * s2, s2, id)
 	if not seen:
 		ic.sil = true
