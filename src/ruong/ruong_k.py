@@ -53,6 +53,7 @@ def mat_dan(uv, prm, pos, nrm):
     a = np.where(f < 0.5, x, y); b = z
     a = np.where(f > 1.5, x, a)
     b = np.where(f > 1.5, LR * np.arctan2(z - ZL, y) * 1.0, b)
+    a = np.where(f > 2.5, np.arctan2(y, x) * 9.0, a)
     col, n = weave_tex(a, b, [1.0], np.array([1.0, 0, 0]), np.array([0, 0, 1.0]), nrm, cell=1.2)
     col = col * (1 + 0.25 * np.clip(1 - b / 6, 0, 1))[:, None]          # weave_tex sẫm chân vách; rương không có đất bắn
     return np.clip(col * TINT[None], 0, 1), n
@@ -604,10 +605,52 @@ def tier_rich(S, rng, t):
             vine(S, rng, Flid, [(uc, 0.7), (uc - sx * 0.6, 1.0), (uc, 1.3)], 0.22, VB, JD, every=3)
 
 
+def gio_tre(S, rng):
+    """BẬC 1 kiểu đồ cổ Nam Bộ: giỏ tre đan tròn có nắp chụp, miệng + đáy niềng tre bện mây, quai mây 2 bên, núm nắp bằng gáo dừa, thẻ gỗ khắc sen"""
+    global LA, LB, ZL, LR
+    R0, H = 10.5, 15.5; LA = LB = R0; ZL = H; LR = R0
+    K.FOOT = ((C0 - 12) / T, (C0 + 12) / T, (C0 - 12) / T, (C0 + 12) / T, 0.5)
+    def prof(zf):                                   # thân phình giữa, thót đáy
+        return R0 * (0.84 + 0.2 * np.sin(np.pi * (0.15 + 0.75 * zf)))
+    def body(U, V):
+        th = V * 2 * math.pi; zf = U; r = prof(zf)
+        return np.stack([r * np.cos(th), r * np.sin(th), 0.4 + zf * (H - 0.4)], -1)
+    grid(S, body, 40, 120, M_DAN, (3, 0, 0), close_v=True, flip=False)
+    def lid(U, V):                                  # nắp chụp: vành đứng ngắn + chỏm cong
+        th = V * 2 * math.pi; rr = prof(1.0) + 0.7
+        r = np.where(U < 0.25, rr, rr * np.cos((U - 0.25) / 0.75 * 1.25))
+        z = np.where(U < 0.25, H - 1.2 + U / 0.25 * 1.8, H + 0.6 + rr * 0.3 * np.sin((U - 0.25) / 0.75 * 1.25) / np.sin(1.25))
+        return np.stack([r * np.cos(th), r * np.sin(th), z], -1)
+    grid(S, lid, 40, 120, M_DAN, (3, 0, 0), close_v=True, flip=False)
+    def ring(z, r, rt, mat, prm=(0.4, 0.2, 0), n=48):
+        pts = [(r * math.cos(t), r * math.sin(t), z) for t in np.linspace(0, 2 * math.pi, n + 1)]
+        for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, rt, mat, prm, nr=7, nl=2)
+    ring(0.7, prof(0.02) + 0.3, 0.95, M_OLDBAMBOO)            # niềng đáy tre già
+    ring(H - 1.1, prof(1.0) + 1.0, 0.8, M_BAMBOO)              # niềng mép nắp
+    ring(H + 0.6, prof(1.0) + 0.95, 0.7, M_BAMBOO)
+    ring(H * 0.5, prof(0.5) + 0.25, 0.4, M_RATTAN)             # đai mây giữa thân
+    for k in range(10):                                       # mây quấn niềng (từng nút)
+        t = 2 * math.pi * k / 10
+        for zz, rr in ((0.7, prof(0.02) + 0.3), (H - 1.1, prof(1.0) + 1.0)):
+            ell(S, (rr * math.cos(t), rr * math.sin(t), zz), 0.7, 0.7, 1.25, M_ROPE, axes=(np.array([-math.sin(t), math.cos(t), 0]), np.array([math.cos(t), math.sin(t), 0]), np.array([0, 0, 1.0])), nu=5, nv_=10)
+    for k in range(8):                                        # nan cốt dọc nổi trên thân (tre chẻ)
+        t = 2 * math.pi * (k + 0.5) / 8
+        pts = [((prof(zf) + 0.15) * math.cos(t), (prof(zf) + 0.15) * math.sin(t), 0.9 + zf * (H - 2.6)) for zf in np.linspace(0, 1, 10)]
+        for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.32, M_BAMBOO, (0.6, k * 0.1, 0), nr=5, nl=2)
+    top = H + 0.6 + (prof(1.0) + 0.7) * 0.3                  # núm nắp: nửa gáo dừa úp + cọng mây
+    X3.ellipsoid(S, Pl(0, 0, top + 0.3), 2.3, 2.3, 1.5, K.M_COCO if hasattr(K, 'M_COCO') else M_TRAM, nu=6, nvv=16, zmin=0.5)
+    for sx in (1, -1):                                        # quai mây 2 bên
+        pts = [(sx * (prof(0.75) + 0.6 + 1.6 * math.sin(t)), 2.6 * math.cos(t), H - 3.6 + 1.2 * math.sin(t)) for t in np.linspace(0, math.pi, 14)]
+        for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.55, M_RATTAN, nr=6, nl=2)
+    sen_go(S, rng, (0, prof(0.5) + 0.2, 7.2), 3.0)            # thẻ gỗ khắc sen buộc mây trước giỏ
+
+
 def build(level, rng, with_props=True):
     global LA, LB, ZL, LR, WOODC
     S = Scene(); K.LIGHTS2.clear(); K.GLOWS[:] = []; K.GROUND_GLOW[:] = []
-    if TIER == 1:
+    if TIER == 11:
+        gio_tre(S, rng)
+    elif TIER == 1:
         LA, LB, ZL = 14.0, 9.0, 13.0; LR = LB
         K.FOOT = ((C0 - 15) / T, (C0 + 15) / T, (C0 - 10) / T, (C0 + 10) / T, 0.05)
         body_dan(S); frame_tre(S, rng)
