@@ -260,7 +260,11 @@ func u4() -> Variant:   # u4: khúc sông Vàm có chợ (null = chưa mở)
 func wm() -> int:   # wm (giờ tan chợ, cho bảng)
 	return WM
 
+var dbg_cho := false   # hook thử choq: chợ họp bất kể giờ
+
 func b2() -> bool:   # b2 (+ lớp bọc qf("cho"))
+	if dbg_cho:
+		return u4() != null
 	if _qf("cho"):
 		return false
 	var t := _hour()
