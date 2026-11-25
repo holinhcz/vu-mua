@@ -1013,6 +1013,10 @@ func cc() -> Dictionary:   # Cc
 			G.g.coins = int(G.g.coins) + 900
 		t.erase("ca")
 		t.erase("chim")
+	for k in {"ca_tra": 24, "ca_lang": 64, "ca_bong_lau": 150}:   # (11-25) bỏ 3 món cá không còn chỗ kiếm: còn trong Kho thì đổi ra xu
+		if G.g.get("barn") is Dictionary and int(G.g.barn.get(k, 0)) > 0:
+			G.g.coins = int(G.g.coins) + int(G.g.barn[k]) * {"ca_tra": 24, "ca_lang": 64, "ca_bong_lau": 150}[k]
+			G.g.barn.erase(k)
 	if not (t.get("meo") is Dictionary):
 		t.meo = {"has": 0, "fd": -1, "gd": -1, "pt": 0, "tim": 0}
 	for a in ["n", "f", "e", "a"]:

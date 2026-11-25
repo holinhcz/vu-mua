@@ -427,7 +427,7 @@ func _jd0() -> Array:   # jd gốc
 			l[1].append({"t": "mua", "k": "item", "id": W, "q": j, "xu": _r(j * G.price(W) * (1.5 + a.next() * 0.25))})
 	var x: String = _pick(["qua_saurieng", "qua_mangcut", "qua_chomchom", "qua_buoi", "qua_xoai", "qua_thanhlong"], a)
 	var k := 2 + int(floor(a.next() * 3))
-	l[1].append({"t": "ban", "k": "item", "id": x, "q": k, "xu": _r(k * _sell(x, 20) * 0.85)})
+	l[1].append({"t": "ban", "k": "item", "id": x, "q": k, "xu": _r(k * _sell(x, 20) * 1.2)})   # (11-25) ghe bán >= 1,2 giá gốc: mua về bán Kho không lời
 	var M: Array = o.call(G.xo.filter(func(W): return r.has(W)) + ["lua"])
 	var T = _pick(M, a)
 	var w = _pick(M.filter(func(W): return W != T) + [T], a)
@@ -440,14 +440,14 @@ func _jd0() -> Array:   # jd gốc
 			l[2].append({"t": "mua", "k": "item", "id": W, "q": j, "xu": _r(j * G.price(W) * (1.4 + a.next() * 0.2))})
 	for W in QR(a):
 		l[2].append(W)
-	l[2].append({"t": "ban", "k": "item", "id": "gao", "q": 4, "xu": _r(4 * _sell("gao", 20) * 0.9)})
-	l[2].append({"t": "ban", "k": "item", "id": "bot", "q": 4, "xu": _r(4 * _sell("bot", 14) * 0.9)})
-	l[3].append({"t": "ban", "k": "item", "id": "cui", "q": 6, "xu": 42})
-	l[3].append({"t": "ban", "k": "item", "id": "soi", "q": 2, "xu": _r(2 * _sell("soi", 20) * 0.9)})
-	l[3].append({"t": "ban", "k": "item", "id": "muoi_hot", "q": 3, "xu": _r(3 * _sell("muoi_hot", 10) * 0.9)})
+	l[2].append({"t": "ban", "k": "item", "id": "gao", "q": 4, "xu": _r(4 * _sell("gao", 20) * 1.2)})
+	l[2].append({"t": "ban", "k": "item", "id": "bot", "q": 4, "xu": _r(4 * _sell("bot", 14) * 1.2)})
+	l[3].append({"t": "ban", "k": "item", "id": "cui", "q": 6, "xu": _r(6 * _sell("cui", 8) * 1.2)})
+	l[3].append({"t": "ban", "k": "item", "id": "soi", "q": 2, "xu": _r(2 * _sell("soi", 20) * 1.2)})
+	l[3].append({"t": "ban", "k": "item", "id": "muoi_hot", "q": 3, "xu": _r(3 * _sell("muoi_hot", 10) * 1.2)})
 	if a.next() < 0.6:   # (bản 326) ghe biển gửi mực: làng nước ngọt không câu được, chỉ mua ở chợ nổi, ngày có ngày không
 		var mq := 2 + int(floor(a.next() * 3))
-		l[3].append({"t": "ban", "k": "item", "id": "muc", "q": mq, "xu": _r(mq * _sell("muc", 34) * 1.1)})
+		l[3].append({"t": "ban", "k": "item", "id": "muc", "q": mq, "xu": _r(mq * _sell("muc", 34) * 1.2)})
 	var E := to.filter(func(W): return _barn(W) > 0 and W != "cui" and Ge.has(W))
 	if E.size():
 		var C: String = _pick(E, a)
