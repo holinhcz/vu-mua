@@ -13,7 +13,7 @@ static var _tex := {}   # tên@nấc -> ImageTexture
 
 static func _anh(k: String, ppu: float) -> Texture2D:   # ppu: px màn hình mỗi đơn vị cần vẽ
 	var n := 0
-	while n < 4 and GOC / pow(2.0, n + 1) >= ppu:
+	while n < 4 and GOC / pow(2.0, n + 1) >= ppu * 2.0:   # (bản 566) giữ >= 2 lần điểm màn như pics.level: nét, không nhòe
 		n += 1
 	var key := k + "@" + str(n)
 	if _tex.has(key):

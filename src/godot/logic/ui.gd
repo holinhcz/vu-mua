@@ -3825,6 +3825,7 @@ func close_all() -> void:
 func item_ic(id: String, px: float) -> Texture2D:
 	# hình món của bản web (Ai, ui/svg/kh, khung 64), vẽ ra đúng số px màn hình cần (làm tròn lên 2^n): luôn nét
 	var n := int(pow(2.0, ceil(log(maxf(16.0, px)) / log(2.0))))
+	n = maxi(n, mini(n * 2, 128))   # (bản 566) gấp 2 điểm màn (tới 128px nướng sẵn) rồi thu nhỏ: nét như ảnh gốc, không nhòe
 	var key := "kh/" + id + "_" + str(n)
 	if _icons.has(key):
 		return _icons[key]

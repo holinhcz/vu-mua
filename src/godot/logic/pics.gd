@@ -128,10 +128,12 @@ func tex(b: String, k: String) -> Texture2D:
 # picture for drawing at scr screen px per world unit (ppu = picture px per world unit of the original):
 # the original (lossless, every pixel) whenever the screen needs it; zoomed out, a Lanczos copy 1/2^l with picture px >=
 # screen px, drawn with plain linear filtering like the village ground (no mipmap blur)
+const OVER := 2.0   # (bản 566) như nhà (lang_ve: scr x dpr): hình luôn >= 2 lần điểm màn rồi GPU thu nhỏ -> nét như ảnh gốc 9px, không lấy bản Lanczos vừa khít (nhòe)
 func level(ppu: float, scr: float) -> int:
-	if scr <= 0.0 or ppu <= scr:
+	var sc := scr * OVER
+	if scr <= 0.0 or ppu <= sc:
 		return 0
-	return clampi(int(floor(log(ppu / scr) / log(2.0))), 0, 4)
+	return clampi(int(floor(log(ppu / sc) / log(2.0))), 0, 4)
 
 func texz(b: String, k: String, ppu: float, scr: float) -> Texture2D:
 	var l := level(ppu, scr)
