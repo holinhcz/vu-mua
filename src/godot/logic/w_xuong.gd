@@ -311,8 +311,8 @@ func gk(t: String) -> bool:   # gk: mò bãi bùn
 		e = 2 + randi() % 3
 	elif k == "tep" or k == "oc" or k == "luc_binh":
 		e = 3 + randi() % 3
-	else:
-		e = 1 + randi() % 2
+	else:   # cá kèo (11-25: 2-3 con, trước 1-2)
+		e = 2 + randi() % 2
 	G.g.barn[k] = int(G.g.barn.get(k, 0)) + e
 	G.float_text.emit(float(n.x), float(n.y), "+" + str(e) + " " + G.item_name(k))
 	G.vib(8)

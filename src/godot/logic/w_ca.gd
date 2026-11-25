@@ -842,6 +842,8 @@ func rk(t: String) -> bool:   # Rk: thăm bẫy
 			r.append([d[0], float(d[1]) * (float(n.get("k", 1.0)) if n.get("rare", []).has(d[0]) else 1.0)])   # (bản 547) bậc cao: con quý dễ vô
 	if _n4():
 		r = r + [["tom", 45]]
+	if String(a.t) == "lo" and G.w_all != null and G.lang != null and G.w_all.WC.W5.has(String(G.lang.fo(int(a.gx), int(a.gy)))):   # (11-25) lờ đặt ở sông Vàm: cá kèo bùn mé sông chui vô
+		r = r + [["ca_keo", 20]]
 	var bait = n.get("bait")
 	var o := _rnd(_nn(float(n.q[0]), float(n.q[1]))) + (0 if (_tr(a.get("b")) or bait == null) else -1) + (1 if G.night else 0) + (1 if _kx() else 0)
 	if e:
