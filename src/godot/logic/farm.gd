@@ -1050,7 +1050,7 @@ func _tap_do(sp: Vector2) -> void:
 		ui.close_all()
 		return
 	match String(h.get("type", "")):
-		"nn", "fl", "bun", "lo", "lob", "vit", "meo":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn, (bản 541) thăm lờ / lọp / giăng
+		"nn", "fl", "bun", "lo", "lob", "vit", "meo", "lgb":   # sông: hái bụi ven sông, vớt lục bình / rau muống, mò bãi bùn, (bản 541) thăm lờ / lọp / giăng
 			ui.close_all()
 			if song != null:
 				song.tap(h)
