@@ -31,7 +31,7 @@ const FISH := [
 		"desc": "Bống tượng hấp xì dầu, cá quý để đãi khách."},
 	{"id": "locbong", "name": "Cá lóc bông", "rar": 3, "w": [2, 8], "cm": [60, 110], "base": 150, "kg": 60, "zone": [6, 20], "cover": 1, "time": {"d": .5, "dd": 1.5, "n": .3}, "bait": {"nhai": 1, "tep": .6}, "bite": "keo", "win": .7, "P": .98, "st": 8, "jump": .5, "vis": .8,
 		"desc": "Dữ dằn nhất kênh. Nó đớp một cái là cong cần, phải gồng mới nổi."},
-	{"id": "chinh", "name": "Cá chình bông", "rar": 3, "w": [1, 6], "cm": [60, 120], "base": 180, "kg": 70, "zone": [10, 30], "time": {"d": .1, "dd": .6, "n": 1}, "bait": {"chua": 1, "nhai": .5}, "bite": "keo", "win": .66, "P": .92, "st": 8, "jump": .05, "vis": .9,
+	{"id": "chinh", "name": "Cá chình bông", "rar": 3, "w": [1, 6], "cm": [60, 120], "base": 180, "kg": 70, "zone": [12, 34], "time": {"d": .1, "dd": .6, "n": 1}, "bait": {"chua": 1, "nhai": .5}, "bite": "keo", "win": .66, "P": .92, "st": 8, "jump": .05, "vis": .9,
 		"desc": "Chình bông ăn đêm, trơn tuột, quẫy một cái là văng dây."},
 	{"id": "ho", "name": "Cá hô", "rar": 4, "w": [20, 90], "cm": [100, 180], "base": 1500, "kg": 15, "zone": [20, 34], "time": {"d": 1, "dd": .7, "n": .2}, "bait": {"sung": 1}, "bite": "giat", "win": .5, "P": 1.45, "st": 14, "jump": .08, "vis": 1.6,
 		"desc": "Vua của dòng Mê Kông. Ông bà kể hồi xưa có con nặng cả tạ."},
