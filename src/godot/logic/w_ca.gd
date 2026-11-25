@@ -1017,6 +1017,12 @@ func cc() -> Dictionary:   # Cc
 		if G.g.get("barn") is Dictionary and int(G.g.barn.get(k, 0)) > 0:
 			G.g.coins = int(G.g.coins) + int(G.g.barn[k]) * {"ca_tra": 24, "ca_lang": 64, "ca_bong_lau": 150}[k]
 			G.g.barn.erase(k)
+	if G.g.get("orders") is Array and not G.g.get("m1125"):   # (11-25) đơn cũ còn đòi 3 món cá đã bỏ: đổi đơn mới (một lần)
+		G.g.m1125 = 1
+		for oi in G.g.orders.size():
+			var od = G.g.orders[oi]
+			if od is Dictionary and od.get("items") is Array and od.items.any(func(c): return c is Array and String(c[0]) in ["ca_tra", "ca_lang", "ca_bong_lau"]):
+				G.g.orders[oi] = G.new_order()
 	if not (t.get("meo") is Dictionary):
 		t.meo = {"has": 0, "fd": -1, "gd": -1, "pt": 0, "tim": 0}
 	for a in ["n", "f", "e", "a"]:
