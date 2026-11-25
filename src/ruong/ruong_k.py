@@ -108,6 +108,7 @@ def ell(S, c, rx, ry, rz, mat, prm=(0, 0, 0), axes=None, nu=8, nv_=12):
 def body_dan(S):
     """thân hộp tre đan: 4 vách + đáy; nắp vòm nửa trụ tre đan, 2 đầu nắp nửa tròn"""
     a, b, h = LA, LB, ZL
+    grid(S, lambda U, V: np.stack([-a + 2 * a * U, -b + 2 * b * V, np.full_like(U, 0.6)], -1), 12, 8, M_DAN, (0, 0, 0))
     grid(S, lambda U, V: np.stack([-a + 2 * a * U, np.full_like(U, b), h * V], -1), 30, 14, M_DAN, (0, 0, 0))
     grid(S, lambda U, V: np.stack([np.full_like(U, a), b - 2 * b * U, h * V], -1), 20, 14, M_DAN, (1, 0, 0))
     grid(S, lambda U, V: np.stack([a - 2 * a * U, np.full_like(U, -b), h * V], -1), 30, 14, M_DAN, (0, 0, 0))
@@ -234,8 +235,9 @@ def mat_kl(col, hammer=True, streak=0.05, leaf=False):
             ix = np.floor((x + 0.3 * z) / 1.3); iz = np.floor((z + 0.3 * y) / 1.3)
             hv = hash1(ix, iz, 7.0)
             cc = cc * (0.92 + 0.14 * hv)[:, None] + np.array([0.04, 0.02, -0.03])[None] * (hv[:, None] - 0.5)
-        cc = metal_sheen(cc, nrm, pos)
+        if not EXPORT: cc = metal_sheen(cc, nrm, pos)
         return np.clip(cc, 0, 1), nrm
+    f.kind = 'kl'
     return f
 
 
@@ -253,6 +255,7 @@ def mat_son(col, wood=True):
         worn = c * 0.6 + hexc('#c8a070') * 0.4                # sơn mòn mỏng: lộ lớp lót vàng nâu nhạt (sáng hơn, không vệt tối)
         cc = cc * (1 - 0.7 * e)[:, None] + worn[None] * (0.7 * e)[:, None]
         return np.clip(cc, 0, 1), nrm
+    f.kind = 'son'
     return f
 
 
@@ -273,12 +276,16 @@ def mat_xacu(col):
         cc = np.where((pet & ins)[:, None], pc, cc)
         cc = np.where((dot & ins)[:, None], hexc('#e8b444')[None] * np.ones_like(cc), cc)
         return np.clip(cc, 0, 1), n
+    f.kind = 'son'
     return f
 
 
 _MID = [960]
-def newmat(fn):
-    m = _MID[0]; _MID[0] += 1; MATS[m] = fn; return m
+KIND = {M_DAN: 'go', M_GO: 'go', M_MO: 'go'}
+EXPORT = False
+def newmat(fn, kind=None):
+    m = _MID[0]; _MID[0] += 1; MATS[m] = fn
+    KIND[m] = kind or getattr(fn, 'kind', 'go'); return m
 
 
 def obx(S, o, a, b, c, mat, prm=(0, 0, 0)):
@@ -306,6 +313,7 @@ def arc_bar(S, x, w, h, mat, prm=(0, 0, 0), n=20, R=None):
 def box_body(S, mat_wall, lidmat=None, prm1=0.0):
     a, b, h = LA, LB, ZL
     lm = lidmat or mat_wall
+    grid(S, lambda U, V: np.stack([-a + 2 * a * U, -b + 2 * b * V, np.full_like(U, 0.6)], -1), 12, 8, mat_wall, (0, 0, 0))
     grid(S, lambda U, V: np.stack([-a + 2 * a * U, np.full_like(U, b), h * V], -1), 30, 16, mat_wall, (0, prm1, 0))
     grid(S, lambda U, V: np.stack([np.full_like(U, a), b - 2 * b * U, h * V], -1), 20, 16, mat_wall, (1, prm1, 0))
     grid(S, lambda U, V: np.stack([a - 2 * a * U, np.full_like(U, -b), h * V], -1), 30, 16, mat_wall, (0, prm1, 0))
@@ -316,6 +324,15 @@ def box_body(S, mat_wall, lidmat=None, prm1=0.0):
             t = V * math.pi
             return np.stack([np.full_like(U, sx * a), U * LR * np.cos(t), ZL + U * LR * np.sin(t)], -1)
         grid(S, end, 8, 22, lm, (1, prm1, 0), flip=(sx < 0))
+
+
+def rim_ring(S, z0, z1, e, mat, w=1.4):
+    """gờ miệng rỗng giữa (4 thanh), để mở nắp thấy lòng rương"""
+    a, b = LA + e, LB + e
+    obx(S, (-a, b - w, z0), (2 * a, 0, 0), (0, w, 0), (0, 0, z1 - z0), mat)
+    obx(S, (-a, -b, z0), (2 * a, 0, 0), (0, w, 0), (0, 0, z1 - z0), mat)
+    obx(S, (a - w, -b + w, z0), (w, 0, 0), (0, 2 * b - 2 * w, 0), (0, 0, z1 - z0), mat)
+    obx(S, (-a, -b + w, z0), (w, 0, 0), (0, 2 * b - 2 * w, 0), (0, 0, z1 - z0), mat)
 
 
 def sen_logo(S, rng, c, s, mpet, mplate=None, mring=None, mgem=None, plate_r=None):
@@ -477,7 +494,7 @@ def frames_panel(S, xr, zr, w, h, mat):
 
 def flat(col):
     c = hexc(col)
-    return newmat(lambda uv, prm, pos, nrm: (np.tile(c, (len(uv), 1)), nrm))
+    return newmat(lambda uv, prm, pos, nrm: (np.tile(c, (len(uv), 1)), nrm), kind='ngoc')
 
 
 def paint(col):
@@ -487,7 +504,7 @@ def paint(col):
         g = vnoise(pos[:, 0] * 0.6, pos[:, 1] * 0.6 + pos[:, 2] * 0.6, 3.0)
         m = np.clip((g - 0.45) * 1.8, 0, 1) * 0.4
         return np.clip(c[None] * (1 - m)[:, None] + lt[None] * m[:, None], 0, 1), nrm
-    return newmat(f)
+    return newmat(f, kind='son')
 
 
 def tier_rich(S, rng, t):
@@ -503,8 +520,9 @@ def tier_rich(S, rng, t):
     MB = newmat(mat_son(BODY) if t == 3 else mat_xacu(BODY)); ML = newmat(mat_son(LEDGE))
     VF = newmat(mat_kl(GF, hammer=False, streak=0.02, leaf=True)); VB = newmat(mat_kl(GB, hammer=False, streak=0.02, leaf=True))
     box_body(S, MB, prm1=1.0)
-    for z0, z1, e in ((0.0, 1.0, 0.9), (1.0, 2.0, 0.5), (ZL - 1.4, ZL, 0.6)):
+    for z0, z1, e in ((0.0, 1.0, 0.9), (1.0, 2.0, 0.5)):
         obx(S, (-LA - e, -LB - e, z0), (2 * (LA + e), 0, 0), (0, 2 * (LB + e), 0), (0, 0, z1 - z0), ML)
+    rim_ring(S, ZL - 1.4, ZL, 0.6, ML)
     for z in (1.0, 2.0, ZL - 1.4, ZL):                              # chỉ vàng viền gờ
         for sy in (1, -1):
             e = 0.95 if z <= 1.0 else (0.55 if z <= 2.0 else 0.65)
@@ -607,8 +625,8 @@ def build(level, rng, with_props=True):
         DONG = newmat(mat_kl('#d4a046', hammer=False)); DONG2 = newmat(mat_kl('#b88430', hammer=False))
         GOV = newmat(mat_kl('#9a5a2a', hammer=False, streak=0.1))
         box_body(S, MV)
-        for z0, z1, e in ((0.0, 1.4, 0.7), (ZL - 1.3, ZL, 0.55)):        # đế + gờ miệng (ván dày lồi ra, cạnh vuông)
-            obx(S, (-LA - e, -LB - e, z0), (2 * (LA + e), 0, 0), (0, 2 * (LB + e), 0), (0, 0, z1 - z0), MV, (0, 0, 0))
+        obx(S, (-LA - 0.7, -LB - 0.7, 0.0), (2 * (LA + 0.7), 0, 0), (0, 2 * (LB + 0.7), 0), (0, 0, 1.4), MV, (0, 0, 0))   # đế
+        rim_ring(S, ZL - 1.3, ZL, 0.55, MV)                                                                                 # gờ miệng
         xs = LA * 0.6
         for x in (-xs, xs):                                              # 2 đai sắt rèn: ôm thân trước/sau + vòng qua nắp
             for sy in (1, -1):
