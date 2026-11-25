@@ -1,5 +1,5 @@
 extends Node2D
-# GHE TRÊN SÔNG (yg bản web): ảnh ghe vẽ sẵn từ chính hàm yg (tools/ghe.js -> ui/img/ghe, 9 px mỗi đơn vị làng;
+# GHE TRÊN SÔNG (yg bản web): ảnh ghe vẽ sẵn (bản 556: dựng 3D src/tools/cc/moi/ghe3d.py -> src/art/ghe3d -> ui/img/ghe, 6 px mỗi đơn vị làng, cùng 122 tên + ui/snap/ghe.json;
 # chợ nổi: đúng góc từng ghe; ghe thương hồ: trục u theo góc sông từng 0,05 rad, trục v), nhấp nhô, lắc nhẹ,
 # rồi vẽ thêm phần động: món treo trên đòn gánh của cây sào (offers), bảng tên ghe chợ, câu rao, bảng giờ ghe thương hồ.
 # Xuồng qua lại (Eh / jq / HD bản web): tối đa 3 chiếc, 14-30 giây một chiếc, chạy hai chiều trên khúc sông đã mua, mỗi chiều một
