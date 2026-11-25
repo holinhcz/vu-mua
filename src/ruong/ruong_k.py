@@ -199,27 +199,60 @@ def mat_van(uv, prm, pos, nrm):
     return np.clip(base, 0, 1), n
 
 
-def mat_kl(col, hammer=True, streak=0.05):
+def edge_w(pos):
+    """độ gần cạnh/góc của thân + nắp (0 giữa mặt, 1 sát cạnh) để làm mòn cạnh"""
+    x, y, z = loc(pos)
+    dx = LA - np.abs(x); dz0 = z; dzl = np.abs(z - ZL)
+    r = np.hypot(y, np.maximum(z - ZL, 0)); dl = np.where(z > ZL, np.abs(r - LR) + np.abs(np.abs(y) - 0) * 0, 9)
+    dy = LB - np.abs(y)
+    d = np.minimum.reduce([dx + np.where(z > ZL, 0, np.maximum(dy, 0)) * 0 + np.minimum(dx, 9), np.where(z <= ZL, np.minimum(dy, dx) + np.minimum(dz0, dzl) * 0 + 9 * 0, 9) + np.minimum(np.minimum(dz0, dzl), 9) * 0 + 0])
+    e1 = np.minimum(dx, dy); e2 = np.minimum(np.minimum(dz0, dzl), np.minimum(dx, dy) + 9 * (z > ZL))
+    e = np.minimum(e1 + 9 * (z > ZL), e2)
+    e = np.minimum(e, np.where(z > ZL, dx, 9))
+    return smooth(1.6, 0.0, e)
+
+
+def metal_sheen(col, nrm, pos, amt=1.0):
+    """kim loại thật: sáng loá ở chỗ quay về đèn, tối sâu ở chỗ quay đi (phản chiếu), không phải màu sơn đều"""
+    h = np.clip(nrm @ K.HALF, 0, 1); up = np.clip(nrm[:, 2], -1, 1)
+    sp = h ** 18 * 0.9 + h ** 4 * 0.25
+    dk = 0.72 + 0.28 * (0.5 + 0.5 * up)
+    c = col * dk[:, None] * (1 - 0.15 * amt) + (np.array([1.0, 0.96, 0.86])[None] * sp[:, None]) * amt
+    return c
+
+
+def mat_kl(col, hammer=True, streak=0.05, leaf=False):
     c = hexc(col)
     def f(uv, prm, pos, nrm):
         x, y, z = loc(pos)
-        t = 0.94 + streak * np.sin((x + y) * 9 + z * 3) * 0.5
+        t = 0.95 + streak * np.sin((x + y) * 9 + z * 3) * 0.5
         if hammer:                                   # mặt kim loại rèn: từng vết búa tròn nhỏ (đổi tông nhẹ, không vệt tối)
             cx = np.floor((x + y) / 0.9); cz = np.floor(z / 0.9)
-            t = t * (0.95 + 0.1 * hash1(cx, cz, 5.0))
-        return np.clip(c[None] * t[:, None], 0, 1), nrm
+            t = t * (0.94 + 0.12 * hash1(cx, cz, 5.0))
+        cc = c[None] * t[:, None]
+        if leaf:                                     # vàng thếp: từng lá vàng vuông dán chồng, lá nào hơi lệch tông
+            ix = np.floor((x + 0.3 * z) / 1.3); iz = np.floor((z + 0.3 * y) / 1.3)
+            hv = hash1(ix, iz, 7.0)
+            cc = cc * (0.92 + 0.14 * hv)[:, None] + np.array([0.04, 0.02, -0.03])[None] * (hv[:, None] - 0.5)
+        cc = metal_sheen(cc, nrm, pos)
+        return np.clip(cc, 0, 1), nrm
     return f
 
 
 def mat_son(col, wood=True):
-    c = hexc(col)
+    """sơn ta cũ trên gỗ: màu sơn xỉn ngả nâu, thớ gỗ nổi dưới sơn, vệt cọ, cạnh hay chạm tay mòn mỏng sáng ra"""
+    c = hexc(col); old = c * 0.78 + hexc('#6a4a30') * 0.22
     def f(uv, prm, pos, nrm):
         a, b, x, y, z = face_ab(pos, prm[:, 0])
         iv = np.floor(b / 2.5); hv = hash1(iv, 3.0, 2.0)
-        warm = np.array([1.04, 0.99, 0.92]); cool = np.array([0.97, 1.0, 1.04])
-        tint = warm[None] * hv[:, None] + cool[None] * (1 - hv)[:, None]
-        br = 0.97 + 0.04 * np.sin(b * 5 + vnoise(a * 0.3, b * 2, 3.0) * 4) + 0.03 * vnoise(a * 0.2, b * 0.5, 8.0)
-        return np.clip(c[None] * tint * br[:, None], 0, 1), nrm
+        grain = 0.5 + 0.5 * np.sin(b * 13 + vnoise(a * 0.2 + iv, b * 2, 3.0) * 6 + a * 0.05)
+        brush = 0.5 + 0.5 * np.sin(a * 2.2 + vnoise(a * 0.5, b * 4, 6.0) * 5)
+        br = (0.9 + 0.08 * hv) * (0.95 + 0.07 * grain) * (0.97 + 0.04 * brush)
+        cc = old[None] * br[:, None]
+        e = edge_w(pos) * (0.55 + 0.45 * vnoise(x * 0.8 + y * 0.8, z * 0.8, 4.0))
+        worn = c * 0.6 + hexc('#c8a070') * 0.4                # sơn mòn mỏng: lộ lớp lót vàng nâu nhạt (sáng hơn, không vệt tối)
+        cc = cc * (1 - 0.7 * e)[:, None] + worn[None] * (0.7 * e)[:, None]
+        return np.clip(cc, 0, 1), nrm
     return f
 
 
@@ -449,7 +482,7 @@ def flat(col):
 
 def paint(col):
     """sơn tay trên khối chạm: đậm nhạt theo mảng, chỗ sơn mỏng sáng hơn (không vệt tối)"""
-    c = hexc(col); lt = c * 0.65 + 0.35
+    c = hexc(col); c = c * 0.85 + hexc('#8a7458') * 0.15; lt = c * 0.7 + 0.3
     def f(uv, prm, pos, nrm):
         g = vnoise(pos[:, 0] * 0.6, pos[:, 1] * 0.6 + pos[:, 2] * 0.6, 3.0)
         m = np.clip((g - 0.45) * 1.8, 0, 1) * 0.4
@@ -461,14 +494,14 @@ def tier_rich(S, rng, t):
     global LA, LB, ZL, LR
     if t == 3:
         LA, LB, ZL = 16.0, 10.0, 14.0
-        BODY, LEDGE = '#1a8f7c', '#12705f'; GF, GB = '#c08a2c', '#ecb846'
+        BODY, LEDGE = '#228a76', '#196a5c'; GF, GB = '#b88a34', '#e2b24a'
     else:
         LA, LB, ZL = 16.6, 10.4, 14.4
-        BODY, LEDGE = '#c21e26', '#961820'; GF, GB = '#cf962c', '#f6c84a'
+        BODY, LEDGE = '#b8302a', '#8a2420'; GF, GB = '#c0903a', '#eabe52'
     LR = LB
     K.FOOT = ((C0 - LA - 1.5) / T, (C0 + LA + 1.5) / T, (C0 - LB - 1.5) / T, (C0 + LB + 1.5) / T, 0.05)
     MB = newmat(mat_son(BODY) if t == 3 else mat_xacu(BODY)); ML = newmat(mat_son(LEDGE))
-    VF = newmat(mat_kl(GF, hammer=False, streak=0.02)); VB = newmat(mat_kl(GB, hammer=False, streak=0.02))
+    VF = newmat(mat_kl(GF, hammer=False, streak=0.02, leaf=True)); VB = newmat(mat_kl(GB, hammer=False, streak=0.02, leaf=True))
     box_body(S, MB, prm1=1.0)
     for z0, z1, e in ((0.0, 1.0, 0.9), (1.0, 2.0, 0.5), (ZL - 1.4, ZL, 0.6)):
         obx(S, (-LA - e, -LB - e, z0), (2 * (LA + e), 0, 0), (0, 2 * (LB + e), 0), (0, 0, z1 - z0), ML)
@@ -567,7 +600,7 @@ def build(level, rng, with_props=True):
             for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.55, M_RATTAN, nr=6, nl=2)
 
     elif TIER == 2:                 # gỗ tràm ván ghép, đế + gờ miệng, đai sắt rèn, bọc góc sắt, đinh đồng, KHOÁ KHIÊN ĐỒNG có SEN nổi, khoá móc
-        WOODC = '#b8743c'
+        WOODC = '#9c6a42'
         LA, LB, ZL = 15.0, 9.6, 13.5; LR = LB
         K.FOOT = ((C0 - 16.5) / T, (C0 + 16.5) / T, (C0 - 11) / T, (C0 + 11) / T, 0.05)
         MV = newmat(mat_van); SAT = newmat(mat_kl('#5c6068')); SAT2 = newmat(mat_kl('#4a4e56'))
