@@ -1836,8 +1836,8 @@ func _sc_mode() -> void:
 	if sc_atl == null:
 		return
 	var far := sc_far
-	if zoom < 2.4: far = 1      # half size of the 5 px/unit trees = 2.5 px/unit: still >= the screen below 2.4
-	elif zoom > 2.6: far = 0
+	if zoom < 1.2: far = 1      # (bản 566) half size 2.5 px/unit chỉ khi vẫn >= 2 lần điểm màn (như pics.level)
+	elif zoom > 1.3: far = 0
 	elif far < 0: far = 0
 	if far == sc_far:
 		return
@@ -2764,7 +2764,7 @@ func _update_view() -> void:
 	var w0 := cam
 	var w1 := cam + vs / zoom
 	var mid := (w0 + w1) / 2
-	var l := _level_for(zoom, GLEV)
+	var l := _level_for(zoom * 2.0, GLEV)   # (bản 566) nền giữ >= 2 lần điểm màn như pics.level: zoom ra không nhòe
 	cur_l = l
 	# draw order: the fallback levels (one coarser, and the two small whole-map ones) go UNDER the river water, the
 	# sharp level over it. Otherwise their blurred plants and bank show through the see-through edges of the sharp
