@@ -36,8 +36,8 @@ static func _anh(k: String, ppu: float) -> Texture2D:   # ppu: px màn hình m�
 	_tex[key] = ImageTexture.create_from_image(m)
 	return _tex[key]
 
-static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := false, cao := CAO) -> void:
-	# at: tâm vòng (toạ độ làng); s: độ to (le x nhún); hinh: hình đặt giữa vòng, cạnh `cao` đơn vị
+static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := false, cao := CAO, mo := 1.0) -> void:
+	# at: tâm vòng (toạ độ làng); s: độ to (le x nhún); hinh: hình đặt giữa vòng, cạnh `cao` đơn vị; mo: độ đậm (mờ = đã xong)
 	var ppu := s * float(ci.get_canvas_transform().get_scale().x)
 	ci.draw_set_transform(at, 0.0, Vector2(s, s))
 	var f := _anh("do" if red else "xanh", ppu)
@@ -45,12 +45,12 @@ static func ve(ci: CanvasItem, at: Vector2, s: float, hinh: Texture2D, red := fa
 	# trước đây khung và hình xen kẽ hai ảnh nên mỗi bong bóng tốn hai lệnh vẽ
 	var g := _gop(f, hinh, cao) if f != null and hinh != null else null
 	if g != null:
-		ci.draw_texture_rect(g, KHUNG, false)
+		ci.draw_texture_rect(g, KHUNG, false, Color(1, 1, 1, mo))
 	else:
 		if f != null:
-			ci.draw_texture_rect(f, KHUNG, false)
+			ci.draw_texture_rect(f, KHUNG, false, Color(1, 1, 1, mo))
 		if hinh != null:
-			ci.draw_texture_rect(hinh, Rect2(-cao / 2.0, -cao / 2.0, cao, cao), false)
+			ci.draw_texture_rect(hinh, Rect2(-cao / 2.0, -cao / 2.0, cao, cao), false, Color(1, 1, 1, mo))
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 static var _gopc := {}   # khung@hình@cao -> ImageTexture
