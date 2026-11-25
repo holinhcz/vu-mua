@@ -322,7 +322,7 @@ class Scene:
 
 
 # thông số sáng (tool khác giữ mặc định; ghe3d chỉnh riêng)
-LT = dict(amb=.34, sky=.16, dif=.78, shmin=0.0, aop=1.0, expo=1.0)
+LT = dict(amb=.34, sky=.16, dif=.78, shmin=0.0, aop=1.0, expo=1.0, inner=.66)
 
 
 def render(scene, name, water=True):
@@ -394,7 +394,7 @@ def render(scene, name, water=True):
     shl = LT['shmin'] + (1 - LT['shmin']) * sh          # bóng đổ không đen kịt (mặc định 0 = như cũ)
     aol = ao ** LT['aop']
     lum = (LT['amb'] + LT['sky'] * sky) * aol + LT['dif'] * lam * shl * (.55 + .45 * aol)
-    lum = lum * (1 - .66 * inner) * LT['expo']
+    lum = lum * (1 - LT['inner'] * inner) * LT['expo']
     col = alb * lum[:, None] + spec[:, None] * sh[:, None] * (1 - inner)[:, None]
     col = col * (1 - emk[:, None]) + alb * emk[:, None]        # đèn: tự sáng
     col = np.clip(col, 0, 1)
@@ -633,6 +633,8 @@ def giang(t=1):
 
 
 if __name__ == '__main__':
+    # 11-25 Link "lờ lọp hơi tối, chỗ khuất sáng lên tí": cùng mức sáng với ghe sông Vàm (ghe3d), lòng đan bớt đen
+    LT.update(amb=.5, sky=.2, shmin=.45, aop=.6, expo=1.25, inner=.45)
     os.makedirs(OUT, exist_ok=True)
     mp = os.path.join(OUT, 'meta.json')
     meta = json.load(open(mp)) if os.path.exists(mp) else {}
