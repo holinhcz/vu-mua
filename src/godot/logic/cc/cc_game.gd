@@ -534,6 +534,8 @@ func cast_at(sx: float, sy: float) -> void:
 		z = rod.range
 		ui.toast("%s chỉ quăng tới đây thôi" % rod.name, "info")
 	z = maxf(z, L.zEdge + 1.6)
+	if (S.bait == "sung" or S.bait == "cam") and z < 18.0:   # (11-25) mồi cá quý: cá hô / tra dầu ở giữa kênh (20-34)
+		ui.toast("Mồi này phải thả xa giữa kênh" + ("" if float(rod.range) >= 27.0 else ", cần câu bậc 3 trở lên"), "info")
 	var acc: float = rod.acc * (.4 + z / 25)
 	x += rnd(-acc, acc) * .5
 	z += rnd(-acc, acc) * .5
@@ -941,7 +943,7 @@ func land_update(dt: float) -> void:
 		caught(h.f, h.w)
 
 func caught(f: Dictionary, w: float) -> void:
-	if S.bait != "trun":
+	if S.bait != "trun" and not f.has("junk"):   # (11-25) vướng rác không tốn mồi
 		S.baits[S.bait] = maxi(0, int(S.baits.get(S.bait, 0)) - 1)
 	S.stats.catches += 1
 	if not S.dex.has(f.id):

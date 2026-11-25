@@ -51,12 +51,12 @@ const RAR_COL := ["#8a7a5a", "#6a9a3a", "#3a7ac8", "#9a4ac8", "#e09a20"]
 const BAIT := {
 	"trun": {"name": "Trùn đất", "desc": "Mồi quốc dân, đào sau hè là có. Không tốn tiền.", "pack": 0, "price": 0, "lv": 1},
 	"com": {"name": "Cơm vo cám", "desc": "Cá ăn tạp mê: sặc, linh, mè vinh, he.", "pack": 10, "price": 12, "lv": 1},
-	"tep": {"name": "Tép sống", "desc": "Mồi sống cho cá dữ: lóc, bống tượng, thát lát.", "pack": 10, "price": 35, "lv": 2},
+	"tep": {"name": "Tép sống", "desc": "Mồi sống cho cá dữ: lóc, bống tượng, thát lát.", "pack": 10, "price": 60, "lv": 2},
 	"oc": {"name": "Ốc gạo", "desc": "Ốc nhặt ngoài ruộng mùa nước nổi (xài chung Kho vườn). Cá trê, cá lóc, lươn mê.", "pack": 0, "price": 0, "lv": 1},
 	"chua": {"name": "Mồi chua", "desc": "Cám ủ chua, hôi mà cá trê, lươn, chình mê.", "pack": 10, "price": 40, "lv": 3},
 	"nhai": {"name": "Nhái con", "desc": "Mồi to dụ cá lóc bông, cá chình.", "pack": 5, "price": 70, "lv": 4},
-	"sung": {"name": "Trái sung chín", "desc": "Cá hô ăn trái cây rụng. Thả xa giữa kênh, ban ngày.", "pack": 5, "price": 120, "lv": 5},
-	"cam": {"name": "Cám rêu thơm", "desc": "Cá tra dầu ăn rêu. Thả xa giữa kênh, chiều tối.", "pack": 5, "price": 150, "lv": 6},
+	"sung": {"name": "Trái sung chín", "desc": "Cá hô ăn trái cây rụng. Thả xa giữa kênh, ban ngày. Cần câu bậc 3 trở lên mới quăng tới.", "pack": 5, "price": 120, "lv": 5},
+	"cam": {"name": "Cám rêu thơm", "desc": "Cá tra dầu ăn rêu. Thả xa giữa kênh, chiều tối. Cần câu bậc 3 trở lên mới quăng tới.", "pack": 5, "price": 150, "lv": 6},
 }
 const BAIT_ORDER := ["trun", "com", "tep", "oc", "chua", "nhai", "sung", "cam"]
 
@@ -128,7 +128,7 @@ static func fish_value(f: Dictionary, w: float) -> int:
 	# con to hơn bán cao hơn -> bán ở giỏ hay ở Kho cùng một giá (trước giỏ ăn gấp 1,5-5 lần Kho)
 	if kho_price.is_valid() and KHO.has(f.id):
 		var mid: float = (float(f.w[0]) + float(f.w[1])) * 0.5
-		return maxi(1, int(round(float(kho_price.call(String(KHO[f.id]))) * sqrt(w / maxf(0.001, mid)))))   # căn: con nhỏ nhất ~0,6, to nhất ~1,3 giá Kho
+		return maxi(1, int(round(float(kho_price.call(String(KHO[f.id]))) * maxf(1.0, sqrt(w / maxf(0.001, mid))))))   # (11-25) ít nhất giá Kho (bán ngay không thiệt hơn cất Kho), con to tới ~1,3 giá Kho
 	return maxi(1, int(round(f.base + f.kg * w)))
 
 # ------------------------------------------------------------ màu trời theo giờ (TOD)
