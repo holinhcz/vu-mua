@@ -30,7 +30,6 @@ class Boat extends Node2D:
 	var sc := 1.0
 	var s := 1.0
 	var th := 0.0
-	var ax := "u"
 	var offers := []     # [{id, done}]
 	var tag := ""        # bảng tên (chợ) khi zoom >= .75
 	var say := ""
@@ -84,10 +83,7 @@ class Boat extends Node2D:
 			var w9 := u9 * c9 - v9 * s9
 			v9 = u9 * s9 + v9 * c9
 			u9 = w9
-		var q := Vector2((u9 - v9) * 32.0, (u9 + v9) * 16.0 - Ft)
-		if ax == "v":
-			q.x = -q.x
-		return q
+		return Vector2((u9 - v9) * 32.0, (u9 + v9) * 16.0 - Ft)
 	func _top_draw() -> void:
 		var mo: bool = v.G.motion_off()
 		if offers.size():   # món treo cây bẹo: bong bóng chung (Bong) treo dây mảnh ở 2 móc đầu đòn ngang + nút giữa sào; đã mua thì mờ
@@ -256,12 +252,8 @@ func _ghe(W) -> void:   # yg() mặc định: ghe thương hồ
 	b.al = float(A.al)
 	b.sc = 1.6   # ghe thương hồ (ghe thu hàng) to hơn ghe chợ (1,25)
 	b.s = 1.0
-	b.ax = String(A.ax)
 	b.th = W.WGH.th()
-	if b.ax == "v":
-		b.set_key("ghe_v")
-	else:
-		b.set_key("ghe_u_" + str(clampi(int(round(b.th / 0.05)), -23, 13)))
+	b.set_key("ghe_u_" + str(clampi(int(round(b.th / 0.05)), -23, 13)))   # ghe luôn dọc sông
 	b.offers = W.WGH.shown_offers()
 	var left := maxf(0.0, ceil(float(A.left)))
 	b.lbl = "Ghe thương hồ · " + W.WGH.cm(left) if int(A.st) == 2 and W.WC._mode() == "off" else ""
