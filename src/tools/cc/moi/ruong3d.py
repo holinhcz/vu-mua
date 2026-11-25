@@ -75,8 +75,10 @@ def edge_dist(obj, x, y, z):
     if not pa: return None
     L, Dp, H = pa[0], pa[1], pa[2]
     if getattr(obj, 'lid', None) is not None:
-        zl, R = obj.lid; v = R * np.arctan2(z - zl, y)
-        return np.minimum(np.abs(L - np.abs(x)), np.minimum(np.abs(v), np.abs(math.pi * R - v)))
+        zl, R = obj.lid; v = R * np.arctan2(z - zl, y); rr = np.hypot(y, z - zl)
+        endc = np.abs(np.abs(x) - L) < .08
+        e = np.minimum(np.abs(L - np.abs(x)), np.minimum(np.abs(v), np.abs(math.pi * R - v)))
+        return np.where(endc, np.maximum(R - rr, 0) + 9 * (R - rr > .6), e)
     d = np.sort(np.stack([np.abs(L - np.abs(x)), np.abs(Dp - np.abs(y)), np.abs(z), np.abs(H - z)], 1), 1)
     return d[:, 1]
 
@@ -93,6 +95,15 @@ def albedo_r(obj, P):
         pat = sstep(.6, .85, vnoise(P, 2.4, 92)) * .45 * (.5 + .5 * vnoise(P, 7, 94))
         pc = getattr(obj, 'pat', None)
         if pc is not None: c = c * (1 - pat)[:, None] + pc[None] * pat[:, None]
+        if obj.col[0] > .8 and obj.col[1] > .55:   # vàng / đồng vàng: chấm đột (punch) li ti + vệt đánh bóng sáng
+            dots = sstep(.72, .8, vnoise(P, 22.0, 108))
+            c = c * (1 - .22 * dots)[:, None]
+            eng = (np.abs(np.sin((x + y) * 2.6 + z * 1.3)) > .955) | (np.abs(np.sin((x - y) * 2.6 - z * 1.3)) > .955)   # chạm chéo trám
+            c = np.where(eng[:, None], c * .66, c)
+            amb = vnoise(P, .8, 110)
+            c = c * (1 - .18 * amb)[:, None] + hexc('#b8741c')[None] * (.18 * amb)[:, None]
+            pol = sstep(.55, .9, vnoise(P * V(1, 1, 3), 1.2, 109))
+            c = c * (1 - .18 * pol)[:, None] + np.minimum(obj.col * 1.25, 1)[None] * (.18 * pol)[:, None]
         if getattr(obj, 'crack', False):      # vàng thếp: rạn chân chim mảnh
             cr = (np.abs(vnoise(P, 14.0, 96) - .5) < .025) & (vnoise(P, 2.0, 107) > .5)
             c = np.where(cr[:, None], c * .62, c)
@@ -100,7 +111,7 @@ def albedo_r(obj, P):
     if k in ('son', 'xacu', 'van', 'hoivan'):
         if k in ('son', 'xacu'):              # sơn: thớ gỗ hằn dưới sơn, rạn nhỏ, bụi đọng
             g = .5 + .5 * np.sin(x * .9 + vnoise(P * V(1, 1, 4), .8, 97) * 7 + z * .3)
-            c = c * (.95 + .07 * g)[:, None]
+            c = c * (.92 + .12 * g)[:, None]
             cr = (np.abs(vnoise(P, 16.0, 98) - .5) < .02) & (vnoise(P, 2.5, 106) > .55)
             c = np.where(cr[:, None], c * .78, c)
         sc = scratches(P, 99, .45, 30.0)
@@ -180,16 +191,16 @@ def albedo_r0(obj, P):
         return c * (1 - .12 * (np.exp(-(fv / .04) ** 2) + np.exp(-((1 - fv) / .04) ** 2)))[:, None]
     if k == 'xacu':                           # sơn mài đen, khảm xà cừ: hoa 4 cánh so le, nhị vàng, trong khung
         c = np.broadcast_to(col, (n, 3)).copy() * (.93 + .1 * vnoise(P, 2, 83))[:, None]
-        cu, cv = 2.7, 2.6
+        cu, cv = 2.05, 2.0
         uu = u / cu; vv = v / cv; row = np.floor(vv); uu = uu + .5 * (row % 2)
         du = ((uu % 1.0) - .5) * cu; dv = ((vv % 1.0) - .5) * cv
         pa = np.arctan2(dv, du); pr = np.hypot(du, dv)
-        petal = pr < .66 * (.5 + .5 * np.abs(np.cos(pa * 2)))
+        petal = pr < .56 * (.5 + .5 * np.abs(np.cos(pa * 2)))
         dot = pr < .2
-        lf = (np.abs(np.abs(du) - np.abs(dv)) < .1) & (pr > .82) & (pr < 1.1)       # 4 lá nhỏ giữa các hoa
+        lf = (np.abs(np.abs(du) - np.abs(dv)) < .08) & (pr > .66) & (pr < .9)       # 4 lá nhỏ giữa các hoa
         w = .5 + .5 * np.sin(u * .9 + v * 1.3)
         pearl = hexc('#f4f2ea')[None] * (1 - .45 * w)[:, None] + hexc('#f0c8dc')[None] * (.3 * w)[:, None] + hexc('#c4ecdc')[None] * (.18 * w)[:, None]
-        inl, _ = panels(obj, x, y, z, lid, .95)
+        inl, _ = panels(obj, x, y, z, lid, .8)
         c = np.where((petal & inl)[:, None], pearl, c)
         c = np.where((lf & inl)[:, None], pearl * .85, c)
         c = np.where((dot & inl)[:, None], D.GOLD[None], c)
@@ -279,11 +290,17 @@ def lid_trim(o, L, H, Rl, col, r=.32, mat='met'):
 
 
 def handle(o, L, H, col, r=1.3, rr=.26):
+    """quai hông: đĩa hoa thị 8 múi + 2 chốt, quai chữ U thả xuống"""
     for sx in (1, -1):
-        c = W(sx * (L + .35), 0, H * .62)
-        o.append(met(Box(tuple(c), AX, (.2, .9, .7), 'met', rr=.1), hexc(col)))
-        tor = Torus(tuple(W(sx * (L + .55), 0, H * .62 - r * .7)), tuple(LN), r, rr, 'met')
-        o.append(met(tor, hexc(col)))
+        c = W(sx * (L + .3), 0, H * .62)
+        o.append(met(Tube(tuple(c - LN * sx * .1), tuple(LN * sx), .3, [(0, 1.25 * r / 1.3), (1, 1.1 * r / 1.3)], 'met'), hexc(col)))
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            o.append(met(Ball(tuple(c + LN * sx * .25 + (FN * math.cos(a) + Z * math.sin(a)) * .95 * r / 1.3), .28 * r / 1.3, 'met'), hexc(col)))
+        for sy in (1, -1):
+            o.append(met(Ball(tuple(c + LN * sx * .4 + FN * sy * .75 * r / 1.3), .3, 'met'), hexc(col)))
+        pts = [tuple(c + LN * sx * .55 + FN * (.75 * r / 1.3) * math.cos(t) - Z * (1.5 * r / 1.3) * math.sin(t)) for t in np.linspace(0, math.pi, 16)]
+        o.append(met(Line(pts, rr, 'met'), hexc(col)))
 
 
 # ------------------------------------------------------------ gờ, rãnh, logo hoa sen (v3 11-25 Link "logo hoa sen đâu / màu trơn trụi / gờ rãnh đâu")
@@ -337,9 +354,15 @@ def lotus(o, c, s, col, mat='met', vein=None, gem=None, plate=None, plate_r=None
         return met(o_, hexc(col)) if mat == 'met' else M(o_, col=col, sp=.1, pw=20)
     if plate:
         pr = plate_r or s * 1.55
-        o.append(met(Tube(tuple(c - FN * .15), tuple(FN), .35, [(0, pr), (1, pr * .94)], 'met'), hexc(plate)) if mat == 'met' or plate.startswith('#e') or plate.startswith('#f') or plate.startswith('#d') or plate.startswith('#c')
-                 else M(Tube(tuple(c - FN * .15), tuple(FN), .35, [(0, pr), (1, pr * .94)], 'gox'), col=plate))
-        o.append(met(Torus(tuple(c + FN * .2), tuple(FN), pr * .97, s * .09, 'met'), hexc(col)) if mat == 'met' else M(Torus(tuple(c + FN * .2), tuple(FN), pr * .97, s * .09, 'gox'), col=col))
+        if mat == 'met':
+            dk = R(Tube(tuple(c - FN * .15), tuple(FN), .32, [(0, pr), (1, pr * .96)], 'ruong'), 'son', hexc(plate), sp=.15, pw=30)
+            dk.ext = None
+            o.append(dk)
+            for rr_, ww in ((pr * .99, s * .1), (pr * .82, s * .05)):
+                o.append(met(Torus(tuple(c + FN * .17), tuple(FN), rr_, ww, 'met'), hexc(col)))
+        else:
+            o.append(M(Tube(tuple(c - FN * .15), tuple(FN), .35, [(0, pr), (1, pr * .94)], 'gox'), col=plate))
+            o.append(M(Torus(tuple(c + FN * .2), tuple(FN), pr * .97, s * .09, 'gox'), col=col))
     base = c - Z * s * .55 + FN * .25
     for ang, ln_, w, dz in ((0, 1.05, .30, .0), (24, .95, .27, .02), (-24, .95, .27, .02), (50, .8, .24, .05), (-50, .8, .24, .05), (78, .6, .2, .08), (-78, .6, .2, .08)):
         a = math.radians(ang); d = nz(Z * math.cos(a) + LN * math.sin(a)); pp = nz(np.cross(FN, d))
@@ -393,24 +416,24 @@ def ruong(t):
         Rl = body(o, L, Dp, H, 'dan', '#e6b850', lidcol='#e0b04a', sp=.05, pw=10)
         for sy in (1, -1):
             for zz in (H - .35, .35, H * .5):
-                o.append(TRE(Line([tuple(W(-L - .1, sy * (Dp + .15), zz)), tuple(W(L + .1, sy * (Dp + .15), zz))], .44 if zz != H * .5 else .3, 'gox'), '#7a9c3e' if zz != H * .5 else '#c09a50'))
+                o.append(TRE(Line([tuple(W(-L - .1, sy * (Dp + .15), zz)), tuple(W(L + .1, sy * (Dp + .15), zz))], .34 if zz != H * .5 else .26, 'gox'), '#8c9c4a' if zz != H * .5 else '#c09a50'))
         for sx in (1, -1):
             for zz in (H - .35, .35):
-                o.append(TRE(Line([tuple(W(sx * (L + .15), -Dp - .1, zz)), tuple(W(sx * (L + .15), Dp + .1, zz))], .44, 'gox'), '#7a9c3e'))
+                o.append(TRE(Line([tuple(W(sx * (L + .15), -Dp - .1, zz)), tuple(W(sx * (L + .15), Dp + .1, zz))], .34, 'gox'), '#8c9c4a'))
             for sy in (1, -1):         # cột tre 4 góc
-                o.append(TRE(Line([tuple(W(sx * (L + .05), sy * (Dp + .05), .1)), tuple(W(sx * (L + .05), sy * (Dp + .05), H - .1))], .5, 'gox'), '#6e8c36'))
+                o.append(TRE(Line([tuple(W(sx * (L + .05), sy * (Dp + .05), .1)), tuple(W(sx * (L + .05), sy * (Dp + .05), H - .1))], .38, 'gox'), '#7e8c40'))
         for x in (-L * .62, L * .62):
             pts = [tuple(W(x, (Rl + .22) * math.cos(a), H + (Rl + .22) * math.sin(a))) for a in np.linspace(0, math.pi, 22)]
             o.append(MAY(Line(pts, .3, 'may'), '#8a4a24'))
             for sy in (1, -1):
                 o.append(MAY(Line([tuple(W(x, sy * (Dp + .25), H - .1)), tuple(W(x, sy * (Dp + .25), .2))], .3, 'may'), '#8a4a24'))
         for sx in (1, -1):
-            o.append(TRE(Line([tuple(W(sx * (L - .05), (Rl + .08) * math.cos(a), H + (Rl + .08) * math.sin(a))) for a in np.linspace(0, math.pi, 22)], .4, 'gox'), '#7a9c3e'))
+            o.append(TRE(Line([tuple(W(sx * (L - .05), (Rl + .08) * math.cos(a), H + (Rl + .08) * math.sin(a))) for a in np.linspace(0, math.pi, 22)], .32, 'gox'), '#8c9c4a'))
         for sy in (1, -1):
-            o.append(TRE(Line([tuple(W(-L, sy * (Rl + .1), H + .1)), tuple(W(L, sy * (Rl + .1), H + .1))], .4, 'gox'), '#7a9c3e'))
+            o.append(TRE(Line([tuple(W(-L, sy * (Rl + .1), H + .1)), tuple(W(L, sy * (Rl + .1), H + .1))], .32, 'gox'), '#8c9c4a'))
         for a in (.62, 2.52):
             o.append(TRE(Line([tuple(W(xx, (Rl + .08) * math.cos(a), H + (Rl + .08) * math.sin(a))) for xx in (-L + .2, L - .2)], .26, 'gox'), '#c09a50', node=4.0))
-        lotus(o, W(0, Dp + .45, H - 1.4), 1.55, '#a8682e', mat='gox', vein='#6a3c18', plate='#d8a868', plate_r=2.3)
+        lotus(o, W(0, Dp + .45, H - 1.5), 1.8, '#a8682e', mat='gox', vein='#6a3c18', plate='#d8a868', plate_r=2.6)
         for sz in (1, -1):              # dây mây buộc bảng gỗ
             o.append(MAY(Line([tuple(W(0, Dp + .6, H - 1.4 + sz * 2.3)), tuple(W(0, Dp + .4, H - 1.4 + sz * 3.0))], .22, 'may'), '#8a4a24'))
         o.append(M(Line([tuple(W(-.9, Dp + .7, H + .1)), tuple(W(.9, Dp + .7, H + .1))], .3, 'gox'), col='#8a6234'))   # chốt gỗ
@@ -435,9 +458,9 @@ def ruong(t):
         c = W(0, Dp + .3, H - 1.2)
         o.append(met(Box(tuple(c), AX, (2.5, .24, 2.6), 'met', rr=.9), hexc(BR)))
         o.append(met(Torus(tuple(c + FN * .26), tuple(FN), 2.15, .16, 'met'), hexc('#b07a28')))
-        lotus(o, c + FN * .2 + Z * .3, 1.6, '#c88a2a', vein='#7a4a14')
+        lotus(o, c + FN * .2 + Z * .45, 2.15, '#c88a2a', vein='#7a4a14')
         o.append(met(Box(tuple(W(0, Rl + .3, H + .5)), AX, (.6, .24, 1.0), 'met', rr=.12), hexc(BR)))
-        o.append(met(Torus(tuple(c + FN * .75 - Z * 2.0), tuple(LN), .8, .24, 'met'), hexc('#3e4248')))
+        o.append(met(Torus(tuple(c + FN * .95 - Z * 2.6), tuple(FN), .7, .22, 'met'), hexc('#4a4e56')))
         o.append(met(Box(tuple(c + FN * .95 - Z * 3.3), AX, (1.05, .45, .9), 'met', rr=.3), hexc('#3e4248')))
         keyhole(o, c + FN * 1.42 - Z * 3.3, .9)
         handle(o, L, H, IRON, r=1.1)
@@ -447,7 +470,7 @@ def ruong(t):
         feet(o, L, Dp, '#d8a038', metal=True)
         BR = '#e2a83a'
         PAT[tuple(np.round(hexc(BR), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#c89030'), 3))] = hexc('#8a7a3a'); PAT[tuple(np.round(hexc('#d8a038'), 3))] = hexc('#8a7a3a')
-        Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.18, pw=30, deco=(lay, hexc(BR)), wearc='#7a4a2a')
+        Rl = body(o, L, Dp, H, 'son', '#14947f', sp=.18, pw=30, deco=(lay, hexc(BR)), wearc='#7cc8b8')
         ledges(o, L, Dp, H, '#0e7466', linec=BR)
         frames(o, lay, '#c89030')
         for x in (-xs, xs):
@@ -456,7 +479,7 @@ def ruong(t):
         corner_caps(o, L, Dp, H, BR, s=2.0)
         lid_trim(o, L, H, Rl, BR, r=.36)
         c = W(0, Dp + .25, H - 1.3)
-        lotus(o, c, 1.9, BR, vein='#9a6a1c', gem='#e0302a', plate='#0a4e44', plate_r=2.6)
+        lotus(o, c, 2.25, BR, vein='#9a6a1c', gem='#e0302a', plate='#8a1c16', plate_r=2.9)
         keyhole(o, c + FN * .5 - Z * 1.85, .8)
         o.append(met(Box(tuple(W(0, Rl + .3, H + .45)), AX, (.6, .22, .9), 'met', rr=.12), hexc(BR)))
         handle(o, L, H, BR, r=1.3)
@@ -466,7 +489,7 @@ def ruong(t):
         GD = '#f2b636'
         feet(o, L, Dp, GD, metal=True)
         CRACK.add(tuple(np.round(hexc(GD), 3))); PAT[tuple(np.round(hexc(GD), 3))] = hexc('#c08a28')
-        Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.15, pw=40, deco=(lay, hexc(GD)), wearc='#2a1210')
+        Rl = body(o, L, Dp, H, 'xacu', '#c41e26', sp=.15, pw=40, deco=(lay, hexc(GD)), wearc='#7a2416')
         ledges(o, L, Dp, H, '#9a141c', linec=GD)
         frames(o, lay, GD, r=.2)
         for x in (-xs, xs):
@@ -478,12 +501,16 @@ def ruong(t):
             for zc in (1.45, H - 1.25):
                 o.append(M(Ball(tuple(W(sx * (L - 1.0), Dp + .45, zc)), .42, 'cam'), col='#1aa878', sp=.35, pw=50))
         c = W(0, Dp + .28, H - 1.45)
-        lotus(o, c, 2.2, GD, vein='#b07a18', gem='#d81c3a', plate='#6e0c12', plate_r=2.95, ring='#f4f0e6')
+        lotus(o, c, 2.6, GD, vein='#b07a18', gem='#d81c3a', plate='#10302a', plate_r=3.3, ring='#f4f0e6')
         keyhole(o, c + FN * .55 - Z * 2.15, .9)
         o.append(met(Box(tuple(W(0, Rl + .3, H + .5)), AX, (.8, .24, 1.1), 'met', rr=.15), hexc(GD)))
         top = W(0, 0, H + Rl + .25)
         o.append(met(Tube(tuple(top - Z * .2), tuple(Z), .5, [(0, 1.3), (1, 1.0)], 'met'), hexc(GD)))
-        o.append(met(Ball(tuple(top + Z * 1.0), .95, 'met', sq=(1, 1, 1.35)), hexc(GD)))
+        o.append(met(Ell(tuple(top + Z * 1.2), (tuple(LN), tuple(FN), tuple(Z)), (.55, .55, 1.25), 'met'), hexc(GD)))
+        for k in range(6):                                       # cánh búp sen ôm nụ
+            a = 2 * math.pi * k / 6; d = LN * math.cos(a) + FN * math.sin(a)
+            ax_ = nz(Z + d * .35); pp = nz(np.cross(ax_, d))
+            o.append(met(Ell(tuple(top + Z * .95 + d * .5), (tuple(ax_), tuple(pp), tuple(d)), (1.05, .42, .2), 'met'), hexc(GD)))
         handle(o, L, H, GD, r=1.4)
     return Scene(o)
 
