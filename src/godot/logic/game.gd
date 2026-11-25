@@ -1721,7 +1721,7 @@ func _fh0() -> Dictionary:
 			t.append(x)
 	var a := mini(4, int(floor(int(g.delivered) / 2.0)))
 	var r := lv()
-	var l := (20.0 + 10.0 * mini(60, r) + 6.0 * a) * randf_range(0.8, 1.2)
+	var l := (20.0 + 10.0 * mini(100, r) + 6.0 * a) * randf_range(0.8, 1.2)   # (11-25) trần cấp 60 -> 100
 	var busy := {}
 	for w in g.orders:
 		if w is Dictionary and w.has("who"):
