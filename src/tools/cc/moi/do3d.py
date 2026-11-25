@@ -402,7 +402,7 @@ def rod(t):
         col, nodes = '#c03a2a', None
         bands = [(.975, 1, '#2a1a16')]
     else:           # cần ông Năm gỗ mun, chỉ vàng quấn từng cặp
-        col, nodes = '#45322a', None
+        col, nodes = '#30241f', None
         bands = [(.975, 1, '#d8a838')]
     guides = {1: [], 2: [], 3: [.18, .36, .54, .72, .88], 4: [.14, .29, .44, .59, .74, .88]}[t]
     for g in guides:
@@ -427,7 +427,7 @@ def rod(t):
         s = S0 + g * LL
         o.append(met(Tube(tuple(p(s - .35)), tuple(d), .7, [(0, rad(s) + .09), (1, rad(s) + .07)], 'met'), hexc('#d8a838'), sp=.5, pw=40))
     # cán
-    gcol, gmat, gk = {1: ('#6e4a2a', 'cuon', 3.0), 2: ('#d8b070', 'cuon', 1.7), 3: ('#8a4628', 'met', 0), 4: ('#2e2220', 'cuon', 3.2)}[t]
+    gcol, gmat, gk = {1: ('#6e4a2a', 'cuon', 3.0), 2: ('#d8b070', 'cuon', 1.7), 3: ('#6e3420', 'met', 0), 4: ('#2e2220', 'cuon', 3.2)}[t]
     gr = M(Tube(tuple(p(.6)), tuple(d), G1 - .6, [(0, R0), (.5, R0 * 1.04), (1, R0 * .9)], gmat), col=hexc(gcol), sp=.15, pw=20)
     if gk:
         gr.k = gk
@@ -435,7 +435,7 @@ def rod(t):
         gr.ns = 3
     o.append(gr)
     if t == 3:      # cán da: đường chỉ khâu trắng dọc cán
-        st = M(Line([tuple(p(s, -R0 * .96)) for s in np.linspace(1.0, G1 - .4, 2)], .07, 'band'), col='#8a4628')
+        st = M(Line([tuple(p(s, -R0 * .96)) for s in np.linspace(1.0, G1 - .4, 2)], .07, 'band'), col='#6e3420')
         st.bands = [(k / 14, (k + .55) / 14, '#f0e6cc') for k in range(14)]
         o.append(st)
     if t == 4:      # chỉ vàng quấn cán

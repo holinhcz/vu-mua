@@ -26,9 +26,9 @@ def V(*a):
 def nz(v):
     return v / np.linalg.norm(v)
 
-AZ = math.radians(45); EL = math.radians(float(os.environ.get('EL', '30')))   # EL env: phao trong game nhìn ngang hơn
+
 # ------------------------------------------------------------ camera: góc nhìn vườn (xoay 45, nghiêng 30)
-AZ = math.radians(45); EL = math.radians(30)
+AZ = math.radians(45); EL = math.radians(float(os.environ.get('EL', '30')))   # EL env: đồ trong game nhìn ngang (phao, cần)
 FWD = nz(V(-math.cos(EL) * math.cos(AZ), -math.cos(EL) * math.sin(AZ), -math.sin(EL)))   # camera nhìn theo hướng này
 RT = nz(np.cross(FWD, V(0, 0, 1)))
 UP = np.cross(RT, FWD)
