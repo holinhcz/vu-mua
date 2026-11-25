@@ -1878,6 +1878,18 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
+		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
+			var vg := Snap.find(n, "u2vg")
+			var vk: Array = vg.get("kids", [])
+			var slot := []
+			for t in vk:
+				slot.append(Vector2(float(t.r[0]), float(t.r[1])))
+			var keep := []
+			for t in vk:
+				if _mat_id(String(Snap.find(t, "u2vn").get("text", ""))) != "":
+					Snap._move(t, slot[keep.size()] - Vector2(float(t.r[0]), float(t.r[1])))
+					keep.append(t)
+			vg.kids = keep
 		if nm == "kho_sel":
 			var g2 := Snap.find(n, "khgrid")
 			for li in g2.get("kids", []):
@@ -2488,7 +2500,27 @@ func _kho_vl_pick(b: Control) -> void:
 	var nm := Snap.find(n, "u2vn")
 	kh_vl = nm.get("text", "")
 	kh_sig = ""
+	_kho_vl_ic(Snap.find(n, "u2vi"))
 	_kho_vl_sync()
+
+func _kho_vl_ic(ti: Dictionary) -> void:   # (11-25) hình ở khung chi tiết theo ô vừa chạm (trước đây luôn là rơm khô)
+	var dv = kho_ids[1].get(".u2vd")
+	if dv == null or ti.is_empty():
+		return
+	var old := _q(dv, "u2vi")
+	if old == null:
+		return
+	var sv: String = Snap.find(ti, "", "svg").get("svg", "")
+	var nd: Dictionary = _sm(old).duplicate(true)
+	var k := Snap.find(nd, "", "svg")
+	if sv == "" or k.is_empty():
+		return
+	k.svg = sv
+	var p: Control = old.get_parent()
+	var nb := Snap.build(nd, Vector2(float(_sm(dv).r[0]), float(_sm(dv).r[1])), {})
+	p.add_child(nb)
+	p.move_child(nb, old.get_index())
+	old.queue_free()
 
 func _mat_id(name: String) -> String:
 	if G.D.mat is Dictionary:
@@ -2517,6 +2549,16 @@ func _kho_vl_sync() -> void:
 		_txt(b0, kh_vl)
 		var sm := _q(det, "", "small")
 		_txt(sm, "Đang có " + str(int(mats.get(_mat_id(kh_vl), 0))))
+		var ds = ids.get(".u2vds")
+		var mid := _mat_id(kh_vl)
+		if ds != null and mid != "":   # dùng để / cách nhận theo từng vật liệu
+			var ps: Array = ds.kids()
+			if ps.size() >= 2:
+				_txt(ps[0], String(G.MAT_DUNG.get(String(G.D.mat[mid].get("g", "")), "nâng sao")))
+				var wh: String = G.mat_where([mid]).trim_suffix(".").split(" rơi khi ")[1]
+				if mid == "gach":
+					wh += ", nung ở lò gạch"
+				_txt(ps[1], wh.substr(0, 1).to_upper() + wh.substr(1) + ".")
 
 # ------------------------------------------------------------------ chạm ô ruộng (c2 bản web)
 # ------------------------------------------------------------------ đơn hàng (#pn-orders, ws / jp bản web)

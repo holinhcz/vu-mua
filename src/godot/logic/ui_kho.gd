@@ -19,7 +19,7 @@ var pop: Control = null      # hộp Nâng sao kho
 var pop_sig := ""
 var kf: Control = null       # hộp Kho đầy
 var ns: Control = null       # hộp Nâng sớm
-var mat_svg := {}            # then/bao/ton -> svg (chụp từ ô giá của web)
+var mat_svg := {}            # vật liệu -> svg
 var star_on := ""
 var star_off := ""
 var chip_css := {}           # "ok"/"no" (vật liệu), "xok"/"xno" (xu): css ô + css chữ b
@@ -37,11 +37,9 @@ func _init(ui) -> void:
 	T.kns_ok = Snap.load_snap("kns_ok")[".nglkov"][0]
 	# kns_poor chụp lúc hộp đang hiện dần (mờ, thu 0,4): lấy chỗ đứng của kns_ok, chỉ lấy kiểu nút "poor"
 	T.poor_btn = Snap.find(Snap.load_snap("kns_poor")[".nglkov"][0], "ngbuy")
-	# hình vật liệu: ô giá thứ 2..4 của k3_ok là then, bao, ton
-	var ch: Array = Snap.find(T.k3_ok, "need").kids
-	var ids := ["then", "bao", "ton"]
-	for j in 3:
-		mat_svg[ids[j]] = Snap.find(ch[j + 1], "", "svg").get("svg", "")
+	# hình vật liệu nâng kho (ván, đinh, gạch): hình món ui/svg/mat
+	for m in G.KHO_MAT:
+		mat_svg[m] = FileAccess.get_file_as_string("res://ui/svg/mat/" + String(m) + ".svg")
 	var st: Array = Snap.find(T.kup_max, "stars").kids
 	star_on = st[0].svg
 	star_off = Snap.find(T.kup_lock, "stars").kids[9].svg
@@ -255,7 +253,7 @@ func close() -> void:
 		pop = null
 
 func _sig() -> String:
-	return "|".join([G.kho_star(), int(G.g.coins / 50), G.mat_n("then"), G.mat_n("bao"), G.mat_n("ton"), G.lv(), int(G.g.get("ngoc", 0)), int(G.g.get("khoB", 0))])
+	return "|".join([G.kho_star(), int(G.g.coins / 50), G.mat_n("van"), G.mat_n("dinh"), G.mat_n("gach"), G.lv(), int(G.g.get("ngoc", 0)), int(G.g.get("khoB", 0))])
 
 func step() -> void:
 	if pop != null and ns == null and _sig() != pop_sig:

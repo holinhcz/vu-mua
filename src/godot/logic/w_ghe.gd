@@ -14,7 +14,7 @@ const MIN := 60000.0
 const HOUR := 3600000.0
 const STAY := 4.0 * HOUR
 const FQ := ["Cái Bè", "Cần Thơ", "Cái Răng", "Phong Điền", "Ngã Bảy", "Long Xuyên", "Vĩnh Long", "Mỹ Tho", "Sa Đéc", "Châu Đốc"]
-const K := ["can", "may", "gach"]   # vật liệu hiếm thưởng khi chất đủ thùng
+const K := ["dinh", "may", "gach"]   # vật liệu hiếm thưởng khi chất đủ thùng
 
 # Ae: st 0 chưa có, 1 đang vào bến, 2 đậu, 3 nhổ neo
 var Ae := {"st": 0, "t": 70.0 + randf() * 60.0, "o": null, "key": "", "c": [0.0, 0.0], "ax": "u", "off": 0.0, "al": 0.0, "left": 0.0, "offers": [], "from": ""}

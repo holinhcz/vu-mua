@@ -120,7 +120,7 @@ func _body() -> Array:
 			Snap._move(n, Vector2(X0 + 10.0, yy))
 		blk.append_array(N[0])
 		yy += float(N[1]) + 4.0
-		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, _where(nm), 10.0, 600, SUB, 13.0)
+		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, G.mat_where(nm), 10.0, 600, SUB, 13.0)
 		blk.append_array(HP[0])
 		yy += float(HP[1]) + 6.0
 		if lk == "":
@@ -183,17 +183,6 @@ func _rows(s: Dictionary, n: Dictionary) -> Array:   # [nhãn, bậc này, (bậ
 			if a != b:   # (bản 550) hai bậc như nhau (vd mồi "không cần") thì khỏi ghi
 				out.append([r[0], a, b, true])
 	return out
-
-const ROI := {"harvest": "thu hoạch", "rice": "gặt lúa", "collect": "thu chuồng", "work": "làm xưởng", "chop": "chặt cây", "clear": "dọn cây cỏ",
-	"lo": "thăm lờ lọp", "deliver": "giao đơn", "sap": "bán sạp", "help": "giúp làng", "trip": "đi chuyến", "fish": "câu cá"}
-func _where(ms: Array) -> String:   # "Cây tre, dây mây rơi khi dọn cây cỏ, chặt cây, thu chuồng, thăm lờ lọp."
-	var w := []
-	for k in G.D.drop:
-		for c in G.D.drop[k]:
-			if ms.has(String(c[0])) and ROI.has(k) and not w.has(ROI[k]):
-				w.append(ROI[k])
-	var nm: String = ", ".join(ms.map(func(m): return G.item_name(String(m)).to_lower()))
-	return (nm.substr(0, 1).to_upper() + nm.substr(1)) + " rơi khi " + ", ".join(w) + "."
 
 func _merge(e: Dictionary, u: Dictionary) -> Dictionary:
 	var o := e.duplicate()

@@ -141,6 +141,7 @@ func _test_hook() -> void:
 			"khost": G.g.khost = int(a[1]); G.g.khoB = 0; G.mark()
 			"mat": G.g.mats = {}; for q in a.slice(1): G.g.mats[q.split("=")[0]] = int(q.split("=")[1])
 			"kup": ui.khp.open()
+			"migt": G.g.mats = {"then": 3, "bao": 2, "ton": 1, "bat": 1, "bang": 1, "can": 2, "van": 1}; G._migrate(G.g); G.g.khost = 2; G.g.coins = 5000; push_error("QKmig " + JSON.stringify(G.g.mats))
 			"vnset":   # vnset:loại:p,t,s;p,t,s... (p -1 = đói, s 1 = bệnh): xây chuồng + thả con
 				G.g.penb[a[1]] = 1
 				var PL := []

@@ -267,6 +267,8 @@ func chop(k: String) -> bool:   # uk: cưa cây ngã ra 3–5 bó củi, trồng
 	ver += 1
 	var e: Dictionary = by[k]
 	G.float_text.emit(float(e.gx) + 0.5, float(e.gy) + 0.5, "+" + str(r) + " củi")
+	if G.w_all != null:   # No("chop"): cưa cây có khi rơi ván, đinh, tre
+		G.w_all.No("chop", 1, [float(e.gx) + 0.5, float(e.gy) - 0.2])
 	if farm != null:
 		farm.burst(Vector2(4268.0 + (float(e.gx) - float(e.gy)) * 32.0, 968.0 + (float(e.gx) + float(e.gy) + 1.0) * 16.0 - 10.0), 12,
 			["#8a6440", "#5fa040", "#c9a868"], 90.0, 2.8, 320.0, 2.2, 0.6, 20.0)

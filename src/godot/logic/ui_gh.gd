@@ -1,7 +1,7 @@
 extends "res://logic/ui_kbang.gd"
 # GHE THƯƠNG HỒ (OD / D bản BUON, chạm ghe đậu bến hoặc viên "Ghe thương hồ ghé bến"). (bản 515) khung Kho + chip chung, không tab:
 #  - chip đầu: hình ghe, "Ghe thương hồ <nơi>", chip giờ nhổ neo (cam, gấp thì đỏ);
-#  - thanh "Đã chất N/M thùng" + chip thưởng chất đủ (xu, kinh nghiệm, 2 vật liệu hiếm: cân đòn / dây mây / gạch nung);
+#  - thanh "Đã chất N/M thùng" + chip thưởng chất đủ (xu, kinh nghiệm, 2 vật liệu hiếm: đinh sắt / dây mây / gạch nung);
 #  - lưới 2 cột: thùng đủ hàng lên đầu (nền xanh, nút Chất), thiếu (số đỏ + chỗ kiếm G.where, nút xám), đã chất (xanh nhạt ✓).
 # Luật ở w_ghe.gd (Ae, Hd, bonus, cm).
 
@@ -69,7 +69,7 @@ func _build() -> void:
 	var R: Array = _rowi(bx + 8.0, y + 1.0, 14.0, ["Chất đủ:"], 9.0, 700, "rgb(40, 110, 50)")
 	var R2: Array = _rowi(bx + 8.0, y + 15.0, 16.0, parts, 10.0, 800, "rgb(40, 110, 50)")
 	bc.kids = R[0] + R2[0]
-	bc.act = _dsay.bind("Chất đủ hết thùng: +" + G.fmt_n(int(Y.xu)) + " xu, +" + str(int(Y.xp)) + " kinh nghiệm và 2 vật liệu hiếm (cân đòn, dây mây hoặc gạch nung).")
+	bc.act = _dsay.bind("Chất đủ hết thùng: +" + G.fmt_n(int(Y.xu)) + " xu, +" + str(int(Y.xp)) + " kinh nghiệm và 2 vật liệu hiếm (đinh sắt, dây mây hoặc gạch nung).")
 	out.append(bc)
 	y += 34.0 + GG
 	# lưới thùng: đủ hàng lên đầu, đã chất xuống cuối

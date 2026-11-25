@@ -43,7 +43,7 @@ const VNS = preload("res://logic/vatnuoi.gd")   # ro (Ro)
 const R3 := {"lon": 102.7, "lat": 9.7, "name": "Đảo trại"}   # r3
 const XO := ["xe"]                                              # XO
 const UJ := {"well": 4, "fert": 6, "pen": 8, "stall": 10}       # uJ: cấp mở nâng cấp
-const OO := ["rom", "phan", "voi", "van", "dinh", "gach", "tre", "la", "may", "bat", "bang", "can"]   # Oo
+const OO := ["rom", "phan", "voi", "van", "dinh", "gach", "tre", "la", "may"]   # Oo
 const HTTAY := 50
 const DI := ["ga", "cuu", "bo", "heo", "de"]                    # Di
 
