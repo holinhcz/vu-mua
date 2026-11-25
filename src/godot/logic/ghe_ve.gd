@@ -89,29 +89,36 @@ class Boat extends Node2D:
 		return q
 	func _top_draw() -> void:
 		var mo: bool = v.G.motion_off()
-		if offers.size():   # món treo trên đòn ngang của cây sào
-			var Nt := _x(C * 0.58, -0.42, 74)
-			var pa := _x(C * 0.58, 0.42, 74)
-			var Gt := _x(C * 0.58, 0, 48)
+		if offers.size():   # món treo cây bẹo: 2 móc đầu đòn ngang + 1 móc nút giữa sào, dây mây đung đưa, món to rõ
+			var hk := [_x(C * 0.58, -0.42, 73), _x(C * 0.58, 0.42, 73), _x(C * 0.58, 0, 48)]
+			var rope := Color8(0x6e, 0x52, 0x30, int(230 * al))
 			for i in offers.size():
 				var o: Dictionary = offers[i]
-				var F: Vector2 = [Nt, pa, Gt][i % 3]
-				var fa := 0.0 if mo else sin(tt * 1.8 + i * 1.3) * 0.16
-				var R := F + Vector2(sin(fa) * 12.0, cos(fa) * 12.0)
-				var a := al * (0.3 if int(o.get("done", 0)) else 1.0)
-				top.draw_line(F, R + Vector2(0, -6), Color(0x5a / 255.0, 0x4a / 255.0, 0x2a / 255.0, al), 0.8, true)
-				top.draw_set_transform(R + Vector2(0, 4), 0.0, Vector2(1, 1))
-				top.draw_circle(Vector2.ZERO, 10.0, Color(1, 1, 1, 0.55 * a))
-				top.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-				var ic: Texture2D = v.farm.ui.item_ic(String(o.id), 22.0 * v.farm.main.zoom * sc) if v.farm.ui != null else null
+				var F: Vector2 = hk[i % 3]
+				var mid := i % 3 == 2
+				var ln := 6.0 if mid else 9.0
+				var fa := 0.0 if mo else sin(tt * 1.6 + i * 1.3) * 0.14
+				var R := F + Vector2(sin(fa) * ln + (5.0 if mid else 0.0), cos(fa) * ln)
+				var dn := int(o.get("done", 0)) != 0
+				var a := al * (0.45 if dn else 1.0)
+				top.draw_line(F, R, rope, 0.55, true)
+				top.draw_circle(F, 0.8, rope)
+				var sz := 19.0
+				var ic: Texture2D = v.farm.ui.item_ic(String(o.id), sz * v.farm.main.zoom * sc) if v.farm.ui != null else null
 				if ic != null:
-					top.draw_texture_rect(ic, Rect2(R.x - 11, R.y - 7, 22, 22), false, Color(1, 1, 1, a))
+					top.draw_set_transform(R, fa * 0.6, Vector2.ONE)
+					top.draw_texture_rect(ic, Rect2(-sz / 2.0, -2.0, sz, sz), false, Color(1, 1, 1, a))
+					top.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				if dn:   # đã giao: dấu tick xanh nhỏ
+					var c := R + Vector2(sz * 0.36, sz * 0.62)
+					top.draw_circle(c, 4.2, Color8(0x2e, 0x8b, 0x4a, int(255 * al)))
+					top.draw_polyline(PackedVector2Array([c + Vector2(-2, 0), c + Vector2(-0.5, 1.6), c + Vector2(2.2, -1.6)]), Color(1, 1, 1, al), 1.2, true)
 		var le: float = v.farm.sign_le()
 		var f: Font = v.farm.fnt
 		if tag != "":   # Lh: bảng tên trên ghe
-			_pill(Vector2(0, -88.0 / sc), tag, 9.0, Color(1, 1, 1, 0.88), Color8(0x4a, 0x34, 0x20), le, f, 10.0, 14.0, 7.0)
+			_pill(Vector2(0, -92.0), tag, 9.0, Color(1, 1, 1, 0.88), Color8(0x4a, 0x34, 0x20), le, f, 10.0, 14.0, 7.0)
 		if say != "" and say_al > 0.0:   # câu rao
-			_pill(Vector2(0, -104.0 / sc), say, 10.0, Color(1, 1, 1, 0.95 * say_al), Color(0x2a / 255.0, 0x4a / 255.0, 0x3a / 255.0, say_al), le, f, 14.0, 18.0, 9.0)
+			_pill(Vector2(0, -110.0), say, 10.0, Color(1, 1, 1, 0.95 * say_al), Color(0x2a / 255.0, 0x4a / 255.0, 0x3a / 255.0, say_al), le, f, 14.0, 18.0, 9.0)
 		if lbl != "":   # bảng giờ ghe thương hồ
 			_pill(Vector2(0, -112.0), lbl, 11.0, Color(200 / 255.0, 60 / 255.0, 40 / 255.0, 0.95) if lbl_red else Color(40 / 255.0, 90 / 255.0, 60 / 255.0, 0.92), Color.WHITE, le, f, 16.0, 20.0, 10.0)
 	func _pill(at: Vector2, s0: String, fs: float, bg: Color, fg: Color, le: float, f: Font, pad: float, h: float, r: float) -> void:
@@ -229,7 +236,7 @@ func _cho(W) -> void:   # tN: 4 ghe chợ nổi
 		var y: float = float(n[1]) + (W.WSG.c(x) - W.WSG.c(float(n[0])) if W.WSG != null else 0.0)
 		b.p = Vector2(x, y)
 		b.al = float(U.al)
-		b.sc = 0.78
+		b.sc = 1.25   # 1,6 lần bản cũ: ghe chợ to hơn xuồng rõ
 		b.s = -1.0 if e % 2 else 1.0
 		b.th = atan(W.WSG.sl(float(n[0]))) if W.WSG != null else 0.0
 		b.set_key("cho_" + String(t) + "_" + str(e))
