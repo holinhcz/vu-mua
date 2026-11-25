@@ -141,6 +141,7 @@ func _test_hook() -> void:
 			"khost": G.g.khost = int(a[1]); G.g.khoB = 0; G.mark()
 			"mat": G.g.mats = {}; for q in a.slice(1): G.g.mats[q.split("=")[0]] = int(q.split("=")[1])
 			"kup": ui.khp.open()
+			"dropt": _dropt()
 			"migt": G.g.mats = {"then": 3, "bao": 2, "ton": 1, "bat": 1, "bang": 1, "can": 2, "van": 1}; G._migrate(G.g); G.g.khost = 2; G.g.coins = 5000; push_error("QKmig " + JSON.stringify(G.g.mats))
 			"vnset":   # vnset:loại:p,t,s;p,t,s... (p -1 = đói, s 1 = bệnh): xây chuồng + thả con
 				G.g.penb[a[1]] = 1
@@ -622,3 +623,15 @@ func _cuatap() -> void:
 		var w := Vector2(4268.0 + (c - f) * 32.0, 968.0 + (c + f) * 16.0 - 10.0)
 		farm.tap(farm.world_to_screen(w))
 		return
+
+func _dropt() -> void:   # thử tỉ lệ rơi vật liệu: 20000 lần mỗi việc
+	var dc := {}
+	for kk in ["harvest", "work", "deliver", "fish", "lo", "rice"]:
+		var n := 0
+		for ii in 20000:
+			var di: String = G.drop_roll(kk)
+			if di != "":
+				n += 1
+				dc[kk + ":" + di] = int(dc.get(kk + ":" + di, 0)) + 1
+		dc[kk] = n
+	push_error("QKdrop " + JSON.stringify(dc) + " | " + G.mat_where(["may"]) + " | " + G.mat_where(["phao"]))

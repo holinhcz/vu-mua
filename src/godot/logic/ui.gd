@@ -2493,7 +2493,7 @@ func _det_sync() -> void:
 		_txt(kd.hint, R)
 
 # Vật liệu
-var kh_vl := ""
+var kh_vl := "Rơm khô"   # ô đang chọn (mẫu chụp chọn sẵn rơm khô)
 
 func _kho_vl_pick(b: Control) -> void:
 	var n: Dictionary = _sm(b)
@@ -2555,10 +2555,9 @@ func _kho_vl_sync() -> void:
 			var ps: Array = ds.kids()
 			if ps.size() >= 2:
 				_txt(ps[0], String(G.MAT_DUNG.get(String(G.D.mat[mid].get("g", "")), "nâng sao")))
-				var wh: String = G.mat_where([mid]).trim_suffix(".").split(" rơi khi ")[1]
-				if mid == "gach":
-					wh += ", nung ở lò gạch"
-				_txt(ps[1], wh.substr(0, 1).to_upper() + wh.substr(1) + ".")
+				var pc := str(int(round(float(G.D.drop.get("rate", 0.0)) * 100.0))) + "%"
+				var cau: bool = G.D.drop.nhom.cau.has(mid)
+				_txt(ps[1], ("Câu cá, thăm lờ, giăng câu: " if cau else "Làm việc gì cũng có thể rơi: ") + pc + (" (hoặc nung ở lò gạch)." if mid == "gach" else "."))
 
 # ------------------------------------------------------------------ chạm ô ruộng (c2 bản web)
 # ------------------------------------------------------------------ đơn hàng (#pn-orders, ws / jp bản web)
