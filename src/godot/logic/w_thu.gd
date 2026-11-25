@@ -177,8 +177,7 @@ func wU(t: String) -> void:   # nút trong bảng thư
 		if n.k == "tien":
 			G.g.coins = int(G.g.coins) + int(n.xu)
 		else:
-			var e: Dictionary = WL._r0()
-			e.gach = int(e.get("gach", 0)) + int(n.gach)
+			G.mat_add("gach", int(n.gach))   # (11-25) kho gạch chung
 		_lg(a, String(n.who), ("+" + G.fmt_n(int(n.xu)) + " xu") if n.k == "tien" else ("+" + str(int(n.gach)) + " gạch"), "xu" if n.k == "tien" else "svg:res://ui/svg/mat/gach.svg", String(n.k))
 		a.un = null
 		_toast("Đọc thư xong xếp vô hộp, ấm lòng ghê.")

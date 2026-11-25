@@ -416,9 +416,6 @@ func x0(n: int) -> void:   # sen đỏ
 	G.g.ngoc = maxi(0, int(G.g.ngoc) + n)
 
 func S0(m: String, a: int) -> void:   # vật liệu
-	if m == "gach":
-		_lang().gach = int(_lang().get("gach", 0)) + a
-		return
 	if not (G.g.get("mats") is Dictionary):
 		G.g.mats = {}
 	G.g.mats[m] = mini(999, int(G.g.mats.get(m, 0)) + a)
@@ -658,7 +655,7 @@ func iY() -> void:   # ngày đủ 100 điểm: tính chuỗi
 		if k > int(s.rk):
 			s.rk = k
 			if k == 1:
-				_lang().gach = int(_lang().get("gach", 0)) + 20
+				G.mat_add("gach", 20)
 			msg = "Chuỗi " + str(s.c) + " ngày! Quà vòng " + str(k) + ": " + _round_f(k) + ", +" + G.fmt_n(x) + " xu"
 		else:
 			x0(3)

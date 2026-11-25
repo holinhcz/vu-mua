@@ -320,8 +320,9 @@ func _r0() -> Dictionary:   # R0
 		t.seq = 1
 	if not (t.get("fam") is Dictionary):
 		t.fam = {}
-	if not (_num(t.get("gach")) and float(t.gach) >= 0.0):
-		t.gach = 0
+	if _num(t.get("gach")) and float(t.gach) > 0.0:   # (11-25) gạch cũ để riêng ở làng (thư, quà, sửa nhà) gộp vô kho vật liệu (nâng sao dùng chung)
+		G.mat_add("gach", int(t.gach))
+	t.gach = 0
 	if not (t.get("cg") is Dictionary):
 		t.cg = {}
 	if not (t.get("hive") is Dictionary):
@@ -1910,9 +1911,8 @@ func ct_give(i: int, res: String) -> void:   # ctGive
 		n = mini(left, _barn("cui"))
 		G.g.barn.cui = _barn("cui") - n
 	elif res == "gach":
-		var L := _r0()
-		n = mini(left, _i(L.get("gach")))
-		L.gach = _i(L.get("gach")) - n
+		n = mini(left, G.mat_n("gach"))   # (11-25) một kho gạch chung (g.mats)
+		G.mat_add("gach", -n)
 	else:
 		n = mini(left, int(floor(_n(G.g.coins) / 100.0)))
 		G.g.coins = _n(G.g.coins) - n * 100

@@ -43,6 +43,7 @@ var gpp = null               # bảng GIA PHẢ (ui_gp.gd)
 var ghp = null               # (bản 515) bảng GHE THƯƠNG HỒ (ui_gh.gd)
 var chop = null              # (bản 517) bảng CHỢ NỔI (ui_cho.gd)
 var lopp = null              # (bản 547) bảng LỜ LỌP (ui_lop.gd): Menu › Làm ăn › Lờ lọp
+var lgp = null               # (11-25) bảng NUNG GẠCH (ui_lg.gd): chạm lò gạch
 var ccpp = null              # (bản 535) bảng CÂU CÁ trên khung Kho (ui_ccp.gd): Giỏ cá, Mồi, Đồ nghề, Sổ cá, Cài đặt
 var tnp = null               # bảng THIÊN TAI (ui_tn.gd)
 var hdnp = null              # bảng HỘI ĐÌNH (ui_hdn.gd)
@@ -3681,7 +3682,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3689,6 +3690,11 @@ func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bản
 	close_all()
 	kho_close()
 	return get(v)
+
+func lg_open(k: String) -> void:   # (11-25) chạm lò gạch: bảng Nung gạch
+	if G.w_all == null or k == "":
+		return
+	_pan_open("lgp", "res://logic/ui_lg.gd", []).open(k)
 
 func lop_open() -> void:   # (bản 547) Menu › Làm ăn › Lờ lọp
 	if G.w_all == null:

@@ -1082,6 +1082,9 @@ func _tap_do(sp: Vector2) -> void:
 		"khohang":
 			ui.close_all()
 			ui.kho_open()
+		"logach":
+			ui.close_all()
+			ui.lg_open(String(h.k))
 		"quan":
 			ui.close_all()
 			G.w_all.WQ.giao(String(h.k))
@@ -1347,6 +1350,10 @@ func _pk_list(w: Vector2) -> Array:   # C(x, y): mọi thứ quanh chỗ chạm
 					var inside: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 					if inside or near:
 						_pk_add(L, {"type": "khohang", "i": idx}, 46, sy, px, {"gr": 3 if inside else 0, "n": on})
+			elif o.id == "logach" or o.id == "logach2":   # (11-25) lò gạch: chạm mở bảng Nung gạch
+				var inside4: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
+				if inside4 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):
+					_pk_add(L, {"type": "logach", "k": G.w_all.WX.lg_key(o) if G.w_all != null else ""}, 46, sy, px, {"gr": 3 if inside4 else 0, "n": on})
 			elif G.w_all != null and G.w_all.WL.CX.has(o.id) and int(o.get("u", 0)) > 0:   # nhà dân (ord 50)
 				var inside2: bool = tl.x >= o.gx and tl.x < o.gx + fw and tl.y >= o.gy and tl.y < o.gy + fd
 				if inside2 or lang_ve.obj_rect(idx).grow(PK_RS / ui.cz()).has_point(w):

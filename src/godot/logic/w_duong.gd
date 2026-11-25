@@ -497,7 +497,7 @@ func _tn_hv(k: String) -> int:
 	if k == "xu":
 		return int(_n(G.g.coins))
 	if k == "gach":
-		return int(_n(WL._r0().get("gach")))
+		return G.mat_n("gach")   # (11-25) một kho gạch chung (g.mats)
 	return int(_n(G.g.barn.get(k, 0)))
 
 func tn_have(q: Dictionary) -> bool:   # tnHave
@@ -519,8 +519,7 @@ func tn_take(q: Dictionary) -> void:   # tnTake
 		if k == "xu":
 			G.g.coins = _n(G.g.coins) - int(q[k])
 		elif k == "gach":
-			var lg: Dictionary = WL._r0()
-			lg.gach = int(_n(lg.get("gach"))) - int(q[k])
+			G.mat_add("gach", -int(q[k]))
 		else:
 			G.g.barn[k] = int(_n(G.g.barn.get(k, 0))) - int(q[k])
 
