@@ -9,6 +9,7 @@ extends Node2D
 const Snap = preload("res://ui/snap.gd")
 const Css = preload("res://ui/css.gd")
 const BongNuoc = preload("res://logic/bong_nuoc.gd")
+const Bong = preload("res://logic/bong.gd")
 
 var farm
 var G
@@ -89,30 +90,19 @@ class Boat extends Node2D:
 		return q
 	func _top_draw() -> void:
 		var mo: bool = v.G.motion_off()
-		if offers.size():   # món treo cây bẹo: 2 móc đầu đòn ngang + 1 móc nút giữa sào, dây mây đung đưa, món to rõ
+		if offers.size():   # món treo cây bẹo: bong bóng chung (Bong) treo dây mảnh ở 2 móc đầu đòn ngang + nút giữa sào; đã mua thì mờ
 			var hk := [_x(C * 0.58, -0.42, 73), _x(C * 0.58, 0.42, 73), _x(C * 0.58, 0, 48)]
-			var rope := Color8(0x6e, 0x52, 0x30, int(230 * al))
+			var bs: float = v.farm.sign_le() * 0.8 / sc
 			for i in offers.size():
 				var o: Dictionary = offers[i]
 				var F: Vector2 = hk[i % 3]
-				var mid := i % 3 == 2
-				var ln := 6.0 if mid else 9.0
-				var fa := 0.0 if mo else sin(tt * 1.6 + i * 1.3) * 0.14
-				var R := F + Vector2(sin(fa) * ln + (5.0 if mid else 0.0), cos(fa) * ln)
-				var dn := int(o.get("done", 0)) != 0
-				var a := al * (0.45 if dn else 1.0)
-				top.draw_line(F, R, rope, 0.55, true)
-				top.draw_circle(F, 0.8, rope)
-				var sz := 19.0
-				var ic: Texture2D = v.farm.ui.item_ic(String(o.id), sz * v.farm.main.zoom * sc) if v.farm.ui != null else null
-				if ic != null:
-					top.draw_set_transform(R, fa * 0.6, Vector2.ONE)
-					top.draw_texture_rect(ic, Rect2(-sz / 2.0, -2.0, sz, sz), false, Color(1, 1, 1, a))
-					top.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-				if dn:   # đã giao: dấu tick xanh nhỏ
-					var c := R + Vector2(sz * 0.36, sz * 0.62)
-					top.draw_circle(c, 4.2, Color8(0x2e, 0x8b, 0x4a, int(255 * al)))
-					top.draw_polyline(PackedVector2Array([c + Vector2(-2, 0), c + Vector2(-0.5, 1.6), c + Vector2(2.2, -1.6)]), Color(1, 1, 1, al), 1.2, true)
+				var ln := 4.0 if i % 3 == 2 else 6.0
+				var fa := 0.0 if mo else sin(tt * 1.6 + i * 1.3) * 0.12
+				var R := F + Vector2(sin(fa) * ln, cos(fa) * ln)
+				var a := al * (0.3 if int(o.get("done", 0)) else 1.0)
+				top.draw_line(F, R, Color8(0x6e, 0x52, 0x30, int(200 * a)), 0.3 / sc, true)
+				var hinh: Texture2D = v.farm.ui.item_ic(String(o.id), Bong.CAO * bs * v.farm.main.zoom * sc) if v.farm.ui != null else null
+				Bong.ve(top, R + Vector2(0, 10.0 * bs), bs, hinh, false, Bong.CAO, a)
 		var le: float = v.farm.sign_le()
 		var f: Font = v.farm.fnt
 		if tag != "":   # Lh: bảng tên trên ghe
