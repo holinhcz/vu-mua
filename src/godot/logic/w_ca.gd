@@ -1065,6 +1065,8 @@ func xx() -> bool:   # Xx: chạm đàn vịt
 		return false
 	if int(t.e) > 0:
 		var a := int(t.e)
+		if not G.kho_fit(a):   # (11-25) Kho đầy thì trứng còn nằm ổ, dọn Kho rồi lượm
+			return true
 		t.e = 0
 		var n := 0
 		for e in a:
