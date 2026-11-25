@@ -621,8 +621,9 @@ def gio_tre(S, rng):
     grid(S, body, 40, 120, M_DAN, (3, 0, 0), close_v=True, flip=False)
     def lid(U, V):                                  # nắp chụp: vành đứng ngắn + chỏm cong
         th = V * 2 * math.pi; rr = prof(1.0) + 0.7
-        r = np.where(U < 0.25, rr, rr * np.cos((U - 0.25) / 0.75 * 1.25))
-        z = np.where(U < 0.25, H - 1.2 + U / 0.25 * 1.8, H + 0.6 + rr * 0.3 * np.sin((U - 0.25) / 0.75 * 1.25) / np.sin(1.25))
+        a = np.clip((U - 0.25) / 0.75, 0, 1) * (np.pi / 2)          # chỏm kín tới đỉnh (trước bị thủng lỗ giữa)
+        r = np.where(U < 0.25, rr, rr * np.cos(a))
+        z = np.where(U < 0.25, H - 1.2 + U / 0.25 * 1.8, H + 0.6 + rr * 0.3 * np.sin(a))
         return np.stack([r * np.cos(th), r * np.sin(th), z], -1)
     grid(S, lid, 40, 120, M_DAN, (3, 0, 0), close_v=True, flip=False)
     def ring(z, r, rt, mat, prm=(0.4, 0.2, 0), n=48):
