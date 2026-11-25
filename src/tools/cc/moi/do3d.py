@@ -282,23 +282,17 @@ def float_(t):
         for zz in (3.85, 9.35):   # chỉ quấn 2 đầu bấc
             o.append(M(Torus((0, 0, zz), (0, 0, 1), .62, .16, 'day'), col='#2a2420'))
         o.append(met(Torus((0, 0, -.5), tuple(HF), .45, .13, 'met'), hexc('#c4ccd2'), sp=.8, pw=60))
-    elif t == 2:    # lông công: cọng + mắt công trên, bấc sơn dưới
-        b = M(Line([(0, 0, 0), (0, 0, 22)], [.32, .18], 'band'), col='#e0d6b8')
-        b.bands = [(.9, 1, '#d8422a'), (.84, .9, '#f2d02a')]
+    elif t == 2:    # lông công: cọng lông tuốt sạch, dài mảnh màu ngà; bấc sơn xanh công khoanh vàng; đỉnh sơn khoanh đỏ vàng
+        b = M(Line([(0, 0, 0), (0, 0, 2.5), (0, 0, 7), (0, 0, 12), (0, 0, 17), (0, 0, 22)], [.16, .3, .42, .34, .24, .15], 'band'), col='#e8dcbc')
+        b.bands = [(.0, .06, '#2a2420'), (.74, .79, '#d8422a'), (.79, .84, '#f2d02a'), (.84, .89, '#d8422a'), (.89, .94, '#f2d02a'), (.94, 1.0, '#d8422a')]
         o.append(b)
-        e = Ell((0, 0, 16.4), (Z, RT, HF), (3.7, 2.6, .3), 'congeye'); o.append(e)
-        for k in range(30):   # tua tơ lông quanh mép mắt
-            aa = k / 30 * 2 * math.pi
-            d_ = RT * math.cos(aa) * 2.6 + Z * math.sin(aa) * 3.7
-            c0 = V(0, 0, 16.4) + d_ * .9; c1 = V(0, 0, 16.4) + d_ * (1.22 + .06 * (k % 3))
-            o.append(M(Line([tuple(c0), tuple(c1)], [.07, .03], 'day'), col=['#8aa83a', '#6a9a4a', '#b0a040'][k % 3]))
-        for s_ in (-1, 1):    # vài sợi tơ dài thưa dọc cọng dưới mắt
-            for k in range(4):
-                zz = 10.8 + k * .9
-                o.append(M(Line([tuple(pl(0, zz)), tuple(pl(s_ * 1.4, zz + 1.6)), tuple(pl(s_ * 2.2, zz + 3.0))], [.05, .04, .02], 'day'), col='#9aa848'))
-        bq = Ell((0, 0, 7.0), (Z, RT, HF), (3.4, 1.35, 1.35), 'bandz'); bq.col = hexc('#d2aa72')
-        bq.bands = [(8.6, 10.4, '#c8342a'), (7.6, 8.0, '#f0e8d8')]
-        o.append(M(bq, sp=.45, pw=40))
+        for k in range(4):     # chỉ quấn chân
+            o.append(M(Torus((0, 0, 1.4 + k * .26), (0, 0, 1), .34, .13, 'day'), col='#2a6a8a'))
+        bq = Ell((0, 0, 7.0), (Z, RT, HF), (3.2, 1.25, 1.25), 'bandz'); bq.col = hexc('#1f7a6e')   # bấc sơn xanh lông công
+        bq.bands = [(4.0, 4.4, '#d8a838'), (6.0, 6.25, '#1e3a7a'), (7.0, 7.4, '#d8a838'), (7.75, 8.0, '#1e3a7a'), (9.6, 10.0, '#d8a838')]
+        o.append(M(bq, sp=.3, pw=30))
+        for zz in (3.75, 10.25):
+            o.append(M(Torus((0, 0, zz), (0, 0, 1), .5, .15, 'day'), col='#2a2420'))
         o.append(met(Torus((0, 0, -.4), tuple(HF), .45, .13, 'met'), hexc('#c4ccd2'), sp=.8, pw=60))
     elif t == 3:    # đèn đêm: bấc sơn cam trắng, cần nhựa trong, đầu đèn xanh tự sáng
         bq = Ell((0, 0, 6.5), (Z, RT, HF), (4.2, 1.6, 1.6), 'bandz'); bq.col = hexc('#e8782a')
