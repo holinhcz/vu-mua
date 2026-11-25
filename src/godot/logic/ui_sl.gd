@@ -373,8 +373,14 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 	elif ct:   # chưa có ảnh nướng: dựng như bảng Xây dựng (U.bdp._icon)
 		ic = _dbx(x + w * 0.5 - 15.0, y + 6.0, 30.0, 30.0, "rgba(0, 0, 0, 0)", 0.0)
 		ic.th = id
-	else:
-		ic = _icx(x + w * 0.5, y + 21.0, 30.0, id)
+	else:   # (11-25) hình dài ngang (cá, lươn): khung giãn theo phần có hình cho vừa bề ngang ô, không còn nhỏ xíu cạnh ốc / cua
+		var bb := _vis_bb(id)   # [x0, y0, x1, y1] phần có hình, theo 1 cạnh ảnh
+		var vw: float = bb[2] - bb[0]
+		var vh: float = maxf(0.05, bb[3] - bb[1])
+		var s2 := 30.0
+		if vw / vh > 1.3:
+			s2 = clampf(minf((w - 8.0) / maxf(0.05, vw), 32.0 / vh), 30.0, 56.0)
+		ic = _icx(x + w * 0.5, y + 21.0 - ((bb[1] + bb[3]) * 0.5 - 0.5) * s2, s2, id)
 	if not seen:
 		ic.sil = true
 	out.append(ic)
@@ -388,6 +394,21 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 		out.append(_dt(x, y + 40.0, w, 16.0, "?", 13.0, 800, "rgb(120, 114, 102)"))
 		c.act = _dsay.bind("Chưa có. " + ("Xây hoặc đặt ở Xây dựng." if ct else G.where(id) + "."))
 	return out
+
+static var _vis_c := {}
+func _vis_bb(id: String) -> Array:   # phần có hình (alpha) của ảnh món Kho ui/img/kh/<id>_64.webp, theo 1 cạnh ảnh; không có ảnh: cả khung
+	if _vis_c.has(id):
+		return _vis_c[id]
+	var r := [0.0, 0.0, 1.0, 1.0]
+	var raw := FileAccess.get_file_as_bytes("res://ui/img/kh/" + id + "_64.webp")
+	var im := Image.new()
+	if raw.size() and im.load_webp_from_buffer(raw) == OK:
+		var u := im.get_used_rect()
+		var n := float(maxi(1, im.get_width()))
+		if u.size.x > 0 and u.size.y > 0:
+			r = [u.position.x / n, u.position.y / n, u.end.x / n, u.end.y / n]
+	_vis_c[id] = r
+	return r
 
 # hình công trình (canvas) và bóng đen mờ của món chưa gặp
 func _wire_extra(b: Control) -> void:
