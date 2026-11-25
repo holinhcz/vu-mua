@@ -47,7 +47,7 @@ func _sig() -> String:
 	var kc := []
 	for fid in CD.KHO:
 		kc.append(cg.ui.basket_count(fid))
-	return JSON.stringify([tab, sel, kc, S.xu, S.bait, S.baits, S.rod, S.line, S.flo, S.cage, S.dex.size(), S.sound, S.music, cg.lv()])
+	return JSON.stringify([tab, sel, kc, S.xu, S.bait, S.baits, S.rod, S.line, S.flo, S.luoi, S.cage, S.dex.size(), S.sound, S.music, cg.lv()])
 
 func step(dt: float) -> void:
 	if on and (cg == null or not is_instance_valid(cg)):
@@ -245,9 +245,10 @@ func _do() -> Array:
 		out.append_array(_cell(i, y, IMG + "ic-" + kk + str(cc) + ".webp", String(L[cc].name), st, col, "got" if kk == k else "fut", func(): sel = kk; _redo()))
 	return [out, y + _rows(CD.GEAR_KEYS.size())]
 
-func _gdesc(k: String, lv: int, d: String) -> String:   # (bản 537) giỏ đựng trong vườn: không đựng cá nữa (cá vô Kho), mà giúp dính cá to
+func _gdesc(k: String, lv: int, d: String) -> String:   # giỏ đựng trong vườn: không đựng cá nữa (cá vô Kho), mà giúp dính cá hiếm
 	if k == "cage":
-		return "Cá to dễ dính hơn" + (" (bậc " + str(lv) + ")." if lv > 0 else ".") + " Cá câu được vô thẳng Kho vườn."
+		var r := int(round((float(CD.CAGE[lv].rare) - 1.0) * 100.0))
+		return ("Cá hiếm dễ dính hơn " + str(r) + "%." if r > 0 else "Chưa tăng cá hiếm.") + " Cá câu được vô thẳng Kho vườn."
 	return d
 
 func _up(k: String) -> void:

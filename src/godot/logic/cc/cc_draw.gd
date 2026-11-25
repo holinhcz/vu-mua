@@ -389,7 +389,7 @@ func _can_m() -> Dictionary:
 		_can_meta = j if typeof(j) == TYPE_DICTIONARY else {"x": 1}
 	return _can_meta
 func draw_float_shape(ci: CanvasItem, x: float, y: float, h: float, sink: float, tilt: float, tod: Dictionary, flying: bool) -> void:
-	var kind: int = clampi(game.S.flo, 0, 2)
+	var kind: int = clampi(game.S.flo, 0, D.FLO.size() - 1)
 	var nm := "phao%d" % kind
 	var m: Dictionary = _can_m().get(nm, {})
 	var tx: Texture2D = A.img("can/" + nm)
