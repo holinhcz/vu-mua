@@ -76,11 +76,15 @@ func _load_data() -> void:
 	for t in 12:
 		cells.append({"gx": 10 + t % 4, "gy": 1 + t / 4, "pc": "dong"})
 
-# (bản 536) GIÁ MÓN CHẾ BIẾN TỰ TÍNH: giá = tổng (giá nguyên liệu x số lượng) + 1 xu mỗi phút nấu (thời gian gốc trong
+# (bản 536) GIÁ MÓN CHẾ BIẾN TỰ TÍNH: giá = tổng (giá nguyên liệu x số lượng) + tiền công mỗi phút nấu (1 xu ở cối xay, tới 4 xu ở quán chè, theo cấp xưởng) (thời gian gốc trong
 # cong_thuc.json), x hệ số "k" nếu món có (bánh trung thu bán giá lễ x1,5). Tính dây chuyền (bột -> bánh, mắm -> lẩu mắm):
 # đổi giá nguyên liệu gốc (nông sản, cá, thịt, trứng... trong cay_trong / vat_pham) là mọi món dùng nó, đơn hàng có món đó,
 # Kho, chợ... tự đổi theo. vat_pham.json chỉ ghi giá hàng gốc; món có công thức không ghi "sell" nữa.
+var _xw_lv := {}   # (11-25) cấp mở từng xưởng: tiền công nấu tăng theo cấp xưởng
 func _auto_sell(R: Dictionary) -> void:
+	var XT: Dictionary = _j("che_bien/xuong")
+	for w in XT:
+		_xw_lv[w] = int(XT[w].get("lv", 1))
 	var memo := {}
 	for k in R:
 		_auto1(String(k), R, memo, {})
@@ -94,7 +98,9 @@ func _auto1(k: String, R: Dictionary, memo: Dictionary, st: Dictionary) -> float
 	var s := 0.0
 	for e in R[k]["in"]:
 		s += _auto1(String(e[0]), R, memo, st) * float(e[1])
-	s += floor(float(R[k].get("time", 0)) / 60.0)
+	# (11-25) tiền công: cối xay (cấp 2) 1 xu mỗi phút nấu -> quán chè (cấp 25) 4 xu; xưởng to lời hơn xưởng nhỏ
+	var rw := 1.0 + 3.0 * clampf((float(_xw_lv.get(String(R[k].get("w", "")), 2)) - 2.0) / 23.0, 0.0, 1.0)
+	s += floor(float(R[k].get("time", 0)) / 60.0) * rw
 	if not D.items.has(k):
 		D.items[k] = {"name": k}
 	s = round(s * float(D.items[k].get("k", 1.0)))
