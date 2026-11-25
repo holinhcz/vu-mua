@@ -10,8 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import do3d as D
 B = D.B
 from bay3d import V, nz, hexc, sstep, vnoise, Tube, Torus, Line, Ball, Box, M, Scene, F32
-from ghe3d import Cut
+from ghe3d import Cut, Ell
 import numpy as np
+B.INNER_LN = 1.0   # Link 11-25: "viền đen là gì" -> rương không nét tối trong
+B.RING_K = .82     # viền ngoài cùng tông, chỉ hơi đậm
 
 Z = V(0, 0, 1)
 _a = math.radians(32)
@@ -97,15 +99,13 @@ def albedo_r(obj, P):
         if obj.col[0] > .8 and obj.col[1] > .55:   # vàng / đồng vàng: chấm đột (punch) li ti + vệt đánh bóng sáng
             dots = sstep(.72, .8, vnoise(P, 22.0, 108))
             c = c * (1 - .22 * dots)[:, None]
-            eng = (np.abs(np.sin((x + y) * 2.6 + z * 1.3)) > .955) | (np.abs(np.sin((x - y) * 2.6 - z * 1.3)) > .955)   # chạm chéo trám
-            c = np.where(eng[:, None], c * .66, c)
             amb = vnoise(P, .8, 110)
 
             pol = sstep(.55, .9, vnoise(P * V(1, 1, 3), 1.2, 109))
             c = c * (1 - .18 * pol)[:, None] + np.minimum(obj.col * 1.25, 1)[None] * (.18 * pol)[:, None]
         if getattr(obj, 'crack', False):      # vàng thếp: rạn chân chim mảnh
             cr = (np.abs(vnoise(P, 14.0, 96) - .5) < .025) & (vnoise(P, 2.0, 107) > .5)
-            c = np.where(cr[:, None], c * .62, c)
+            pass
         return c
     if k in ('son', 'xacu', 'van', 'hoivan'):
         if k in ('son', 'xacu'):              # sơn: thớ gỗ hằn dưới sơn, rạn nhỏ, bụi đọng
@@ -183,6 +183,8 @@ def albedo_r0(obj, P):
         g = vnoise(np.stack([u * .3, v * 2, u * 0], 1).astype(F32), 1.0, 82)
         c = col[None] * (.94 + .08 * g)[:, None]
         return c * (1 - .12 * (np.exp(-(fv / .04) ** 2) + np.exp(-((1 - fv) / .04) ** 2)))[:, None]
+    if k == 'xacu' and getattr(obj, 'noinlay', False):
+        return col[None] * (.95 + .05 * vnoise(P, 2, 83))[:, None]
     if k == 'xacu':                           # sơn mài đen, khảm xà cừ: hoa 4 cánh so le, nhị vàng, trong khung
         c = np.broadcast_to(col, (n, 3)).copy() * (.93 + .1 * vnoise(P, 2, 83))[:, None]
         cu, cv = 2.05, 2.0
@@ -213,7 +215,7 @@ def R(o, k, col, lid=None, **kw):
 
 def cut(o, P0, n):
     c = Cut(o, P0, n)
-    for k_ in ('rk', 'lid', 'inlay', 'ns', 'hl', 'panels', 'linec', 'zr', 'wearc', 'ext', 'pat', 'crack'):
+    for k_ in ('rk', 'lid', 'inlay', 'ns', 'hl', 'panels', 'linec', 'zr', 'wearc', 'ext', 'pat', 'crack', 'noinlay'):
         if hasattr(o, k_): setattr(c, k_, getattr(o, k_))
     return c
 
@@ -399,6 +401,166 @@ def MAY(o_, col='#8a4a24'):
     return o_
 
 
+
+# ------------------------------------------------------------ CHẠM NỔI đề tài miền Tây (v6 11-25 Link "trơn, không hoa văn chạm khắc, không liên quan miền Nam")
+# mỗi mặt ô = hàm F(u, v) -> (điểm trên mặt, trục u, trục v, pháp tuyến); hoa văn là KHỐI nổi thật (có bóng, AO), không vẽ nét
+def F_front(Dp, sy=1):
+    def F(u, v): return W(u, sy * (Dp + .06), v), LN, Z, FN * sy
+    return F
+
+
+def F_side(L, sx=-1):
+    def F(u, v): return W(sx * (L + .06), u, v), FN * (-sx), Z, LN * sx
+    return F
+
+
+def F_lid(H, Rl):
+    def F(u, v):
+        th = v / Rl; n = FN * math.cos(th) + Z * math.sin(th); tv = -FN * math.sin(th) + Z * math.cos(th)
+        return W(u, (Rl + .06) * math.cos(th), H + (Rl + .06) * math.sin(th)), LN, tv, n
+    return F
+
+
+class Carve:
+    def __init__(s, o, col, mat='met', metal=True):
+        s.o, s.col, s.mat, s.metal = o, col, mat, metal
+
+    def put(s, ob, col=None):
+        col = col or s.col
+        if s.metal and col == s.col: s.o.append(met(ob, hexc(col)))
+        else: s.o.append(M(ob, col=col, sp=.12, pw=25))
+
+    def leaf(s, F, u, v, ang, ln, wd, th=.2, col=None, bend=-.06):
+        p, tu, tv, n = F(u, v); t = nz(tu * math.cos(ang) + tv * math.sin(ang)); b = nz(np.cross(n, t))
+        s.put(Ell(tuple(p + t * ln * .5 + n * th * .35), (tuple(t), tuple(b), tuple(n)), (ln * .52, wd, th), s.mat, bend=bend / max(ln, .3)), col)
+
+    def stem(s, F, pts, r=.13, col=None):
+        q = []
+        for (u, v) in pts:
+            p, tu, tv, n = F(u, v); q.append(tuple(p + n * r * .6))
+        s.put(Line(q, r, s.mat), col)
+
+    def ball(s, F, u, v, r, sq=.55, col=None):
+        p, tu, tv, n = F(u, v)
+        s.put(Ell(tuple(p + n * r * sq * .5), (tuple(tu), tuple(tv), tuple(n)), (r, r, r * sq), s.mat), col)
+
+    # --- đề tài
+    def frond(s, F, u0, v0, u1, v1, bow=.6, n=9, ln=1.5, col=None):
+        """tàu lá dừa nước: sống lá cong, lá chét 2 bên xiên ra, nhỏ dần về ngọn"""
+        pts = [(u0 + (u1 - u0) * t, v0 + (v1 - v0) * t + bow * math.sin(math.pi * t)) for t in np.linspace(0, 1, 14)]
+        s.stem(F, pts, .14, col)
+        for i in range(1, n + 1):
+            t = i / (n + 1); k = int(t * 13)
+            (ua, va), (ub, vb) = pts[k], pts[min(k + 1, 13)]
+            a0 = math.atan2(vb - va, ub - ua); l = ln * (1 - .55 * t)
+            for sg in (1, -1):
+                s.leaf(F, ua, va, a0 + sg * .95, l, .2, .16, col)
+
+    def dua(s, F, u, v, sc=1.0, col=None, nut=None):
+        """chùm dừa 3 trái + tàu lá xoè phía trên"""
+        for a in (-.8, .8):
+            s.frond(F, u, v + .3 * sc, u + a * 2.3 * sc, v + 1.3 * sc, bow=.35 * sc, n=6, ln=1.0 * sc, col=col)
+        s.frond(F, u, v + .3 * sc, u + .15, v + 2.0 * sc, bow=.1, n=6, ln=.9 * sc, col=col)
+        for (du, dv) in ((-.55, -.15), (.55, -.15), (0, -.75)):
+            s.ball(F, u + du * sc, v + dv * sc, .6 * sc, .6, nut)
+            p, tu, tv, n = F(u + du * sc, v + dv * sc + .45 * sc)
+            s.ball(F, u + du * sc, v + dv * sc + .5 * sc, .14 * sc, .5, col)
+
+    def fish(s, F, u, v, d=1, sc=1.0, col=None, eye='#1a1208'):
+        """cá lóc: thân dài cong nhẹ, đầu bẹt to, vảy theo hàng gờ, vây lưng + vây hậu môn chạy dài có tia, đuôi tròn có tia, vây ngực, mắt"""
+        def P(du, dv):
+            return F(u + d * du * sc, v + dv * sc)
+        def bod(du):          # thân uốn sóng nhẹ
+            return .18 * math.sin(du * 1.4)
+        # thân: chuỗi elip nối nhau theo đường cong
+        for du, r in ((1.0, .5), (.45, .55), (-.15, .52), (-.75, .45), (-1.3, .34), (-1.75, .24)):
+            p, tu, tv, n = P(du, bod(du)); t = tu * d
+            b = nz(np.cross(n, t))
+            s.put(Ell(tuple(p + n * r * .3 * sc), (tuple(t), tuple(b), tuple(n)), (.48 * sc, r * sc, r * .55 * sc), s.mat), col)
+        # đầu bẹt + miệng
+        p, tu, tv, n = P(1.55, bod(1.55)); t = tu * d; b = nz(np.cross(n, t))
+        s.put(Ell(tuple(p + n * .16 * sc), (tuple(t), tuple(b), tuple(n)), (.5 * sc, .44 * sc, .26 * sc), s.mat), col)
+        s.stem(F, [(u + d * 1.7 * sc, v + (bod(1.7) - .12) * sc), (u + d * 2.02 * sc, v + bod(1.9) * sc), (u + d * 1.7 * sc, v + (bod(1.7) + .1) * sc)], .05 * sc, col)
+        # nắp mang
+        s.stem(F, [(u + d * (1.15 + .18 * math.cos(a)) * sc, v + (bod(1.1) + .4 * math.sin(a)) * sc) for a in np.linspace(-1.2, 1.2, 7)], .06 * sc, col)
+        # vảy: hàng vòng cung nhỏ
+        for du in np.arange(.85, -1.4, -.3):
+            for dv in (-.25, 0, .25):
+                if abs(dv) > .3 - abs(du + .2) * .05: continue
+                c0 = v + (bod(du) + dv) * sc
+                s.stem(F, [(u + d * (du + .12 * math.cos(a)) * sc, c0 + .13 * math.sin(a) * sc) for a in np.linspace(-1.4, 1.4, 5)], .035 * sc, col)
+        # vây lưng + vây hậu môn: màng + tia
+        for side, du0, du1, h in ((1, .8, -1.55, .42), (-1, -.1, -1.55, .32)):
+            for du in np.linspace(du0, du1, 9):
+                y0 = bod(du) + side * .45 * (1 - .4 * abs(du + .3) / 1.3)
+                s.stem(F, [(u + d * du * sc, v + y0 * sc), (u + d * (du - .15) * sc, v + (y0 + side * h) * sc)], .045 * sc, col)
+            pts = [(u + d * (du - .15) * sc, v + (bod(du) + side * (.45 * (1 - .4 * abs(du + .3) / 1.3) + h)) * sc) for du in np.linspace(du0, du1, 9)]
+            s.stem(F, pts, .06 * sc, col)
+        # đuôi tròn có tia
+        tb = -1.95; y = bod(tb)
+        for a in np.linspace(-.9, .9, 7):
+            s.stem(F, [(u + d * tb * sc, v + y * sc), (u + d * (tb - .7 * math.cos(a)) * sc, v + (y + .7 * math.sin(a)) * sc)], .06 * sc, col)
+        s.stem(F, [(u + d * (tb - .7 * math.cos(a)) * sc, v + (y + .7 * math.sin(a)) * sc) for a in np.linspace(-.95, .95, 9)], .07 * sc, col)
+        # vây ngực
+        s.leaf(F, u + d * .85 * sc, v + (bod(.85) - .15) * sc, math.atan2(-.8, -d), .55 * sc, .16 * sc, .07 * sc, col)
+        p, tu, tv, n = P(1.45, bod(1.45) + .14)
+        s.o.append(M(Ball(tuple(p + n * .42 * sc), .11 * sc, 'cam'), col=eye))
+
+    def waves(s, F, u0, u1, v, sc=1.0, col=None):
+        """sóng nước cuộn: 2 lớp vòng cung + xoáy cuộn ở đỉnh, kiểu sóng chạm gỗ Nam Bộ"""
+        w = 1.2 * sc; u = u0
+        while u + w <= u1 + .01:
+            for k, (dv, amp, rr) in enumerate(((0, .5, .12), (-.4, .3, .08))):
+                s.stem(F, [(u + w * t, v + dv * sc + amp * sc * math.sin(math.pi * t)) for t in np.linspace(0, 1, 9)], rr * sc, col)
+            cx, cy = u + w * .62, v + .45 * sc
+            s.stem(F, [(cx + .3 * sc * (1 - a / 7) * math.cos(a), cy + .3 * sc * (1 - a / 7) * math.sin(a)) for a in np.linspace(0, 5.5, 11)], .08 * sc, col)
+            s.ball(F, cx, cy, .08 * sc, .8, col)
+            u += w
+
+    def flower(s, F, u, v, sc=1.0, col=None, petal=None):
+        """bông sen nở 2 tầng cánh có gân giữa, gương sen có hạt"""
+        pc = petal or col
+        for ang, l, w in ((90, 1.25, .38), (55, 1.12, .36), (125, 1.12, .36), (22, .9, .32), (158, .9, .32), (-5, .62, .26), (185, .62, .26)):
+            s.leaf(F, u, v, math.radians(ang), l * sc, w * sc, .2 * sc, pc, bend=-.15)
+            a = math.radians(ang)
+            s.stem(F, [(u + .25 * sc * math.cos(a), v + .25 * sc * math.sin(a)), (u + l * .85 * sc * math.cos(a), v + l * .85 * sc * math.sin(a))], .04 * sc, col)
+        for ang in (72, 108, 40, 140):          # tầng cánh trong
+            s.leaf(F, u, v + .05 * sc, math.radians(ang), .7 * sc, .24 * sc, .3 * sc, pc, bend=-.2)
+        s.ball(F, u, v + .1 * sc, .34 * sc, .55, col)
+        for a in np.linspace(0, 2 * math.pi, 6, endpoint=False):
+            s.ball(F, u + .17 * sc * math.cos(a), v + .1 * sc + .14 * sc * math.sin(a), .07 * sc, 1.0, '#8a5a14' if s.metal else None)
+        s.leaf(F, u, v - .1 * sc, math.radians(-90), .5 * sc, .22 * sc, .14 * sc, col)  # đài
+
+    def pad(s, F, u, v, r, col=None):
+        """lá sen: đĩa có khía chữ V, mép cuộn nổi, gân toả dày từ rốn lá"""
+        p, tu, tv, n = F(u, v)
+        s.put(Ell(tuple(p + n * .08), (tuple(tu), tuple(tv), tuple(n)), (r, r * .8, .1), s.mat), col)
+        gap = .35
+        rim = [(u + r * .97 * math.cos(a), v + r * .78 * math.sin(a)) for a in np.linspace(math.pi * 1.5 + gap, math.pi * 3.5 - gap, 26)]
+        s.stem(F, rim, .1, col)
+        s.stem(F, [rim[0], (u, v)], .08, col); s.stem(F, [rim[-1], (u, v)], .08, col)
+        for a in np.linspace(math.pi * 1.5 + gap + .3, math.pi * 3.5 - gap - .3, 9):
+            s.stem(F, [(u, v), (u + r * .55 * math.cos(a) - .08 * math.sin(a), v + r * .44 * math.sin(a)), (u + r * .92 * math.cos(a), v + r * .74 * math.sin(a))], .07, col)
+        s.ball(F, u, v, .16, .8, col)
+
+    def vine(s, F, pts, col=None, leafc=None, r=.16, every=2):
+        """dây sen uốn: cọng uốn mềm, lá nhỏ + tua cuộn xoắn mọc so le"""
+        q = []
+        for i in range(len(pts) - 1):
+            (ua, va), (ub, vb) = pts[i], pts[i + 1]
+            for t in np.linspace(0, 1, 7)[:-1]:
+                q.append((ua + (ub - ua) * t, va + (vb - va) * t + .25 * math.sin(math.pi * t) * (1 if i % 2 else -1)))
+        q.append(pts[-1])
+        s.stem(F, q, r, col)
+        for i in range(2, len(q) - 2, every):
+            (ua, va), (ub, vb) = q[i], q[i + 1]
+            a0 = math.atan2(vb - va, ub - ua); sg = 1 if (i // every) % 2 else -1
+            if (i // every) % 3 == 0:
+                cx, cy = ua + .35 * math.cos(a0 + sg * 1.4), va + .35 * math.sin(a0 + sg * 1.4)
+                s.stem(F, [(ua, va)] + [(cx + .3 * (1 - k / 9) * math.cos(a0 + sg * (3.5 - k * .7)), cy + .3 * (1 - k / 9) * math.sin(a0 + sg * (3.5 - k * .7))) for k in range(9)], .06, col)
+            else:
+                s.leaf(F, ua, va, a0 + sg * 1.0, .75, .22, .14, leafc or col, bend=-.1)
+
 # ------------------------------------------------------------ 4 bậc
 from ghe3d import Ell
 
@@ -438,7 +600,7 @@ def ruong(t):
         L, Dp, H = 8.6, 5.6, 7.6
         xs = L * .58; lay = layout(L, Dp, H, xs)
         PAT[tuple(np.round(hexc('#565a62'), 3))] = hexc('#7a4a2a'); PAT[tuple(np.round(hexc('#e0a23a'), 3))] = hexc('#6a7a4a')
-        Rl = body(o, L, Dp, H, 'van', '#c8783a', sp=.08, pw=12, deco=(lay, hexc('#6a3a1a')), wearc='#e0a868')
+        Rl = body(o, L, Dp, H, 'van', '#c8783a', sp=.08, pw=12, deco=(lay, hexc('#d89050')), wearc='#e0a868')
         IRON, BR = '#565a62', '#e0a23a'
         ledges(o, L, Dp, H, '#a8602c', linec='#5a2e12')
         frames(o, lay, '#a05a28', mat='gox')
@@ -458,6 +620,14 @@ def ruong(t):
         o.append(met(Box(tuple(c + FN * .95 - Z * 3.3), AX, (1.05, .45, .9), 'met', rr=.3), hexc('#3e4248')))
         keyhole(o, c + FN * 1.42 - Z * 3.3, .9)
         handle(o, L, H, IRON, r=1.1)
+        C = Carve(o, '#b0662c', mat='gox', metal=False)                    # chạm nổi gỗ: chùm dừa + tàu lá dừa nước
+        Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
+        for sx in (1, -1):
+            C.dua(Ff, sx * (xs + L) / 2, 3.2, sc=.62, nut='#a85e28')
+            C.dua(Fl, sx * (xs + L) / 2, 4.2, sc=.6, nut='#a85e28')
+        C.frond(Fs, -4.4, 1.8, 4.4, 2.4, bow=.5, n=9, ln=1.2)
+        C.frond(Fl, -4.0, 2.6, 4.0, 3.2, bow=1.0, n=10, ln=1.6)
+        C.frond(Fl, 4.0, 6.8, -4.0, 6.2, bow=-1.0, n=10, ln=1.6)
     elif t == 3:    # sơn xanh ngọc, ô khung nổi vàng + chỉ vàng vẽ trong ô, gờ hồi văn vàng, đai vàng đồng, LOGO SEN VÀNG hột đỏ trên đĩa
         L, Dp, H = 9.0, 5.8, 7.8
         xs = L * .6; lay = layout(L, Dp, H, xs)
@@ -477,6 +647,18 @@ def ruong(t):
         keyhole(o, c + FN * .5 - Z * 1.85, .8)
         o.append(met(Box(tuple(W(0, Rl + .3, H + .45)), AX, (.6, .22, .9), 'met', rr=.12), hexc(BR)))
         handle(o, L, H, BR, r=1.3)
+        C = Carve(o, '#e6ae3e')                                              # chạm nổi thếp vàng: cá lóc vượt sóng, sen súng
+        Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
+        for sx in (1, -1):
+            C.pad(Ff, sx * (xs + L) / 2, 2.2, 1.1)
+            C.flower(Ff, sx * (xs + L) / 2, 4.5, sc=1.15)
+            C.stem(Ff, [(sx * (xs + L) / 2, 4.2), (sx * (xs + L) / 2 + .25, 3.1), (sx * (xs + L) / 2, 2.3)], .14)
+        C.waves(Fs, -4.6, 4.6, 1.5, sc=.95)
+        C.waves(Fl, -4.0, 4.0, 2.2, sc=1.1)
+        C.fish(Fl, -.4, 4.0, d=1, sc=1.25); C.fish(Fl, .6, 6.4, d=-1, sc=1.05)
+        for sx in (1, -1):
+            C.pad(Fl, sx * (xs + L) / 2, 3.0, 1.1); C.flower(Fl, sx * (xs + L) / 2, 5.4, sc=1.0)
+            C.stem(Fl, [(sx * (xs + L) / 2, 5.0), (sx * (xs + L) / 2 - sx * .3, 4.0), (sx * (xs + L) / 2, 3.0)], .12)
     else:           # sơn son ĐỎ thếp vàng: ô khung vàng khảm xà cừ, gờ hồi văn vàng, LOGO SEN VÀNG TO hột ruby trên đĩa đỏ + vòng ngọc, núm búp sen
         L, Dp, H = 9.4, 6.0, 8.0
         xs = L * .5; lay = layout(L, Dp, H, xs)
@@ -506,6 +688,23 @@ def ruong(t):
             ax_ = nz(Z + d * .35); pp = nz(np.cross(ax_, d))
             o.append(met(Ell(tuple(top + Z * .95 + d * .5), (tuple(ax_), tuple(pp), tuple(d)), (1.05, .42, .2), 'met'), hexc(GD)))
         handle(o, L, H, GD, r=1.4)
+        for ob in o:
+            if getattr(ob, 'rk', None) == 'xacu': ob.noinlay = True
+        C = Carve(o, GD)                                                       # chạm lộng kiểu tủ thờ Nam Bộ: dây sen, lá sen, bông sen cẩn xà cừ
+        Ff, Fs, Fl = F_front(Dp), F_side(L), F_lid(H, Rl)
+        PE = '#f2eee2'
+        for sx in (1, -1):
+            uc = sx * (xs + L) / 2
+            C.pad(Ff, uc, 2.3, .9)
+            C.vine(Ff, [(uc, 2.3), (uc - sx * .4, 3.3), (uc, 4.2)], leafc=PE, r=.12, every=3)
+            C.flower(Ff, uc, 4.7, sc=1.1, petal=PE)
+        C.vine(Fs, [(-4.6, 1.9), (-2.5, 2.6), (0, 2.0), (2.5, 2.6), (4.6, 1.9)], r=.13)
+        C.vine(Fl, [(-4.2, 3.4), (-2.6, 4.6), (-1.2, 3.0), (0, 3.6), (1.2, 3.0), (2.6, 4.6), (4.2, 3.4)], leafc=PE, r=.16)
+        C.flower(Fl, -2.6, 5.3, sc=1.2, petal=PE); C.flower(Fl, 2.6, 5.3, sc=1.2, petal=PE)
+        C.pad(Fl, 0, 5.6, 1.0); C.pad(Fl, -3.9, 6.6, .8); C.pad(Fl, 3.9, 6.6, .8)
+        for sx in (1, -1):
+            uc = sx * (xs + L) / 2
+            C.flower(Fl, uc, 5.0, sc=.85, petal=PE); C.pad(Fl, uc, 2.6, .8)
     return Scene(o)
 
 

@@ -412,7 +412,7 @@ def render(scene, name, water=True):
         gd = np.maximum(gd, dep - nb)
     ln = (gd > .6) & (a > 0)
     ln = ndi.binary_dilation(ln, iterations=max(1, SSA // 3))
-    rgb = np.where(ln[..., None], rgb * .55, rgb)
+    rgb = np.where(ln[..., None], rgb * INNER_LN, rgb)
     outs = []
     for wv in ([False, True] if water else [False]):
         r2 = rgb.copy(); a2 = a.copy()
@@ -435,6 +435,10 @@ def render(scene, name, water=True):
     return outs, (round(float(ax_), 2), round(float(ay_), 2))
 
 
+INNER_LN = .55   # độ tối nét trong (1 = tắt)
+RING_K = .42     # màu viền ngoài = màu mép x RING_K (1 = cùng tông)
+
+
 def outline(rgb, a, a_full):
     """viền ngoài mảnh màu tối của chỗ sát mép (như cá câu)"""
     w = int(SSA * 1.0) | 1
@@ -443,7 +447,7 @@ def outline(rgb, a, a_full):
     ring = np.clip(dil - a_full, 0, 1)
     num = ndi.gaussian_filter(rgb * a_full[..., None], (SSA * 2, SSA * 2, 0))
     den = ndi.gaussian_filter(a_full, SSA * 2)[..., None] + 1e-4
-    ec = np.clip(num / den * .42, 0, 1)
+    ec = np.clip(num / den * RING_K, 0, 1)
     al = np.clip(a + ring * (a_full.max() and 1), 0, 1)
     al = np.maximum(a, ring * .95)
     out = rgb * a[..., None] + ec * (ring * .95)[..., None] * (1 - a[..., None])
