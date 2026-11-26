@@ -34,7 +34,7 @@ func _build() -> void:
 	var L := []
 	if E.N8():
 		L.append(["7", "Quà 7 ngày đầu", E.Cp()])
-	L.append(["m", "Điểm danh tháng", E.q9() or E.nF() > 0])
+	L.append(["m", "Điểm danh tháng", (E.q9() or E.nF() > 0) and L.size() > 0])   # (11-26) còn mỗi tab này thì bỏ chấm đỏ
 	var sh := _kshell(L, cd, _tab_go)
 	var r: Array = _tab7() if cd == "7" else _tabm()
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
@@ -111,7 +111,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var hy := 12.0
 	var mt := "Tháng " + str(E.q8() % 100)
 	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
-	out.append(_onbtn(X0, hy - 3.0, mw, 24.0, mt, null, true))
+	out.append(_mua_chip(_onbtn(X0, hy - 3.0, mw, 24.0, mt, null, true)))
 	var tx := X0 + mw + 8.0
 	var t1 := "Đã điểm danh "
 	var w1: float = Box.text_w(t1, 12.0, 700)
@@ -152,7 +152,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var bot := 38.0 + (18.0 if misses > 0 else 0.0)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
+	var bot := 56.0 + (18.0 if misses > 0 else 0.0)   # (11-26) + chừa chóp đỏ đáy khung   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
 	var cw := (XW - g * 6.0) / 7.0
@@ -184,7 +184,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
 		out.append(_dt(X0, ey, XW, 16.0, fs, 10.5, 600, SUB))
 		ey += 20.0
-	return [out, ey + 8.0]
+	return [out, ey + 26.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
 	var got: bool = E.got(w)
@@ -196,6 +196,10 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var kind := "got" if got else ("now" if now else ("miss" if miss else ("sen" if big else "fut")))
 	var op := 0.5 if miss else 1.0
 	var c := _chip(x, y, cw, rh, kind)
+	c.css = c.css.duplicate()
+	c.css["border-radius"] = _cpx(6.0)   # (11-26) ô ngày bo ít: góc không lẹm số ngày
+	if now:   # hôm nay: gờ vàng dày, nổi hẳn
+		c.css["box-shadow"] = "rgb(200, 132, 20) 0px 0px 0px 1.2px inset, rgb(255, 214, 90) 0px 0px 0px 2.8px inset, rgb(236, 176, 50) 0px 0px 0px 3.6px inset, rgba(214, 150, 20, 0.35) 0px 0px 6px 4px inset"
 	var s := minf(cw - 6.0, rh - 13.0)
 	var kids := [_dt(x + 4.0, y + 2.5, 18.0, 10.0, str(w), 8.25, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
 		_dick(x + cw * 0.5, y + rh - s * 0.5 - 3.0, s, String(gd.ic), op)]

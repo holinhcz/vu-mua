@@ -220,6 +220,16 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false)
 		n.act = cb
 	return n
 
+# (11-26) chip mùa: xuân hồng đào, hạ cam nắng, thu xanh nước, khô vàng (Trời đất, Điểm danh)
+const MUA_C := ["linear-gradient(rgb(242, 138, 168) 0%, rgb(230, 108, 146) 50%, rgb(217, 85, 126) 100%)",
+	"linear-gradient(rgb(247, 181, 71) 0%, rgb(236, 158, 48) 50%, rgb(224, 138, 30) 100%)",
+	"linear-gradient(rgb(91, 179, 224) 0%, rgb(68, 156, 208) 50%, rgb(46, 134, 193) 100%)",
+	"linear-gradient(rgb(242, 198, 75) 0%, rgb(228, 176, 50) 50%, rgb(212, 154, 30) 100%)"]
+func _mua_chip(b: Dictionary) -> Dictionary:   # nút _onbtn -> chip màu mùa hiện tại, gờ vàng
+	b.css["background-image"] = MUA_C[G.season()]
+	b.css["box-shadow"] = Snap.SEN_VIEN
+	return b
+
 # hình quà vẽ trong khung 64 mà độ đầy khác nhau (đồng xu nhỏ, hộp quà to): phóng theo loại cho cùng cỡ nhìn
 const ICK := {"coin": 1.35, "pearl": 1.08, "crate": 1.0, "bua": 1.0, "che": 0.9, "gift": 0.8}
 func _dick(cx: float, cy: float, s: float, ic: String, op := 1.0) -> Dictionary:   # hình quà loại ic, tâm (cx, cy)
