@@ -190,7 +190,7 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	# (11-26) bộ sen: mọi chip viền vàng kép như ảnh mẫu: vàng đậm 2px, chỉ kem, chỉ vàng nhạt bên trong
 	sh = SEN_BD + sh.substr(sh.find(")") + 1)
 	# viền vàng kim như ảnh mẫu: nét nâu vàng ngoài 1px, dải vàng 3px sáng phía trên, sậm phía dưới
-	sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 1px inset, rgb(255, 236, 150) 0px 1.5px 0px 1px inset, rgb(214, 140, 40) 0px -1.5px 0px 1px inset, rgb(242, 190, 72) 0px 0px 0px 3.5px inset, rgba(150, 100, 30, 0.45) 0px 0px 0px 4.3px inset")
+	sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 1px inset, rgb(250, 214, 110) 0px 0px 0px 2.2px inset, rgb(236, 184, 70) 0px 0px 0px 3.5px inset, rgba(150, 100, 30, 0.45) 0px 0px 0px 4.3px inset")   # dải vàng đều 4 cạnh
 	var L := sh.split(") 0px 1px 2px 0px")   # bỏ lớp bóng đổ mờ dưới chip (lớp cuối, không inset)
 	if L.size() > 1:
 		sh = L[0].substr(0, L[0].rfind(", "))
@@ -226,6 +226,11 @@ func _dick(cx: float, cy: float, s: float, ic: String, op := 1.0) -> Dictionary:
 	var svg: String = D.ic[ic] if D.ic.has(ic) else String(D.ddms.kids[1].kids[3].kids[0].svg)
 	var z := s * float(ICK.get(ic, 1.0))
 	return _dic(cx - z * 0.5, cy - z * 0.5, z, svg, op)
+
+func _dsvg(x: float, y: float, w: float, h: float, svg: String) -> Dictionary:   # hình svg chữ nhật w x h (svg viewBox đúng w h)
+	var n := _dic(x, y, w, svg)
+	n.r = [x, y, w, h]
+	return n
 
 func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
 	var n: Dictionary = D.cell.fut.kids[1].duplicate(false)   # (bản 475) chép nông

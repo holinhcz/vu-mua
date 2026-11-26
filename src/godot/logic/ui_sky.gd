@@ -43,6 +43,46 @@ func _wic(cx: float, cy: float, s: float, f: String) -> Dictionary:   # hình th
 	var z := s * float(w[0])
 	return _dic(cx - z * 0.5, cy - z * 0.5 + s * float(w[1]), z, String(SK.ic[f]))
 
+# (11-26) trang trí vẽ tay (svg): mây + cỏ ô dự báo, hoa văn cuộn vàng góc thẻ "Bây giờ"
+static func _sv_sky(w: float, h: float, dark := false) -> String:
+	var W := str(w)
+	var H := str(h)
+	var c := "#ffffff" if not dark else "#c9cfee"
+	var s := "<svg xmlns='http://www.w3.org/2000/svg' width='" + W + "' height='" + H + "' viewBox='0 0 " + W + " " + H + "'>"
+	s += "<defs><clipPath id='k'><rect x='4' y='4' width='" + str(w - 8.0) + "' height='" + str(h - 8.0) + "' rx='9'/></clipPath>"
+	s += "<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#7cc95a'/><stop offset='1' stop-color='#3e9a3a'/></linearGradient>"
+	s += "<linearGradient id='g2' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#a6dc72'/><stop offset='1' stop-color='#58b046'/></linearGradient></defs><g clip-path='url(#k)'>"
+	for cl in [[0.1, 0.5, 1.0], [0.9, 0.44, 0.8]]:   # mây trắng nhỏ mờ hai bên
+		var x := float(cl[0]) * w
+		var y := float(cl[1]) * h
+		var z := float(cl[2]) * h * 0.06
+		s += "<g fill='" + c + "' opacity='0.7'><ellipse cx='" + str(x) + "' cy='" + str(y) + "' rx='" + str(z * 2.4) + "' ry='" + str(z * 0.8) + "'/>"
+		s += "<circle cx='" + str(x - z * 0.9) + "' cy='" + str(y - z * 0.4) + "' r='" + str(z * 0.9) + "'/><circle cx='" + str(x + z * 0.5) + "' cy='" + str(y - z * 0.7) + "' r='" + str(z * 1.15) + "'/></g>"
+	for side in [0, 1]:   # bụi lá tròn hai góc dưới
+		var bx := 3.0 if side == 0 else w - 3.0
+		var d := 1.0 if side == 0 else -1.0
+		var by := h - 3.0
+		for lf in [[1.0, 13.0, -0.55, "g"], [7.0, 15.0, -0.15, "g2"], [13.0, 10.0, 0.35, "g"]]:   # [cách góc, dài, nghiêng]
+			var k := h / 90.0
+			var x0 := bx + d * float(lf[0]) * k
+			var L := float(lf[1]) * k
+			var an := float(lf[2])
+			var tx := x0 + d * (L * sin(an + 0.6))
+			var ty := by - L * cos(an)
+			var wd := L * 0.55
+			s += "<path fill='url(#" + String(lf[3]) + ")' stroke='#3a8a32' stroke-width='0.5' d='M" + str(x0) + " " + str(by) + " C" + str(x0 - d * wd) + " " + str(by - L * 0.5) + " " + str(tx - d * wd * 0.4) + " " + str(ty) + " " + str(tx) + " " + str(ty) + " C" + str(tx + d * wd * 0.9) + " " + str(ty + L * 0.3) + " " + str(x0 + d * wd) + " " + str(by - L * 0.2) + " " + str(x0) + " " + str(by) + "Z'/>"
+			s += "<path fill='none' stroke='#9bd46a' stroke-width='0.6' d='M" + str(x0) + " " + str(by) + " Q" + str((x0 + tx) * 0.5) + " " + str(by - L * 0.55) + " " + str(tx) + " " + str(ty) + "'/>"
+	return s + "</g></svg>"
+
+static func _sv_cuon(sz: float, flip: bool) -> String:   # hoa văn cuộn vàng góc dưới (trái; flip = góc phải)
+	var S := str(sz)
+	var t := " transform='translate(" + S + " 0) scale(-1 1)'" if flip else ""
+	return "<svg xmlns='http://www.w3.org/2000/svg' width='" + S + "' height='" + S + "' viewBox='0 0 20 20'><g" + t + " fill='none' stroke-linecap='round'>" \
+		+ "<path d='M3 17 C3 11 6 7 12 6 C15 5.6 16.5 7.5 15.5 9.5 C14.6 11.2 12 11 11.6 9.4 C11.3 8.3 12.5 7.6 13.2 8.2' stroke='#b27a24' stroke-width='2.4'/>" \
+		+ "<path d='M3 17 C3 11 6 7 12 6 C15 5.6 16.5 7.5 15.5 9.5 C14.6 11.2 12 11 11.6 9.4 C11.3 8.3 12.5 7.6 13.2 8.2' stroke='#f2c860' stroke-width='1.2'/>" \
+		+ "<path d='M3 17 C7 17 10 15.5 11 13' stroke='#b27a24' stroke-width='2.2'/><path d='M3 17 C7 17 10 15.5 11 13' stroke='#f2c860' stroke-width='1.1'/>" \
+		+ "<circle cx='3.2' cy='16.8' r='1.6' fill='#e6b448' stroke='#b27a24' stroke-width='0.8'/></g></svg>"
+
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
 	return "wx_" + (f if f in ["nang", "han", "rao", "mua"] else "nang")
 
@@ -179,6 +219,8 @@ func _tabt() -> Array:
 		_dt(tx0, ty0 + 12.0 + lg, tw0, 20.0, String(G.troi.TEN[a]), 17.0, 800, BROWN, "left")]
 	for li in hl.size():
 		nc.kids.append(_dt(tx0, ty0 + 32.0 + lg * 2.0 + li * 13.0, tw0, 13.0, String(hl[li]), 10.5, 600, SUB, "left"))
+	nc.kids.append(_dsvg(X0 + 4.0, ny + nh - 22.0, 18.0, 18.0, _sv_cuon(18.0, false)))
+	nc.kids.append(_dsvg(X0 + XW - 22.0, ny + nh - 22.0, 18.0, 18.0, _sv_cuon(18.0, true)))
 	nc.act = _dsay.bind(HQF[a])
 	out.append(nc)
 	# dự báo 3 buổi kế tiếp (bỏ khuya)
@@ -204,7 +246,7 @@ func _tabt() -> Array:
 		var x := X0 + i * (cw + g)
 		var yy := gy
 		var cc := _chip(x, yy, cw, ch, "fc")
-		cc.kids = [_dt(x, yy + fg, cw, 13.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 11.0, 800, BROWN),
+		cc.kids = [_dsvg(x, yy, cw, ch, _sv_sky(cw, ch, posmod(c, 4) == 3)), _dt(x, yy + fg, cw, 13.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 11.0, 800, BROWN),
 			_wic(x + cw * 0.5, yy + fg + 15.0 + isz * 0.5, isz, f),
 			_dt(x + 2.0, yy + fg + 18.0 + isz, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 12.5, 800, cw - 4.0), 12.5, 800, BROWN)]
 		cc.act = _dsay.bind(TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")) + ": " + String(G.troi.TEN[f]) + ". " + HQF[f])
