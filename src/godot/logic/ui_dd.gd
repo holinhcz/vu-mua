@@ -159,7 +159,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var bot := 56.0 + (18.0 if misses > 0 else 0.0)   # (11-26) + chừa chóp đỏ đáy khung   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
+	var bot := 60.0   # (11-26) hàng bù + nút hôm nay, chừa chóp đỏ đáy khung   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
 	var cw := (XW - g * 6.0) / 7.0
@@ -178,22 +178,24 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		if gi >= 35:
 			gi -= 35
 		out.append(_dday(w, gx + (gi % 7) * (cw + g), gy + (gi / 7) * (rh + g), cw, rh, M))
-	# 3. hôm nay: nút vàng (chưa nhận) / một dòng (đã nhận), dòng bù
+	# 3. (11-26) một hàng: trái 2 dòng bù ngày lỡ, phải nút Điểm danh hôm nay (đã nhận: chữ xanh)
 	var ty := gy + rows * (rh + g) + 4.0
-	var gd: Dictionary = E.aF(r)
+	var bw2 := 150.0
+	var bx2 := X0 + XW - bw2
 	if E.q9():
-		out.append(_onbtn(X0 + (XW - 170.0) * 0.5, ty, 170.0, 28.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
+		out.append(_onbtn(bx2, ty, bw2, 30.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
 	else:
-		var t := "✓ Đã nhận hôm nay" + ((" · Mai: " + String(E.aF(r + 1).t)) if r < o else "")
-		out.append(_dt(X0, ty, XW, 28.0, t, 11.0, 700, GREEN))
-	var ey := ty + 36.0
+		out.append(_dt(bx2, ty, bw2, 15.0, "✓ Đã nhận hôm nay", 11.0, 800, GREEN))
+		if r < o:
+			out.append(_dt(bx2, ty + 15.0, bw2, 14.0, _fitw("Mai: " + String(E.aF(r + 1).t), 10.0, 700, bw2), 10.0, 700, SUB))
 	if misses > 0:
-		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
-		var fw2: float = Box.text_w(fs, 11.5, 800) + 24.0   # (11-26) dòng bù: chữ đậm trên chip kem viền vàng, nổi rõ
-		var fc := _chip(X0 + (XW - fw2) * 0.5, ey - 3.0, fw2, 22.0, "fut")
-		fc.kids = [_dt(X0 + (XW - fw2) * 0.5, ey - 3.0, fw2, 22.0, fs, 11.5, 800, "rgb(150, 40, 40)" if M < 5 else BROWN)]
-		out.append(fc)
-		ey += 20.0
+		var lw2 := XW - bw2 - 8.0
+		if M < 5:
+			out.append(_dt(X0 + 2.0, ty, lw2, 15.0, "Bù ngày lỡ", 12.0, 800, "rgb(150, 40, 40)", "left"))
+			out.append(_dt(X0 + 2.0, ty + 15.0, lw2, 14.0, "còn " + str(5 - M) + " lần · " + str(3 + M) + " sen/lần", 10.5, 700, BROWN, "left"))
+		else:
+			out.append(_dt(X0 + 2.0, ty + 7.0, lw2, 15.0, "Hết lượt bù tháng này", 11.0, 700, SUB, "left"))
+	var ey := ty + 34.0
 	return [out, ey + 26.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
