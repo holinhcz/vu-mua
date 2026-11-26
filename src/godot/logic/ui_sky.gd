@@ -140,9 +140,10 @@ func _build() -> void:
 		if W.WH.mm(o + r) != null:
 			lehot = true
 	var tn_mai: bool = W.WL.tn_ok() and W.WL.tn_on(o + 1) != null
-	if not _wsv.has("nang"):
-		_wsv["nang"] = Css.img_svg(WPIC["nang"])
-	var sh := _kshell([["t", "Thời tiết", tn_mai, _wsv["nang"]], ["l", "Lịch làng", lehot, _sic("lich")]], cd, _tab_go)
+	var tw: String = _now_w()   # icon tab theo thời tiết bây giờ (3 loại: nắng đẹp, nắng hạn, mưa dầm; mưa rào xài mưa dầm)
+	if not WPIC.has(tw):
+		tw = "mua" if tw == "rao" else "nang"
+	var sh := _kshell([["t", "Thời tiết", tn_mai, _wsv_get(tw)], ["l", "Lịch làng", lehot, _sic("lich")]], cd, _tab_go)
 	var r: Array = _tabt() if cd == "t" else _tabl()
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
