@@ -390,7 +390,7 @@ static func _sen_close(n: Dictionary, B: Array) -> void:   # #pClose trong khung
 			n.r = k.r.duplicate()
 
 const SEN_DO := "linear-gradient(rgb(234, 88, 96) 0%, rgb(214, 52, 64) 50%, rgb(182, 32, 44) 100%)"
-const SEN_VIEN := "rgb(170, 112, 36) 0px 0px 0px 1px inset, rgb(250, 214, 110) 0px 0px 0px 2.2px inset, rgb(236, 184, 70) 0px 0px 0px 3px inset"   # viền vàng đều 4 cạnh (như chip nền)
+const SEN_VIEN := "rgb(252, 216, 110) 0px 0px 0px 1.2px inset, rgb(232, 180, 66) 0px 0px 0px 3px inset, rgba(0, 0, 0, 0.6) 0px 0px 5px 3.2px inset"   # viền vàng (không nét tối ngoài) + bóng trong: lõm xuống trong gờ
 const SEN_XANH := "linear-gradient(rgb(70, 140, 60) 0%, rgb(52, 118, 46) 55%, rgb(40, 98, 38) 100%)"
 
 static func _white(n: Dictionary) -> void:
