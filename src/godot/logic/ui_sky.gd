@@ -273,9 +273,9 @@ func _tabt() -> Array:
 		var x := X0 + i * (cw + g)
 		var yy := gy
 		var cc := _chip(x, yy, cw, ch, "fc")
-		var bgn := _dic(x + 3.0, yy + 3.0, cw - 6.0, "")   # nền trời + cỏ (ảnh), góc bo sẵn, phủ sát dải vàng viền
+		var bgn := _dic(x + 2.0, yy + 2.0, cw - 4.0, "")   # nền trời + cỏ (ảnh), góc bo sẵn, phủ sát dải vàng viền
 		bgn.erase("svg")
-		bgn.r = [x + 3.0, yy + 3.0, cw - 6.0, ch - 6.0]
+		bgn.r = [x + 2.0, yy + 2.0, cw - 4.0, ch - 4.0]
 		bgn["pic"] = "res://ui/img/troi/nen_du_bao.webp"
 		cc.kids = [bgn, _dt(x, yy + fg, cw, 13.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 11.0, 800, BROWN),
 			_wic(x + cw * 0.5, yy + fg + 15.0 + isz * 0.5, isz, f),
