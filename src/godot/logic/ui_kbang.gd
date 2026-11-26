@@ -189,15 +189,17 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	var sh := String(n.css["box-shadow"])
 	# (11-26) bộ sen: mọi chip viền vàng kép như ảnh mẫu: vàng đậm 2px, chỉ kem, chỉ vàng nhạt bên trong
 	sh = SEN_BD + sh.substr(sh.find(")") + 1)
-	sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 2px inset, rgba(255, 250, 232, 0.95) 0px 0px 0px 3.5px inset, rgba(226, 190, 112, 0.9) 0px 0px 0px 4.5px inset")
+	# viền vàng kim như ảnh mẫu: nét nâu vàng ngoài 1px, dải vàng 3px sáng phía trên, sậm phía dưới
+	sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 1px inset, rgb(255, 236, 150) 0px 1.5px 0px 1px inset, rgb(214, 140, 40) 0px -1.5px 0px 1px inset, rgb(242, 190, 72) 0px 0px 0px 3.5px inset, rgba(150, 100, 30, 0.45) 0px 0px 0px 4.3px inset")
 	var L := sh.split(") 0px 1px 2px 0px")   # bỏ lớp bóng đổ mờ dưới chip (lớp cuối, không inset)
 	if L.size() > 1:
 		sh = L[0].substr(0, L[0].rfind(", "))
 	n.css["box-shadow"] = sh
+	n.css["border-radius"] = _cpx(12.0)   # bo tròn như ảnh mẫu
 	_CKC[ck] = n.css.duplicate()
 	return n
 
-const SEN_BD := "rgb(204, 156, 64)"   # viền vàng chip (bộ sen)
+const SEN_BD := "rgb(170, 112, 36)"   # viền vàng chip (bộ sen)
 static var _CKC := {}   # kiểu chip đã tính, theo bộ màu
 static var _ON := {}
 func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false) -> Dictionary:   # nút = chip "on" (xanh) của Kho; red: cùng dáng, tông đỏ

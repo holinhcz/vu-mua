@@ -165,7 +165,7 @@ func _tabt() -> Array:
 	var k := clampf((_hb - gaps) / (72.0 + 68.0 + nwarn * 44.0), 0.75, 1.6)
 	_rh = 44.0 * k
 	var ny := y + 40.0
-	var nh := 72.0 * k
+	var nh := minf(72.0 * k, 84.0)
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
 	var nis := minf(nh - 14.0, 66.0)
 	var tx0 := X0 + 16.0 + nis + 20.0
@@ -187,9 +187,9 @@ func _tabt() -> Array:
 	var e: int = o * 4 + int(floor(G.nv.hour() / 6.0))
 	var g := 6.0
 	var cw := (XW - g * 2.0) / 3.0
-	var ch := 68.0 * k
-	var isz := clampf(ch - 12.0 - 15.0 - 20.0, 20.0, 44.0)   # lề trên / dưới 7, khe chữ - hình 3
-	var fg := (ch - 12.0 - isz - 15.0) / 2.0 - 3.0   # lề trên = lề dưới   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
+	var ch := minf(68.0 * k, cw / 1.15)   # ô dự báo dẹt ngang như ảnh mẫu
+	var isz := clampf(ch - 12.0 - 15.0 - 24.0, 20.0, 44.0)   # lề trên / dưới 7, khe chữ - hình 3
+	var fg := (ch - 12.0 - isz - 18.0) / 3.0   # lề trên = lề dưới   # khoảng đều: trên, giữa chữ - hình, hình - chữ, dưới
 	var gy := fy + 22.0
 	var bs := []
 	var c0: int = e + 1
