@@ -689,7 +689,21 @@ def hom_go(S, rng):
     for sx in (1, -1):
         for sy in (1, -1):
             obx(S, (sx * (LA - 1.4) - 0.0 if sx > 0 else -LA, sy * (LB - 1.4) if sy > 0 else -LB, 1.0), (1.4, 0, 0), (0, 1.4, 0), (0, 0, z0 - 1.0), MV2)
-    tube_box(S, -LA, LA, -LB, LB, z0, ZL, MV)
+    import ruong_trai as RT
+    zs, ss = (z0 + ZL) / 2 + 0.2, 4.6
+    def m_van_sen(uv, prm, pos, nrm):                            # ván thân + hoa sen CHẠM NỔI ngay trên mặt ván trước (cùng kiểu dừa/bí)
+        c, n = mat_van(uv, prm, pos, nrm)
+        x, y, z = loc(pos); fr = (y > LB - 0.3).astype(float)
+        sk = (RT.sen_khac(pos, math.pi / 2, zs, ss) * fr)[:, None]
+        c = c * (1 - 0.7 * sk) + (c * 1.5 + 0.08) * (0.7 * sk)
+        return np.clip(c, 0, 1), n
+    MVB = newmat(m_van_sen)
+    HFN[MVB] = lambda P, UV, q: 1.6 * RT.sen_khac(P, math.pi / 2, zs, ss, True) * (loc(P)[1] > LB - 0.3)
+    tube_box(S, -LA, LA, -LB, LB, z0, ZL, MVB)
+    COIN = newmat(mat_kl('#f8cc50', hammer=False, streak=0.02, leaf=False)); KIND[COIN] = 'son'
+    for dz, cx, rc_, nc in ((1.0, -7.0, 6.0, 26), (1.0, 7.0, 6.0, 26), (1.0, 0, 6.5, 26), (2.8, -5.5, 5.5, 22), (2.8, 5.5, 5.5, 22), (3.4, 0, 6.0, 24), (4.8, -2.5, 5.0, 20), (4.8, 3.0, 5.0, 20), (6.2, 0, 4.2, 16)):   # quà: vàng chất kín lòng hòm, gò cao giữa
+        RT.coins(S, rng, z0 + dz, rc_, nc, COIN, cx=cx)
+    ell(S, (1.0, 0.5, z0 + 7.4), 1.1, 1.1, 1.3, flat('#d81c3a')); ell(S, (-2.4, -1.4, z0 + 7.0), 0.9, 0.9, 1.0, flat('#2fae6a'))
     for sx in (1, -1):                                           # 4 cột góc vuông lồi ra
         for sy in (1, -1):
             obx(S, (sx * LA - (0.8 if sx > 0 else 0.4), sy * LB - (0.8 if sy > 0 else 0.4), z0 - 0.2), (1.2, 0, 0), (0, 1.2, 0), (0, 0, ZL - z0 + 0.2), MV2)
@@ -703,14 +717,9 @@ def hom_go(S, rng):
             obx(S, (sx * (LA + 1.05) - (2.4 if sx > 0 else 0), sy * (LB + 1.05) - (2.4 if sy > 0 else 0), ZL + 1.52), (2.4, 0, 0), (0, 2.4, 0), (0, 0, 0.12), DONG)
     # khoá đồng lá sen: tấm lá sen tròn có gân + tai khoá
     c = (0, LB + 0.4, ZL - 2.6)
-    disc(S, Pl(0, LB + 0.45, ZL - 2.6), rotv((0, 1, 0)), 2.6, DONG, nr=4, na=36)
-    tube(S, Pl(0, LB + 0.0, ZL - 2.6), Pl(0, LB + 0.45, ZL - 2.6), 2.6, DONG, nr=36, nl=2)
-    for k in range(9):
-        a = 2 * math.pi * k / 9 + 0.35
-        tube(S, Pl(0, LB + 0.6, ZL - 2.6), Pl(2.3 * math.cos(a), LB + 0.6, ZL - 2.6 + 2.3 * math.sin(a)), 0.14, DONG, nr=4, nl=2)
-    sen_logo(S, rng, (0, LB + 0.5, ZL - 2.3), 1.5, DONG)
-    obx(S, (-0.7, LB + 1.0, ZL - 1.0), (1.4, 0, 0), (0, 0.45, 0), (0, 0, 2.6), DONG)
-    keyhole_ = flat('#2a2018'); ell(S, (0, LB + 0.95, ZL - 4.3), 0.3, 0.1, 0.45, keyhole_)
+    obx(S, (-1.3, LB + 0.05, ZL - 2.4), (2.6, 0, 0), (0, 0.3, 0), (0, 0, 2.0), DONG)          # khoá đồng chữ nhật gọn trên mép
+    obx(S, (-0.6, LB + 0.35, ZL - 1.6), (1.2, 0, 0), (0, 0.4, 0), (0, 0, 3.2), DONG)           # tai khoá từ nắp gập xuống
+    ell(S, (0, LB + 0.4, ZL - 2.0), 0.22, 0.08, 0.35, flat('#3a2a1a'))
     for sx in (1, -1):                                           # quai mây bện 2 hông (3 sợi xoắn)
         for j in range(3):
             pts = [(sx * (LA + 1.0 + 1.9 * math.sin(t)), (3.0 + 0.25 * j) * math.cos(t), ZL - 4.0 + 0.3 * math.sin(t * 6 + j * 2.1)) for t in np.linspace(0, math.pi, 18)]

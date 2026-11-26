@@ -338,13 +338,13 @@ def cut_disc(S, z, r_in, r_out, mat, flip=False, n=72):
     grid(S, F, 8, n, mat, (4, 0, 0), close_v=True, flip=flip)
 
 
-def coins(S, rng, z0, r, n, mat):
+def coins(S, rng, z0, r, n, mat, cx=0.0, cy=0.0):
     for k in range(n):
         a = rng.random() * TAU; d = math.sqrt(rng.random()) * r
         tilt = (rng.random() - 0.5) * 0.9
         ax = np.array([math.cos(a), math.sin(a), 0.0]); nz = np.array([0, 0, 1.0]) + ax * tilt; nz /= np.linalg.norm(nz)
         a2 = np.cross(nz, ax); a2 /= np.linalg.norm(a2); a1 = np.cross(a2, nz)
-        ell(S, (d * math.cos(a), d * math.sin(a), z0 + 0.35 * (k % 4) + rng.random() * 0.3), 1.3, 1.3, 0.28, mat, axes=(a1, a2, nz), nu=5, nv_=16)
+        ell(S, (cx + d * math.cos(a), cy + d * math.sin(a), z0 + 0.35 * (k % 4) + rng.random() * 0.3), 1.3, 1.3, 0.28, mat, axes=(a1, a2, nz), nu=5, nv_=16)
 
 
 def spine(r0, L, a0, a1, z0):
