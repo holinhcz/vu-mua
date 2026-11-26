@@ -28,7 +28,7 @@ K.INSIDE_K = 0.3
 C0 = 0.5 * T                       # tâm rương (đơn vị game), giữa ô
 TIER = 1
 LIDZ = None
-PART = [0]; PARTS = {}; HFN = {}       # phần động (nắp, cánh sen) + độ gồ riêng theo vật liệu (ruong_trai)
+PART = [0]; PARTS = {}; HFN = {}; MORPHF = [None]      # phần động (nắp, cánh sen) + độ gồ riêng theo vật liệu (ruong_trai)
 ROT = 0.0                          # xoay quanh trục đứng (độ) để xem mô hình nhiều góc
 
 

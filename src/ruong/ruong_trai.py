@@ -45,11 +45,11 @@ def tone(c, k):
 
 def m_dua_vo():
     """vỏ dừa xiêm: xanh lá đậm/nhạt loang mảng lớn, thớ dọc mảnh, 3 gờ sáng, bì vàng lốm đốm nhạt quanh tai, đốm bì nhạt li ti"""
-    g0, g1, g2, g3, lent = hexc('#47782a'), hexc('#78a63c'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
+    g0, g1, g2, g3, lent = hexc('#3c6a24'), hexc('#88b246'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
     def f(uv, prm, pos, nrm):
         th, rr, z = azi(pos)
         big = fbm(np.cos(th) * 2.2 + z * 0.08, np.sin(th) * 2.2 + z * 0.11, 3.0)
-        c = mix(g0, g1, np.clip((big - 0.35) * 1.6, 0, 1))
+        c = mix(g0, g1, np.clip((big - 0.3) * 2.4, 0, 1))
         st = vnoise(th * 55, z * 0.18, 8.0); st2 = 0.5 + 0.5 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4)
         c = tone(c, 0.9 + 0.12 * st + 0.06 * st2)
         rid = np.abs(np.cos(1.5 * (th - 0.3))) ** 18                         # 3 gờ dọc
@@ -82,7 +82,7 @@ def m_lop(prof, cols, edges, fibre=True):
         rim = np.exp(-((fr - e0) / 0.012) ** 2) * 0.25                     # mép cơm ngả vàng nhẹ
         inner = fr <= e0
         ring = 0.5 + 0.5 * np.sin(fr * 90 + vnoise(th * 6, fr * 6, 4.0) * 3)
-        k = np.where(inner, 0.94 + 0.05 * ring + 0.03 * vnoise(th * 20, fr * 20, 9.0), k)
+        k = np.where(inner, 0.84 + 0.1 * ring + 0.08 * vnoise(th * 14, fr * 14, 9.0) + 0.05 * np.sin(th * 90 + fr * 10), k)
         out = tone(out, k) * (1 - rim)[:, None] + hexc('#e8d49a')[None] * rim[:, None]
         sk = fr > max(edges)
         out = np.where(sk[:, None], tone(out, 0.92 + 0.12 * vnoise(th * 80, fr * 10, 2.0)), out)
@@ -160,8 +160,8 @@ def m_cuong():
 
 
 def leaf_veins(U, V, nveins, off=0.0):
-    ph = ((V - off) * nveins) % 1.0; d = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
-    v1 = np.exp(-(d / 0.09) ** 2) * smooth(0.02, 0.12, U)
+    ph = ((V - off) * nveins + 0.04 * np.sin(U * 13 + V * 31) * U) % 1.0; d = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
+    v1 = np.exp(-(d / (0.035 + 0.04 * (1 - U))) ** 2) * smooth(0.02, 0.12, U) * (0.75 + 0.25 * vnoise(U * 20, V * 50, 7.0))
     # gân phụ: chẽ xiên từ mỗi gân chính, lặp theo bán kính
     side = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
     v2 = np.exp(-((((U * 14 - side * 2.2) % 1.0) - 0.5) / 0.07) ** 2) * smooth(0.15, 0.3, U) * 0.55
@@ -182,8 +182,8 @@ def m_la(col, vein, nveins, edge='#a8a850', off=0.0, bloom=None):
         cc = cc * (1 + 0.15 * U)[:, None]
         cen = np.exp(-(U / 0.12) ** 2) * 0.6
         cc = cc * (1 - cen)[:, None] + v[None] * cen[:, None]
-        vv = np.clip(v1 + v2 * 0.6, 0, 1)
-        cc = cc * (1 - 0.6 * vv)[:, None] + v[None] * (0.6 * vv)[:, None]
+        vv = np.clip(v1 + v2 * 0.45, 0, 1)
+        cc = cc * (1 - 0.45 * vv)[:, None] + v[None] * (0.45 * vv)[:, None]
         e = smooth(0.86, 1.0, U) * (0.5 + 0.5 * vnoise(V * 60, U * 4, 3.0))
         cc = cc * (1 - 0.5 * e)[:, None] + ed[None] * (0.5 * e)[:, None]
         return np.clip(cc, 0, 1), nrm
@@ -359,26 +359,53 @@ def petal(S, sp, phi, mat, cup=0.35, thick=0.28, nu=28, nv_=16, dr=0.0, wk=1.35)
     return (Rr[0] * d[0], Rr[0] * d[1], Zz[0]), tuple(t)
 
 
-def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=82, open_in=14, smin=0.6):
-    """BÔNG SEN THẬT (v4 11-26 Link "sen gì 3-4 cánh, không chồng"): N cánh xếp xoắn theo góc vàng 137.5°,
-    mỗi cánh rộng ~70° nên chỗ nào cũng chồng 3 lớp; cánh trong là bản thu nhỏ (vị tự quanh tâm gốc) của cánh ngoài
-    nên các mặt cánh lồng nhau, búp khép không đâm xuyên. Mặt cánh = mảnh mặt tròn xoay (cong theo búp), chót nhọn."""
+def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=68, open_in=12, smin=0.6, cup=0.32):
+    """BÔNG SEN THẬT (v5 11-26): N cánh xếp xoắn góc vàng 137.5°, mỗi cánh rộng ~90° nên chỗ nào cũng chồng 3 lớp.
+    Búp khép: cánh trong là bản vị tự thu nhỏ của cánh ngoài -> mặt cánh lồng nhau, không đâm xuyên.
+    Lúc NỞ mỗi cánh BIẾN HÌNH (morph) sang dáng cánh sen nở thật: muỗng bầu khum lòng, xoè ra từ gốc, chót hơi vểnh lên (không móc)."""
     GA = math.radians(137.508)
     for i in range(N):
         sc = 1.0 - (1.0 - smin) * i / max(N - 1, 1)
-        phi = i * GA
-        def F(U, V, sc=sc, phi=phi, i=i):
-            Rr = (0.55 + (r0 - 0.55) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)) * sc
-            Zz = z0 + L * U * sc + 0.6 * np.sin(np.pi * U) * sc
-            A = A0 * (0.45 + 0.55 * np.sin(np.pi * np.clip(U, 0, 1) ** 0.6)) * (1 - U ** 3.2) + 0.01
-            a = phi + (V - 0.5) * 2 * A
-            rr = Rr * (1 + 0.015 * (V - 0.5) ** 2)                 # mép hơi vểnh nhẹ
-            return np.stack([rr * np.cos(a), rr * np.sin(a), Zz], -1)
+        phi = i * GA; k = i / max(N - 1, 1)
+        d = np.array([math.cos(phi), math.sin(phi), 0.0]); t = np.array([-math.sin(phi), math.cos(phi), 0.0]); zz = np.array([0, 0, 1.0])
+        def Rc(U, sc=sc): return (0.2 + (r0 - 0.2) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)) * sc
+        def Aw(U): return A0 * (0.45 + 0.55 * np.sin(np.pi * np.clip(U, 0, 1) ** 0.6)) * (1 - U ** 3.2) + 0.01
+        def F(U, V, sc=sc, phi=phi):
+            Rr = Rc(U); Zz = z0 + L * U * sc + 0.6 * np.sin(np.pi * U) * sc
+            a = phi + (V - 0.5) * 2 * Aw(U)
+            return np.stack([Rr * np.cos(a), Rr * np.sin(a), Zz], -1)
+        al = math.radians(open_out + (open_in - open_out) * k ** 0.8); be = 0.45 * al
+        us = np.linspace(0, 1, 200); th = al - be * us ** 1.3; Ls = L * sc * 1.08
+        sr = r0 * sc + np.concatenate([[0], np.cumsum(np.sin(th) * Ls / 199)[:-1]]); sz = z0 + np.concatenate([[0], np.cumsum(np.cos(th) * Ls / 199)[:-1]])
+        def Fo(U, V, sc=sc, d=d, t=t, sr=sr, sz=sz, th=th, us=us):
+            rad = np.interp(U, us, sr); hz = np.interp(U, us, sz); tt = np.interp(U, us, th)
+            w = Rc(U) * Aw(U) * 1.05
+            vv = (V - 0.5) * 2
+            o = np.cos(tt)[..., None] * d - np.sin(tt)[..., None] * zz
+            return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * w * vv ** 2 + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
         b = (r0 * sc * math.cos(phi), r0 * sc * math.sin(phi), z0)
-        k = i / max(N - 1, 1)
-        part(100 + i, b, (-math.sin(phi), math.cos(phi), 0.0), open_out + (open_in - open_out) * k ** 0.8, delay=0.32 * k)
+        part(100 + i, b, (-math.sin(phi), math.cos(phi), 0.0), 0.0, delay=0.32 * k)
+        R.MORPHF[0] = (lambda U, V, Fo=Fo: R.rot(Fo(U, V) + np.array([R.C0, R.C0, 0.0])))
         grid(S, F, 30, 18, mats[min(int(k * len(mats)), len(mats) - 1)], (0, 0, 0), flip=False)
+        R.MORPHF[0] = None
     body()
+
+
+def nhuy(S, z0, r_in, r_out, n, mstem, manth):
+    """vòng nhụy vàng quanh gương sen: sợi chỉ mảnh cong ra, bao phấn ở đầu"""
+    for k in range(n):
+        a = k * TAU / n + 0.13 * math.sin(k * 7.3)
+        L_ = 2.4 + 0.5 * math.sin(k * 3.1)
+        p0 = (r_in * math.cos(a), r_in * math.sin(a), z0)
+        p1 = ((r_out + 0.3 * math.sin(k * 5)) * math.cos(a), (r_out + 0.3 * math.sin(k * 5)) * math.sin(a), z0 + L_)
+        pm = tuple((np.array(p0) + np.array(p1)) / 2 + np.array([0, 0, 0.3]))
+        tb(S, p0, pm, 0.09, mstem, nr=4, nl=2); tb(S, pm, p1, 0.08, mstem, nr=4, nl=2)
+        dd = np.array(p1) - np.array(pm); dd /= np.linalg.norm(dd)
+        ell(S, tuple(np.array(p1) + dd * 0.35), 0.16, 0.16, 0.45, manth, axes=(nz_(np.cross(dd, [0, 0, 1.0]) + 1e-6), nz_(np.cross(dd, np.cross(dd, [0, 0, 1.0])) + 1e-6), dd), nu=4, nv_=8)
+
+
+def torus(S, z, Rr, r, mat, n=96):
+    grid(S, lambda U, V: np.stack([(Rr + r * np.cos(U * TAU)) * np.cos(V * TAU), (Rr + r * np.cos(U * TAU)) * np.sin(V * TAU), z + r * np.sin(U * TAU)], -1), 10, n, mat, (0, 0, 0), close_v=True, flip=False)
 
 
 def leaf_disc(S, z0, Rl, mat_top, mat_bot, waves=9, bowl=1.6, lobes=None, n=96):
@@ -400,7 +427,7 @@ def trai_dua(S, rng):
     zc = Hd * SC_
     def prof_c(th): return rad(SC_, th)
     ED = [0.955, 0.70, 0.645]                      # vỏ xanh | cơm xơ trắng ngà | gáo nâu | cơm dừa
-    CAT = newmat(m_lop(prof_c, ['#5f8f30', '#efe2c0', '#7a5230', '#f7f5ee'], ED)); R.HFN[CAT] = h_lop(prof_c, ED)
+    CAT = newmat(m_lop(prof_c, ['#5f8f30', '#e0cfa4', '#7a5230', '#e2dac2'], ED)); R.HFN[CAT] = h_lop(prof_c, ED)
     COM = newmat(m_com('#f6f3ea', '#e8e4d2'))
     VANG = newmat(mat_kl('#e0a538', hammer=False, streak=0.02, leaf=True)); R.KIND[VANG] = 'vang'
     body()
@@ -442,11 +469,11 @@ def trai_bi(S, rng):
     VO = newmat(m_bi()); R.HFN[VO] = h_bi
     def lob(th): return 0.89 + 0.11 * np.abs(np.cos(5 * (th - math.pi / 2))) ** 0.6
     def surf(a, th):
-        r = Rb * np.sin(a) * lob(th)
+        r = Rb * np.sin(a) * lob(th) * (1 - 0.035 * np.exp(-((a - AC) / 0.035) ** 2))     # vết khoét nắp: rãnh lõm quanh đường cắt
         z = Hb / 2 * (1 - np.cos(a)) + 1.6 * np.exp(-(a / 0.4) ** 2) - 1.1 * np.exp(-((math.pi - a) / 0.5) ** 2)
         return r, z
     rc0, zc = surf(AC, 0.0); rc0 = Rb * math.sin(AC)
-    def prof_c(th): return Rb * math.sin(AC) * lob(th)
+    def prof_c(th): return Rb * math.sin(AC) * lob(th) * 0.965
     CAT = newmat(m_lop(prof_c, ['#c8601c', '#f4b04a', '#eea040'], [0.95, 0.82])); R.HFN[CAT] = h_lop(prof_c, [0.95, 0.82])
     RUOT = newmat(m_com('#f0a43c', '#e4902c'))
     VANG = newmat(mat_kl('#e0a538', hammer=False, streak=0.02, leaf=True)); R.KIND[VANG] = 'vang'
@@ -552,14 +579,12 @@ def sen(S, rng, gold):
         SON = newmat(mat_son('#a8261e')); VB = newmat(mat_kl('#f0c24e', hammer=False, streak=0.02, leaf=True))
         from kho3d import tube, disc
         tube(S, R.Pl(0, 0, 0), R.Pl(0, 0, 2.2), 12.5, SON, nr=64, nl=3); disc(S, R.Pl(0, 0, 2.2), (0, 0, 1), 12.5, SON, nr=6, na=64)
-        for z, rr in ((0.35, 12.9), (2.0, 12.9)):
-            pts = [(rr * math.cos(t), rr * math.sin(t), z) for t in np.linspace(0, TAU, 49)]
-            for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.45, VB, nr=6, nl=2)
+        for z, rr in ((0.35, 12.9), (2.0, 12.9)): torus(S, z, rr, 0.45, VB)
         for k in range(12):
             a = k * TAU / 12; ell(S, (12.6 * math.cos(a), 12.6 * math.sin(a), 1.2), 0.7, 0.7, 0.7, flat('#2fae6a') if k % 2 else flat('#d81c3a'))
         z0 = 2.4
-        LT = newmat(m_la('#2f8a5a', '#f0c858', 22, edge='#d8a840', bloom='#7cc0a0')); LB_ = newmat(m_la('#4a9a6a', '#d8d080', 22))
-        CANS = [newmat(m_canh('#f6c64a', '#c8304a', '#b07418', kind='vang', foot='#fae08a', tipexp=2.6)),
+        LT = newmat(m_la('#2a8058', '#d8b850', 22, edge='#c8a040', bloom='#6cb090')); LB_ = newmat(m_la('#4a9a6a', '#d8d080', 22))
+        CANS = [newmat(m_canh('#f6c64a', '#d85870', '#b07418', kind='vang', foot='#fae08a', tipexp=4.5)),
                 newmat(m_canh('#f8d060', '#e8a02c', '#b88020', kind='vang', foot='#fae6a0')),
                 newmat(m_canh('#fae4a0', '#e8708a', '#c89040', kind='vang', foot='#fff0c0', tipexp=1.6))]
         POD = newmat(m_ngoc('#2f8f62', '#5cc090')); R.HFN[POD] = h_guong
@@ -567,19 +592,21 @@ def sen(S, rng, gold):
         rings = [(8, 3.6, 13.5, 4.6, 0.32, -0.72, 74, 0.0, 0.0), (8, 3.1, 11.4, 4.0, 0.24, -0.80, 58, math.pi / 8, 0.12), (8, 2.7, 9.0, 3.2, 0.16, -0.9, 36, 0.0, 0.24)]
     else:
         z0 = 0.6
-        LT = newmat(m_la('#3e7a3c', '#a8c890', 22, edge='#8a7a40', bloom='#a4bcaa')); LB_ = newmat(m_la('#6a9a5a', '#b0cc98', 22, edge='#9a8a50'))
+        LT = newmat(m_la('#35703c', '#8eb486', 22, edge='#8a7a40', bloom='#9cb8aa')); LB_ = newmat(m_la('#6a9a5a', '#b0cc98', 22, edge='#9a8a50'))
         CAN = newmat(m_canh('#fbe8ee', '#e45890', '#d04a7a', tipexp=0.55)); CANS = [CAN, CAN, CAN]; POD = newmat(m_guong('#9cb244', '#c8cc66')); R.HFN[POD] = h_guong
         PT = newmat(m_guong('#d6d06a', '#c0c454')); SEED = newmat(m_com('#6f8e34', '#58782a'))
         rings = [(6, 3.4, 13.0, 4.8, 0.34, -0.72, 58, 0.0, 0.0), (6, 2.9, 11.0, 4.1, 0.24, -0.80, 40, math.pi / 6, 0.12), (6, 2.5, 8.6, 3.3, 0.16, -0.9, 22, 0.0, 0.24)]
     R.HFN[LT] = h_la(22); R.HFN[LB_] = h_la(22)
     for c_ in CANS: R.HFN[c_] = h_canh
     leaf_disc(S, z0, Rl, LT, LB_)
-    GIOT = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#cfe6e0'), (len(uv), 1)), nrm), kind='ngoc')
+    GIOT = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#e8f6f2'), (len(uv), 1)), nrm), kind='ngoc')
     for (U, th, rd) in ((0.62, 0.5, 0.55), (0.68, 0.6, 0.3), (0.55, 2.4, 0.45), (0.78, 3.9, 0.6), (0.5, 5.3, 0.4)):
         rr = Rl * U * (1 + 0.04 * math.sin(7 * th + 1.0)); zz = z0 + 1.6 * U ** 2 + 0.55 * U ** 3 * math.sin(9 * th)
-        ell(S, (rr * math.cos(th), rr * math.sin(th), zz + rd * 0.12), rd, rd * 0.9, rd * 0.38, GIOT, nu=5, nv_=12)
+        ell(S, (rr * math.cos(th), rr * math.sin(th), zz + rd * 0.2), rd, rd * 0.92, rd * 0.62, GIOT, nu=7, nv_=14)
     VANG = newmat(mat_kl('#e0a538', hammer=False, streak=0.02, leaf=True)); R.KIND[VANG] = 'vang'
     guongsen(S, rng, z0 + 4.6, 2.7, POD, PT, SEED)
+    NH = newmat(m_com('#f2c838', '#e8b020')); BP = newmat(m_com('#fae27a', '#f4d050'))
+    nhuy(S, z0 + 5.3, 2.2, 3.3, 44, NH, BP)
     if not gold:
         ell(S, (0, 0, z0 + 7.0), 0.9, 0.9, 0.9, VANG)
     bong_sen(S, z0 + 0.8, 24 if gold else 18, CANS, open_out=70 if gold else 62, open_in=16 if gold else 10)

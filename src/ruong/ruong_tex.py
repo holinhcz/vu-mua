@@ -13,12 +13,20 @@ from pxr_3d import Scene
 
 TIER = int(sys.argv[1]); OUT = sys.argv[2]; D = float(sys.argv[3]) if len(sys.argv) > 3 else 16.0
 R.TIER = TIER; R.ROT = 0.0; R.EXPORT = True
-SH = []; SPART = []
+SH = []; SPART = []; SMORPH = []
 _g = Scene.grid
 def grid_rec(self, F, nu, nv_, mat, prm=(0, 0, 0), ao=None, uvr=((0, 1), (0, 1)), close_v=False, flip=False):
     SH.append((F, nu, nv_, uvr, close_v, flip)); SPART.append(R.PART[0])
     nu2 = max(nu, min(120, nu * 2)) if nu > 2 else nu; nv2 = max(nv_, min(120, nv_ * 2)) if nv_ > 2 else nv_
     SH[-1] = (F, nu2, nv2, uvr, close_v, flip)
+    mf = getattr(R, 'MORPHF', [None])[0]
+    if mf is not None:                                   # hình lúc NỞ của cánh sen (morph target)
+        u = np.linspace(uvr[0][0], uvr[0][1], nu2); v = np.linspace(uvr[1][0], uvr[1][1], nv2)
+        Uu, Vv = np.meshgrid(u, v, indexing='ij'); Po = mf(Uu, Vv)
+        nn = np.cross(np.gradient(Po, axis=0), np.gradient(Po, axis=1)); nn = -nn if flip else nn
+        nn = nn / np.maximum(np.linalg.norm(nn, axis=2, keepdims=True), 1e-12)
+        SMORPH.append((Po.reshape(-1, 3), nn.reshape(-1, 3)))
+    else: SMORPH.append(None)
     return _g(self, F, nu2, nv2, mat, prm, ao, uvr, close_v, flip)
 Scene.grid = grid_rec
 S, _ = R.build(1, np.random.default_rng(R.K.SEED + 1))
@@ -159,6 +167,8 @@ for k in range(len(S.P)):
                 cols[t_] = np.where(c == 0, nv_, c)
         T = rows * (nv_ + 1) + cols
     m = int(S.M[k][0]); kind = R.KIND.get(m, 'go')
+    Po, No = (SMORPH[k] if SMORPH[k] is not None else (P, N))
+    if SMORPH[k] is not None: kind = kind + '_m'
     if R.PARTS:
         lid = np.full(len(T), SPART[k])
     else:
@@ -167,9 +177,9 @@ for k in range(len(S.P)):
     for flag in np.unique(lid):
         sel = lid == flag
         if not sel.any(): continue
-        g = groups.setdefault((flag, kind), dict(P=[], N=[], U=[], T=[], n=0))
+        g = groups.setdefault((flag, kind), dict(P=[], N=[], U=[], T=[], n=0, Po=[], No=[]))
         tt = T[sel]; used = np.unique(tt); remap = -np.ones(len(P), np.int64); remap[used] = np.arange(len(used))
-        g['P'].append(P[used]); g['N'].append(N[used]); g['U'].append(UVv[used]); g['T'].append(remap[tt] + g['n']); g['n'] += len(used)
+        g['P'].append(P[used]); g['N'].append(N[used]); g['U'].append(UVv[used]); g['T'].append(remap[tt] + g['n']); g['n'] += len(used); g['Po'].append(Po[used]); g['No'].append(No[used])
 
 hx, hy, hz = R.C0, R.C0 - R.LB, (R.LIDZ if R.LIDZ is not None else R.ZL)
 def to_gl(P, piv): return g_to_gl((P - np.array(piv)) * SC)
@@ -183,27 +193,51 @@ for kind, r in ROUGH.items():
     if kind == 'kl': Gb.j['materials'][mi]['pbrMetallicRoughness']['metallicFactor'] = 0.9
     if kind == 'vang': Gb.j['materials'][mi]['pbrMetallicRoughness']['metallicFactor'] = 0.3
     mats[kind] = mi
+    mm = Gb.material(kind + '_m', tex=ta, rough=r)                 # cánh sen biến hình: pháp tuyến đỉnh, không ảnh pháp tuyến
+    if kind == 'vang': Gb.j['materials'][mm]['pbrMetallicRoughness']['metallicFactor'] = 0.3
+    mats[kind + '_m'] = mm
 def prims(flag, piv):
     out = []
     for (f, kind), g in groups.items():
         if f != flag: continue
         P = np.concatenate(g['P']); nvx = len(P)
         out.append(dict(pos=to_gl(P, piv), nrm=n_gl(np.concatenate(g['N'])), col=np.ones((nvx, 3)), uv=np.concatenate(g['U']), idx=np.concatenate(g['T']), mat=mats[kind], extras={'osn': 1}))
+        if kind.endswith('_m'):
+            Po = np.concatenate(g['Po']); No = np.concatenate(g['No'])
+            out[-1]['morph'] = (to_gl(Po, piv) - out[-1]['pos'], n_gl(No) - out[-1]['nrm'])
     return out
 root = Gb.node('ruong_goc', (0, 0, 0))
 Gb.node('than', (0, 0, 0), mesh=Gb.mesh('than', prims(0, (R.C0, R.C0, 0.0))), parent=root)
 PARTS = R.PARTS or {1: dict(piv=(hx - R.C0, hy - R.C0, hz), axis=(1, 0, 0), ang=108.0, delay=0.0)}
-tracks = []
+tracks = []; wtracks = []
 for pid, pp in PARTS.items():
     if not any(f == pid for (f, kd) in groups): continue
     pv = np.array(pp['piv']) + np.array([R.C0, R.C0, 0.0])
-    nd = Gb.node('nap' if pid == 1 and not R.PARTS else 'p%d' % pid, tuple(g_to_gl((pv - np.array([R.C0, R.C0, 0])) * SC)), mesh=Gb.mesh('p%d' % pid, prims(pid, tuple(pv))), parent=root)
+    pr = prims(pid, tuple(pv)); mi_ = Gb.mesh('p%d' % pid, pr); hasm = False
+    for j, p_ in enumerate(pr):
+        if 'morph' in p_:
+            dp, dn = p_['morph']; hasm = True
+            Gb.j['meshes'][mi_]['primitives'][j]['targets'] = [{'POSITION': Gb.acc(dp.astype(np.float32), 'VEC3', minmax=True), 'NORMAL': Gb.acc(dn.astype(np.float32), 'VEC3')}]
+    if hasm:
+        for j, p_ in enumerate(pr):
+            if 'morph' not in p_:
+                z3 = np.zeros((len(p_['pos']), 3), np.float32)
+                Gb.j['meshes'][mi_]['primitives'][j]['targets'] = [{'POSITION': Gb.acc(z3, 'VEC3', minmax=True), 'NORMAL': Gb.acc(z3, 'VEC3')}]
+        Gb.j['meshes'][mi_]['weights'] = [0.0]
+    nd = Gb.node('nap' if pid == 1 and not R.PARTS else 'p%d' % pid, tuple(g_to_gl((pv - np.array([R.C0, R.C0, 0])) * SC)), mesh=mi_, parent=root)
     ax = g_to_gl(np.array(pp['axis'], float)); ax = ax / np.linalg.norm(ax); A = pp['ang']; dl = pp['delay']
     tm = np.linspace(0, 1.4, 43); x = np.clip((tm - 0.1 - dl) / 0.85, 0, 1)
     c1 = 1.2; c3 = c1 + 1; e = 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2      # easeOutBack: mở êm, nảy nhẹ rồi đứng
     ang = np.radians(A * e); tm = list(tm)
+    if hasm: wtracks.append((nd, tm, e))
     tracks.append((nd, 'rotation', tm, [[ax[0] * math.sin(a / 2), ax[1] * math.sin(a / 2), ax[2] * math.sin(a / 2), math.cos(a / 2)] for a in ang]))
 Gb.animation('mo_nap', tracks)
+an = Gb.j['animations'][-1]
+for nd, tm, e in wtracks:
+    ia = Gb.acc(np.asarray(tm, np.float32), 'SCALAR', target=None, minmax=True)
+    io_ = Gb.acc(np.asarray(e, np.float32), 'SCALAR', target=None)
+    an['samplers'].append({'input': ia, 'output': io_, 'interpolation': 'LINEAR'})
+    an['channels'].append({'sampler': len(an['samplers']) - 1, 'target': {'node': nd, 'path': 'weights'}})
 Gb.save(OUT)
 print(OUT, os.path.getsize(OUT) // 1024, 'KB', sum(g['n'] for g in groups.values()), 'verts, atlas', PAGE, HH)
 Image.fromarray((np.clip(alb, 0, 1) * 255).astype(np.uint8)).resize((PAGE // 4, HH // 4)).save('/tmp/claude-0/ruong/atlas_prev.png')
