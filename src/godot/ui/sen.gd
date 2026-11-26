@@ -149,14 +149,18 @@ static func paper(w: float, h: float) -> Texture2D:   # nền giấy cả hộp:
 	var t := float(m.T)
 	_put(out, "song", Rect2(t - 1.0, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k)
 	_put(out, "song", Rect2(w - t + 1.0 - sw, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k, true, false)
-	var rp := int(round(17.0 * k))   # = bán kính ngoài góc tre (330 px ảnh góc / 20): giấy không lòi ra ngoài góc cong
+	# góc: giấy chỉ tới giữa ống tre góc cong (mặt nạ cắt từ chính ảnh góc tre): giấu hẳn dưới tre, không lòi ra ngoài
+	var gw := int(round(float(m.goc[0]) * k))
+	var gh := int(round(float(m.goc[1]) * k))
+	var mk := Image.new()
+	mk.load_png_from_buffer(FileAccess.get_file_as_bytes(D + "goc_mask.png"))
+	mk.convert(Image.FORMAT_RGBA8)
+	mk.resize(gw, gh, Image.INTERPOLATE_BILINEAR)
 	var W := out.get_width()
 	var H := out.get_height()
-	for j in rp:
-		for i in rp:
-			var dx := float(rp - i) - 0.5
-			var dy := float(rp - j) - 0.5
-			var a2 := clampf(float(rp) - sqrt(dx * dx + dy * dy) + 0.5, 0.0, 1.0)
+	for j in mini(gh, H):
+		for i in mini(gw, W):
+			var a2 := mk.get_pixel(i, j).r
 			if a2 < 1.0:
 				for p2 in [Vector2i(i, j), Vector2i(W - 1 - i, j), Vector2i(i, H - 1 - j), Vector2i(W - 1 - i, H - 1 - j)]:
 					var c := out.get_pixelv(p2)

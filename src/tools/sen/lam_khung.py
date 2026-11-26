@@ -34,6 +34,13 @@ C = 700                               # góc cắt tới trước mắt tre đ�
 goc = g.crop((OX, OY, C, C))
 save(goc, 'goc', (C - OX) / Q, (C - OY) / Q)
 M["goc"] = [(C - OX) / Q, (C - OY) / Q]
+ga = np.array(goc)[:, :, 3] > 100
+H_, W_ = ga.shape; half = 141 // 2
+ex = np.array([np.argmax(ga[y]) if ga[y].any() else 0 for y in range(H_)])
+ey = np.array([np.argmax(ga[:, x]) if ga[:, x].any() else 0 for x in range(W_)])
+yy, xx = np.mgrid[0:H_, 0:W_]
+mk = (xx >= ex[:, None] + half) & (yy >= ey[None, :] + half)
+Image.fromarray((mk * 255).astype(np.uint8), 'L').convert('RGBA').save(os.path.join(OUT, 'goc_mask.png'))
 ong_n = g.crop((760, OY, 1240, OY + 150)); save(ong_n, 'ong_n', 480 / Q, 150 / Q)
 ong_d = g.crop((OX, 760, OX + 160, 1240)); save(ong_d, 'ong_d', 160 / Q, 480 / Q)
 mat_n = g.crop((585, OY, 690, OY + 150)); save(mat_n, 'mat_n', 105 / Q, 150 / Q)
@@ -72,17 +79,28 @@ im, c = chop('04_chop_do_dinh.png', 1067, 1157, DINH_W, 797)   # thanh vàng ch�
 save(im, 'dinh', DINH_W, DINH_W * im.height / im.width)
 M['dinh'] = {"a": [0.5, 0.0], "c": [0.5, c], "s": [DINH_W, DINH_W * im.height / im.width], "dy": T / 2, "fw": [0.81, 170, DINH_W]}
 im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height   # chóp đáy như bản 598: nguyên hình, thanh 70 px = T
-put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c)
+def side_fade(im):   # hai cánh chóp đáy trong dần ra hai đầu, hoà vào ống tre
+    a = np.array(im).astype(np.float32); w = a.shape[1]
+    x = np.arange(w); r = np.clip(np.minimum(x, w - 1 - x) / (w * 0.3), 0, 1) ** 1.3
+    a[:, :, 3] *= r[None, :]
+    return Image.fromarray(a.astype(np.uint8), 'RGBA')
+put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c, lambda im: side_fade(crop_bb(im)))
 M['day']['dy'] = -T / 2
 # hoa sen góc: tràn ra ngoài khung một phần
 put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # tư thế như ảnh mẫu (không xoay)
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 92, [1.0, 1.0], 0.87, 0.64)   # cân với góc trên trái
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 92, [1.0, 1.0], 0.87, 0.76)   # cân với góc trên trái, nhích lên
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
 def with_x(im):
-    im = im.copy(); d = ImageDraw.Draw(im)
-    cx, cy, r = 1000, 1000, 330
+    # ảnh gốc bị cụt đáy vòng vàng (hết ở hàng 1895, tròn phải tới 1932): vá đáy bằng cung trên lật xuống, tối đi chút
+    a = np.array(im).astype(np.float32)
+    for r_ in range(1896, 1933):
+        src = a[110 + (1932 - r_)].copy()
+        src[:, :3] *= 0.82
+        a[r_] = src
+    im = Image.fromarray(a.astype(np.uint8), 'RGBA'); d = ImageDraw.Draw(im)
+    cx, cy, r = 1002, 1021, 330
     for wdt, col in ((210, (122, 24, 26, 255)), (150, (255, 246, 228, 255))):
         d.line((cx - r, cy - r, cx + r, cy + r), fill=col, width=wdt)
         d.line((cx - r, cy + r, cx + r, cy - r), fill=col, width=wdt)
