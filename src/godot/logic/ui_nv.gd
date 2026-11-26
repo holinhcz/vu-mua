@@ -66,6 +66,7 @@ var tab := "ngay"
 var bdg: Control = null
 var bdg_n := -1
 var _bt := 0.0
+var _cw := CW   # (11-26) chỗ số cuối thanh của tab đang dựng: số dài ("10.588/20.000") thì mọi thanh cùng ngắn lại
 
 func _init(ui) -> void:
 	super(ui)
@@ -114,6 +115,7 @@ func _build() -> void:
 		var vt: Dictionary = sh[1]
 		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - SEN_DAY]
 		_hb -= SEN_DAY
+	_cw = CW
 	var r: Array = _week() if tab == "tuan" else (_ach() if tab == "tt" else (_event() if tab == "sk" else _day()))
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
@@ -162,7 +164,7 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		s.act = sw
 		out.append(s)
 	if f >= 0.0:
-		var cw := CW   # chỗ số "0/3" cố định: thanh mọi dòng dài bằng nhau
+		var cw := _cw   # chỗ số "0/3" cố định trong một tab: thanh mọi dòng dài bằng nhau
 		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk)))
 		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
@@ -412,10 +414,15 @@ func _ach() -> Array:
 		out.append(_dt(mx - 16.0, y + 42.0, 32.0, 11.0, str(th[k + 1]), 9.0, 700, SUB))
 	y += bh + 14.0
 	out.append_array(_hd(y, "Thành tựu"))
-	var sl := _wrap("Mỗi thành tựu 5 bậc: " + ", ".join(N.T9).to_lower() + ".", 10.0, 600, XW - 4.0)   # (11-26) dài thì xuống dòng, không cắt
+	var sl := _wrap("5 bậc: " + ", ".join(N.T9).to_lower() + ".", 10.0, 600, XW - 4.0)   # (11-26) dài thì xuống dòng, không cắt
 	for i in sl.size():
 		out.append(_dt(X0 + 2.0, y + 25.0 + i * 13.0, XW - 4.0, 13.0, sl[i], 10.0, 600, SUB, "left"))
 	y += 30.0 + sl.size() * 13.0
+	for A in N.L8:   # (11-26) số dài nhất quyết chỗ số cho cả tab
+		var t0: int = N.A8(A)
+		if t0 < 5:
+			var nd: int = N.S9(A, t0)
+			_cw = maxf(_cw, Box.text_w(G.fmt_n(mini(N.ach_f(A), nd)) + "/" + G.fmt_n(nd), 10.0, 700) + 8.0)
 	for A in N.L8:
 		var t: int = N.A8(A)
 		var v: int = N.ach_f(A)
