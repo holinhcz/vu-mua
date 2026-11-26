@@ -359,7 +359,7 @@ def petal(S, sp, phi, mat, cup=0.35, thick=0.28, nu=28, nv_=16, dr=0.0, wk=1.35)
     return (Rr[0] * d[0], Rr[0] * d[1], Zz[0]), tuple(t)
 
 
-def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=68, open_in=12, smin=0.6, cup=0.32):
+def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=20.0, A0=0.8, open_out=68, open_in=12, smin=0.6, cup=0.32):
     """BÔNG SEN THẬT (v5 11-26): N cánh xếp xoắn góc vàng 137.5°, mỗi cánh rộng ~90° nên chỗ nào cũng chồng 3 lớp.
     Búp khép: cánh trong là bản vị tự thu nhỏ của cánh ngoài -> mặt cánh lồng nhau, không đâm xuyên.
     Lúc NỞ mỗi cánh BIẾN HÌNH (morph) sang dáng cánh sen nở thật: muỗng bầu khum lòng, xoè ra từ gốc, chót hơi vểnh lên (không móc)."""
@@ -374,12 +374,12 @@ def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=68, open_i
             U = np.asarray(U, dtype=float)
             base = 0.05 + (r0 - 0.05) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)
             s_ = np.clip((U - UM) / (1 - UM), 0, 1)
-            dome = RM * np.clip(1 - s_ ** 2.3, 0, 1) ** (1 / 2.3) + 0.05
+            dome = RM * np.clip(1 - s_ ** 1.08, 0, 1) ** 0.52 + 0.05       # giọt nước: thon dần lên, chót tròn nhỏ (không kim, không trứng)
             return np.where(U < UM, base, dome) * sc
         def Aw(U): return A0 * (0.45 + 0.55 * np.sin(np.pi / 2 * np.clip(U / 0.55, 0, 1))) * (1 - 0.15 * U ** 4) + 0.01        # búp khép: cánh rộng tới chót -> đỉnh búp kín
         def F(U, V, sc=sc, phi=phi):
             U = 1 - (1 - np.asarray(U, dtype=float)) ** 1.7                # dồn hàng lưới về phía đỉnh vòm -> đỉnh tròn mịn, không gãy khúc
-            Rr = Rc(U); scz = 1 - (1 - sc) * 0.2; Zz = z0 + L * U * scz + 0.6 * np.sin(np.pi * U) * scz   # cánh trong cao gần bằng cánh ngoài -> đỉnh búp liền một vòm, không lòi mép
+            vb = (V - 0.5) * 2; Rr = Rc(U) * (1 + 0.06 * (1 - vb ** 2) * np.sin(np.pi * U) ** 0.7);   scz = 1 - (1 - sc) * 0.1; Zz = z0 + L * U * scz + 0.6 * np.sin(np.pi * U) * scz   # cánh trong cao gần bằng cánh ngoài -> đỉnh búp liền một vòm, không lòi mép
             a = phi + (V - 0.5) * 2 * Aw(U)
             return np.stack([Rr * np.cos(a), Rr * np.sin(a), Zz], -1)
         al = math.radians(open_out + (open_in - open_out) * k ** 0.8); be = 0.45 * al
