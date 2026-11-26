@@ -22,7 +22,7 @@ const HQF := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa r
 
 # màu chip riêng bảng Trời đất: thời tiết (nền + viền theo trời), buổi trong ngày (ô giờ), lễ gần / xa
 const SKC := {
-	"wx_nang": ["rgb(255, 246, 200)", "rgb(255, 240, 180)", "rgb(254, 232, 160)", "rgb(222, 176, 70)"],
+	"wx_nang": ["rgb(255, 246, 200)", "rgb(255, 240, 180)", "rgb(254, 232, 160)", "rgb(214, 170, 80)"],
 	"fc": ["rgb(140, 196, 240)", "rgb(186, 220, 248)", "rgb(228, 244, 252)", "rgb(214, 176, 96)"],   # (11-26) ô dự báo: trời xanh, viền vàng (chờ ảnh nền trời + cỏ)
 	"wx_han": ["rgb(250, 206, 160)", "rgb(252, 218, 180)", "rgb(254, 230, 202)", "rgb(206, 120, 50)"],
 	"wx_rao": ["rgb(196, 226, 246)", "rgb(210, 234, 250)", "rgb(226, 242, 252)", "rgb(90, 160, 210)"],
