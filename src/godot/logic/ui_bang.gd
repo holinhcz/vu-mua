@@ -8,6 +8,8 @@ const Snap = preload("res://ui/snap.gd")
 const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
+const Sen = preload("res://ui/sen.gd")
+const TUA_W := 9.0   # dây tua khung sen lòng vào hàng tab
 
 var U          # ui.gd
 var G          # game.gd
@@ -368,13 +370,14 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 	var on_t: Dictionary = K[0] if String(K[0].cls).split(" ").has("on") else K[1]
 	var off_t: Dictionary = K[1] if on_t == K[0] else K[0]
 	var n := L.size()
+	var RW := 305.0 - (TUA_W if Sen.ON and n > 1 else 0.0)   # (11-26) khung sen: chừa chỗ dây tua góc phải
 	# U2TRE.ttFit: thử lần lượt [chia đều?, cỡ chữ, đệm ngang] tới khi chữ tab nào cũng vừa một dòng
 	var z0 := _z(off_t)
 	var tw0 := []
 	for i in n:
 		tw0.append(_tw(off_t, String(L[i][1])))
 	var fs0 := _px(off_t, "font-size") / z0
-	var weq := (305.0 - (n - 1) * 4.5) / n
+	var weq := (RW - (n - 1) * 4.5) / n
 	var pick := [true, fs0, 8.0]
 	for P in [[true, 14.0, 8.0], [true, 14.0, 5.0], [false, 14.0, 8.0], [false, 14.0, 5.0], [false, 13.0, 8.0], [false, 13.0, 5.0], [false, 12.0, 8.0], [false, 12.0, 5.0], [false, 12.0, 3.0]]:
 		pick = P
@@ -385,7 +388,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 			sum += ww
 			if P[0] and ww > weq:
 				ok = false
-		if ok and (P[0] or sum <= 305.0):
+		if ok and (P[0] or sum <= RW):
 			break
 	var out := []
 	var x := 16.5
@@ -396,7 +399,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		var w1: float = weq if pick[0] else float(tw0[i]) * float(pick[1]) / fs0 + (float(pick[2]) * 2.0 + 7.0) * z0
 		ws.append(w1)
 		sw += w1
-	var ex := maxf(0.0, 305.0 - sw) / n if not pick[0] else 0.0
+	var ex := maxf(0.0, RW - sw) / n if not pick[0] else 0.0
 	for i in n:
 		var a: bool = cur == L[i][0]
 		var c := _cl(on_t if a else off_t)
@@ -423,7 +426,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
-			_mv(b, x + w - 13.0, float(c.r[1]) + 2.0)   # (bản 503) chấm đỏ nằm trong góc tab, không đè tab bên cạnh
+			_mv(b, x + w - 10.0, float(c.r[1]) - 4.0)   # (11-26) chấm đỏ ngồi trên góc trên phải tab, không đè chữ
 			c.kids.append(b)
 		out.append(c)
 		x += w + 4.5
