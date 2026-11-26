@@ -71,14 +71,12 @@ def chop(fname, y0, y1, css_w, top0):
 im, c = chop('04_chop_do_dinh.png', 1067, 1157, DINH_W, 797)   # thanh vàng chóp đỉnh = ống tre trên: cùng dày, tâm trùng tâm ống
 save(im, 'dinh', DINH_W, DINH_W * im.height / im.width)
 M['dinh'] = {"a": [0.5, 0.0], "c": [0.5, c], "s": [DINH_W, DINH_W * im.height / im.width], "dy": T / 2, "fw": [0.81, 170, DINH_W]}
-DAY_W = 112.0
-im, c = chop('05_chop_do_day.png', 1034, 1104, DAY_W, 794)
-w0 = im.width; im = im.crop((int(w0 * 0.22), 0, int(w0 * 0.78), im.height)); DW = DAY_W * 0.56
-save(im, 'day', DW, DW * im.height / im.width)
-M['day'] = {"a": [0.5, 1.0], "c": [0.5, c], "s": [DW, DW * im.height / im.width], "dy": -T / 2}
+im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height   # chóp đáy như bản 598: nguyên hình, thanh 70 px = T
+put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c)
+M['day']['dy'] = -T / 2
 # hoa sen góc: tràn ra ngoài khung một phần
 put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # tư thế như ảnh mẫu (không xoay)
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 112, [1.0, 1.0], 0.87, 0.64)
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 92, [1.0, 1.0], 0.87, 0.64)   # cân với góc trên trái
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
