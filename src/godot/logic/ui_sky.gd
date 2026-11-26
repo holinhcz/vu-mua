@@ -27,11 +27,14 @@ const SKC := {
 	"wx_han": ["rgb(255, 232, 196)", "rgb(255, 222, 176)", "rgb(254, 210, 156)", "rgb(206, 120, 50)"],
 	"wx_rao": ["rgb(224, 242, 254)", "rgb(206, 234, 252)", "rgb(190, 226, 250)", "rgb(90, 160, 210)"],
 	"wx_mua": ["rgb(232, 244, 254)", "rgb(214, 236, 252)", "rgb(196, 226, 248)", "rgb(80, 116, 150)"],
-	"t_sang": ["rgb(255, 236, 170)", "rgb(255, 242, 192)", "rgb(255, 248, 214)", "rgb(214, 160, 40)"],
-	"t_chieu": ["rgb(252, 210, 166)", "rgb(253, 220, 184)", "rgb(254, 230, 204)", "rgb(206, 128, 60)"],
-	"t_toi": ["rgb(112, 114, 158)", "rgb(124, 126, 170)", "rgb(138, 140, 182)", "rgb(84, 86, 130)"],
+	"t_sang": ["rgb(255, 248, 206)", "rgb(255, 238, 176)", "rgb(254, 226, 146)", "rgb(214, 160, 40)"],   # (11-26) ô giờ: sáng vàng, chiều cam, tối xanh đêm
+	"t_chieu": ["rgb(255, 230, 196)", "rgb(254, 214, 166)", "rgb(252, 198, 138)", "rgb(206, 128, 60)"],
+	"t_toi": ["rgb(84, 116, 190)", "rgb(66, 96, 170)", "rgb(50, 78, 150)", "rgb(40, 60, 120)"],
+	"m0": ["rgb(255, 232, 240)", "rgb(252, 214, 228)", "rgb(248, 196, 214)", "rgb(217, 85, 126)"],   # ô lễ theo mùa (nhạt của chip mùa)
+	"m1": ["rgb(255, 238, 210)", "rgb(254, 224, 180)", "rgb(252, 208, 150)", "rgb(224, 138, 30)"],
+	"m2": ["rgb(226, 242, 252)", "rgb(206, 232, 250)", "rgb(186, 220, 246)", "rgb(46, 134, 193)"],
+	"m3": ["rgb(255, 246, 210)", "rgb(254, 236, 176)", "rgb(252, 224, 140)", "rgb(212, 154, 30)"],
 	"le_gan": ["rgb(244, 170, 160)", "rgb(248, 186, 176)", "rgb(250, 202, 192)", "rgb(196, 70, 60)"],
-	"le_xa": ["rgb(226, 196, 128)", "rgb(233, 206, 144)", "rgb(240, 218, 165)", "rgb(150, 108, 40)"],
 }
 func _ck(kind: String) -> Array:
 	return SKC[kind] if SKC.has(kind) else super(kind)
@@ -160,7 +163,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 		ks.append(_dic(X0 + 9.0, y + (h - 32.0) * 0.5, 32.0, _sic(lt)))
 		x = X0 + 50.0
 	elif lt != null:   # ô trái: [dòng 1, dòng 2] hoặc [svg]
-		var lw := 50.0
+		var lw := 58.0
 		var L: Array = lt
 		var lk: String = String(L[2]) if L.size() > 2 else "fut"
 		var lc := _chip(X0 + 6.0, y + 5.0, lw, h - 10.0, lk)
@@ -168,7 +171,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 		if L.size() == 1:
 			lc.kids = [_dic(X0 + 6.0 + (lw - 24.0) * 0.5, y + (h - 24.0) * 0.5, 24.0, String(L[0]))]
 		else:
-			lc.kids = [_dt(X0 + 6.0, y + h * 0.5 - 13.0, lw, 12.0, _cap(String(L[0])), 9.5, 600, "rgb(220, 222, 240)" if dk else SUB), _dt(X0 + 6.0, y + h * 0.5, lw, 13.0, String(L[1]), 11.0, 800, "rgb(255, 255, 255)" if dk else BROWN)]
+			lc.kids = [_dt(X0 + 6.0, y + h * 0.5 - 14.0, lw, 12.0, _cap(String(L[0])), 9.5, 600, "rgb(226, 234, 252)" if dk else SUB), _dt(X0 + 6.0, y + h * 0.5 + 1.0, lw, 13.0, String(L[1]), 11.0, 800, "rgb(255, 255, 255)" if dk else BROWN)]
 		ks.append(lc)
 		x = X0 + lw + 14.0
 	var bw := 0.0
@@ -241,7 +244,7 @@ func _tabt() -> Array:
 	var WN := _warns()
 	var nwarn := WN.size()
 	# (bản 402) cả bảng giãn / co cùng một tỉ lệ k cho vừa khung: chip bây giờ 72, dự báo 68, hàng cảnh báo 44 (x k)
-	var gaps := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 22.0 + maxf(0.0, nwarn - 1) * 6.0 + 8.0
+	var gaps := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 22.0 + maxf(0.0, nwarn - 1) * 6.0 + 26.0
 	var k := clampf((_hb - gaps) / (72.0 + 68.0 + nwarn * 44.0), 0.75, 1.6)
 	_rh = 44.0 * k
 	var ny := y + 40.0
@@ -419,14 +422,14 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		if d != null and not seen.has(d.id):
 			seen[d.id] = 1
 			var when := String(G.SEA_N[int(d.sea)]) + " ngày " + str(int(d.day))
-			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else ["Mùa " + String(G.SEA_N[int(d.sea)]).to_lower(), "ngày " + str(int(d.day)), "le_xa"]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), null]])
+			LE.append([r, ["fut", ["", "Hôm nay", "le_gan"] if r == 0 else (["còn", str(r) + " ngày", "le_gan"] if r <= 2 else ["Mùa " + String(G.SEA_N[int(d.sea)]).to_lower(), "ngày " + str(int(d.day)), "m" + str(int(d.sea))]), String(d.n), String(d.d), String(d.n) + " (" + when + "): " + String(d.d), null]])
 	var tx = W.WH.hdn_pill_txt()
 	if tx != null:
 		var cu: Dictionary = W.WH.hdn_s().cur
 		var today: bool = int(tx[1]) == 1
 		var rr: int = 0 if today else int(cu.d) - o
 		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(rr) + " ngày tới hội. Bà con đang góp lễ."
-		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else ["Mùa " + String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]).to_lower(), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "le_xa"]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
+		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else ["Mùa " + String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]).to_lower(), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "m" + str(int(floor(posmod(int(cu.d), 28) / 7.0)))]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
 	LE.sort_custom(func(x, z): return int(x[0]) < int(z[0]))
 	LE = LE.slice(0, 4)
 	if LE.size():
@@ -435,7 +438,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 	var g := 6.0
 	var nT := T.size()
 	var nL := LE.size()
-	var gaps := 10.0 + 22.0 + maxf(0.0, nT - 1) * g + 12.0 + 22.0 + maxf(0.0, nL - 1) * g + 8.0
+	var gaps := 10.0 + 22.0 + maxf(0.0, nT - 1) * g + 12.0 + 22.0 + maxf(0.0, nL - 1) * g + 26.0
 	var k := clampf((_hb - gaps) / (nT * 46.0 + nL * 58.0), 0.85, 1.5)
 	var out := []
 	var y := 10.0
@@ -452,7 +455,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		var q: Array = LE[i][1]
 		out.append_array(_row(y, 58.0 * k, String(q[0]), q[1], String(q[2]), String(q[3]), String(q[4]), q[5]))
 		y += 58.0 * k + (g if i < nL - 1 else 0.0)
-	return [out, y + 8.0]
+	return [out, y + 26.0]   # chừa sóng hồng + hoa sen góc đáy
 
 static func _tr(v) -> bool:
 	return not (v == null or v is bool and not v or (v is float or v is int) and v == 0 or v is String and v == "")

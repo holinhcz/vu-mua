@@ -212,9 +212,9 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false)
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 10.0)
 	for key in ["background-color", "background-image", "border-radius", "box-shadow"]:
 		n.css[key] = _ON.get(key, n.css.get(key))
-	if red:
-		n.css["background-image"] = "linear-gradient(rgb(196, 62, 48) 0%, rgb(204, 68, 52) 50%, rgb(216, 82, 62) 100%)"
-		n.css["box-shadow"] = String(n.css["box-shadow"]).replace("rgb(63, 116, 41)", "rgb(140, 38, 28)").replace("rgba(150, 215, 130, 0.45)", "rgba(255, 170, 150, 0.45)").replace("rgba(10, 55, 10, 0.2)", "rgba(80, 10, 5, 0.2)").replace("rgba(30, 70, 20, 0.32)", "rgba(80, 20, 10, 0.32)")
+	# (11-26) bộ sen: nút xanh / đỏ gờ vàng như nút Bán hết, chip lọc đang chọn
+	n.css["background-image"] = Snap.SEN_DO if red else Snap.SEN_XANH
+	n.css["box-shadow"] = Snap.SEN_VIEN
 	n.kids = [_dt(x, y, w, h, t, 12.5, 800, "rgb(255, 255, 255)")]
 	if cb is Callable:
 		n.act = cb
