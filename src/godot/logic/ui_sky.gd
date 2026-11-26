@@ -431,7 +431,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		var hd := ("Hôm nay mở hội ở sân đình.") if today else "Còn " + str(rr) + " ngày tới hội. Bà con đang góp lễ."
 		LE.append([rr, ["fut", ["", "Hôm nay", "le_gan"] if today else (["còn", str(rr) + " ngày", "le_gan"] if rr <= 2 else ["Mùa " + String(G.SEA_N[int(floor(posmod(int(cu.d), 28) / 7.0))]).to_lower(), "ngày " + str(posmod(int(cu.d), 28) % 7 + 1), "m" + str(int(floor(posmod(int(cu.d), 28) / 7.0)))]), "Hội đình làng", hd, hd, ["Vào thi" if today else "Chuẩn bị", _go(U.hdn_open.bind("giai" if today else "mo"))]]])
 	LE.sort_custom(func(x, z): return int(x[0]) < int(z[0]))
-	LE = LE.slice(0, 4)
+	LE = LE.slice(0, maxi(1, 6 - T.size()))   # (11-26) cả tab tối đa 6 hàng: trong làng bao nhiêu thì lễ hội bù cho đủ 6
 	if LE.size():
 		LE[0][1][0] = "sen"   # lễ gần nhất nổi lên
 	# xếp: cùng tỉ lệ k
