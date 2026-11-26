@@ -43,13 +43,30 @@ def tone(c, k):
     return c * k[:, None]
 
 
+def sen_khac(pos, th0, zc, s, height=False):
+    """hoa sen CHẠM NỔI thẳng vào vỏ trái: 5 cánh chót tròn xếp lớp (cánh giữa nổi cao nhất, mỗi cánh có gân giữa lõm),
+    lá đỡ cong bên dưới. Trả mặt nạ màu 0..1, hoặc độ cao nổi (height=True)."""
+    th, rr, z = azi(pos)
+    u = np.angle(np.exp(1j * (th - th0))) * rr; v = z - (zc - 0.45 * s)
+    m = np.zeros_like(u); h = np.zeros_like(u)
+    lv = smooth(0.0, 0.05 * s, 0.11 * s * np.sqrt(np.clip(1 - (u / (1.1 * s)) ** 2, 0, 1)) - np.abs(v + 0.1 * s - 0.12 * (u / s) ** 2 * s))
+    m = np.maximum(m, lv); h = h * (1 - lv) + 0.2 * lv
+    for a, Lk, hk in ((1.2, 0.62, 0.22), (-1.2, 0.62, 0.22), (0.62, 0.84, 0.3), (-0.62, 0.84, 0.3), (0.0, 1.0, 0.4)):   # sau -> trước
+        L_ = Lk * s; al = u * math.sin(a) + v * math.cos(a); ac = u * math.cos(a) - v * math.sin(a)
+        t_ = al / L_; w = 0.29 * L_ * np.sqrt(np.clip(1 - ((t_ - 0.55) / 0.45) ** 2, 0, 1)); t_ = np.clip(t_, 0, 1)     # cánh bầu dục, chót tròn
+        mk = smooth(0.0, 0.035 * s, w - np.abs(ac))
+        vein = np.exp(-(ac / (0.025 * s)) ** 2) * np.sin(np.pi * t_) * 0.07
+        m = np.maximum(m, mk); h = h * (1 - mk) + (hk - vein) * mk
+    return h if height else m
+
+
 def m_dua_vo():
     """vỏ dừa xiêm: xanh lá đậm/nhạt loang mảng lớn, thớ dọc mảnh, 3 gờ sáng, bì vàng lốm đốm nhạt quanh tai, đốm bì nhạt li ti"""
-    g0, g1, g2, g3, lent = hexc('#3c6a24'), hexc('#88b246'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
+    g0, g1, g2, g3, lent = hexc('#4c7c2c'), hexc('#88b246'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
     def f(uv, prm, pos, nrm):
         th, rr, z = azi(pos)
         big = fbm(np.cos(th) * 2.2 + z * 0.08, np.sin(th) * 2.2 + z * 0.11, 3.0)
-        c = mix(g0, g1, np.clip((big - 0.3) * 2.4, 0, 1))
+        c = mix(g0, g1, np.clip((big - 0.15) * 1.1, 0, 1))
         st = vnoise(th * 55, z * 0.18, 8.0); st2 = 0.5 + 0.5 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4)
         c = tone(c, 0.9 + 0.12 * st + 0.06 * st2)
         rid = np.abs(np.cos(1.5 * (th - 0.3))) ** 18                         # 3 gờ dọc
@@ -60,6 +77,8 @@ def m_dua_vo():
         c = c * (1 - 0.3 * bot)[:, None] + g3[None] * (0.3 * bot)[:, None]
         mot = fbm(np.cos(th) * 7 + z * 0.3, np.sin(th) * 7 - z * 0.2, 11.0)      # loang nhạt nhỏ (không chấm)
         c = c * (1 - 0.18 * smooth(0.55, 0.8, mot))[:, None] + lent[None] * (0.18 * smooth(0.55, 0.8, mot))[:, None]
+        sk = sen_khac(pos, math.pi / 2, R.ZL * 0.6, 5.0)[:, None]                # sen chạm nổi: lớp bì cạo lộ màu xanh vàng nhạt
+        c = c * (1 - 0.6 * sk) + hexc('#b4c86a')[None] * (0.6 * sk)
         return np.clip(c, 0, 1), nrm
     f.kind = 'son'
     return f
@@ -139,6 +158,8 @@ def m_bi():
         c = c * (1 - 0.45 * top)[:, None] + gr[None] * (0.45 * top)[:, None]
         x, y, _ = R.loc(pos); sp = bi_dot(x, y, z)
         c = c * (1 - 0.35 * sp)[:, None] + dot[None] * (0.35 * sp)[:, None]
+        sk = sen_khac(pos, math.pi / 2, R.ZL * 0.58, 4.2)[:, None]                # sen chạm nổi trên múi trước: vỏ cạo lộ thịt vàng
+        c = c * (1 - 0.55 * sk) + hexc('#f6c05a')[None] * (0.55 * sk)
         return np.clip(c, 0, 1), nrm
     f.kind = 'son'
     return f
@@ -276,7 +297,7 @@ def h_guong(P, UV, q):
 
 def h_soi(P, UV, q):                  # thớ dọc vỏ dừa + 3 gờ
     th, rr, z = azi(P)
-    return 0.03 * vnoise(th * 90, z * 0.5, 7.0) + 0.015 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4) + 0.08 * np.abs(np.cos(1.5 * (th - 0.3))) ** 18
+    return 0.03 * vnoise(th * 90, z * 0.5, 7.0) + 0.015 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4) + 0.08 * np.abs(np.cos(1.5 * (th - 0.3))) ** 18 + sen_khac(P, math.pi / 2, R.ZL * 0.6, 5.0, True)
 
 
 def h_bi(P, UV, q):
@@ -284,7 +305,7 @@ def h_bi(P, UV, q):
     ph = 5 * (th - math.pi / 2)
     st = 0.5 + 0.5 * np.sin(ph * 9 + vnoise(th * 6, z * 0.25, 2.0) * 3)
     x, y, _ = R.loc(P)
-    return 0.035 * st ** 3 + 0.02 * vnoise(th * 60, z * 0.4, 6.0) + 0.04 * bi_dot(x, y, z)
+    return 0.035 * st ** 3 + 0.02 * vnoise(th * 60, z * 0.4, 6.0) + 0.04 * bi_dot(x, y, z) + sen_khac(P, math.pi / 2, R.ZL * 0.58, 4.2, True)
 
 
 # ------------------------------------------------------------------ hình khối
@@ -453,10 +474,6 @@ def trai_dua(S, rng):
     # vòng tre lót đáy + dây mây buộc + thẻ gỗ sen
     pts = [(5.6 * math.cos(t), 5.6 * math.sin(t), 1.5) for t in np.linspace(0, TAU, 33)]
     for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.9, M_BAMBOO, (0.4, 0.2, 0), nr=7, nl=2)
-    zr = Hd * 0.47; rr = Rd * math.sin(math.pi * 0.47) ** 0.6 * (1 - 0.08 * 0.47) + 0.15
-    pts = [(rr * math.cos(t), rr * math.sin(t), zr) for t in np.linspace(0, TAU, 49)]
-    for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.45, M_ROPE, nr=6, nl=2)
-    sen_go(S, rng, (0, rr - 0.6, zr - 0.2), 2.8)
     # NẮP: chỏm dừa vạt ngang (bản lề sau)
     part(1, (0, -prof_c(-math.pi / 2), zc), (1, 0, 0), 112)
     shell(S, lambda U, V: np.stack([rad(SC_ + U * (1 - SC_) * 0.995, V * TAU) * np.cos(V * TAU), rad(SC_ + U * (1 - SC_) * 0.995, V * TAU) * np.sin(V * TAU), (SC_ + U * (1 - SC_)) * Hd], -1), 24, 96, VO)
@@ -465,10 +482,10 @@ def trai_dua(S, rng):
     for k in range(3):                                # tai dừa: 3 cánh lớn + 3 cánh nhỏ xen, nâu khô xếp hình sao
         for big in (1, 0):
             a = k * TAU / 3 + 0.4 + (0 if big else TAU / 6); d = np.array([math.cos(a), math.sin(a), 0.0])
-            ln, wd, lift = (3.6, 2.3, 0.3) if big else (2.4, 1.5, 0.5)
-            n = np.array([0, 0, 1.0]) + d * 0.45; n /= np.linalg.norm(n)
-            ell(S, tuple(d * ln * 0.62 + np.array([0, 0, Hd - 0.55 + lift])), ln, wd, 0.45, TAI, axes=(nz_(d - n * (n @ d)), nz_(np.cross(n, d)), n), nu=6, nv_=18)
-    tb(S, (0, 0, Hd - 0.2), (0.25, 0.15, Hd + 1.4), 0.75, CU, nr=10, nl=3, cap=True)
+            ln, wd, lift = (3.0, 2.0, 0.0) if big else (2.0, 1.35, 0.2)
+            n = np.array([0, 0, 1.0]) + d * 0.75; n /= np.linalg.norm(n)
+            ell(S, tuple(d * ln * 0.55 + np.array([0, 0, Hd - 0.75 + lift - 0.25 * ln])), ln, wd, 0.6, TAI, axes=(nz_(d - n * (n @ d)), nz_(np.cross(n, d)), n), nu=6, nv_=18)
+    tb(S, (0, 0, Hd - 0.4), (0.15, 0.1, Hd + 0.7), 0.6, CU, nr=10, nl=3, cap=True)
     body()
 
 
@@ -506,7 +523,6 @@ def trai_bi(S, rng):
     ell(S, (-1.0, 0.6, zb + 3.2), 1.2, 1.2, 1.4, flat('#2fae6a'))
     # logo sen vàng trên đĩa sơn son trước bụng bí
     zm = Hb * 0.42
-    sen_logo(S, rng, (0, Rb * 0.995 - 0.75, zm), 2.6, VANG, mplate=newmat(mat_son('#8e2418')), mring=VANG, mgem=flat('#e0302a'), plate_r=3.7)
     # NẮP: chỏm bí + cuống + tua + lá bí
     part(1, (0, -prof_c(-math.pi / 2), zc), (1, 0, 0), 108)
     shell(S, lambda U, V: outer(U, V, AC, math.pi * 0.999), 24, 120, VO)
@@ -535,20 +551,20 @@ def trai_bi(S, rng):
     for i, (p0, p1) in enumerate(zip(vp, vp[1:])): tb(S, p0, p1, 0.62 - 0.012 * i, VI, nr=8, nl=2)
     for j in (8, 16):                                  # đốt dây
         ell(S, vp[j], 0.85, 0.85, 0.7, VI, nu=5, nv_=12)
-    node = np.array(vp[10]); lc = node + np.array([-1.6, -1.2, 4.2])
-    pts = [node + (lc - node) * t_ + np.array([0, 0, 1.0 * math.sin(t_ * math.pi)]) for t_ in np.linspace(0, 1, 9)]
+    node = np.array(vp[10]); lc = node + np.array([-2.2, -1.8, 1.9])
+    pts = [node + (lc - node) * t_ + np.array([0, 0, 0.6 * math.sin(t_ * math.pi)]) for t_ in np.linspace(0, 1, 9)]
     for p0, p1 in zip(pts, pts[1:]): tb(S, tuple(p0), tuple(p1), 0.38, VI, nr=7, nl=2)
     n2 = np.array(vp[16]); hp = [tuple(n2 + np.array([0.5 * math.cos(t_ * 2.4) * (1 - t_ / 9) + 0.25 * t_, 0.5 * math.sin(t_ * 2.4) * (1 - t_ / 9), 0.42 * t_])) for t_ in np.linspace(0, 7, 46)]
     for p0, p1 in zip(hp, hp[1:]): tb(S, p0, p1, 0.16, VI, nr=5, nl=2)
     # LÁ BÍ: 5 thuỳ răng cưa, gân chân vịt toả từ chỗ cuống lá đính, mặt lá gợn, nghiêng đón nắng
     LA_ = newmat(m_la('#4a8a2e', '#a8d070', 4.6, edge='#8a9a40', off=0.5)); R.HFN[LA_] = h_la(4.6, 0.5)
-    tl = math.radians(24); M = np.array([[1, 0, 0], [0, math.cos(tl), -math.sin(tl)], [0, math.sin(tl), math.cos(tl)]])
+    tl = math.radians(10); M = np.array([[1, 0, 0], [0, math.cos(tl), -math.sin(tl)], [0, math.sin(tl), math.cos(tl)]])
     cz_, sz_ = math.cos(-2.3), math.sin(-2.3); Mz = np.array([[cz_, -sz_, 0], [sz_, cz_, 0], [0, 0, 1]])
     def leaf(U, V, off=0.0):
         th = (V - 0.5) * TAU * 0.92
         lobe = 0.6 + 0.4 * np.abs(np.cos(2.5 * th)) ** 0.8
         ser = 1 + 0.04 * np.sin(th * 46) * U ** 4
-        rr = 7.4 * U * lobe * ser
+        rr = 8.6 * U * lobe * ser
         z = 0.9 * np.sin(np.pi * U) * 0.7 + 0.35 * np.cos(th * 5) * U ** 2 - 0.5 * U ** 2 + off
         p = np.stack([rr * np.sin(th), -rr * np.cos(th) * 0 + rr * np.cos(th), z], -1)
         return p @ (Mz @ M).T + lc
@@ -559,7 +575,7 @@ def trai_bi(S, rng):
     for k in range(9):
         a = rng.random() * TAU; d = 1.5 + rng.random() * 4.5
         ax = np.array([math.cos(a + 1.2), math.sin(a + 1.2), 0])
-        ell(S, (d * math.cos(a), d * math.sin(a), zc - 0.2), 0.95, 0.58, 0.22, HAT, axes=(ax, np.array([-ax[1], ax[0], 0]), np.array([0, 0, 1.0])), nu=4, nv_=10)
+        ell(S, (d * math.cos(a), d * math.sin(a), zc - 0.45), 0.95, 0.58, 0.32, HAT, axes=(ax, np.array([-ax[1], ax[0], 0]), np.array([0, 0, 1.0])), nu=4, nv_=10)
     XO = newmat(m_com('#e8962e', '#d8822a'))
     for k in range(7):
         a = rng.random() * TAU; d = 1 + rng.random() * 5
