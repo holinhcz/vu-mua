@@ -73,6 +73,13 @@ const IC := {
 	"loa": _SV + "<path d='M4 13 H10 L22 6 V26 L10 19 H4 Z' fill='#e2473f' stroke='#9c2a24' stroke-width='1.6' stroke-linejoin='round'/><rect x='6' y='19' width='4' height='8' rx='1.5' fill='#9c2a24'/><path d='M4.5 14 H10' stroke='#ff9a90' stroke-width='1.4'/><g fill='none' stroke='#e2473f' stroke-width='2' stroke-linecap='round'><path d='M25 12 q3 4 0 8'/><path d='M27.5 9 q5 7 0 14'/></g></svg>",
 	"hoa": _SV + "<g fill='#ffffff' stroke='#f0c0c8' stroke-width='0.8'><circle cx='16' cy='8' r='6'/><circle cx='23.6' cy='13.5' r='6'/><circle cx='20.7' cy='22.5' r='6'/><circle cx='11.3' cy='22.5' r='6'/><circle cx='8.4' cy='13.5' r='6'/></g><circle cx='16' cy='16' r='4.2' fill='#f6c341' stroke='#d89a20' stroke-width='1'/></svg>",
 }
+const ICP := ["gio", "canh", "radio", "loa", "sen", "hoa", "lich", "play"]   # (11-26) icon ảnh (bộ 12 icon của Link), còn lại vẽ svg
+static var _ics := {}
+func _ic(k: String) -> String:
+	if not _ics.has(k):
+		_ics[k] = Css.img_svg("res://ui/img/troi/" + k + ".webp") if k in ICP else String(IC[k])
+	return _ics[k]
+
 const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "sen", "Lễ hội": "sen"}
 
 func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước chữ (ảnh mẫu)
@@ -83,7 +90,7 @@ func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước 
 		Snap._move(n, Vector2(22.0, 0))
 		if float(n.r[0]) + float(n.r[2]) > X0 + XW:
 			n.r[2] = X0 + XW - float(n.r[0])
-	L.append(_dic(X0, y - 3.0, 20.0, IC[HDI[t]]))
+	L.append(_dic(X0, y - 3.0, 20.0, _ic(HDI[t])))
 	return L
 
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
@@ -122,7 +129,9 @@ func _build() -> void:
 		if W.WH.mm(o + r) != null:
 			lehot = true
 	var tn_mai: bool = W.WL.tn_ok() and W.WL.tn_on(o + 1) != null
-	var sh := _kshell([["t", "Thời tiết", tn_mai], ["l", "Lịch làng", lehot]], cd, _tab_go)
+	if not _wsv.has("nang"):
+		_wsv["nang"] = Css.img_svg(WPIC["nang"])
+	var sh := _kshell([["t", "Thời tiết", tn_mai, _wsv["nang"]], ["l", "Lịch làng", lehot, _ic("lich")]], cd, _tab_go)
 	var r: Array = _tabt() if cd == "t" else _tabl()
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
@@ -136,7 +145,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 	var x := X0 + 10.0
 	var ks := []
 	if lt is String:   # icon trái không ô (ảnh mẫu)
-		ks.append(_dic(X0 + 10.0, y + (h - 30.0) * 0.5, 30.0, IC[lt]))
+		ks.append(_dic(X0 + 9.0, y + (h - 32.0) * 0.5, 32.0, _ic(lt)))
 		x = X0 + 50.0
 	elif lt != null:   # ô trái: [dòng 1, dòng 2] hoặc [svg]
 		var lw := 50.0
@@ -163,8 +172,14 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 	c.act = _dsay.bind(full)
 	out.append(c)
 	if btn != null:   # nút đặt ngoài chip (bấm nút không bấm luôn hàng)
-		var b := _onbtn(X0 + XW - bw - 8.0, y + (h - 26.0) * 0.5, bw, 26.0, String(btn[0]), btn[1])
+		var pl := String(btn[0]) == "Mở radio"
+		var bx := X0 + XW - bw - 8.0 - (14.0 if pl else 0.0)
+		var by := y + (h - 26.0) * 0.5
+		var b := _onbtn(bx, by, bw + (14.0 if pl else 0.0), 26.0, String(btn[0]), btn[1])
 		b.kids[0].css["font-size"] = _cpx(11.0)
+		if pl:
+			b.kids[0].r = [bx + 16.0, by, bw - 6.0, 26.0]
+			b.kids.append(_dic(bx + 9.0, by + 7.0, 12.0, _ic("play")))
 		out.append(b)
 	return out
 
@@ -194,7 +209,7 @@ func _tabt() -> Array:
 	var mb := _onbtn(X0, y - 2.0, mw, 30.0, mt, null, true)
 	mb.kids[0].css["font-size"] = _cpx(13.0)
 	mb.kids[0].r = [X0 + 22.0, y - 2.0, mw - 26.0, 30.0]
-	mb.kids.append(_dic(X0 + 9.0, y + 4.0, 18.0, IC.hoa))
+	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _ic("hoa")))
 	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))

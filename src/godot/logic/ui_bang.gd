@@ -415,11 +415,16 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		c.text = L[i][1]
 		c.tr = [x + (w - tw) * 0.5, c.tr[1], tw, c.tr[3]]
 		c.act = _tab_jump.bind(go, L[i][0])
+		if L[i].size() > 3 and String(L[i][3]) != "" and has_method("_dic"):   # (11-26) icon trước chữ tab
+			var isz := 18.0
+			var ix := x + (w - tw - isz - 5.0) * 0.5
+			c.tr = [ix + isz + 5.0, c.tr[1], tw, c.tr[3]]
+			c.kids.append(call("_dic", ix, float(c.tr[1]) + (float(c.tr[3]) - isz) * 0.5, isz, String(L[i][3])))
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
 			_mv(b, x + w - 13.0, float(c.r[1]) + 2.0)   # (bản 503) chấm đỏ nằm trong góc tab, không đè tab bên cạnh
-			c.kids = [b]
+			c.kids.append(b)
 		out.append(c)
 		x += w + 4.5
 	seg.kids = out
