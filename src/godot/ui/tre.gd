@@ -72,6 +72,8 @@ static func texture(w: float, h: float) -> Texture2D:   # cả khung tre cho h�
 	return t
 
 static func bar(w: float) -> Texture2D:   # thanh tre ngang dài w (css px), cao T + S, một ảnh
+	if Sen.ON:   # (11-26) bộ sen: ống tre khung sen
+		return Sen.bar(w, T + S)
 	var k := _px()
 	var W := int(round(w * k))
 	var key := "bar" + str(W)

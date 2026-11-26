@@ -95,6 +95,8 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	var z := float(n.get("z", 1.0))
 	n = _tre(n, z)   # (bản 294) khung tre chung bằng ảnh
 	n = _sen_giay(n)   # (11-25) nền giấy sen của khung chung
+	if Sen.ON:
+		n = _sen_look(n)   # (11-26) tab đang chọn, chip, thanh đầy, nút chính theo bộ sen
 	var tick: bool = String(n.get("text", "")) == "✓"
 	if tick:   # (bản 300) dấu tích: ảnh chung ui/img/bong/tick.png (ô tròn xanh + tích trắng) thay chữ ✓ (Nunito không có)
 		n = n.duplicate()
@@ -382,6 +384,50 @@ static func _sen_close(n: Dictionary, B: Array) -> void:   # #pClose trong khung
 	for k in n.get("kids", []):   # header bọc nút: theo chỗ mới
 		if String(k.get("id", "")) == "pClose":
 			n.r = k.r.duplicate()
+
+const SEN_DO := "linear-gradient(rgb(234, 88, 96) 0%, rgb(214, 52, 64) 50%, rgb(182, 32, 44) 100%)"
+const SEN_VIEN := "rgb(218, 170, 84) 0px 0px 0px 2px inset, rgba(255, 210, 205, 0.5) 0px 3px 0px 0px inset, rgba(90, 10, 10, 0.25) 0px 0px 6px 2px inset"
+const SEN_XANH := "linear-gradient(rgb(70, 140, 60) 0%, rgb(52, 118, 46) 55%, rgb(40, 98, 38) 100%)"
+
+static func _white(n: Dictionary) -> void:
+	n.css = n.css.duplicate()
+	n.css["color"] = "rgb(255, 255, 255)"
+	for k in n.get("kids", []):
+		_white(k)
+
+static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chip đỏ, thanh đầy đỏ, nút chính xanh đậm viền vàng
+	var cl := String(n.get("cls", "")).split(" ")
+	if cl.has("khseg"):
+		var o: Dictionary = n.duplicate()
+		o.kids = []
+		for k in n.get("kids", []):
+			var kk: Dictionary = k
+			if String(k.get("cls", "")).split(" ").has("on"):
+				kk = k.duplicate(true)
+				kk.css["background-image"] = SEN_DO
+				kk.css["box-shadow"] = SEN_VIEN
+			o.kids.append(kk)
+		return o
+	if cl.has("khst"):
+		var o2: Dictionary = n.duplicate(true)
+		o2.css["background-image"] = SEN_DO
+		o2.css["background-color"] = "rgb(214, 52, 64)"
+		o2.css["box-shadow"] = SEN_VIEN
+		_white(o2)
+		return o2
+	if cl.has("khchip") and cl.has("on"):   # chip lọc đang chọn: xanh đậm viền vàng
+		var o3: Dictionary = n.duplicate()
+		o3.css = n.css.duplicate()
+		o3.css["background-image"] = SEN_XANH
+		o3.css["box-shadow"] = SEN_VIEN
+		return o3
+	if cl.has("primary") and String(n.get("tag", "")) == "button":
+		var o4: Dictionary = n.duplicate()
+		o4.css = n.css.duplicate()
+		o4.css["background-image"] = SEN_XANH
+		o4.css["box-shadow"] = SEN_VIEN
+		return o4
+	return n
 
 static func _sen_giay(n: Dictionary) -> Dictionary:   # .pbody (nền giấy vân lá của khung chung) -> giấy sen (ảnh dưới nội dung)
 	var cl := String(n.get("cls", "")).split(" ")

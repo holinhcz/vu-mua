@@ -26,9 +26,19 @@ def crop_bb(im):
     return im.crop(im.getbbox())
 
 
+def pale(im):   # tre nhạt như ảnh mẫu Kho (vàng mật nhạt, không cam): giảm bão hoà, sáng lên chút
+    a = np.array(im).astype(np.float32)
+    rgb = a[:, :, :3]
+    g = rgb.mean(2, keepdims=True)
+    rgb = g + (rgb - g) * 0.55
+    rgb = rgb * 0.82 + np.array([238, 214, 160], np.float32) * 0.18
+    a[:, :, :3] = np.clip(rgb, 0, 255)
+    return Image.fromarray(a.astype(np.uint8), 'RGBA')
+
+
 M = {"T": T, "giay": [251, 242, 229]}
 # ---- tre: lấy hết từ ảnh góc (cùng độ dày, cùng ánh sáng): góc cong, ống trơn ngang/dọc, mắt tre ngang/dọc
-g = load('01_goc_tre_tron.png')
+g = pale(load('01_goc_tre_tron.png'))
 OX, OY = 100, 116                     # mép ngoài ống ngang (trên) / ống dọc (trái) của ảnh góc
 C = 700                               # góc cắt tới trước mắt tre đầu (mắt ở ~600-672)
 goc = g.crop((OX, OY, C, C))
@@ -56,13 +66,13 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
 # chóp đỉnh: thanh vàng dưới chân chóp đè đúng giữa ống tre trên
 im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1107 - 797) / im.height
 put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c)
-M['dinh']['dy'] = T / 2
+M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.66, 170, 250]   # rộng theo hộp: 66% bề ngang (170..250)
 im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
 put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c)
-M['day']['dy'] = -T / 2
+M['day']['dy'] = -T / 2; M['day']['fw'] = [0.42, 110, 170]
 # hoa sen góc: tràn ra ngoài khung một phần
-put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 84, [0.0, 0.0], 0.30, 0.34)
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 104, [1.0, 1.0], 0.70, 0.62)
+put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 88, [0.0, 0.0], 0.36, 0.40)
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 116, [1.0, 1.0], 0.66, 0.58)
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
@@ -77,10 +87,10 @@ def with_x(im):
     return im
 
 
-put('dong', '08_nut_dong_do_khong_X.png', 28, [1.0, 0.0], 0.5, 0.5, with_x)
-M['dong']['dx'] = -9; M['dong']['dy'] = 4
-put('tua', '09_day_tua_do.png', 13, [1.0, 0.0], 0.5, 0.0)
-M['tua']['dx'] = 0.5; M['tua']['dy'] = 17
+put('dong', '08_nut_dong_do_khong_X.png', 34, [1.0, 0.0], 0.5, 0.5, with_x)
+M['dong']['dx'] = -6; M['dong']['dy'] = 1
+put('tua', '09_day_tua_do.png', 18, [1.0, 0.0], 0.5, 0.0)
+M['tua']['dx'] = 2; M['tua']['dy'] = 22
 # sóng hồng: lớp giấy, đáy trái (lật ngang cho đáy phải)
 w = load('10_song_hong_day_giay.png'); w = crop_bb(w)
 save(w, 'song', 140, 140 * w.height / w.width)

@@ -23,7 +23,7 @@ var mat_svg := {}            # vật liệu -> svg
 var star_on := ""
 var star_off := ""
 var chip_css := {}           # "ok"/"no" (vật liệu), "xok"/"xno" (xu): css ô + css chữ b
-var bar_col := {"": "rgb(255, 204, 51)", "warn": "rgb(246, 111, 39)", "full": "rgb(240, 62, 50)"}
+var bar_col := {"": "rgb(222, 64, 76)", "warn": "rgb(246, 111, 39)", "full": "rgb(160, 18, 30)"}
 
 func _init(ui) -> void:
 	U = ui

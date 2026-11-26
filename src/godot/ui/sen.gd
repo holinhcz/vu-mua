@@ -10,6 +10,7 @@ const D := "res://ui/img/sen/"
 const USE_W := 220.0
 const USE_H := 200.0
 const MAT := 40.0     # mắt tre cách nhau ~ (css px)
+const ON := true      # bộ giao diện sen (khung, thanh tre, tab, chip đỏ)
 
 static var M := {}
 static var _src := {}
@@ -21,7 +22,7 @@ static func meta() -> Dictionary:
 	return M
 
 static func use(w: float, h: float) -> bool:
-	return w >= USE_W and h >= USE_H
+	return ON and w >= USE_W and h >= USE_H
 
 static func _px() -> float:
 	return clampf(ceilf(Css.K), 2.0, 4.0)
@@ -55,6 +56,9 @@ static func _put(out: Image, name: String, r: Rect2, o: Vector2, k: float, fx :=
 static func _deco(n: String, w: float, h: float) -> Rect2:   # mảnh trang trí neo theo hộp: a (phần hộp), c (điểm neo ảnh), dx/dy
 	var q: Dictionary = meta()[n]
 	var sz := Vector2(float(q.s[0]), float(q.s[1]))
+	if q.has("fw"):   # rộng theo hộp (chóp đỉnh, đáy)
+		var nw := clampf(float(q.fw[0]) * w, float(q.fw[1]), float(q.fw[2]))
+		sz = Vector2(nw, sz.y * nw / sz.x)
 	var p := Vector2(float(q.a[0]) * w + float(q.get("dx", 0.0)), float(q.a[1]) * h + float(q.get("dy", 0.0)))
 	return Rect2(p - Vector2(float(q.c[0]) * sz.x, float(q.c[1]) * sz.y), sz)
 
@@ -109,6 +113,26 @@ static func frame(w: float, h: float) -> Array:   # [texture, rect css so với 
 		out.generate_mipmaps()
 		_tex[key] = ImageTexture.create_from_image(out)
 	return [_tex[key], B]
+
+static func bar(w: float, h: float) -> Texture2D:   # thanh tre ngang bên trong bảng (ngăn mục): ống tre khung + mắt tre
+	var k := _px()
+	var key := "b" + str(int(w * 10)) + "x" + str(int(h * 10)) + "@" + str(k)
+	if _tex.has(key):
+		return _tex[key]
+	var m := meta()
+	var out := Image.create(int(ceil(w * k)), int(ceil(h * k)), false, Image.FORMAT_RGBA8)
+	var t := minf(h, float(m.ong_n[0]))
+	var y := (h - t) * 0.5
+	_put(out, "ong_n", Rect2(0, y, w, t), Vector2.ZERO, k)
+	var mn: Array = m.mat_n
+	var mw := float(mn[0]) * t / float(mn[1])
+	var cnt := maxi(0, int(round(w / MAT)) - 1)
+	for i in cnt:
+		_put(out, "mat_n", Rect2(w * float(i + 1) / float(cnt + 1) - mw * 0.5, y, mw, t), Vector2.ZERO, k)
+	out.generate_mipmaps()
+	var tx := ImageTexture.create_from_image(out)
+	_tex[key] = tx
+	return tx
 
 static func close_rect(w: float) -> Rect2:   # chỗ bấm nút đóng (css, so với góc trên trái hộp)
 	return _deco("dong", w, 0.0)
