@@ -78,8 +78,12 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 	U._layout()
 
 func _hd(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
-	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
-	return [_dt(X0 + 2.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"), _dbx(X0 + 2.0 + tw + 6.0, y + 8.0, XW - tw - 12.0, 1.0, "rgb(222, 204, 164)", 0.0)]
+	# (11-26) bộ sen: chữ đậm + chấm tròn vàng + đường kẻ vàng mảnh tới mép phải
+	var tw: float = Box.text_w(t, 13.0, 800) + 6.0
+	var lx := X0 + 2.0 + tw + 6.0
+	return [_dt(X0 + 2.0, y - 1.0, tw, 18.0, t, 13.0, 800, BROWN, "left"),
+		_dbx(lx, y + 5.5, 5.0, 5.0, "rgb(252, 246, 230)", 3.0, "1px solid rgb(200, 158, 80)"),
+		_dbx(lx + 5.0, y + 7.5, XW - tw - 17.0, 1.0, "rgb(214, 176, 104)", 0.0)]
 
 func _fitw(s: String, fs: float, fw: int, w: float) -> String:   # cắt chữ thêm "…" cho vừa bề ngang
 	if Box.text_w(s, fs, fw) <= w:
@@ -158,7 +162,7 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"s_vuon": ["rgb(255, 232, 196)", "rgb(255, 238, 210)", "rgb(255, 246, 228)", "rgb(220, 150, 50)"],
 	"s_chan": ["rgb(250, 222, 200)", "rgb(252, 230, 212)", "rgb(254, 240, 228)", "rgb(200, 130, 80)"],
 	"s_xuong": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
-	"fut": ["rgb(250, 242, 222)", "rgb(252, 247, 234)", "rgb(255, 252, 245)", "rgba(150, 112, 48, 0.55)"],
+	"fut": ["rgb(255, 250, 238)", "rgb(253, 246, 230)", "rgb(250, 240, 220)", "rgb(216, 180, 110)"],   # (11-26) bộ sen: kem, viền vàng
 	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
 	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
 	"miss": ["rgb(200, 196, 186)", "rgb(208, 204, 195)", "rgb(218, 215, 207)", "rgb(145, 137, 123)"],

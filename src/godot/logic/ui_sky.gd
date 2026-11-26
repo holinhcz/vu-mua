@@ -22,7 +22,8 @@ const HQF := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa r
 
 # màu chip riêng bảng Trời đất: thời tiết (nền + viền theo trời), buổi trong ngày (ô giờ), lễ gần / xa
 const SKC := {
-	"wx_nang": ["rgb(255, 238, 176)", "rgb(255, 244, 200)", "rgb(255, 250, 222)", "rgb(222, 170, 40)"],
+	"wx_nang": ["rgb(255, 246, 200)", "rgb(255, 240, 180)", "rgb(254, 232, 160)", "rgb(222, 176, 70)"],
+	"fc": ["rgb(140, 196, 240)", "rgb(186, 220, 248)", "rgb(228, 244, 252)", "rgb(214, 176, 96)"],   # (11-26) ô dự báo: trời xanh, viền vàng (chờ ảnh nền trời + cỏ)
 	"wx_han": ["rgb(250, 206, 160)", "rgb(252, 218, 180)", "rgb(254, 230, 202)", "rgb(206, 120, 50)"],
 	"wx_rao": ["rgb(196, 226, 246)", "rgb(210, 234, 250)", "rgb(226, 242, 252)", "rgb(90, 160, 210)"],
 	"wx_mua": ["rgb(184, 204, 220)", "rgb(198, 214, 228)", "rgb(214, 226, 236)", "rgb(80, 116, 150)"],
@@ -109,7 +110,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 	var tw := X0 + XW - x - (bw + 14.0 if bw > 0.0 else 8.0)
 	var L2 := _wrap2(sub, 10.0, 600, tw) if h >= 54.0 else [_fitw(sub, 10.0, 600, tw)]
 	var ty := y + (h - (16.0 + L2.size() * 13.0)) * 0.5
-	ks.append(_dt(x, ty, tw, 15.0, _fitw(title, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+	ks.append(_dt(x, ty, tw, 15.0, _fitw(title, 13.0, 800, tw), 13.0, 800, BROWN, "left"))
 	for i in L2.size():
 		ks.append(_dt(x, ty + 17.0 + i * 13.0, tw, 13.0, String(L2[i]), 10.0, 600, SUB, "left"))
 	c.kids = ks
@@ -143,8 +144,10 @@ func _tabt() -> Array:
 	# mùa + ngày trong mùa
 	var y := 10.0
 	var mt: String = T8[sea]
-	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
-	out.append(_onbtn(X0, y, mw, 26.0, mt, null, true))
+	var mw: float = Box.text_w(mt, 13.0, 800) + 30.0
+	var mb := _onbtn(X0, y - 2.0, mw, 30.0, mt, null, true)
+	mb.kids[0].css["font-size"] = _cpx(13.0)
+	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))
 	if auto:   # thanh 7 ngày
@@ -164,16 +167,16 @@ func _tabt() -> Array:
 	var ny := y + 40.0
 	var nh := 72.0 * k
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
-	var nis := minf(nh - 20.0, 56.0)
-	var tx0 := X0 + 14.0 + nis + 14.0
+	var nis := minf(nh - 14.0, 66.0)
+	var tx0 := X0 + 16.0 + nis + 20.0
 	var tw0 := XW - (tx0 - X0) - 12.0
 	var hl := _wrap2(HQ[a], 10.5, 600, tw0)   # hiệu ứng tối đa 2 dòng
 	var bh := 12.0 + 20.0 + hl.size() * 13.0
 	var lg := maxf(2.0, (nh - bh) / 4.0)   # khoảng đều: trên, giữa các dòng, dưới
 	var ty0 := ny + lg
-	nc.kids = [_wic(X0 + 14.0 + nis * 0.5, ny + nh * 0.5, nis, a),
+	nc.kids = [_wic(X0 + 16.0 + nis * 0.5, ny + nh * 0.5, nis, a), _dbx(tx0 - 10.0, ny + 10.0, 1.0, nh - 20.0, "rgb(226, 190, 110)", 0.0),
 		_dt(tx0, ty0, tw0, 12.0, "Bây giờ · " + String(TK[int(floor(G.nv.hour() / 6.0))]).to_lower(), 10.0, 600, SUB, "left"),
-		_dt(tx0, ty0 + 12.0 + lg, tw0, 20.0, String(G.troi.TEN[a]), 15.5, 800, BROWN, "left")]
+		_dt(tx0, ty0 + 12.0 + lg, tw0, 20.0, String(G.troi.TEN[a]), 17.0, 800, BROWN, "left")]
 	for li in hl.size():
 		nc.kids.append(_dt(tx0, ty0 + 32.0 + lg * 2.0 + li * 13.0, tw0, 13.0, String(hl[li]), 10.5, 600, SUB, "left"))
 	nc.act = _dsay.bind(HQF[a])
@@ -200,10 +203,10 @@ func _tabt() -> Array:
 		var s: int = int(floor(c / 4.0)) - o
 		var x := X0 + i * (cw + g)
 		var yy := gy
-		var cc := _chip(x, yy, cw, ch, _wk(f))
-		cc.kids = [_dt(x, yy + fg, cw, 12.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 9.5, 600, SUB),
+		var cc := _chip(x, yy, cw, ch, "fc")
+		cc.kids = [_dt(x, yy + fg, cw, 13.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 11.0, 800, BROWN),
 			_wic(x + cw * 0.5, yy + fg + 15.0 + isz * 0.5, isz, f),
-			_dt(x + 2.0, yy + fg + 18.0 + isz, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 11.5, 800, cw - 4.0), 11.5, 800, BROWN)]
+			_dt(x + 2.0, yy + fg + 18.0 + isz, cw - 4.0, 15.0, _fitw(String(G.troi.TEN[f]), 12.5, 800, cw - 4.0), 12.5, 800, BROWN)]
 		cc.act = _dsay.bind(TK[posmod(c, 4)] + " " + ("hôm nay" if s == 0 else ("mai" if s == 1 else "mốt")) + ": " + String(G.troi.TEN[f]) + ". " + HQF[f])
 		out.append(cc)
 	# cảnh báo + radio
