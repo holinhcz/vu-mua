@@ -1,18 +1,13 @@
-extends "res://logic/ui_ls.gd"
-# BẢNG NHÂN VẬT (bấm hình đại diện #pcAv), kiểu bảng trang bị game online, dựng từ khối dùng chung của game:
-# khung + hàng tab của bảng sổ (ui_ls.gd), ô trang bị = thẻ Kho › Đồ dùng (ui/snap/kdd.json: u2vt, viền xanh khi chọn,
-# số cấp góc thẻ), khung chi tiết món đang chọn = khung chi tiết Đồ dùng (u2vd: hình, tên, "Có…", nút), thẻ thông tin .vlcard
-# (.nvsh + thanh), nút .utbig.
-#   Tab Nhân vật: hình nhân vật đang đứng (ảnh tạm: khung đứng của nhân vật trên làng) giữa 2 cột ô trang bị:
-#     trái Nón / Áo / Quần / Dép (đồ mặc, chưa có), phải Bình tưới / Liềm / Cuốc / Gùi (đồ nghề cấp 0-3);
-#     hàng dưới Xe đạp / Xuồng ba lá / Bùa / Bùa EXP. Chạm ô: chi tiết + nút Sắm / Nâng / Mở túi.
-#     Dưới: cấp, kinh nghiệm, sức (+ ăn hồi sức), chỉ số (tốc độ đi, việc đã làm), Về nhà ngủ.
-#   (bản 546) chỉ còn tab Nhân vật; bảng Diều (thân w_ca_ui) mở riêng qua open_solo("dieu").
+extends "res://logic/ui_kbang.gd"
+# BẢNG NHÂN VẬT (bấm hình đại diện #pcAv) trên khung chung (ui_kbang: khung sen, hàng tab, tiêu đề mục, chip), 3 tab:
+#   Nhân vật: tên + cấp + thanh kinh nghiệm + thanh sức (nút Ngủ); nhân vật đứng giữa 2 cột ô:
+#     trái Nón / Áo / Quần / Dép (đồ mặc), phải Bình tưới / Liềm / Cuốc / Gùi (đồ nghề cấp 0-3); hàng dưới Xe đạp / Xuồng / Bùa / Bùa EXP.
+#     Chạm ô: thẻ chi tiết đáy tab (tác dụng, nút Sắm / Nâng / Mở túi).
+#   Chỉ số: cấp, thể lực, di chuyển, đồ nghề, bùa.
+#   Túi đồ: đồ mặc được (lọc Nón / Áo / Quần / Dép). (11-27) chưa có nguồn đồ: ô trống.
+#   (bản 546) bảng Diều (thân w_ca_ui) mở riêng qua open_solo("dieu").
 
-const KDD := "kdd"
-# (Link 11-23 "bỏ câu cũ đi"): tab Câu cá cũ bỏ, câu cá giờ là minigame Câu Cá Bờ Kênh (Menu > Giải trí, ui_cc.gd)
-# (bản 546) lờ lọp + đàn vịt qua Xây dựng › Mặt nước, mèo qua Xây dựng › Chuồng, Diều mở riêng từ nút viên lúc có gió
-const TABS := [["nv", "Nhân vật"]]
+const TABS := [["nv", "Nhân vật"], ["cs", "Chỉ số"], ["tui", "Túi đồ"]]
 const WTABS := ["dieu"]
 const LEFT := ["non", "ao", "quan", "dep"]
 const RIGHT := ["binh", "liem", "cuoc", "gui"]
@@ -22,23 +17,20 @@ const MAC := {"non": "Nón", "ao": "Áo", "quan": "Quần", "dep": "Dép"}
 var K := {}
 var tab := "nv"
 var sel := "binh"
+var tui := ""   # lọc túi đồ: "" tất cả, hoặc khoá MAC
 var wc: Control = null      # thân tab w_ca_ui
 var pic: Control = null     # hình nhân vật
+var _svgs := {}
 
 func _init(ui) -> void:
 	super(ui)
-	K = Snap.load_snap(KDD)
+	K = Snap.load_snap("kdd")
 
 var solo := ""   # (bản 546) mở riêng 1 bảng (Diều từ nút viên "Có gió chướng"): chỉ 1 tab
 func open_solo(t: String) -> void:
 	solo = t
 	tab = t
-	U.close_all()
-	U.kho_close()
-	on = true
-	scroll = 0.0
-	sig = ""
-	_build()
+	_open0()
 
 func open(t := "") -> void:
 	if t == "cau":   # câu cũ đã bỏ: mở minigame câu cá
@@ -47,8 +39,11 @@ func open(t := "") -> void:
 	solo = ""
 	if t != "":
 		tab = t
-	if WTABS.has(tab) and solo == "":
+	if WTABS.has(tab):
 		tab = "nv"
+	_open0()
+
+func _open0() -> void:
 	U.close_all()
 	U.kho_close()
 	on = true
@@ -58,64 +53,67 @@ func open(t := "") -> void:
 
 func close() -> void:
 	if wc != null and is_instance_valid(wc) and wc.get_parent() != null:
-		wc.get_parent().remove_child(wc)   # bảng câu dùng lại lần sau, không để khung cũ xoá mất
-	wc = null   # hình nhân vật (pic) giữ theo bảng cất
+		wc.get_parent().remove_child(wc)   # bảng diều dùng lại lần sau, không để khung cũ xoá mất
+	wc = null
 	super()
 
-func step(dt := 0.25) -> void:
-	if not on:
-		return
-	_sig_t -= dt
-	if _sig_t > 0.0:
-		return
-	_sig_t = 0.5
-	if _sig() != sig:
-		_build()
-
 func _sig() -> String:
+	if WTABS.has(tab):
+		return tab
 	var p: Dictionary = G.g.pc
-	return JSON.stringify([tab, sel, p.lv, p.xp, int(floor(float(p.en))), p.get("tools"), p.get("xe"), p.get("xuong"), G.bh(), int(G.bh_left() / 60000.0),
-		int(G.nv.Fu() / 60000.0), G.g.coins, G.mat_n("gach"), p.get("n")]) if tab == "nv" else tab
+	return JSON.stringify([tab, sel, tui, p.lv, p.xp, int(floor(float(p.en))), p.get("tools"), p.get("xe"), p.get("xuong"), G.bh(), int(G.bh_left() / 60000.0),
+		int(G.nv.Fu() / 60000.0), G.g.coins, G.mat_n("gach"), p.get("n")])
 
 func _tab_go(k: String) -> void:
 	if tab != k:
 		tab = k
 		scroll = 0.0
-		sig = ""
 
 # ------------------------------------------------------------------ dựng
 func _build() -> void:
 	sig = _sig()
 	var L := [[solo, {"dieu": "Diều"}.get(solo, solo), false]] if solo != "" else TABS.map(func(x): return [x[0], x[1], false])
-	var blocks: Array
+	var sh := _kshell(L, tab, _tab_go)
+	var r: Array
+	wc = null
 	if WTABS.has(tab) and G.w_all != null and G.w_all.WCAU != null:
 		wc = G.w_all.WCAU.tab_body(tab)
 		var h: float = maxf(200.0, wc.get_combined_minimum_size().y / Css.K)
-		blocks = [{"z": 0.75, "tag": "div", "id": "", "cls": "pcw", "r": [16.5, 0.0, 305.0, h], "css": {"display": "block", "position": "static"}, "kids": [], "nw": str(Time.get_ticks_msec())}]
+		r = [[_hold("pcw", X0, 0.0, XW, h)], h]
+	elif tab == "cs":
+		r = _cs()
+	elif tab == "tui":
+		r = _tui()
 	else:
-		wc = null
-		blocks = _nv()
-	_ls_build(L, tab, _tab_go, blocks)
+		r = _nv()
+	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 	if wc != null:   # thân tab w_ca_ui đặt vào khối giữ chỗ
 		var hold = ids.get(".pcw")
 		if hold != null:
 			wc.custom_minimum_size.x = hold.size.x
 			hold.add_child(wc)
-	else:
+	elif tab == "nv":
 		var fig = ids.get(".pcfig")
 		if fig != null and (pic == null or not is_instance_valid(pic) or pic.get_parent() != fig):
 			pic = PcPic.new()
 			pic.farm = U.F
 			pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			fig.add_child(pic)
-		if pic != null and fig != null:   # giữa 2 cột ô trang bị
-			var cw := float(K.li.r[2])
-			var ch := float(K.li.kids[0].r[3])
-			var a := Rect2(cw + 8.0, 4.0, 305.0 - 2.0 * cw - 16.0, 4.0 * (ch + 4.5) - 12.0)
-			pic.position = a.position * Css.K
-			pic.size = a.size * Css.K
+		if pic != null and fig != null:
+			pic.position = Vector2.ZERO
+			pic.size = fig.size
 
-# ô trang bị: [hình (ui/svg/kh), tên, số góc thẻ ("" = không), có chưa]
+func _hold(cls: String, x: float, y: float, w: float, h: float) -> Dictionary:   # khối trống giữ chỗ (gắn Control vào sau)
+	return {"z": 0.75, "tag": "div", "id": "", "cls": cls, "r": [x, y, w, h], "css": {"display": "block", "position": "static"}, "kids": [], "nw": str(Time.get_ticks_msec())}
+
+func _svg(k: String) -> String:   # hình ô (ui/svg/kh/pc_*, bùa từ mẫu Đồ dùng)
+	if k == "*bua":
+		return String(K.ic_bua)
+	if not _svgs.has(k):
+		_svgs[k] = FileAccess.get_file_as_string("res://ui/svg/kh/" + k + ".svg")
+	return _svgs[k]
+
+# ô trang bị: [hình, tên, số góc thẻ ("" = không), có chưa]
 func _slot(k: String) -> Array:
 	var p: Dictionary = G.g.pc
 	if MAC.has(k):
@@ -142,85 +140,74 @@ func _slot(k: String) -> Array:
 			return ["*bua", "Bùa EXP", str(n) if n > 0 else "", G.nv.Fu() > 0.0 or n > 0]
 	return ["", k, "", false]
 
-func _scard(k: String, x: float, y: float) -> Dictionary:   # thẻ u2vt của Đồ dùng
+func _cell(k: String, x: float, y: float, w: float, h: float) -> Array:   # ô chip: hình + tên, số góc; đang chọn vàng
 	var s := _slot(k)
-	var on_ := k == sel
-	var li := _cl(K.li)
-	var b: Dictionary = li.kids[0]
-	b.css = _cl(K.sel_css if on_ else K.li.kids[0].css)
-	if not s[3]:
-		b.css["opacity"] = "0.6"
-	var ic := Snap.find(b, "u2vi")
-	if not ic.is_empty() and ic.get("kids", []).size():
-		ic.kids[0].svg = K.ic_bua if s[0] == "*bua" else FileAccess.get_file_as_string("res://ui/svg/kh/" + String(s[0]) + ".svg")
-	var nn := Snap.find(b, "u2vn")
-	nn.text = String(s[1])
-	nn.tr = nn.r.duplicate()
-	var bc := Snap.find(b, "u2vc")
-	if not bc.is_empty():
-		if String(s[2]) != "":
-			bc.css = _cl(Snap.find(K.li0 if on_ else K.li, "u2vc").css)
-			var w := _tw(bc, String(s[2]))
-			bc.text = String(s[2])
-			var bw := maxf(float(bc.r[2]), w + 6.0)
-			bc.r = [float(bc.r[0]) + float(bc.r[2]) - bw, bc.r[1], bw, bc.r[3]]
-			bc.tr = [float(bc.r[0]) + (bw - w) * 0.5, bc.tr[1], w, bc.tr[3]]
-		else:
-			b.kids.erase(bc)
-	b.act = func(): sel = k
-	_mv(li, x, y)
-	li.r[3] = float(b.r[3])
-	return li
+	var c := _chip(x, y, w, h, "now" if k == sel else ("fut" if s[3] else "miss"))
+	var is_ := minf(30.0, h - 26.0)
+	var op := 1.0 if s[3] or k == sel else 0.55
+	c.kids = [_dic(x + (w - is_) * 0.5, y + (h - is_ - 16.0) * 0.5, is_, _svg(String(s[0])), op),
+		_dt(x + 2.0, y + h - 18.0, w - 4.0, 14.0, _fitw(String(s[1]), 10.0, 700, w - 6.0), 10.0, 700, BROWN if s[3] else SUB)]
+	if String(s[2]) != "":
+		var bw: float = Box.text_w(String(s[2]), 9.0, 800) + 8.0
+		c.kids.append(_dbx(x + w - bw - 3.0, y + 3.0, bw, 14.0, "rgb(214, 160, 30)", 7.0))
+		c.kids.append(_dt(x + w - bw - 3.0, y + 3.0, bw, 14.0, String(s[2]), 9.0, 800, "rgb(255, 255, 255)"))
+	var kk := k
+	c.act = func(): sel = kk
+	return [c]
 
+func _bars(y: float, nm: String, f: float, t: String) -> Array:   # dòng thanh: tên trái, thanh giữa, số phải
+	var tw: float = Box.text_w(t, 10.5, 800) + 4.0
+	var out := [_dt(X0, y, 72.0, 14.0, nm, 10.5, 700, SUB, "left")]
+	out.append_array(_bar(X0 + 74.0, y + 4.0, XW - 74.0 - tw - 8.0, f, 6.0))
+	out.append(_dt(X0 + XW - tw, y, tw, 14.0, t, 10.5, 800, GREEN, "right"))
+	return out
+
+# ------------------------------------------------------------------ tab Nhân vật
 func _nv() -> Array:
 	var out := []
-	# hình + ô trang bị
-	var cw := float(K.li.r[2])
-	var ch := float(K.li.kids[0].r[3])
-	var gap := 4.5
-	var x0 := 16.5
-	var x1 := 321.5 - cw
-	var y0 := 0.0
-	var kids := []
-	for i in 4:
-		kids.append(_scard(LEFT[i], x0, y0 + i * (ch + gap)))
-		kids.append(_scard(RIGHT[i], x1, y0 + i * (ch + gap)))
-	var yb := y0 + 4 * (ch + gap) + 3.0
-	var bx := (305.0 - 4 * cw - 3 * gap) * 0.5
-	for i in 4:
-		kids.append(_scard(BOT[i], 16.5 + bx + i * (cw + gap), yb))
-	var H := yb + ch
-	var fig := {"z": 0.75, "tag": "div", "id": "", "cls": "pcfig", "r": [16.5, 0.0, 305.0, H], "css": {"display": "block", "position": "static"}, "kids": kids}
-	out.append(fig)
-	# chi tiết món đang chọn
-	out.append(_det())
-	# thông tin
 	var p: Dictionary = G.g.pc
 	var lv: int = int(p.lv)
 	var need: int = G.xp_need(lv)
 	var em: float = G.en_max()
-	out.append(_sec2("Thông tin"))
-	out.append(_card_nv(UT.card, "Cấp " + str(lv), [["Kinh nghiệm ", false], [str(int(p.xp)) + "/" + str(need), true]], float(p.xp) / maxf(1.0, need),
-		[["Đã làm ", false], [G.fmt_n(int(p.get("n", 0))), true], [" việc trong làng.", false]]))
-	out.append(_card_nv(UT.card, "Sức", [[str(int(floor(float(p.en)))) + "/" + str(int(em)), true]], float(p.en) / maxf(1.0, em),
-		[["Tự hồi 4 sức mỗi phút" + (", đang mệt nên đi chậm." if float(p.en) < 1.0 else "."), false]]))
-	var sp: float = G.speed(3.0)
-	out.append(_card_nv(UT.card, "Chỉ số", [], null, [["Tốc độ đi ", false], [str(snappedf(sp, 0.1)).replace(".", ",") + " ô/giây", true],
-		[(" (xe đạp +70% khi đi xa)" if p.get("xe", 0) else ""), false], [". Bùa đang có: ", false], [(String(G.BUFFS[G.bh()].n)) if G.bh() != "" else "không", true], [".", false]]))
-	out.append(_big("Về nhà ngủ", "plain", true, func():
-		close()
-		U.F.sleep_go()))
-	return out
+	# đầu: tên + cấp, nút ngủ; thanh kinh nghiệm, sức
+	var nm := String(p.get("name", ""))
+	if nm == "":
+		nm = "Anh Năm Gạo"
+	var nw: float = minf(Box.text_w(nm, 15.0, 800) + 4.0, XW - 150.0)
+	out.append(_dt(X0, 6.0, nw, 22.0, _fitw(nm, 15.0, 800, nw), 15.0, 800, BROWN, "left"))
+	var lt := "Cấp " + str(lv)
+	var lw: float = Box.text_w(lt, 10.5, 800) + 16.0
+	var lp := _onbtn(X0 + nw + 6.0, 8.0, lw, 18.0, lt, null)
+	lp.kids[0].css["font-size"] = _cpx(10.5)
+	out.append(lp)
+	out.append(_btn(X0 + XW - 64.0, 5.0, 64.0, 24.0, "Về ngủ", _sleep, "plain"))
+	out.append_array(_bars(34.0, "Kinh nghiệm", float(p.xp) / maxf(1.0, need), G.fmt_n(int(p.xp)) + "/" + G.fmt_n(need)))
+	out.append_array(_bars(52.0, "Sức", float(p.en) / maxf(1.0, em), str(int(floor(float(p.en)))) + "/" + str(int(em))))
+	# ô trang bị: cao theo thân, vừa một màn
+	var y0 := 76.0
+	var dh := 62.0   # thẻ chi tiết
+	var g := 6.0
+	var sh := clampf(floorf((_hb - 2.0 - y0 - dh - 10.0 - 8.0 - 4.0 * g) / 5.0), 50.0, 70.0)
+	var sw := 66.0
+	for i in 4:
+		out.append_array(_cell(LEFT[i], X0, y0 + i * (sh + g), sw, sh))
+		out.append_array(_cell(RIGHT[i], X0 + XW - sw, y0 + i * (sh + g), sw, sh))
+	var fh := 4.0 * sh + 3.0 * g
+	out.append(_hold("pcfig", X0 + sw + 6.0, y0, XW - 2.0 * sw - 12.0, fh))
+	var yb := y0 + fh + 8.0
+	var bw := (XW - 3.0 * 8.0) / 4.0
+	for i in 4:
+		out.append_array(_cell(BOT[i], X0 + i * (bw + 8.0), yb, bw, sh))
+	var yd := yb + sh + 10.0
+	out.append_array(_det(yd, dh))
+	return [out, yd + dh + 2.0]
 
-func _det() -> Dictionary:   # khung chi tiết u2vd (Đồ dùng): hình, tên, dòng nhỏ, nút, lời tả
+func _sleep() -> void:
+	close()
+	U.F.sleep_go()
+
+func _det(y: float, h: float) -> Array:   # thẻ chi tiết món đang chọn: hình, tên · cấp, tác dụng, cấp sau, nút
 	var s := _slot(sel)
-	var d := _cl(K.det0)
-	var ic := Snap.find(d, "u2vi")
-	if ic.get("kids", []).size():
-		ic.kids[0].svg = K.ic_bua if s[0] == "*bua" else FileAccess.get_file_as_string("res://ui/svg/kh/" + String(s[0]) + ".svg")
-	var dt := Snap.find(d, "u2vdt")
-	var go := Snap.find(d, "u2vgo")
-	var ds := Snap.find(d, "u2vds")
 	var nm := String(s[1])
 	var sm := ""
 	var tx := ""
@@ -229,7 +216,7 @@ func _det() -> Dictionary:   # khung chi tiết u2vd (Đồ dùng): hình, tên,
 	var ok := true
 	if MAC.has(sel):
 		sm = "Chưa mặc"
-		tx = "Đồ mặc (nón, áo, quần, dép) sẽ có ở Tủ đồ. Sắp có."
+		tx = "Đồ mặc chọn ở tab Túi đồ."
 	elif RIGHT.has(sel):
 		var t: int = G.fd(sel)
 		nm += " · cấp " + str(t)
@@ -263,33 +250,117 @@ func _det() -> Dictionary:   # khung chi tiết u2vd (Đồ dùng): hình, tên,
 			tx = String(G.BUFFS[b].d) + "."
 		else:
 			sm = "Chưa có bùa"
-			tx = "Bùa (Chân sáo, Tay mát, Dẻo dai, Sáng dạ, No ấm, Tay câu đỏ) có từ chùa, lễ hội, sự kiện."
+			tx = "Bùa có từ chùa, lễ hội, sự kiện."
 	elif sel == "xp":
 		var f: float = G.nv.Fu()
 		sm = ("Đang chạy · còn " + U.kdp.MA(f)) if f > 0.0 else "Chưa dùng"
-		tx = "+50% kinh nghiệm. Bùa cất trong Kho › Đồ dùng, dùng thêm thì cộng dồn thời gian."
-		bl = "Mở túi đồ dùng"
+		tx = "+50% kinh nghiệm, dùng thêm thì cộng dồn."
+		bl = "Mở túi"
 		act = func():
 			close()
 			U.kho_open()
 			U._kho_tab(2)
-	dt.kids[0].text = nm
-	dt.kids[1].text = sm
-	if bl == "" or act == null:
-		d.kids.erase(go)
-	else:
-		var w := _tw(go, bl)
-		var bw := w + _px(go, "padding-left") + _px(go, "padding-right") + 4.0
-		go.r = [float(go.r[0]) + float(go.r[2]) - bw, go.r[1], bw, go.r[3]]
-		go.text = bl
-		go.tr = [float(go.r[0]) + (bw - w) * 0.5, go.tr[1], w, go.tr[3]]
-		dt.r[2] = float(go.r[0]) - 6.0 - float(dt.r[0])
-		_act(go, act, ok)
-	ds.kids[0].text = tx
-	d.dx = -16.5
-	return d
+	var out := [_chip(X0, y, XW, h, "fut")]
+	out.append(_dic(X0 + 10.0, y + (h - 34.0) * 0.5, 34.0, _svg(String(s[0]))))
+	var x := X0 + 52.0
+	var bw := 0.0
+	if bl != "" and act != null:
+		bw = Box.text_w(bl, 11.0, 800) + 22.0
+		out.append(_btn(X0 + XW - 8.0 - bw, y + (h - 26.0) * 0.5, bw, 26.0, bl, act if ok else null, "go" if ok else "off"))
+	var tw := XW - 52.0 - 8.0 - (bw + 8.0 if bw > 0.0 else 0.0)
+	out.append(_dt(x, y + 7.0, tw, 16.0, _fitw(nm, 12.5, 800, tw), 12.5, 800, BROWN, "left"))
+	out.append(_dt(x, y + 24.0, tw, 14.0, _fitw(sm, 10.5, 700, tw), 10.5, 700, GREEN if s[3] else SUB, "left"))
+	out.append(_dt(x, y + 40.0, tw, 14.0, _fitw(tx, 10.0, 600, tw), 10.0, 600, SUB, "left"))
+	return out
 
-# ------------------------------------------------------------------ hình nhân vật (ảnh tạm: khung đứng nhìn ra của nhân vật trên làng)
+# ------------------------------------------------------------------ tab Chỉ số
+func _info(y: float, t: String, ic: String, rows: Array) -> Array:   # tiêu đề mục + thẻ kem các dòng [trái, phải, màu phải] / ["bar", tên, f, số]
+	var out := _hd(y, t, ic)
+	var cy := y + HDG
+	var h := 8.0
+	for r in rows:
+		h += 22.0 if String(r[0]) == "bar" else 18.0
+	h += 6.0
+	out.append(_chip(X0, cy, XW, h, "fut"))
+	var ry := cy + 8.0
+	for r in rows:
+		if String(r[0]) == "bar":
+			var tw: float = Box.text_w(String(r[3]), 10.5, 800) + 4.0
+			out.append(_dt(X0 + 10.0, ry, 90.0, 14.0, String(r[1]), 10.5, 700, SUB, "left"))
+			out.append_array(_bar(X0 + 100.0, ry + 4.0, XW - 110.0 - tw - 6.0, float(r[2]), 6.0))
+			out.append(_dt(X0 + XW - 10.0 - tw, ry, tw, 14.0, String(r[3]), 10.5, 800, GREEN, "right"))
+			ry += 22.0
+		else:
+			var rw: float = minf(Box.text_w(String(r[1]), 10.5, 800) + 4.0, XW * 0.6)
+			out.append(_dt(X0 + 10.0, ry, XW - 24.0 - rw, 14.0, _fitw(String(r[0]), 10.5, 600, XW - 24.0 - rw), 10.5, 600, SUB, "left"))
+			out.append(_dt(X0 + XW - 10.0 - rw, ry, rw, 14.0, _fitw(String(r[1]), 10.5, 800, rw), 10.5, 800, String(r[2]) if r.size() > 2 else BROWN, "right"))
+			ry += 18.0
+	return [out, HDG + h]
+
+func _cs() -> Array:
+	var p: Dictionary = G.g.pc
+	var lv: int = int(p.lv)
+	var need: int = G.xp_need(lv)
+	var em: float = G.en_max()
+	var out := []
+	var y := 13.0
+	var S := []
+	S.append(["Cấp, kinh nghiệm", "d:gift", [["Cấp", str(lv)], ["bar", "Kinh nghiệm", float(p.xp) / maxf(1.0, need), G.fmt_n(int(p.xp)) + "/" + G.fmt_n(need)],
+		["Đã làm", G.fmt_n(int(p.get("n", 0))) + " việc"]]])
+	S.append(["Thể lực", "lua", [["bar", "Sức", float(p.en) / maxf(1.0, em), str(int(floor(float(p.en)))) + "/" + str(int(em))],
+		["Tự hồi", "4 sức mỗi phút"], ["Hết sức", "đi chậm lại"]]])
+	var sp: float = G.speed(3.0)
+	S.append(["Di chuyển", "kh:pc_gui", [["Tốc độ đi", str(snappedf(sp, 0.1)).replace(".", ",") + " ô/giây"],
+		["Xe đạp", "+70% khi đi xa" if p.get("xe", 0) else "chưa có", GREEN if p.get("xe", 0) else SUB],
+		["Xuồng ba lá", "đã có" if p.get("xuong", 0) else "chưa có", GREEN if p.get("xuong", 0) else SUB]]])
+	var tr := []
+	for o in G.TOOLS:
+		var t: int = G.fd(String(o.id))
+		tr.append([String(o.n) + " · cấp " + str(t), G.tool_desc(String(o.id), t), GREEN if t > 0 else SUB])
+	S.append(["Đồ nghề", "kh:pc_cuoc", tr])
+	var b: String = G.bh()
+	var f: float = G.nv.Fu()
+	S.append(["Bùa", "d:bua", [["Bùa đang có", (String(G.BUFFS[b].n) + " · còn " + U.kdp.MA(G.bh_left())) if b != "" else "không", GREEN if b != "" else SUB],
+		["Bùa EXP +50%", ("còn " + U.kdp.MA(f)) if f > 0.0 else "chưa dùng", GREEN if f > 0.0 else SUB]]])
+	for s in S:
+		var r := _info(y, String(s[0]), String(s[1]), s[2])
+		out.append_array(r[0])
+		y += float(r[1]) + GG
+	return [out, y - GG + 2.0]
+
+# ------------------------------------------------------------------ tab Túi đồ
+func _tui() -> Array:
+	var out := []
+	var y := 8.0
+	var F := [["", "Tất cả"], ["non", "Nón"], ["ao", "Áo"], ["quan", "Quần"], ["dep", "Dép"]]
+	var g := 5.0
+	var fw := (XW - g * (F.size() - 1)) / F.size()
+	for i in F.size():
+		var k := String(F[i][0])
+		var x := X0 + i * (fw + g)
+		var c := _chip(x, y, fw, 26.0, "now" if tui == k else "fut")
+		c.kids = [_dt(x, y, fw, 26.0, String(F[i][1]), 11.0, 800, BROWN)]
+		c.act = func(): tui = k
+		out.append(c)
+	y += 26.0 + GG
+	out.append(_dt(X0, y, XW, 14.0, "Chưa có đồ mặc. Có đồ thì chạm ô để mặc lên.", 10.5, 600, SUB, "left"))
+	y += 14.0 + GG
+	var cols := 4
+	var cw := (XW - 6.0 * (cols - 1)) / cols
+	var av := _hb - 2.0 - y
+	var rows := maxi(1, int(floor((av + 6.0) / (cw + 6.0))))   # ô vuông, số hàng vừa kín thân
+	var ch := floorf((av - 6.0 * (rows - 1)) / rows)
+	for i in rows * cols:
+		var x := X0 + (i % cols) * (cw + 6.0)
+		var cy := y + (i / cols) * (ch + 6.0)
+		var c := _chip(x, cy, cw, ch, "miss")
+		c.css["opacity"] = "0.6"
+		var k: String = tui if tui != "" else LEFT[i % 4]
+		c.kids = [_dic(x + (cw - 28.0) * 0.5, cy + (ch - 28.0) * 0.5, 28.0, _svg("pc_" + k), 0.35)]
+		out.append(c)
+	return [out, y + rows * (ch + 6.0) - 4.0]
+
+# ------------------------------------------------------------------ hình nhân vật (khung đứng nhìn ra của nhân vật trên làng)
 class PcPic extends Control:
 	var farm
 	func _process(_dt: float) -> void:
@@ -308,6 +379,6 @@ class PcPic extends Control:
 		var per := maxi(1, int(tx.get_width() / fw))
 		var j := dir * n + fr
 		var src := Rect2((j % per) * fw, (j / per) * fh, fw, fh)
-		var h := size.y
+		var h := minf(size.y, size.x * fh / fw)
 		var w := h * fw / fh
-		draw_texture_rect_region(tx, Rect2((size.x - w) * 0.5, 0, w, h), src)
+		draw_texture_rect_region(tx, Rect2((size.x - w) * 0.5, (size.y - h) * 0.5, w, h), src)
