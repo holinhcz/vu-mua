@@ -22,11 +22,11 @@ const HQF := {"nang": "Không có gì đặc biệt. Thỉnh thoảng có mưa r
 
 # màu chip riêng bảng Trời đất: thời tiết (nền + viền theo trời), buổi trong ngày (ô giờ), lễ gần / xa
 const SKC := {
-	"wx_nang": ["rgb(255, 246, 200)", "rgb(255, 240, 180)", "rgb(254, 232, 160)", "rgb(214, 170, 80)"],
-	"fc": ["rgb(140, 196, 240)", "rgb(186, 220, 248)", "rgb(228, 244, 252)", "rgb(214, 176, 96)"],   # (11-26) ô dự báo: trời xanh, viền vàng (chờ ảnh nền trời + cỏ)
-	"wx_han": ["rgb(250, 206, 160)", "rgb(252, 218, 180)", "rgb(254, 230, 202)", "rgb(206, 120, 50)"],
-	"wx_rao": ["rgb(196, 226, 246)", "rgb(210, 234, 250)", "rgb(226, 242, 252)", "rgb(90, 160, 210)"],
-	"wx_mua": ["rgb(184, 204, 220)", "rgb(198, 214, 228)", "rgb(214, 226, 236)", "rgb(80, 116, 150)"],
+	"wx_nang": ["rgb(255, 248, 210)", "rgb(255, 242, 190)", "rgb(254, 234, 168)", "rgb(214, 170, 80)"],   # (11-26) thẻ Bây giờ: tông sáng, sạch
+	"fc": ["rgb(196, 230, 252)", "rgb(214, 238, 252)", "rgb(232, 246, 254)", "rgb(214, 176, 96)"],
+	"wx_han": ["rgb(255, 232, 196)", "rgb(255, 222, 176)", "rgb(254, 210, 156)", "rgb(206, 120, 50)"],
+	"wx_rao": ["rgb(224, 242, 254)", "rgb(206, 234, 252)", "rgb(190, 226, 250)", "rgb(90, 160, 210)"],
+	"wx_mua": ["rgb(232, 244, 254)", "rgb(214, 236, 252)", "rgb(196, 226, 248)", "rgb(80, 116, 150)"],
 	"t_sang": ["rgb(255, 236, 170)", "rgb(255, 242, 192)", "rgb(255, 248, 214)", "rgb(214, 160, 40)"],
 	"t_chieu": ["rgb(252, 210, 166)", "rgb(253, 220, 184)", "rgb(254, 230, 204)", "rgb(206, 128, 60)"],
 	"t_toi": ["rgb(112, 114, 158)", "rgb(124, 126, 170)", "rgb(138, 140, 182)", "rgb(84, 86, 130)"],
@@ -222,9 +222,9 @@ func _tabt() -> Array:
 		var x := X0 + i * (cw + g)
 		var yy := gy
 		var cc := _chip(x, yy, cw, ch, "fc")
-		var bgn := _dic(x + 3.5, yy + 3.5, cw - 7.0, "")   # nền trời + cỏ (ảnh), góc bo sẵn
+		var bgn := _dic(x + 3.0, yy + 3.0, cw - 6.0, "")   # nền trời + cỏ (ảnh), góc bo sẵn, phủ sát dải vàng viền
 		bgn.erase("svg")
-		bgn.r = [x + 3.5, yy + 3.5, cw - 7.0, ch - 7.0]
+		bgn.r = [x + 3.0, yy + 3.0, cw - 6.0, ch - 6.0]
 		bgn["pic"] = "res://ui/img/troi/nen_du_bao.webp"
 		cc.kids = [bgn, _dt(x, yy + fg, cw, 13.0, TK[posmod(c, 4)] + " " + ("nay" if s == 0 else ("mai" if s == 1 else "mốt")), 11.0, 800, BROWN),
 			_wic(x + cw * 0.5, yy + fg + 15.0 + isz * 0.5, isz, f),
