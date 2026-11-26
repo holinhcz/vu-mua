@@ -567,6 +567,39 @@ func _qbox(y: float, cls: String) -> Dictionary:   # (bản 493, chung) ô tìm:
 	sb.kids = [_dic(X0 + XW - 26.0, y + 7.0, 16.0, LUP)]
 	return sb
 
+const HDG := 26.0   # (11-26) đỉnh tiêu đề mục -> khối dưới (icon tiêu đề không dính khối)
+
+# (11-26) giãn khối cho kín thân: chỗ dư (tới đáy chung) chia đều vào các khối cs (theo thứ tự trên xuống), nội dung trong khối dời giữa; trả cao mới
+func _fill(out: Array, h: float, cs: Array) -> float:
+	var d := _hb - 2.0 - h
+	if d <= 1.0 or cs.is_empty():
+		return h
+	var e := d / cs.size()
+	var B := []
+	for c in cs:
+		B.append([float(c.r[1]), float(c.r[1]) + float(c.r[3])])
+	for k in out:
+		if not (k is Dictionary and k.has("r")):
+			continue
+		var t := float(k.r[1])
+		var dy := 0.0
+		for i in cs.size():
+			if is_same(k, cs[i]):
+				dy = e * i
+				break
+			if t >= B[i][1] - 0.5:
+				dy = e * (i + 1)
+			elif t >= B[i][0] - 0.5:
+				dy = e * i + e * 0.5
+				break
+			else:
+				break
+		if dy != 0.0:
+			Snap._move(k, Vector2(0, dy))
+	for c in cs:
+		c.r[3] = float(c.r[3]) + e
+	return h + d
+
 func _sect(y: float, t: String, _col := "", ic := "") -> Array:   # (11-26) tiêu đề phần = tiêu đề mục chung (_hd)
 	return _hd(maxf(y - 3.0, 5.0) if ic != "" else y + 1.0, t, ic)   # có icon: nhích lên cho icon không đụng dòng dưới
 

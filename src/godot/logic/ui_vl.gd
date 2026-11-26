@@ -430,8 +430,8 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var col: String = TABC.thue
 	var y := 6.0
 	out.append_array(_sect(y, "Thuê làm phụ", col, "kh:pc_cuoc"))
-	out.append(_dt(X0 + 2.0, y + 18.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
-	y += 38.0
+	out.append(_dt(X0 + 2.0, y + 22.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
+	y += 42.0
 	var hr := _hire(y, u, e, col, W)
 	out.append_array(hr[0])
 	y += float(hr[1])
@@ -442,8 +442,8 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 	var out := []
 	var y := 6.0
 	out.append_array(_sect(y, "Giống nhà " + String(a.n) + " để dư", TABC.giong, "kh:lua"))
-	out.append(_dt(X0 + 2.0, y + 18.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
-	y += 38.0
+	out.append(_dt(X0 + 2.0, y + 22.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
+	y += 42.0
 	for e in WC.bZ(u):
 		var id := String(e)
 		var r := "h" + str(u) + "_" + id
@@ -476,7 +476,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var Li: Dictionary = W.fam_likes(u)
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
 	out.append_array(_sect(y, "Tính nết: " + String(TT.n), col, "kh:tra_tac"))
-	y += 22.0
+	y += HDG
 	var c := _chip(X0, y, XW, 10.0, "t_" + tk if CHIPK.has("t_" + tk) else "t_khac")
 	out.append(c)
 	var pp := _para(X0 + 10.0, y + 6.0, XW - 20.0, String(TT.d), 10.5, 600, BROWN, 15.0)   # (bản 452) mọi dòng cách đều 15
@@ -519,7 +519,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var o: int = W._i(f.ts)
 	var l: Dictionary = W.W3[r]
 	out.append_array(_sect(y, "Sở trường: " + String(l.n), col, "kh:" + String(TALIC.get(r, "lua"))))
-	y += 22.0
+	y += HDG
 	var c2 := _chip(X0, y, XW, 10.0, "s_" + r if CHIPK.has("s_" + r) else "tal")   # màu theo nghề
 	out.append(c2)
 	out.append(_icn(X0 + 24.0, y + 26.0, 30.0, String(TALIC.get(r, "lua"))))
@@ -565,8 +565,13 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	# nghề gia truyền
 	var su := _su(y, f)
 	out.append_array(su[0])
-	y += float(su[1]) + 8.0
-	return [out, y]
+	y += float(su[1])
+	var cs := [c, c2]   # (11-26) 3 khối giãn đều cho kín thân tới đáy chung
+	for k2 in su[0]:
+		if absf(float(k2.r[2]) - XW) < 0.5 and float(k2.r[3]) > 20.0:
+			cs.append(k2)
+			break
+	return [out, _fill(out, y, cs)]
 
 func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà này
 	var x: Dictionary = W.a_r(u)
@@ -577,7 +582,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 	var go0 := func(): W.mk(u)
 	var gosk := func(): W.mk(u, "skip")
 	var out := _sect(y, T0, TABC.tal, "kh:banh_tet")
-	y += 22.0
+	y += HDG
 	var r: Array
 	if W.t6().has(x.id):
 		r = _job(y, "nghe", "Đã học nghề " + String(x.n).to_lower(), "Mở bảng Nghề (nhóm Làm ăn) để làm.", [], 0, "", null)
@@ -623,7 +628,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 			("" if W._tr(kw.get("a")) and W._tr(kw.get("b")) else " Chưa biết nhà này thích gì thì trò chuyện, tặng quà để dò.")
 		r = _job(y, "nghe", "Bước 4/4 · Ra mắt thầy", s, ch, 0, "Ra mắt", go0 if W._n(G.g.coins) >= hp and W.hn_le_ok(u, f) else null)
 	out.append_array(r[0])
-	return [out, 22.0 + float(r[1])]
+	return [out, HDG + float(r[1])]
 
 # ------------------------------------------------------------------ hộp nổi: trò chuyện, tặng quà
 func _pop(f: Dictionary, y0: float, y1: float, vt: Dictionary) -> Array:   # hộp chip phủ kín thân bảng, sát mép khung tre
