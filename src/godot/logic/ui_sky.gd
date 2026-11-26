@@ -80,6 +80,18 @@ func _sic(k: String) -> String:
 		_ics[k] = Css.img_svg("res://ui/img/troi/" + k + ".webp") if k in ICP else String(IC[k])
 	return _ics[k]
 
+# (11-26) chip mùa: xuân hồng đào, hạ cam nắng, thu xanh nước, khô vàng; icon theo mùa
+const MUA_C := ["linear-gradient(rgb(242, 138, 168) 0%, rgb(230, 108, 146) 50%, rgb(217, 85, 126) 100%)",
+	"linear-gradient(rgb(247, 181, 71) 0%, rgb(236, 158, 48) 50%, rgb(224, 138, 30) 100%)",
+	"linear-gradient(rgb(91, 179, 224) 0%, rgb(68, 156, 208) 50%, rgb(46, 134, 193) 100%)",
+	"linear-gradient(rgb(242, 198, 75) 0%, rgb(228, 176, 50) 50%, rgb(212, 154, 30) 100%)"]
+const MUA_I := ["hoa", "han", "nuoc", "gio"]
+const IC_SONG_T := "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><g fill='none' stroke-linecap='round'><path d='M3 11 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#ffffff' stroke-width='3.4'/><path d='M3 18 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#e4f4ff' stroke-width='3.4'/><path d='M3 25 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#c4e6fb' stroke-width='3.4'/></g></svg>"   # sóng trắng trên chip mùa thu
+func _wsv_get(f: String) -> String:
+	if not _wsv.has(f):
+		_wsv[f] = Css.img_svg(WPIC[f])
+	return _wsv[f]
+
 const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "sen", "Lễ hội": "sen"}
 
 func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước chữ (ảnh mẫu)
@@ -210,10 +222,13 @@ func _tabt() -> Array:
 	var mw: float = Box.text_w(mt, 13.0, 800) + 52.0
 	var mb := _onbtn(X0, y - 2.0, mw, 30.0, mt, null, true)
 	mb.kids[0].css["font-size"] = _cpx(13.0)
-	mb.css["background-image"] = Snap.SEN_DO   # như chip lọc đang chọn bên Kho: viền vàng, tông đỏ
+	mb.css["background-image"] = MUA_C[sea]   # (11-26) màu theo mùa, gờ vàng như chip lọc đang chọn
 	mb.css["box-shadow"] = Snap.SEN_VIEN
 	mb.kids[0].r = [X0 + 22.0, y - 2.0, mw - 26.0, 30.0]
-	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _sic("hoa")))
+	var mi: String = MUA_I[sea]
+	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _wsv_get(mi) if mi == "han" else (IC_SONG_T if mi == "nuoc" else _sic(mi))))
+	if sea == 3:   # nền vàng: chữ nâu đậm cho dễ đọc
+		mb.kids[0].css["color"] = "rgb(96, 54, 8)"
 	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))
