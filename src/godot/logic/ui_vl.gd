@@ -500,18 +500,18 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 				if String(it[0]) != "" or ix == X0 + 10.0:
 					var lb := (String(it[0]) if String(it[0]) != "" else "Thích") + ":"
 					var lw: float = Box.text_w(lb, 10.0, 700) + 4.0
-					out.append(_dt(ix, yy, lw, 24.0, lb, 10.0, 700, SUB, "left"))
+					out.append(_dt(ix, yy, lw, 15.0, lb, 10.0, 700, SUB, "left"))
 					ix += lw
 				var id := String(it[1])
-				out.append(_icn(ix + 11.0, yy + 12.0, 22.0, id))
+				out.append(_icn(ix + 8.0, yy + 7.5, 16.0, id))   # (11-26) hình món nhỏ cỡ dòng chữ: dòng thích / ghét cao bằng các dòng khác
 				var nm := String(W._ae(id).get("name", id))
 				var nw: float = minf(Box.text_w(nm, 10.0, 700) + 2.0, 62.0)
-				out.append(_dt(ix + 24.0, yy, nw, 24.0, _fitw(nm, 10.0, 700, nw), 10.0, 700, BROWN, "left"))
-				ix += 24.0 + nw + 10.0
-			yy += 28.0
+				out.append(_dt(ix + 18.0, yy, nw, 15.0, _fitw(nm, 10.0, 700, nw), 10.0, 700, BROWN, "left"))
+				ix += 18.0 + nw + 10.0
+			yy += 15.0
 		var nr := ("Ngày riêng: ngày " + str(Li.ngay) + " mỗi mùa (" + String(Li.ly) + ")") if nd else "Ngày riêng: chưa biết"
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 14.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
-		yy += 20.0
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
+		yy += 21.0   # 15 + lề dưới 6 (bằng lề trên), như khi chưa biết gì
 	c.r[3] = yy - y
 	y = yy + GG
 	# sở trường làm thuê

@@ -572,12 +572,31 @@ const HDG := 26.0   # (11-26) đỉnh tiêu đề mục -> khối dưới (icon 
 # (11-26) giãn khối cho kín thân: chỗ dư (tới đáy chung) chia đều vào các khối cs (theo thứ tự trên xuống), nội dung trong khối dời giữa; trả cao mới
 func _fill(out: Array, h: float, cs: Array) -> float:
 	var d := _hb - 2.0 - h
-	if d <= 1.0 or cs.is_empty():
+	if cs.is_empty() or absf(d) <= 1.0:
 		return h
-	var e := d / cs.size()
 	var B := []
 	for c in cs:
 		B.append([float(c.r[1]), float(c.r[1]) + float(c.r[3])])
+	if d < 0.0:   # lố đáy chút (vd hiện thêm hàng thích / ghét): bớt đều khoảng cách giữa các khối, tiêu đề vẫn nằm giữa; lố nhiều thì để cuộn
+		if cs.size() < 2:
+			return h
+		var gq := maxf(d / (cs.size() - 1), -14.0)
+		for k in out:
+			if not (k is Dictionary and k.has("r")):
+				continue
+			var t := float(k.r[1])
+			var dy := 0.0
+			for i in range(cs.size() - 1, 0, -1):
+				if is_same(k, cs[i]) or t >= B[i][0] - 0.5:
+					dy = gq * i
+					break
+				if t >= B[i - 1][1] - 0.5:
+					dy = gq * (i - 0.5)
+					break
+			if dy != 0.0:
+				Snap._move(k, Vector2(0, dy))
+		return h + gq * (cs.size() - 1)
+	var e := d / cs.size()
 	for k in out:
 		if not (k is Dictionary and k.has("r")):
 			continue
