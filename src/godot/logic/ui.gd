@@ -2602,6 +2602,9 @@ const OD_IT := 33.75          # khoảng cách 2 dòng món trong thẻ
 const OD_COL := 160.0         # cột 2 lệch cột 1
 const OD_GAP := 6.0           # gap 8px x .75
 const OD_UL := 416.22         # khung danh sách đơn cao nhất (2 hàng thẻ đầy)
+func _od_ulh() -> float:   # cao danh sách thật (khung chung kéo cao: lấy theo mẫu đã giãn)
+	var ul := Snap.find(od_shell.get("no", {}), "orders")
+	return float(ul.r[3]) if not ul.is_empty() else OD_UL
 var od_on := false
 var od_src := ""              # (bản 353) "" = Đơn hàng; quancom / taphoa / cafe = khách quán (w_quan.cards) trên cùng bảng
 var od_L := []                # danh sách thẻ của od_src (làm mới mỗi lần _ord_sync)
@@ -2875,12 +2878,12 @@ func _ord_sync() -> void:
 		H += (OD_GAP if Hc > 0.0 else 0.0) + float(mn.r[3])
 	var pad: float = float(od_tpl.no.r[1]) - float(Snap.find(od_shell.no, "orders").r[1])
 	var ch := H + 2.0 * pad
-	var dy := maxf(0.0, OD_UL - ch)
+	var dy := 0.0 if Sen.ON else maxf(0.0, OD_UL - ch)   # (11-26) khung chung: không thấp xuống
 	var ssig: String = ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1)) + "|" + od_src
 	if ssig != od_shsig:
 		od_shsig = ssig
 		_od_shell(okn, m, dy)
-	od_hmax = maxf(0.0, ch - OD_UL)
+	od_hmax = maxf(0.0, ch - _od_ulh())
 	od_scroll = clampf(od_scroll, 0.0, od_hmax)
 	# thẻ
 	var cols := _od_colors()
@@ -2975,6 +2978,9 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	if od_src != "":   # (bản 357) bảng quán: góc phải trống (sao, danh tiếng, giá... ở hàng chip dưới đầu bảng)
 		td.kids = []
 		td.text = ""
+	if Sen.ON:   # (11-26) khung sen: hoa sen góc trên trái che đầu dòng "Giao được": dời dòng sang phải
+		Snap._move(Snap.find(n, "odtl"), Vector2(26.0, 0))
+		Snap._move(Snap.find(n, "odtd"), Vector2(-18.0, 0))   # dây tua góc phải che chữ "đã giao"
 	# ít thẻ: khung thấp xuống (đầu bảng, khăn trên, hoa dời xuống; đáy giữ chỗ)
 	if dy > 0.0:
 		_od_low(Snap.find(n, "pwin"), dy)
@@ -2983,7 +2989,7 @@ func _od_shell(okn: int, m: int, dy: float) -> void:
 	var ids := {}
 	od_box = _build(n, ids)
 	root.add_child(od_box)
-	anchors.append([od_box, 0.5, 1])
+	anchors.append([od_box, 0.5, 0.5 if Sen.ON else 1])   # (11-26) khung chung: giữa màn, chừa lề như các bảng
 	od_ids = ids
 	od_ul = ids.get("#orders")
 	od_ul._kids.clip_contents = true
