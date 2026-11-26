@@ -430,8 +430,8 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var col: String = TABC.thue
 	var y := 6.0
 	out.append_array(_sect(y, "Thuê làm phụ", col, "kh:pc_cuoc"))
-	out.append(_dt(X0 + 2.0, y + 22.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
-	y += 42.0
+	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
+	y += 44.0
 	var hr := _hire(y, u, e, col, W)
 	out.append_array(hr[0])
 	y += float(hr[1])
@@ -442,8 +442,8 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 	var out := []
 	var y := 6.0
 	out.append_array(_sect(y, "Giống nhà " + String(a.n) + " để dư", TABC.giong, "kh:lua"))
-	out.append(_dt(X0 + 2.0, y + 22.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
-	y += 42.0
+	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
+	y += 44.0
 	for e in WC.bZ(u):
 		var id := String(e)
 		var r := "h" + str(u) + "_" + id

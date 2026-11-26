@@ -601,7 +601,7 @@ func _fill(out: Array, h: float, cs: Array) -> float:
 	return h + d
 
 func _sect(y: float, t: String, _col := "", ic := "") -> Array:   # (11-26) tiêu đề phần = tiêu đề mục chung (_hd)
-	return _hd(maxf(y - 3.0, 5.0) if ic != "" else y + 1.0, t, ic)   # có icon: nhích lên cho icon không đụng dòng dưới
+	return _hd(maxf(y, 5.0) if ic != "" else y + 1.0, t, ic)   # có icon: icon cách khối trên (GG - 5) bằng cách khối dưới (HDG - 20)
 
 # hàng chip món cần: [[hình, tên, có, cần, (việc khi thiếu)]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
 func _nchips(x: float, y: float, w: float, list: Array) -> Array:
