@@ -119,7 +119,10 @@ func _hdx(x: float, y: float, w: float, t: String, ic := "", mid := "", mc := ""
 	return L
 
 var _hics := {}
+const LUA_SVG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\"><path d=\"M16 2.5c1.2 4.6 7.6 8 9.4 14.2 1.7 6-2.6 12.6-9.4 12.6S4.9 23.6 6.4 17.6c.9-3.6 3.4-5.3 4.4-8 .6 2.5 1.6 3.8 3 4.4-.5-4.6.6-8.4 2.2-11.5z\" fill=\"rgb(232,96,32)\" stroke=\"rgb(176,52,20)\" stroke-width=\"1.2\" stroke-linejoin=\"round\"/><path d=\"M16.2 13.5c.9 3 4.8 4.8 5 8.6.2 3.4-2.3 5.6-5.2 5.6s-5.4-2.1-5-5.3c.3-2.4 2-3.4 2.6-5.2.5 1.3 1.1 1.9 2 2.2-.4-2.1-.1-4.1.6-5.9z\" fill=\"rgb(255,206,72)\"/></svg>"
 func _hic(x: float, y: float, s: float, ic: String) -> Dictionary:   # icon tiêu đề mục
+	if ic == "lua":   # ngọn lửa (chuỗi ngày): cùng màu chấm lửa
+		return _dic(x, y, s, LUA_SVG)
 	var k := ic.substr(ic.find(":") + 1)
 	if ic.begins_with("d:"):
 		return _dick(x + s * 0.5, y + s * 0.5, s * 0.86, k)
@@ -565,7 +568,7 @@ func _qbox(y: float, cls: String) -> Dictionary:   # (bản 493, chung) ô tìm:
 	return sb
 
 func _sect(y: float, t: String, _col := "", ic := "") -> Array:   # (11-26) tiêu đề phần = tiêu đề mục chung (_hd)
-	return _hd(y + 1.0, t, ic)
+	return _hd(maxf(y - 3.0, 5.0) if ic != "" else y + 1.0, t, ic)   # có icon: nhích lên cho icon không đụng dòng dưới
 
 # hàng chip món cần: [[hình, tên, có, cần, (việc khi thiếu)]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
 func _nchips(x: float, y: float, w: float, list: Array) -> Array:

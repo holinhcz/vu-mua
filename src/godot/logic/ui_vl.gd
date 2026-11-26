@@ -733,8 +733,8 @@ func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp n�
 	var w0 := XW
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
 	var x2: bool = W.is_ngay_rieng(u) and W._tr(k.get("d"))
-	out.append_array(_hdx(x0, y0 + 10.0, w0, "Tặng " + String(f.n) + " 1 món", "d:gift"))
-	out.append(_dt(x0, y0 + 32.0, w0, 14.0, _fitw(("Ngày riêng: quý gấp đôi · " if x2 else "") + "Món thích +thân nhiều · món ghét bị trừ", 10.5, 600, w0), 10.5, 600, SUB, "left"))
+	out.append_array(_hdx(x0, y0 + 8.0, w0, "Tặng " + String(f.n) + " 1 món", "d:gift"))
+	out.append(_dt(x0, y0 + 34.0, w0, 14.0, _fitw(("Ngày riêng: quý gấp đôi · " if x2 else "") + "Món thích +thân nhiều · món ghét bị trừ", 10.5, 600, w0), 10.5, 600, SUB, "left"))
 	var ids: Array = W.gift_ids(u)
 	var y := y0 + 56.0
 	if ids.is_empty():

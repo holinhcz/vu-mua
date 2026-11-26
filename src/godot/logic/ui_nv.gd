@@ -256,7 +256,7 @@ func _day() -> Array:
 	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("hôm nay đã đủ 100" if today else "hôm nay chưa đủ 100")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
 	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
-	out.append_array(_hd(y + 5.0, t1, "kh:long_den", rw + 6.0, t2, GREEN if today else SUB))   # (11-26) tiêu đề mục chung
+	out.append_array(_hd(y + 5.0, t1, "lua", rw + 6.0, t2, GREEN if today else SUB))   # (11-26) tiêu đề mục chung
 	var rc := _chip(X0 + XW - rw, y + 4.0, rw, 18.0, "fut" if rest_ok else "miss")
 	rc.kids = [_dt(X0 + XW - rw, y + 4.0, rw, 18.0, rt, 10.0, 700, SUB)]
 	out.append(rc)
@@ -357,7 +357,7 @@ func _week() -> Array:
 func _ach() -> Array:
 	var s: Dictionary = N.SI()
 	var out := []
-	var y := 8.0
+	var y := 13.0   # (11-26) tiêu đề đầu cách tab bằng Hằng ngày / Tuần (_ms: y + 5)
 	# danh hiệu chuỗi ngày: một dòng, danh hiệu kế tiếp + tiến độ chuỗi dài nhất
 	var best := int(s.best)
 	var nx = null
@@ -371,7 +371,7 @@ func _ach() -> Array:
 	for x in N.NVSK:
 		all.append(String(x[1]) + " (" + str(x[0]) + " ngày)")
 	var tip := "Danh hiệu theo chuỗi dài nhất đủ 100 năng động: " + ", ".join(all) + "."
-	out.append_array(_hd(y, "Danh hiệu chuỗi ngày", "kh:long_den"))
+	out.append_array(_hd(y, "Danh hiệu chuỗi ngày", "lua"))
 	y += 27.0
 	# (bản 423) một khối: chuỗi dài nhất + danh hiệu đang có; thanh 5 mốc 30 / 60 / 100 / 200 / 365 cách đều
 	var bh := 58.0
@@ -487,7 +487,7 @@ func _event() -> Array:
 			out.append(c)
 		y += 36.0 + 14.0
 		var st: Dictionary = N.FL[int(x.d)]
-		out.append_array(_hd(y, "Hôm nay: " + String(st.n)))
+		out.append_array(_hd(y, "Hôm nay: " + String(st.n), "img:lich"))
 		out.append(_sub(y + 23.0, String(st.d)))
 		y += 40.0
 		var nm := ["Túi xu", "2 vật liệu", "1 sen đỏ"]
@@ -498,7 +498,7 @@ func _event() -> Array:
 				"done" if got else ("claim" if ok else "go"), N.FI.bind("d", i) if ok else _go.bind(String(st.k))))
 			y += RH + GAPR
 		y += 8.0
-		out.append_array(_hd(y, "Cộng dồn 5 ngày"))
+		out.append_array(_hd(y, "Cộng dồn 5 ngày", "d:gift"))
 		y += 27.0
 		nm = ["Túi xu lớn", "3 sen đỏ, 6 vật liệu kho", "8 sen đỏ, bùa +50% EXP"]
 		for i in 3:
@@ -508,7 +508,7 @@ func _event() -> Array:
 				"done" if got else ("claim" if ok else "go"), N.FI.bind("t", i) if ok else _go.bind(String(st.k))))
 			y += RH + GAPR
 	elif ev.id == "cho":
-		out.append_array(_hd(y, "Vé chợ: " + str(s.ve)))
+		out.append_array(_hd(y, "Vé chợ: " + str(s.ve), "d:coin"))
 		out.append(_sub(y + 23.0, "10 điểm năng động = 1 vé · mỗi đơn giao = 2 vé"))
 		y += 40.0
 		for it in N.HI:
@@ -518,7 +518,7 @@ func _event() -> Array:
 			out.append_array(_row(y, ["d:" + String(it.get("ic", "coin")), str(it.c) + " vé", "g_cho"], String(it.n), sb, -1.0, "", "claim" if ok else "off", N.sY.bind(String(it.id)), "Đổi" if ok else ("Hết lượt" if lim else "Thiếu vé")))
 			y += RH + GAPR
 	elif ev.id == "ngoc":
-		out.append_array(_hd(y, "Đã tiêu " + str(s.sp) + " sen đỏ"))
+		out.append_array(_hd(y, "Đã tiêu " + str(s.sp) + " sen đỏ", "img:sen"))
 		out.append(_sub(y + 23.0, "Làm chín ngay, bù thiếu, đổi sen đỏ… đều tính"))
 		y += 40.0
 		for i in N.VL.size():
