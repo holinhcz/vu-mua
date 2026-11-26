@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 SRC, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 P = 6.0          # điểm ảnh lưu / css px
-T = 7.0          # tre dày (css px) — đo ảnh mẫu Kho: tre ~19 px / bảng 1112 px = 5,8 css
+T = 7.0          # tre dày (css px)
 Q = 141.0 / T    # điểm ảnh ảnh gốc / css px của tre (ống tre ảnh góc dày 141 px)
 
 
@@ -53,22 +53,32 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
     return im
 
 
-def rot(deg):
-    return lambda im: crop_bb(im).rotate(deg, resample=Image.BICUBIC, expand=True)
+DINH_W = 254.0   # chóp đỉnh rộng (css): như bản 596 (~54% bề ngang màn)
 
 
-# chóp đỉnh: thanh vàng dưới chân chóp đè đúng giữa ống tre trên
-# thanh vàng chân chóp CHÍNH LÀ một khúc ống tre trên: cỡ chóp lấy theo thanh dày đúng T (thanh 90 px ảnh gốc), đè khít ống tre,
-# đầu thanh tròn nằm trên ống như một mắt tre (không mờ, không cắt)
-im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1112 - 797) / im.height
-put('dinh', '04_chop_do_dinh.png', im.width * T / 90.0, [0.5, 0.0], 0.5, bar_c)
-M['dinh']['dy'] = T / 2
-im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
-put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c)   # thanh 70 px = T
-M['day']['dy'] = -T / 2
+def chop(fname, y0, y1, css_w, top0):
+    im = crop_bb(load(fname))
+    a, b = y0 - top0, y1 - top0                       # hàng thanh trong ảnh đã cắt
+    k = T / ((b - a) * css_w / im.width)               # tỉ lệ nén thanh
+    nb = max(1, round((b - a) * k))
+    up = im.crop((0, 0, im.width, a)); bar = im.crop((0, a, im.width, b)).resize((im.width, nb), Image.LANCZOS)
+    lo = im.crop((0, b, im.width, im.height))
+    out = Image.new('RGBA', (im.width, a + nb + lo.height), (0, 0, 0, 0))
+    out.alpha_composite(up, (0, 0)); out.alpha_composite(bar, (0, a)); out.alpha_composite(lo, (0, a + nb))
+    return out, (a + nb / 2.0) / out.height
+
+
+im, c = chop('04_chop_do_dinh.png', 1067, 1157, DINH_W, 797)   # thanh vàng chóp đỉnh = ống tre trên: cùng dày, tâm trùng tâm ống
+save(im, 'dinh', DINH_W, DINH_W * im.height / im.width)
+M['dinh'] = {"a": [0.5, 0.0], "c": [0.5, c], "s": [DINH_W, DINH_W * im.height / im.width], "dy": T / 2, "fw": [0.81, 170, DINH_W]}
+DAY_W = 112.0
+im, c = chop('05_chop_do_day.png', 1034, 1104, DAY_W, 794)
+w0 = im.width; im = im.crop((int(w0 * 0.22), 0, int(w0 * 0.78), im.height)); DW = DAY_W * 0.56
+save(im, 'day', DW, DW * im.height / im.width)
+M['day'] = {"a": [0.5, 1.0], "c": [0.5, c], "s": [DW, DW * im.height / im.width], "dy": -T / 2}
 # hoa sen góc: tràn ra ngoài khung một phần
-put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 78, [0.0, 0.0], 0.22, 0.36, rot(28))   # xéo theo góc: lá rủ xuống mép trái
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 96, [1.0, 1.0], 0.78, 0.66, rot(24))   # xéo theo góc dưới phải
+put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # tư thế như ảnh mẫu (không xoay)
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 112, [1.0, 1.0], 0.87, 0.64)
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
