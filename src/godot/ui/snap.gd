@@ -96,7 +96,8 @@ static func build(n: Dictionary, origin: Vector2, ids: Dictionary, fsh = null) -
 	n = _tre(n, z)   # (bản 294) khung tre chung bằng ảnh
 	n = _sen_giay(n)   # (11-25) nền giấy sen của khung chung
 	if Sen.ON:
-		n = _sen_look(n)   # (11-26) tab đang chọn, chip, thanh đầy, nút chính theo bộ sen
+		n = _sen_look(n)
+		n = _sen_vang(n)   # (11-26) tab đang chọn, chip, thanh đầy, nút chính theo bộ sen
 	var tick: bool = String(n.get("text", "")) == "✓"
 	if tick:   # (bản 300) dấu tích: ảnh chung ui/img/bong/tick.png (ô tròn xanh + tích trắng) thay chữ ✓ (Nunito không có)
 		n = n.duplicate()
@@ -425,6 +426,23 @@ static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chi
 		o4.css["box-shadow"] = SEN_VIEN
 		return o4
 	return n
+
+# (11-26) viền nâu đồng cũ của nút HUD / nút tròn (4 vòng: nâu sẫm, be, đồng, nâu) -> cùng độ dày, tông vàng kim của bộ sen
+const VANG_MAP := [["rgb(156, 122, 54)", "rgb(196, 138, 42)"], ["rgb(224, 202, 146)", "rgb(255, 224, 128)"], ["rgb(179, 146, 80)", "rgb(236, 184, 70)"], ["rgb(124, 95, 42)", "rgb(170, 112, 36)"]]
+static func _sen_vang(n: Dictionary) -> Dictionary:
+	var bs := String(n.get("css", {}).get("box-shadow", ""))
+	var lbl := bs.begins_with("rgb(184, 145, 63) 0px 0px 0px 1px inset")   # nhãn chữ dưới nút (Điểm danh...)
+	if not (bs.find("rgb(156, 122, 54) 0px 0px 0px 0.8px inset") >= 0 or bs.begins_with("rgb(124, 95, 42) 0px 0px 0px 0.6px") or lbl):
+		return n
+	var o: Dictionary = n.duplicate()
+	o.css = n.css.duplicate()
+	if lbl:
+		bs = bs.replace("rgb(184, 145, 63)", "rgb(226, 176, 66)")
+	else:
+		for m in VANG_MAP:
+			bs = bs.replace(String(m[0]), String(m[1]))
+	o.css["box-shadow"] = bs
+	return o
 
 static func _sen_giay(n: Dictionary) -> Dictionary:   # .pbody (nền giấy vân lá của khung chung) -> giấy sen (ảnh dưới nội dung)
 	var cl := String(n.get("cls", "")).split(" ")
