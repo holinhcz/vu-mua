@@ -375,12 +375,13 @@ def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=68, open_i
             a = phi + (V - 0.5) * 2 * Aw(U)
             return np.stack([Rr * np.cos(a), Rr * np.sin(a), Zz], -1)
         al = math.radians(open_out + (open_in - open_out) * k ** 0.8); be = 0.45 * al
-        us = np.linspace(0, 1, 200); th = al - be * us ** 1.3; Ls = L * sc * 1.08
+        us = np.linspace(0, 1, 200); th = al - be * us ** 1.3; Ls = L * sc * (1.08 - 0.16 * (1 - k))
         sr = r0 * sc + np.concatenate([[0], np.cumsum(np.sin(th) * Ls / 199)[:-1]]); sz = z0 + np.concatenate([[0], np.cumsum(np.cos(th) * Ls / 199)[:-1]])
         uu_ = np.linspace(0, 1, 200); Wm = 1.08 * float(np.max(Rc(uu_) * Aw(uu_)))
-        def Fo(U, V, sc=sc, Wm=Wm, d=d, t=t, sr=sr, sz=sz, th=th, us=us):
+        def Fo(U, V, sc=sc, Wm=Wm, k=k, d=d, t=t, sr=sr, sz=sz, th=th, us=us):
             rad = np.interp(U, us, sr); hz = np.interp(U, us, sz); tt = np.interp(U, us, th)
-            w = Wm * (0.42 + 0.58 * np.sin(np.pi * np.clip(U, 0, 1) ** 0.65)) * np.sqrt(np.clip(1 - U ** 2.4, 0, 1)) + 0.04   # cánh sen nở: bầu dục, chót tròn (chỉ nhú mũi nhỏ)
+            ex = 2.4 + 3.6 * (1 - k) ** 1.5                              # cánh ngoài chót tròn bầu hơn, cánh trong giữ dáng thuôn
+            w = Wm * (1 + 0.15 * (1 - k)) * (0.42 + 0.58 * np.sin(np.pi * np.clip(U, 0, 1) ** (0.65 + 0.35 * (1 - k)))) * np.sqrt(np.clip(1 - U ** ex, 0, 1)) + 0.04   # cánh sen nở: bầu dục, chót tròn (chỉ nhú mũi nhỏ)
             vv = (V - 0.5) * 2
             o = np.cos(tt)[..., None] * d - np.sin(tt)[..., None] * zz
             return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * w * vv ** 2 + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
