@@ -402,6 +402,20 @@ static func _white(n: Dictionary) -> void:
 
 static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chip đỏ, thanh đầy đỏ, nút chính xanh đậm viền vàng
 	var cl := String(n.get("cls", "")).split(" ")
+	if cl.has("khseg") or cl.has("bk2tabs"):   # hàng tab: viền tab vàng kim (cùng độ dày cũ), chân tab chui dưới thanh tre, icon to hơn
+		var o0: Dictionary = n.duplicate(true)
+		for t in o0.get("kids", []):
+			if not (t is Dictionary) or not t.has("::after"):
+				continue
+			var af: Dictionary = t["::after"]
+			if String(af.get("bs", "")).begins_with("rgb(126, 96, 38) 0px 0px 0px 0.5px inset"):
+				af.bs = TAB_VANG
+			t.r[3] = float(t.r[3]) + 3.0
+			var bf: Dictionary = t.get("::before", {})
+			if bf.has("w") and String(bf.w) == "18px":
+				bf.w = "22px"
+				bf.h = "22px"
+		return o0
 	if cl.has("khst"):
 		var o2: Dictionary = n.duplicate(true)
 		o2.css["background-image"] = SEN_DO
@@ -428,6 +442,7 @@ static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chi
 	return n
 
 # (11-26) viền nâu đồng cũ của nút HUD / nút tròn (4 vòng: nâu sẫm, be, đồng, nâu) -> cùng độ dày, tông vàng kim của bộ sen
+const TAB_VANG := "rgb(170, 112, 36) 0px 0px 0px 0.5px inset, rgb(196, 138, 42) 0px 0px 0px 1px inset, rgb(226, 170, 60) 0px 0px 0px 1.5px inset, rgb(255, 224, 128) 0px 0px 0px 2px inset, rgb(246, 200, 92) 0px 0px 0px 2.5px inset, rgb(236, 184, 70) 0px 0px 0px 3px inset, rgb(226, 170, 60) 0px 0px 0px 3.5px inset, rgb(214, 156, 52) 0px 0px 0px 4px inset, rgb(196, 138, 42) 0px 0px 0px 4.5px inset, rgb(170, 112, 36) 0px 0px 0px 5px inset"
 const VANG_MAP := [["rgb(156, 122, 54)", "rgb(196, 138, 42)"], ["rgb(224, 202, 146)", "rgb(255, 224, 128)"], ["rgb(179, 146, 80)", "rgb(236, 184, 70)"], ["rgb(124, 95, 42)", "rgb(170, 112, 36)"]]
 static func _sen_vang(n: Dictionary) -> Dictionary:
 	var bs := String(n.get("css", {}).get("box-shadow", ""))
