@@ -14,7 +14,44 @@ static var _cache := {}
 static func load_snap(name: String) -> Dictionary:
 	if not _cache.has(name):
 		_cache[name] = JSON.parse_string(FileAccess.get_file_as_string("res://ui/snap/" + name + ".json"))
+		_tall(_cache[name])
 	return _cache[name]
+
+# (11-26) khung sen: chóp đáy ăn bớt chỗ -> khung bảng chung (#pov .pwin 0,85 338x525) cao thêm TALL phía trên.
+# Khối nằm hẳn trên vạch TCUT dời lên TALL, khối vắt qua vạch (khung, thân, lưới cuộn) cao thêm TALL, khối dưới vạch giữ chỗ.
+const TALL := 36.0
+const TCUT := 500.0
+static func _tall(d) -> void:
+	if not Sen.ON or not (d is Dictionary) or not d.has("#pov") or not (d["#pov"] is Array) or d["#pov"].is_empty():
+		return
+	var pv: Dictionary = d["#pov"][0]
+	var ok := false
+	for k in pv.get("kids", []):
+		if k is Dictionary and String(k.get("cls", "")).split(" ").has("pwin") and absf(float(k.r[1]) - 85.0) < 0.5 and absf(float(k.r[3]) - 525.0) < 0.5:
+			ok = true
+	if not ok:
+		return
+	for k in pv.get("kids", []):
+		if k is Dictionary and not String(k.get("cls", "")).begins_with("pbk"):
+			_tall_n(k)
+
+static func _tall_n(n: Dictionary) -> void:
+	if n.has("r"):
+		var r: Array = n.r
+		var y0 := float(r[1])
+		var y1 := y0 + float(r[3])
+		if y1 <= TCUT + 0.5:
+			r[1] = y0 - TALL
+			if n.has("tr"):
+				n.tr[1] = float(n.tr[1]) - TALL
+		elif y0 < TCUT:
+			r[1] = y0 - TALL
+			r[3] = float(r[3]) + TALL
+			if n.has("tr") and float(n.tr[1]) + float(n.tr[3]) <= TCUT:
+				n.tr[1] = float(n.tr[1]) - TALL
+	for k in n.get("kids", []):
+		if k is Dictionary:
+			_tall_n(k)
 
 const KEYS := ["background-color", "background-image", "background-size", "background-position", "background-repeat", "border-radius", "box-shadow", "border-top", "border-right", "border-bottom", "border-left", "opacity", "overflow", "backdrop-filter"]
 
