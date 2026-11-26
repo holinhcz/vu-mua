@@ -27,107 +27,181 @@ def azi(pos):
     return np.arctan2(y, x), np.hypot(x, y), z
 
 
-# ------------------------------------------------------------------ vật liệu
+# ------------------------------------------------------------------ vật liệu (v2 11-26 Link "toàn 1 mảng màu": loang mảng lớn + thớ + gân + chi tiết nhỏ, không chấm đen)
+def fbm(a, b, seed, oct=3):
+    s = 0.0; w = 0.5; f = 1.0
+    for i in range(oct):
+        s = s + w * vnoise(a * f, b * f, seed + i * 7.1); w *= 0.5; f *= 2.1
+    return s / (1 - 0.5 ** oct)
+
+
+def tone(c, k):
+    return c * k[:, None]
+
+
 def m_dua_vo():
-    """vỏ dừa xiêm xanh: thớ dọc mảnh sáng/tối nhẹ, ngả vàng quanh cuống"""
-    g0, g1, g2 = hexc('#4f7f2a'), hexc('#6f9a38'), hexc('#a89a48')
+    """vỏ dừa xiêm: xanh lá đậm/nhạt loang mảng lớn, thớ dọc mảnh, 3 gờ sáng, bì vàng lốm đốm nhạt quanh tai, đốm bì nhạt li ti"""
+    g0, g1, g2, g3, lent = hexc('#47782a'), hexc('#78a63c'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
     def f(uv, prm, pos, nrm):
         th, rr, z = azi(pos)
-        s = vnoise(th * 26, z * 0.25, 3.0); s2 = vnoise(th * 70, z * 0.6, 8.0)
-        c = mix(g0, g1, 0.35 * s + 0.25 * s2)
-        top = smooth(R.ZL * 0.82, R.ZL * 1.0, z)
-        c = c * (1 - 0.45 * top)[:, None] + g2[None] * (0.45 * top)[:, None]
+        big = fbm(np.cos(th) * 2.2 + z * 0.08, np.sin(th) * 2.2 + z * 0.11, 3.0)
+        c = mix(g0, g1, np.clip((big - 0.35) * 1.6, 0, 1))
+        st = vnoise(th * 55, z * 0.18, 8.0); st2 = 0.5 + 0.5 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4)
+        c = tone(c, 0.9 + 0.12 * st + 0.06 * st2)
+        rid = np.abs(np.cos(1.5 * (th - 0.3))) ** 18                         # 3 gờ dọc
+        c = c * (1 - 0.3 * rid)[:, None] + g1[None] * 1.15 * (0.3 * rid)[:, None]
+        top = smooth(R.ZL * 0.78, R.ZL * 0.98, z) * (0.6 + 0.4 * fbm(th * 4, z * 0.4, 5.0))
+        c = c * (1 - 0.55 * top)[:, None] + g2[None] * (0.55 * top)[:, None]
+        bot = smooth(R.ZL * 0.25, R.ZL * 0.05, z)
+        c = c * (1 - 0.3 * bot)[:, None] + g3[None] * (0.3 * bot)[:, None]
+        ci = np.floor(th * 30); cz = np.floor(z * 1.1); h = hash1(ci, cz, 4.0)
+        fx = th * 30 - ci - 0.5; fz = z * 1.1 - cz - 0.5
+        dot = (h > 0.82) & (fx * fx + fz * fz * 3 < 0.05)
+        c = np.where(dot[:, None], c * 0.55 + lent[None] * 0.45, c)
         return np.clip(c, 0, 1), nrm
     f.kind = 'son'
     return f
 
 
-def m_lop(prof, cols, edges):
-    """mặt cắt ngang trái cây: các lớp theo bán kính tương đối (vỏ ngoài -> cơm/ruột)"""
+def m_lop(prof, cols, edges, fibre=True):
+    """mặt cắt trái: vỏ mỏng -> lớp xơ có sợi toả tia -> lớp cơm, mỗi lớp có vân riêng"""
     cs = [hexc(c) for c in cols]
     def f(uv, prm, pos, nrm):
         th, rr, z = azi(pos)
         fr = rr / np.maximum(prof(th), 1e-6)
-        c = np.tile(cs[-1], (len(fr), 1))
-        for e, cc in zip(edges, cs):
-            c = np.where((fr > e)[:, None], cc[None], c) if False else c
-        # từ trong ra ngoài: lớp nào bán kính vượt mốc thì đổi màu
         out = np.tile(cs[-1], (len(fr), 1))
         for e, cc in sorted(zip(edges, cs[:-1]), key=lambda t: t[0]):
             out = np.where((fr > e)[:, None], cc[None], out)
-        fib = 0.92 + 0.1 * vnoise(th * 40, fr * 30, 5.0)
-        return np.clip(out * fib[:, None], 0, 1), nrm
+        e0, e1 = min(edges), max(edges)
+        mid = (fr > e0) & (fr <= e1)
+        sợi = 0.5 + 0.5 * np.sin(th * 260 + vnoise(th * 30, fr * 8, 3.0) * 9)
+        sợi2 = vnoise(th * 120, fr * 4, 6.0)
+        k = np.where(mid, 0.82 + 0.22 * sợi * (0.6 + 0.4 * sợi2), 1.0)
+        rim = np.exp(-((fr - e0) / 0.012) ** 2) * 0.25                     # mép cơm ngả vàng nhẹ
+        inner = fr <= e0
+        ring = 0.5 + 0.5 * np.sin(fr * 90 + vnoise(th * 6, fr * 6, 4.0) * 3)
+        k = np.where(inner, 0.94 + 0.05 * ring + 0.03 * vnoise(th * 20, fr * 20, 9.0), k)
+        out = tone(out, k) * (1 - rim)[:, None] + hexc('#e8d49a')[None] * rim[:, None]
+        sk = fr > max(edges)
+        out = np.where(sk[:, None], tone(out, 0.92 + 0.12 * vnoise(th * 80, fr * 10, 2.0)), out)
+        return np.clip(out, 0, 1), nrm
     f.kind = 'go'
     return f
 
 
+def h_lop(prof, edges):
+    def h(P, UV, q):
+        th, rr, z = azi(P)
+        fr = rr / np.maximum(prof(th), 1e-6)
+        e0, e1 = min(edges), max(edges)
+        mid = (fr > e0) & (fr <= e1)
+        return np.where(mid, 0.05 * np.sin(th * 260 + vnoise(th * 30, fr * 8, 3.0) * 9), 0.01 * vnoise(th * 20, fr * 20, 9.0)) - 0.06 * np.exp(-((fr - e0) / 0.01) ** 2)
+    return h
+
+
 def m_com(col, col2):
+    """cơm / ruột trái: vân cong theo lòng, loang nhạt"""
     c, c2 = hexc(col), hexc(col2)
     def f(uv, prm, pos, nrm):
         x, y, z = R.loc(pos)
-        g = vnoise(x * 0.7 + z * 0.3, y * 0.7, 4.0)
-        return np.clip(mix(c, c2, g * 0.6), 0, 1), nrm
+        th = np.arctan2(y, x)
+        g = fbm(x * 0.35 + z * 0.2, y * 0.35, 4.0)
+        ln = 0.5 + 0.5 * np.sin(z * 4.5 + vnoise(th * 5, z * 0.4, 3.0) * 4)
+        return np.clip(tone(mix(c, c2, g * 0.8), 0.95 + 0.06 * ln), 0, 1), nrm
     f.kind = 'son'
     return f
 
 
 def m_bi():
-    """vỏ bí đỏ: múi cam, sống múi sáng hơn, rãnh múi cam đậm (khối, không vệt đen), lấm tấm chấm vàng nhạt"""
-    c0, c1, c2, dot = hexc('#d9701e'), hexc('#f29a38'), hexc('#c25a18'), hexc('#f6c878')
+    """vỏ bí đỏ: sống múi cam vàng sáng, rãnh múi cam nâu (khối thật), sọc dọc mảnh, loang mảng, vệt xanh quanh cuống, chấm tròn vàng nhạt"""
+    c0, c1, c2, gr, dot = hexc('#d9701e'), hexc('#f7ac48'), hexc('#a8501a'), hexc('#8a9a3a'), hexc('#f8d08a')
     def f(uv, prm, pos, nrm):
         th, rr, z = azi(pos)
-        lobe = np.abs(np.cos(5 * (th - math.pi / 2)))
-        c = mix(c2, c0, lobe ** 0.5)
-        c = c * (1 - 0.35 * lobe ** 3)[:, None] + c1[None] * (0.35 * lobe ** 3)[:, None]
-        st = vnoise(th * 60, z * 0.4, 6.0)
-        c = c * (0.94 + 0.1 * st)[:, None]
-        ci = np.floor(th * 40); cz = np.floor(z * 1.6); h = hash1(ci, cz, 3.0)
-        sp = (h > 0.975)
-        c = np.where(sp[:, None], c * 0.75 + dot[None] * 0.25, c)
+        ph = 5 * (th - math.pi / 2); lobe = np.abs(np.cos(ph))
+        c = mix(c2, c0, np.clip(lobe * 2.2, 0, 1))
+        c = c * (1 - 0.55 * lobe ** 4)[:, None] + c1[None] * (0.55 * lobe ** 4)[:, None]
+        big = fbm(np.cos(th) * 2 + z * 0.1, np.sin(th) * 2, 6.0)
+        c = tone(c, 0.88 + 0.22 * big)
+        st = 0.5 + 0.5 * np.sin(ph * 9 + vnoise(th * 6, z * 0.25, 2.0) * 3)          # sọc dọc mảnh trên mỗi múi
+        c = c * (1 - 0.16 * st ** 3)[:, None] + c1[None] * (0.16 * st ** 3)[:, None]
+        top = smooth(R.ZL * 0.72, R.ZL * 1.0, z) * (1 - smooth(0.0, 0.0001, 0 * z)) * (0.5 + 0.5 * fbm(th * 5, z * 0.5, 7.0))
+        c = c * (1 - 0.45 * top)[:, None] + gr[None] * (0.45 * top)[:, None]
+        ci = np.floor(th * 34); cz = np.floor(z * 1.3); h = hash1(ci, cz, 3.0)
+        fx = th * 34 - ci - 0.5; fz = z * 1.3 - cz - 0.5
+        sp = (h > 0.8) & (fx * fx + fz * fz < 0.04)
+        c = np.where(sp[:, None], c * 0.6 + dot[None] * 0.4, c)
         return np.clip(c, 0, 1), nrm
     f.kind = 'son'
     return f
 
 
 def m_cuong():
-    a, b = hexc('#7f8a40'), hexc('#c2ae6e')
+    """cuống bí: xơ dọc xanh rêu -> nâu vàng khô ở đầu cắt"""
+    a, b, c3 = hexc('#6f7f36'), hexc('#c8b06e'), hexc('#a8a058')
     def f(uv, prm, pos, nrm):
         th = uv[:, 1] if uv.shape[1] > 1 else uv[:, 0]
         x, y, z = R.loc(pos)
-        g = 0.5 + 0.5 * np.sin(th * TAU * 7)
+        g = 0.5 + 0.5 * np.sin(th * TAU * 9 + vnoise(th * 9, z, 3.0) * 2)
         tz = smooth(R.ZL + 1.0, R.ZL + 5.5, z)
-        c = mix(a, b, 0.55 * tz + 0.2 * g)
-        return np.clip(c, 0, 1), nrm
+        c = mix(a, b, 0.6 * tz)
+        c = c * (1 - 0.3 * g)[:, None] + c3[None] * (0.3 * g)[:, None]
+        return np.clip(tone(c, 0.9 + 0.15 * vnoise(th * 30, z * 3, 5.0)), 0, 1), nrm
     f.kind = 'go'
     return f
 
 
-def m_la(col, vein, nveins):
-    """lá: màu lá + gân lá toả từ cuống (sáng hơn lá, nổi khối nhẹ)"""
-    c, v = hexc(col), hexc(vein)
+def leaf_veins(U, V, nveins):
+    ph = (V * nveins) % 1.0; d = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
+    v1 = np.exp(-(d / 0.09) ** 2) * smooth(0.02, 0.12, U)
+    # gân phụ: chẽ xiên từ mỗi gân chính, lặp theo bán kính
+    side = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
+    v2 = np.exp(-((((U * 14 - side * 2.2) % 1.0) - 0.5) / 0.07) ** 2) * smooth(0.15, 0.3, U) * 0.55
+    return v1, v2
+
+
+def m_la(col, vein, nveins, edge='#a8a850'):
+    """lá: xanh loang mảng, gân chính + gân phụ sáng, đốm sáng giữa lá, mép ngả vàng"""
+    c, v, ed = hexc(col), hexc(vein), hexc(edge)
     def f(uv, prm, pos, nrm):
         U, V = uv[:, 0], uv[:, 1]
-        ph = (V * nveins) % 1.0; d = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
-        vv = np.exp(-(d / 0.09) ** 2) * smooth(0.02, 0.1, U) * smooth(1.0, 0.85, U)
-        g = vnoise(U * 9, V * 40, 2.0)
-        cc = mix(c, c * 1.12, g * 0.5)
-        cc = cc * (1 - vv)[:, None] + v[None] * vv[:, None]
-        cc = cc * (1 + 0.12 * U)[:, None]
+        v1, v2 = leaf_veins(U, V, nveins)
+        big = fbm(U * 3 * np.cos(V * TAU), U * 3 * np.sin(V * TAU), 2.0)
+        cc = tone(c, 0.82 + 0.3 * big)
+        cc = cc * (1 + 0.15 * U)[:, None]
+        cen = np.exp(-(U / 0.12) ** 2) * 0.6
+        cc = cc * (1 - cen)[:, None] + v[None] * cen[:, None]
+        vv = np.clip(v1 + v2 * 0.7, 0, 1)
+        cc = cc * (1 - 0.75 * vv)[:, None] + v[None] * (0.75 * vv)[:, None]
+        e = smooth(0.86, 1.0, U) * (0.5 + 0.5 * vnoise(V * 60, U * 4, 3.0))
+        cc = cc * (1 - 0.5 * e)[:, None] + ed[None] * (0.5 * e)[:, None]
         return np.clip(cc, 0, 1), nrm
     f.kind = 'go'
     return f
 
 
-def m_canh(base, tip, vein, kind='son'):
-    """cánh sen: gốc trắng ngà -> hồng ở chót + 2 mép, gân dọc mảnh"""
-    b, t, v = hexc(base), hexc(tip), hexc(vein)
+def h_la(nveins):
+    def h(P, UV, q):
+        U, V = UV[:, 0], UV[:, 1]
+        v1, v2 = leaf_veins(U, V, nveins)
+        return 0.1 * v1 + 0.04 * v2 + 0.012 * vnoise(U * 25, V * 70, 4.0)
+    return h
+
+
+def m_canh(base, tip, vein, kind='son', foot='#e8e6a0'):
+    """cánh sen: gốc vàng xanh nhạt -> trắng ngà -> hồng đậm ở chót, mép sáng, gân dọc chẽ nhánh rõ, loang nhẹ"""
+    b, t, v, ft = hexc(base), hexc(tip), hexc(vein), hexc(foot)
     def f(uv, prm, pos, nrm):
         U, V = uv[:, 0], uv[:, 1]
         e = np.abs(V - 0.5) * 2
-        k = np.clip(U * 1.15 - 0.2 + e * 0.35 * U, 0, 1) ** 1.3
+        k = np.clip(U * 1.25 - 0.3 + e * 0.45 * U, 0, 1) ** 1.2
         c = mix(b, t, k)
-        ln = 0.5 + 0.5 * np.cos((V - 0.5) * TAU * 7 * (1.2 - 0.4 * U))
-        c = c * (1 - 0.12 * ln ** 4)[:, None] + v[None] * (0.12 * ln ** 4)[:, None]
+        c = c * (1 - 0.5 * smooth(0.18, 0.0, U))[:, None] + ft[None] * (0.5 * smooth(0.18, 0.0, U))[:, None]
+        ln = 0.5 + 0.5 * np.cos((V - 0.5) * TAU * 11 * (1.25 - 0.45 * U) + vnoise(U * 4, V * 3, 2.0) * 1.5)
+        vl = ln ** 6 * smooth(0.05, 0.2, U)
+        c = c * (1 - 0.35 * vl)[:, None] + v[None] * (0.35 * vl)[:, None]
+        c = tone(c, 0.93 + 0.1 * fbm(U * 5, V * 4, 6.0))
+        rim = smooth(0.82, 0.98, e) * 0.25
+        c = c * (1 - rim)[:, None] + (t * 0.6 + 0.4)[None] * rim[:, None]
         return np.clip(c, 0, 1), nrm
     f.kind = kind
     return f
@@ -135,27 +209,41 @@ def m_canh(base, tip, vein, kind='son'):
 
 def h_canh(P, UV, q):
     U, V = UV[:, 0], UV[:, 1]
-    ln = 0.5 + 0.5 * np.cos((V - 0.5) * TAU * 7 * (1.2 - 0.4 * U))
-    return 0.045 * ln ** 3 * np.sin(np.pi * np.clip(U, 0, 1)) + 0.01 * vnoise(U * 30, V * 30, 2.0)
+    ln = 0.5 + 0.5 * np.cos((V - 0.5) * TAU * 11 * (1.25 - 0.45 * U) + vnoise(U * 4, V * 3, 2.0) * 1.5)
+    return 0.05 * ln ** 4 * np.sin(np.pi * np.clip(U, 0, 1)) + 0.012 * vnoise(U * 30, V * 30, 2.0)
 
 
-def h_la(nveins):
-    def h(P, UV, q):
-        U, V = UV[:, 0], UV[:, 1]
-        ph = (V * nveins) % 1.0; d = np.minimum(ph, 1 - ph) * (U + 0.05) * 6
-        return 0.09 * np.exp(-(d / 0.09) ** 2) * smooth(0.02, 0.1, U) + 0.015 * vnoise(U * 20, V * 60, 4.0)
-    return h
+def m_guong(col, col2):
+    """gương sen: mặt trên vàng xanh có vòng lõm quanh lỗ hột, thân có gờ dọc"""
+    c, c2 = hexc(col), hexc(col2)
+    def f(uv, prm, pos, nrm):
+        x, y, z = R.loc(pos)
+        th = np.arctan2(y, x)
+        rib = 0.5 + 0.5 * np.cos(th * 16)
+        g = fbm(x * 0.8, y * 0.8 + z * 0.5, 3.0)
+        cc = tone(mix(c, c2, g), 0.88 + 0.16 * rib)
+        return np.clip(cc, 0, 1), nrm
+    f.kind = 'son'
+    return f
 
 
-def h_soi(P, UV, q):                  # thớ dọc vỏ (dừa / bí)
+def h_guong(P, UV, q):
+    x, y, z = R.loc(P); th = np.arctan2(y, x)
+    return 0.07 * np.cos(th * 16) + 0.01 * vnoise(x * 5, y * 5 + z * 5, 3.0)
+
+
+def h_soi(P, UV, q):                  # thớ dọc vỏ dừa + 3 gờ
     th, rr, z = azi(P)
-    return 0.025 * vnoise(th * 90, z * 0.5, 7.0) + 0.012 * np.sin(th * 160 + z * 0.3)
+    return 0.03 * vnoise(th * 90, z * 0.5, 7.0) + 0.015 * np.sin(th * 140 + vnoise(th * 9, z * 0.2, 2.0) * 4) + 0.08 * np.abs(np.cos(1.5 * (th - 0.3))) ** 18
 
 
 def h_bi(P, UV, q):
     th, rr, z = azi(P)
-    ci = np.floor(th * 40); cz = np.floor(z * 1.6); hh = hash1(ci, cz, 3.0)
-    return 0.03 * vnoise(th * 60, z * 0.4, 6.0) + 0.03 * (hh > 0.975)
+    ph = 5 * (th - math.pi / 2)
+    st = 0.5 + 0.5 * np.sin(ph * 9 + vnoise(th * 6, z * 0.25, 2.0) * 3)
+    ci = np.floor(th * 34); cz = np.floor(z * 1.3); hh = hash1(ci, cz, 3.0)
+    fx = th * 34 - ci - 0.5; fz = z * 1.3 - cz - 0.5
+    return 0.035 * st ** 3 + 0.02 * vnoise(th * 60, z * 0.4, 6.0) + 0.03 * ((hh > 0.8) & (fx * fx + fz * fz < 0.04))
 
 
 # ------------------------------------------------------------------ hình khối
@@ -217,7 +305,7 @@ def trai_dua(S, rng):
     def rad(s, th): return Rd * np.sin(np.pi * np.clip(s, 0, 1)) ** 0.6 * (1 - 0.08 * s) * (1 + 0.035 * np.cos(3 * th))
     zc = Hd * SC_
     def prof_c(th): return rad(SC_, th)
-    CAT = newmat(m_lop(prof_c, ['#7aa03e', '#d2ad70', '#f6f3ea'], [0.955, 0.80]))
+    CAT = newmat(m_lop(prof_c, ['#5f8f30', '#d8b57a', '#f6f3ea'], [0.955, 0.80])); R.HFN[CAT] = h_lop(prof_c, [0.955, 0.80])
     COM = newmat(m_com('#f3efe2', '#e6e2cc'))
     VANG = newmat(mat_kl('#e8b84a', hammer=False, streak=0.02, leaf=True))
     body()
@@ -244,7 +332,9 @@ def trai_dua(S, rng):
     CU = newmat(m_cuong())
     for k in range(4):                                # tai dừa (đài) + cuống
         a = k * TAU / 4 + 0.4; d = np.array([math.cos(a), math.sin(a), 0.0]); n = np.array([0, 0, 1.0]) + d * 0.35; n /= np.linalg.norm(n)
-        ell(S, tuple(d * 1.9 + np.array([0, 0, Hd - 0.25])), 2.2, 1.3, 0.38, CU, axes=(np.cross(np.cross(n, d), n) * -1 if False else d, np.cross(n, d), n), nu=6, nv_=14)
+        ell(S, tuple(d * 2.4 + np.array([0, 0, Hd - 0.45])), 2.9, 1.8, 0.42, CU, axes=(d, np.cross(n, d), n), nu=6, nv_=16)
+        a2 = a + TAU / 8; d2 = np.array([math.cos(a2), math.sin(a2), 0.0]); n2 = np.array([0, 0, 1.0]) + d2 * 0.3; n2 /= np.linalg.norm(n2)
+        ell(S, tuple(d2 * 1.6 + np.array([0, 0, Hd - 0.05])), 2.0, 1.3, 0.36, CU, axes=(d2, np.cross(n2, d2), n2), nu=6, nv_=14)
     tb(S, (0, 0, Hd - 0.3), (0.3, 0.2, Hd + 1.6), 0.6, CU, nr=8, nl=3, cap=True)
     body()
 
@@ -257,11 +347,11 @@ def trai_bi(S, rng):
     def lob(th): return 0.89 + 0.11 * np.abs(np.cos(5 * (th - math.pi / 2))) ** 0.6
     def surf(a, th):
         r = Rb * np.sin(a) * lob(th)
-        z = Hb / 2 * (1 - np.cos(a)) + 1.6 * np.exp(-(a / 0.4) ** 2) - 2.0 * np.exp(-((math.pi - a) / 0.5) ** 2)
+        z = Hb / 2 * (1 - np.cos(a)) + 1.6 * np.exp(-(a / 0.4) ** 2) - 1.1 * np.exp(-((math.pi - a) / 0.5) ** 2)
         return r, z
     rc0, zc = surf(AC, 0.0); rc0 = Rb * math.sin(AC)
     def prof_c(th): return Rb * math.sin(AC) * lob(th)
-    CAT = newmat(m_lop(prof_c, ['#d9701e', '#f4b04a', '#f8c862'], [0.95, 0.82]))
+    CAT = newmat(m_lop(prof_c, ['#c8601c', '#f4b04a', '#f8c862'], [0.95, 0.82])); R.HFN[CAT] = h_lop(prof_c, [0.95, 0.82])
     RUOT = newmat(m_com('#f0a43c', '#e4902c'))
     VANG = newmat(mat_kl('#e8b84a', hammer=False, streak=0.02, leaf=True))
     body()
@@ -294,7 +384,7 @@ def trai_bi(S, rng):
     for i, (p0, p1) in enumerate(zip(pts, pts[1:])): tb(S, p0, p1, 1.5 - 0.12 * i, CU, nr=10, nl=3, cap=(i == 4))
     for k in range(5):                                # gân cuống loe ra mặt bí
         a = k * TAU / 5 + 0.3
-        tb(S, (0, 0, ztop + 0.2), (2.4 * math.cos(a), 2.4 * math.sin(a), ztop - 0.3), 0.55, CU, nr=6, nl=2)
+        tb(S, (0, 0, ztop + 0.5), (2.4 * math.cos(a), 2.4 * math.sin(a), ztop + 0.25), 0.5, CU, nr=6, nl=2)
     hp = [(1.2 + 1.3 * math.cos(t * 2.2), -1.0 + 1.3 * math.sin(t * 2.2), ztop + 2.6 + t * 0.9) for t in np.linspace(0, 4.5, 40)]
     for p0, p1 in zip(hp, hp[1:]): tb(S, p0, p1, 0.18, CU, nr=5, nl=2)
     LA_ = newmat(m_la('#4e8a30', '#9cc860', 5)); R.HFN[LA_] = h_la(5)
@@ -320,7 +410,8 @@ def guongsen(S, rng, z0, r, mpod, mtop, mseed, nseed=7):
         if k == 0: x = y = 0.0
         else:
             a = (k - 1) * TAU / (nseed - 1); x, y = 0.6 * r * math.cos(a), 0.6 * r * math.sin(a)
-        ell(S, (x, y, z0 + 1.75), r * 0.17, r * 0.17, r * 0.12, mseed, nu=5, nv_=12)
+        ell(S, (x, y, z0 + 1.62), r * 0.24, r * 0.24, r * 0.05, mpod, nu=4, nv_=14)
+        ell(S, (x, y, z0 + 1.7), r * 0.16, r * 0.16, r * 0.11, mseed, nu=5, nv_=12)
 
 
 def sen(S, rng, gold):
@@ -338,17 +429,21 @@ def sen(S, rng, gold):
             a = k * TAU / 12; ell(S, (12.6 * math.cos(a), 12.6 * math.sin(a), 1.2), 0.7, 0.7, 0.7, flat('#2fae6a') if k % 2 else flat('#d81c3a'))
         z0 = 2.4
         LT = newmat(m_la('#3f8a3a', '#e8c25a', 22)); LB_ = newmat(m_la('#6aa04a', '#c8d880', 22))
-        CAN = newmat(m_canh('#f6d266', '#e0a02c', '#b87e1c', kind='kl')); POD = newmat(mat_kl('#d8a83a', hammer=False))
+        CAN = newmat(m_canh('#f8cc56', '#e8a42c', '#c08020', kind='vang', foot='#fae08a')); POD = newmat(mat_kl('#d8a83a', hammer=False)); R.HFN[POD] = h_guong
         PT = newmat(mat_kl('#f0cf6a', hammer=False)); SEED = flat('#e0302a')
-        rings = [(8, 3.6, 13.5, 4.6, 0.30, -0.62, 74, 0.0, 0.0), (8, 2.8, 11.8, 4.0, 0.16, -0.70, 58, math.pi / 8, 0.08), (8, 2.0, 9.6, 3.2, 0.05, -0.72, 36, 0.0, 0.16)]
+        rings = [(8, 3.6, 13.5, 4.6, 0.30, -0.62, 74, 0.0, 0.0), (8, 2.8, 11.8, 4.0, 0.16, -0.70, 58, math.pi / 8, 0.12), (8, 2.0, 9.6, 3.2, 0.05, -0.72, 36, 0.0, 0.24)]
     else:
         z0 = 0.6
         LT = newmat(m_la('#4a8c34', '#8cc45c', 22)); LB_ = newmat(m_la('#7aa856', '#a8cc80', 22))
-        CAN = newmat(m_canh('#fbf2e6', '#e8689a', '#d8507e')); POD = newmat(m_com('#a8b84a', '#c8cc66'))
-        PT = newmat(m_com('#d6d06a', '#c0c454')); SEED = newmat(m_com('#6f8e34', '#58782a'))
-        rings = [(6, 3.4, 13.0, 4.8, 0.32, -0.60, 58, 0.0, 0.0), (6, 2.6, 11.4, 4.1, 0.18, -0.68, 40, math.pi / 6, 0.08), (5, 1.8, 9.2, 3.3, 0.06, -0.74, 22, 0.3, 0.16)]
+        CAN = newmat(m_canh('#fbf2e6', '#e8689a', '#d8507e')); POD = newmat(m_guong('#9cb244', '#c8cc66')); R.HFN[POD] = h_guong
+        PT = newmat(m_guong('#d6d06a', '#c0c454')); SEED = newmat(m_com('#6f8e34', '#58782a'))
+        rings = [(6, 3.4, 13.0, 4.8, 0.32, -0.60, 58, 0.0, 0.0), (6, 2.6, 11.4, 4.1, 0.18, -0.68, 40, math.pi / 6, 0.12), (5, 1.8, 9.2, 3.3, 0.06, -0.74, 22, 0.3, 0.24)]
     R.HFN[LT] = h_la(22); R.HFN[LB_] = h_la(22); R.HFN[CAN] = h_canh
     leaf_disc(S, z0, Rl, LT, LB_)
+    GIOT = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#e4f2f0'), (len(uv), 1)), nrm), kind='ngoc')
+    for (U, th, rd) in ((0.62, 0.5, 0.75), (0.7, 0.62, 0.45), (0.55, 2.4, 0.6), (0.78, 3.9, 0.85), (0.66, 4.05, 0.4), (0.5, 5.3, 0.55)):
+        rr = Rl * U * (1 + 0.04 * math.sin(7 * th + 1.0)); zz = z0 + 1.6 * U ** 2 + 0.55 * U ** 3 * math.sin(9 * th)
+        ell(S, (rr * math.cos(th), rr * math.sin(th), zz + rd * 0.3), rd, rd, rd * 0.55, GIOT, nu=5, nv_=12)
     VANG = newmat(mat_kl('#e8b84a', hammer=False, streak=0.02, leaf=True))
     coins(S, rng, z0 + 0.9, 3.0, 8, VANG)
     guongsen(S, rng, z0 + 5.6, 3.7, POD, PT, SEED)
@@ -360,7 +455,7 @@ def sen(S, rng, gold):
             phi = ph0 + k * TAU / n
             b = (1.3 * r0 * math.cos(phi), 1.3 * r0 * math.sin(phi), z0 + 1.0 + 0.15 * (k % 2))
             t = (-math.sin(phi), math.cos(phi), 0.0)
-            part(pid, b, t, ang, delay=dl + 0.02 * k)
+            part(pid, b, t, ang, delay=dl)
             petal(S, b, phi, L * 1.3, W * 1.3, a0, a1, CAN, cup=0.42)
             pid += 1
         body()

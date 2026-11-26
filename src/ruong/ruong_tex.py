@@ -61,7 +61,7 @@ for m_, f_ in R.MATS.items():
         if k_ == 'kl': H[m_] = h_kl
         elif k_ == 'son': H[m_] = h_son
 H.update(R.HFN)
-ROUGH = {'kl': 0.42, 'son': 0.78, 'go': 0.97, 'ngoc': 0.3}
+ROUGH = {'vang': 0.45, 'kl': 0.42, 'son': 0.78, 'go': 0.97, 'ngoc': 0.3}
 
 # ---------------- xếp ô atlas
 tiles = []
@@ -181,6 +181,7 @@ mats = {}
 for kind, r in ROUGH.items():
     mi = Gb.material(kind, tex=ta, rough=r); Gb.j['materials'][mi]['normalTexture'] = {'index': tn}
     if kind == 'kl': Gb.j['materials'][mi]['pbrMetallicRoughness']['metallicFactor'] = 0.9
+    if kind == 'vang': Gb.j['materials'][mi]['pbrMetallicRoughness']['metallicFactor'] = 0.3
     mats[kind] = mi
 def prims(flag, piv):
     out = []
@@ -198,7 +199,9 @@ for pid, pp in PARTS.items():
     pv = np.array(pp['piv']) + np.array([R.C0, R.C0, 0.0])
     nd = Gb.node('nap' if pid == 1 and not R.PARTS else 'p%d' % pid, tuple(g_to_gl((pv - np.array([R.C0, R.C0, 0])) * SC)), mesh=Gb.mesh('p%d' % pid, prims(pid, tuple(pv))), parent=root)
     ax = g_to_gl(np.array(pp['axis'], float)); ax = ax / np.linalg.norm(ax); A = pp['ang']; dl = pp['delay']
-    ang = np.radians([0, 0, A * 1.06, A * 0.95, A]); tm = [0, 0.15 + dl, 0.55 + dl, 0.75 + dl, 0.9 + dl]
+    tm = np.linspace(0, 1.4, 43); x = np.clip((tm - 0.1 - dl) / 0.85, 0, 1)
+    c1 = 1.2; c3 = c1 + 1; e = 1 + c3 * (x - 1) ** 3 + c1 * (x - 1) ** 2      # easeOutBack: mở êm, nảy nhẹ rồi đứng
+    ang = np.radians(A * e); tm = list(tm)
     tracks.append((nd, 'rotation', tm, [[ax[0] * math.sin(a / 2), ax[1] * math.sin(a / 2), ax[2] * math.sin(a / 2), math.cos(a / 2)] for a in ang]))
 Gb.animation('mo_nap', tracks)
 Gb.save(OUT)
