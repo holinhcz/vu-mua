@@ -88,9 +88,7 @@ put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c, la
 M['day']['dy'] = -T / 2
 # hoa sen góc: tràn ra ngoài khung một phần
 put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # tư thế như ảnh mẫu (không xoay)
-# ảnh gốc 07 bị cụt lá bên phải: dùng bản vá (lá nối dài + bo tròn mép) — 07_hoa_sen_goc_duoi_phai_va.png
-_v = crop_bb(load('07_hoa_sen_goc_duoi_phai_va.png')); _k = _v.width / 1840.0
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai_va.png', 92 * _k, [1.0, 1.0], 0.99 / _k, 0.76)   # cân với góc trên trái, nhích lên
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 96, [1.0, 1.0], 0.80, 0.70)   # ảnh mới (đủ lá), cân với góc trên trái
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
