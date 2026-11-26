@@ -145,7 +145,14 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 			ring.act = _dtip.bind(String(R.t), "gift:" + String(R.ic), "Mốc " + str(n) + " ngày" + ("" if ok else " · còn " + str(n - v) + " ngày"))   # (bản 504) bong bóng: hình quà, tên, số lượng
 		out.append(ring)
 		out.append(_dt(cx - 30.0, ly, 60.0, 14.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
-		out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, ("còn " + str(n - v) + " ngày") if nxt else R8S[j], 9.5, 700 if nxt else 600, "rgb(176, 118, 10)" if nxt else SUB))
+		if nxt:   # (11-26) mốc kế tiếp: "còn N ngày" trên nhãn đỏ chữ trắng, nổi rõ
+			var ct := "còn " + str(n - v) + " ngày"
+			var cw2: float = Box.text_w(ct, 10.0, 800) + 14.0
+			var pl := _onbtn(cx - cw2 * 0.5, ly + 15.0, cw2, 17.0, ct, null, true)
+			pl.kids[0].css["font-size"] = _cpx(10.0)
+			out.append(pl)
+		else:
+			out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, R8S[j], 9.5, 600, SUB))
 	# 2. lịch
 	var cy := ly + 42.0
 	var misses := 0
@@ -182,7 +189,10 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var ey := ty + 36.0
 	if misses > 0:
 		var fs := ("Chạm ngày lỡ để bù · còn " + str(5 - M) + " lần · " + str(3 + M) + " sen đỏ/lần") if M < 5 else "Hết lượt bù tháng này"
-		out.append(_dt(X0, ey, XW, 16.0, fs, 10.5, 600, SUB))
+		var fw2: float = Box.text_w(fs, 11.5, 800) + 24.0   # (11-26) dòng bù: chữ đậm trên chip kem viền vàng, nổi rõ
+		var fc := _chip(X0 + (XW - fw2) * 0.5, ey - 3.0, fw2, 22.0, "fut")
+		fc.kids = [_dt(X0 + (XW - fw2) * 0.5, ey - 3.0, fw2, 22.0, fs, 11.5, 800, "rgb(150, 40, 40)" if M < 5 else BROWN)]
+		out.append(fc)
 		ey += 20.0
 	return [out, ey + 26.0]
 
