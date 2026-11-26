@@ -211,7 +211,7 @@ def m_canh(base, tip, vein, kind='son', foot='#e8e6a0', tipexp=1.0, vk=0.2):
         ln = 0.5 + 0.5 * np.cos((V - 0.5) * TAU * (9 + 4 * vnoise(V * 3, 1.0, 4.0)) * (1.25 - 0.45 * U) + vnoise(U * 4, V * 3, 2.0) * 2.5)
         vl = ln ** 5 * smooth(0.05, 0.25, U) * (0.6 + 0.4 * vnoise(U * 8, V * 20, 5.0))
         c = c * (1 - vk * vl)[:, None] + v[None] * (vk * vl)[:, None]
-        c = tone(c, 0.93 + 0.1 * fbm(U * 5, V * 4, 6.0))
+        bl = fbm(U * 3, V * 2.5, 9.0); kb = (np.clip((bl - 0.45) * 0.9, 0, 0.35) * smooth(0.2, 0.7, U))[:, None]; c = c * (1 - kb) + t[None] * kb; c = tone(c, 0.9 + 0.16 * fbm(U * 5, V * 4, 6.0))
         rim = smooth(0.82, 0.98, e) * 0.25
         c = c * (1 - rim)[:, None] + (t * 0.6 + 0.4)[None] * rim[:, None]
         return np.clip(c, 0, 1), nrm
@@ -379,7 +379,7 @@ def bong_sen(S, z0, N, mats, r0=2.4, Rb=5.4, L=20.0, A0=0.8, open_out=68, open_i
         def Aw(U): return A0 * (0.45 + 0.55 * np.sin(np.pi / 2 * np.clip(U / 0.55, 0, 1))) * (1 - 0.15 * U ** 4) + 0.01        # búp khép: cánh rộng tới chót -> đỉnh búp kín
         def F(U, V, sc=sc, phi=phi):
             U = 1 - (1 - np.asarray(U, dtype=float)) ** 1.7                # dồn hàng lưới về phía đỉnh vòm -> đỉnh tròn mịn, không gãy khúc
-            vb = (V - 0.5) * 2; Rr = Rc(U) * (1 + 0.11 * (1 - vb ** 2) * np.sin(np.pi * U) ** 0.7);   scz = 1 - (1 - sc) * 0.1; Zz = z0 + L * U * scz + 0.6 * np.sin(np.pi * U) * scz   # cánh trong cao gần bằng cánh ngoài -> đỉnh búp liền một vòm, không lòi mép
+            vb = (V - 0.5) * 2; Rr = Rc(U) * (1 + 0.11 * (1 - vb ** 2) * np.sin(np.pi * U) ** 0.7 - 0.06 * np.abs(vb) ** 6 * np.clip((U - 0.55) / 0.3, 0, 1) * np.clip((1 - U) / 0.12, 0, 1));   scz = 1.0; Zz = z0 + L * U * scz + 0.6 * np.sin(np.pi * U) * scz   # cánh trong cao gần bằng cánh ngoài -> đỉnh búp liền một vòm, không lòi mép
             a = phi + (V - 0.5) * 2 * Aw(U)
             return np.stack([Rr * np.cos(a), Rr * np.sin(a), Zz], -1)
         al = math.radians(open_out + (open_in - open_out) * k ** 0.8); be = 0.45 * al
@@ -392,7 +392,7 @@ def bong_sen(S, z0, N, mats, r0=2.4, Rb=5.4, L=20.0, A0=0.8, open_out=68, open_i
             w = Wm * (1 + 0.15 * (1 - k)) * (0.52 + 0.48 * np.sin(np.pi * np.clip(U, 0, 1) ** (0.65 + 0.35 * (1 - k)))) * np.sqrt(np.clip(1 - U ** ex, 0, 1)) + 0.04   # cánh sen nở: bầu dục, chót tròn (chỉ nhú mũi nhỏ)
             vv = (V - 0.5) * 2
             o = np.cos(tt)[..., None] * d - np.sin(tt)[..., None] * zz
-            return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * (1 - 0.6 * np.clip(U, 0, 1) ** 3) * w * vv ** 2 + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
+            return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * (1 - 0.6 * np.clip(U, 0, 1) ** 3) * w * vv ** 2 + 0.07 * w * vv ** 4 * np.sin(np.pi * 5 * U + 1.3 * k * 7) * np.sin(np.pi * U) + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
         b = (r0 * sc * math.cos(phi), r0 * sc * math.sin(phi), z0)
         part(100 + i, b, (-math.sin(phi), math.cos(phi), 0.0), 0.0, delay=0.32 * k)
         R.MORPHF[0] = (lambda U, V, Fo=Fo: R.rot(Fo(U, V) + np.array([R.C0, R.C0, 0.0])))
@@ -594,9 +594,9 @@ def sen(S, rng, gold):
             a = k * TAU / 12; ell(S, (12.6 * math.cos(a), 12.6 * math.sin(a), 1.2), 0.7, 0.7, 0.7, flat('#2fae6a') if k % 2 else flat('#d81c3a'))
         z0 = 2.4
         LT = newmat(m_la('#2a8058', '#d8b850', 22, edge='#c8a040', bloom='#6cb090')); LB_ = newmat(m_la('#4a9a6a', '#d8d080', 22))
-        CANS = [newmat(m_canh('#f6c64a', '#d85870', '#b07418', kind='vang', foot='#fae08a', tipexp=4.5)),
-                newmat(m_canh('#f8d060', '#e8a02c', '#b88020', kind='vang', foot='#fae6a0')),
-                newmat(m_canh('#fae4a0', '#e8708a', '#c89040', kind='vang', foot='#fff0c0', tipexp=1.6))]
+        CANS = [newmat(m_canh('#f6c64a', '#d85870', '#b07418', kind='son', foot='#fae08a', tipexp=4.5)),
+                newmat(m_canh('#f8d060', '#e8a02c', '#b88020', kind='son', foot='#fae6a0')),
+                newmat(m_canh('#fae4a0', '#e8708a', '#c89040', kind='son', foot='#fff0c0', tipexp=1.6))]
         POD = newmat(m_ngoc('#2f8f62', '#5cc090')); R.HFN[POD] = h_guong
         PT = newmat(m_ngoc('#48a874', '#8ad8a8')); SEED = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#d81c3a'), (len(uv), 1)), nrm), kind='ngoc')
         rings = [(8, 3.6, 13.5, 4.6, 0.32, -0.72, 74, 0.0, 0.0), (8, 3.1, 11.4, 4.0, 0.24, -0.80, 58, math.pi / 8, 0.12), (8, 2.7, 9.0, 3.2, 0.16, -0.9, 36, 0.0, 0.24)]
