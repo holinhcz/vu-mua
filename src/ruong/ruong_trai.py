@@ -60,6 +60,23 @@ def sen_khac(pos, th0, zc, s, height=False):
     return h if height else m
 
 
+def m_gogu():
+    """gỗ gụ tiện tròn: nền nâu đỏ sẫm, thớ gỗ lượn dọc thân + vòng vân trên mặt, lỗ mạch li ti sáng nhẹ"""
+    a, b, hl = hexc('#4a2616'), hexc('#8a5432'), hexc('#a8744a')
+    def f(uv, prm, pos, nrm):
+        th, rr, z = azi(pos)
+        side = smooth(0.5, 0.8, np.abs(nrm[:, 2]) if nrm is not None and len(nrm) == len(th) else 0 * th)
+        g1 = 0.5 + 0.5 * np.sin(th * rr * 1.4 + vnoise(th * 6, z * 0.6, 3.0) * 5 + z * 0.4)
+        g2 = 0.5 + 0.5 * np.sin(rr * 2.6 + vnoise(np.cos(th) * 3, np.sin(th) * 3, 5.0) * 4)
+        g = g1 * (1 - side) + g2 * side
+        c = mix(a, b, 0.25 + 0.6 * g ** 1.5)
+        pore = vnoise(th * rr * 9, z * 9 + rr * 9, 7.0)
+        c = c * (1 - 0.12 * smooth(0.7, 0.9, pore))[:, None] + hl[None] * (0.12 * smooth(0.7, 0.9, pore))[:, None]
+        return np.clip(c, 0, 1), nrm
+    f.kind = 'go'
+    return f
+
+
 def m_dua_vo():
     """vỏ dừa xiêm: xanh lá đậm/nhạt loang mảng lớn, thớ dọc mảnh, 3 gờ sáng, bì vàng lốm đốm nhạt quanh tai, đốm bì nhạt li ti"""
     g0, g1, g2, g3, lent = hexc('#4c7c2c'), hexc('#88b246'), hexc('#b0a44c'), hexc('#5f8f30'), hexc('#c8d488')
@@ -618,7 +635,7 @@ def sen(S, rng, gold):
         rings = [(8, 3.6, 13.5, 4.6, 0.32, -0.72, 74, 0.0, 0.0), (8, 3.1, 11.4, 4.0, 0.24, -0.80, 58, math.pi / 8, 0.12), (8, 2.7, 9.0, 3.2, 0.16, -0.9, 36, 0.0, 0.24)]
     else:
         from kho3d import tube, disc                    # đế gỗ gụ tiện tròn, viền đồng (bậc 3 mộc hơn bậc 4)
-        GO = newmat(mat_son('#5a3018', wood=True)); DO = newmat(mat_kl('#c0924a', hammer=False, streak=0.03)); R.KIND[DO] = 'vang'
+        GO = newmat(m_gogu()); DO = newmat(mat_kl('#c0924a', hammer=False, streak=0.03)); R.KIND[DO] = 'vang'
         tube(S, R.Pl(0, 0, 0), R.Pl(0, 0, 2.0), RD, GO, nr=64, nl=3); disc(S, R.Pl(0, 0, 2.0), (0, 0, 1), RD, GO, nr=6, na=64)
         torus(S, 0.3, RD + 0.25, 0.32, GO); torus(S, 1.85, RD + 0.25, 0.32, DO)
         z0 = 2.2
