@@ -416,7 +416,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		c.tr = [x + (w - tw) * 0.5, c.tr[1], tw, c.tr[3]]
 		c.act = _tab_jump.bind(go, L[i][0])
 		if L[i].size() > 3 and String(L[i][3]) != "" and has_method("_dic"):   # (11-26) icon trước chữ tab
-			var isz := 18.0
+			var isz := 24.0
 			var ix := x + (w - tw - isz - 5.0) * 0.5
 			c.tr = [ix + isz + 5.0, c.tr[1], tw, c.tr[3]]
 			c.kids.append(call("_dic", ix, float(c.tr[1]) + (float(c.tr[3]) - isz) * 0.5, isz, String(L[i][3])))

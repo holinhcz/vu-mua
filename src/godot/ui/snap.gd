@@ -401,17 +401,6 @@ static func _white(n: Dictionary) -> void:
 
 static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chip đỏ, thanh đầy đỏ, nút chính xanh đậm viền vàng
 	var cl := String(n.get("cls", "")).split(" ")
-	if cl.has("khseg"):
-		var o: Dictionary = n.duplicate()
-		o.kids = []
-		for k in n.get("kids", []):
-			var kk: Dictionary = k
-			if String(k.get("cls", "")).split(" ").has("on"):
-				kk = k.duplicate(true)
-				kk.css["background-image"] = SEN_DO
-				kk.css["box-shadow"] = SEN_VIEN
-			o.kids.append(kk)
-		return o
 	if cl.has("khst"):
 		var o2: Dictionary = n.duplicate(true)
 		o2.css["background-image"] = SEN_DO
