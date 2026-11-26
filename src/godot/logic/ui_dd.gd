@@ -210,8 +210,6 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	var c := _chip(x, y, cw, rh, kind)
 	c.css = c.css.duplicate()
 	c.css["border-radius"] = _cpx(6.0)   # (11-26) ô ngày bo ít: góc không lẹm số ngày
-	if now:   # hôm nay: gờ vàng dày, nổi hẳn
-		c.css["box-shadow"] = "rgb(200, 132, 20) 0px 0px 0px 1.2px inset, rgb(255, 214, 90) 0px 0px 0px 2.8px inset, rgb(236, 176, 50) 0px 0px 0px 3.6px inset, rgba(214, 150, 20, 0.35) 0px 0px 6px 4px inset"
 	var s := minf(cw - 6.0, rh - 13.0)
 	var kids := [_dt(x + 4.0, y + 2.5, 18.0, 10.0, str(w), 8.25, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
 		_dick(x + cw * 0.5, y + rh - s * 0.5 - 3.0, s, String(gd.ic), op)]
