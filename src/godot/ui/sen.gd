@@ -109,8 +109,7 @@ static func frame(w: float, h: float) -> Array:   # [texture, rect css so với 
 		_put(out, "goc", Rect2(w - gw, h - gh, gw, gh), o, k, true, true)
 		for n in DECO:
 			_put(out, n, _deco(n, w, h), o, k)
-		out.fix_alpha_edges()
-		out.generate_mipmaps()
+		out.fix_alpha_edges()   # không mipmap: thu nhỏ theo bảng vẫn nét
 		_tex[key] = ImageTexture.create_from_image(out)
 	return [_tex[key], B]
 
@@ -129,7 +128,6 @@ static func bar(w: float, h: float) -> Texture2D:   # thanh tre ngang bên trong
 	var cnt := maxi(0, int(round(w / MAT)) - 1)
 	for i in cnt:
 		_put(out, "mat_n", Rect2(w * float(i + 1) / float(cnt + 1) - mw * 0.5, y, mw, t), Vector2.ZERO, k)
-	out.generate_mipmaps()
 	var tx := ImageTexture.create_from_image(out)
 	_tex[key] = tx
 	return tx
@@ -151,7 +149,7 @@ static func paper(w: float, h: float) -> Texture2D:   # nền giấy cả hộp:
 	var t := float(m.T)
 	_put(out, "song", Rect2(t - 1.0, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k)
 	_put(out, "song", Rect2(w - t + 1.0 - sw, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k, true, false)
-	var rp := int(round(14.0 * k))
+	var rp := int(round(17.0 * k))   # = bán kính ngoài góc tre (330 px ảnh góc / 20): giấy không lòi ra ngoài góc cong
 	var W := out.get_width()
 	var H := out.get_height()
 	for j in rp:
@@ -164,7 +162,6 @@ static func paper(w: float, h: float) -> Texture2D:   # nền giấy cả hộp:
 					var c := out.get_pixelv(p2)
 					c.a *= a2
 					out.set_pixelv(p2, c)
-	out.generate_mipmaps()
 	var tx := ImageTexture.create_from_image(out)
 	_tex[key] = tx
 	return tx

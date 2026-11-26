@@ -348,6 +348,10 @@ static func _tre(n: Dictionary, z: float) -> Dictionary:
 	o2.css = n.css.duplicate()
 	o2.css["border-radius"] = str(Tre.R) + "px"
 	var sen := Sen.use(float(n.r[2]), float(n.r[3]))
+	if sen:   # khung sen: hộp không tự vẽ nền / bóng (giấy sen + khung vẽ hết), khỏi lòi nền kem ra ngoài góc tre cong
+		o2.css["background-color"] = "rgba(0, 0, 0, 0)"
+		o2.css["background-image"] = "none"
+		o2.css["box-shadow"] = "none"
 	var nk := []
 	for k in kids:
 		var cl := String(k.get("cls", "")).split(" ")

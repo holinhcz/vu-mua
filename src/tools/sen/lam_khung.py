@@ -63,19 +63,30 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
     return im
 
 
+def fade_ends(im, y0, frac):   # đầu thanh vàng dưới chân chóp mờ dần vào ống tre khung (không lòi đầu thanh)
+    a = np.array(im).astype(np.float32); w = a.shape[1]
+    x = np.arange(w); r = np.clip(np.minimum(x, w - 1 - x) / (w * frac), 0, 1)
+    a[y0:, :, 3] *= r[None, :]
+    return Image.fromarray(a.astype(np.uint8), 'RGBA')
+
+
+def rot(deg):
+    return lambda im: crop_bb(im).rotate(deg, resample=Image.BICUBIC, expand=True)
+
+
 # chóp đỉnh: thanh vàng dưới chân chóp đè đúng giữa ống tre trên
 im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1107 - 797) / im.height
-put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c)
+put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c, lambda im: fade_ends(crop_bb(im), 1045 - 797, 0.1))
 M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.58, 160, 230]   # ảnh mẫu: dải đỏ 640/1112 = 58% bề ngang
 def mid(im):   # chóp đáy: chỉ lấy chóp giữa + khúc vàng ngắn hai bên (ảnh mẫu không có dải đỏ dài dưới đáy)
     im = crop_bb(im); w = im.width
-    return im.crop((int(w * 0.365), 0, int(w * 0.635), im.height))
+    return fade_ends(im.crop((int(w * 0.365), 0, int(w * 0.635), im.height)), 1020 - 794, 0.22)
 im = mid(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
 put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c, mid)
 M['day']['dy'] = -T / 2; M['day']['fw'] = [0.095, 30, 34]   # ảnh mẫu: chóp đáy ~ 30 css
 # hoa sen góc: tràn ra ngoài khung một phần
-put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # ảnh mẫu: lòi trái 12, lên 32 css
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 112, [1.0, 1.0], 0.87, 0.64)   # ảnh mẫu: phần lớn nằm trong góc dưới phải
+put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 78, [0.0, 0.0], 0.22, 0.36, rot(28))   # xéo theo góc: lá rủ xuống mép trái
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 96, [1.0, 1.0], 0.78, 0.66, rot(24))   # xéo theo góc dưới phải
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
