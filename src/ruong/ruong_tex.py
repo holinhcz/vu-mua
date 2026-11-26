@@ -13,10 +13,10 @@ from pxr_3d import Scene
 
 TIER = int(sys.argv[1]); OUT = sys.argv[2]; D = float(sys.argv[3]) if len(sys.argv) > 3 else 16.0
 R.TIER = TIER; R.ROT = 0.0; R.EXPORT = True
-SH = []
+SH = []; SPART = []
 _g = Scene.grid
 def grid_rec(self, F, nu, nv_, mat, prm=(0, 0, 0), ao=None, uvr=((0, 1), (0, 1)), close_v=False, flip=False):
-    SH.append((F, nu, nv_, uvr, close_v, flip))
+    SH.append((F, nu, nv_, uvr, close_v, flip)); SPART.append(R.PART[0])
     nu2 = max(nu, min(120, nu * 2)) if nu > 2 else nu; nv2 = max(nv_, min(120, nv_ * 2)) if nv_ > 2 else nv_
     SH[-1] = (F, nu2, nv2, uvr, close_v, flip)
     return _g(self, F, nu2, nv2, mat, prm, ao, uvr, close_v, flip)
@@ -60,6 +60,7 @@ for m_, f_ in R.MATS.items():
     if m_ not in H:
         if k_ == 'kl': H[m_] = h_kl
         elif k_ == 'son': H[m_] = h_son
+H.update(R.HFN)
 ROUGH = {'kl': 0.42, 'son': 0.78, 'go': 0.97, 'ngoc': 0.3}
 
 # ---------------- xếp ô atlas
@@ -158,9 +159,12 @@ for k in range(len(S.P)):
                 cols[t_] = np.where(c == 0, nv_, c)
         T = rows * (nv_ + 1) + cols
     m = int(S.M[k][0]); kind = R.KIND.get(m, 'go')
-    cz = P[T].mean(1)[:, 2]
-    lid = cz > (R.LIDZ if R.LIDZ is not None else R.ZL + 0.02)
-    for flag in (False, True):
+    if R.PARTS:
+        lid = np.full(len(T), SPART[k])
+    else:
+        cz = P[T].mean(1)[:, 2]
+        lid = (cz > (R.LIDZ if R.LIDZ is not None else R.ZL + 0.02)).astype(int)
+    for flag in np.unique(lid):
         sel = lid == flag
         if not sel.any(): continue
         g = groups.setdefault((flag, kind), dict(P=[], N=[], U=[], T=[], n=0))
@@ -186,11 +190,17 @@ def prims(flag, piv):
         out.append(dict(pos=to_gl(P, piv), nrm=n_gl(np.concatenate(g['N'])), col=np.ones((nvx, 3)), uv=np.concatenate(g['U']), idx=np.concatenate(g['T']), mat=mats[kind], extras={'osn': 1}))
     return out
 root = Gb.node('ruong_goc', (0, 0, 0))
-Gb.node('than', (0, 0, 0), mesh=Gb.mesh('than', prims(False, (R.C0, R.C0, 0.0))), parent=root)
-hp = g_to_gl(np.array([hx - R.C0, hy - R.C0, hz]) * SC)
-lid = Gb.node('nap', tuple(hp), mesh=Gb.mesh('nap', prims(True, (hx, hy, hz))), parent=root)
-ang = np.radians([0, 0, 108, 100, 104]); tm = [0, 0.15, 0.55, 0.75, 0.9]
-Gb.animation('mo_nap', [(lid, 'rotation', tm, [[-math.sin(a / 2), 0, 0, math.cos(a / 2)] for a in ang])])
+Gb.node('than', (0, 0, 0), mesh=Gb.mesh('than', prims(0, (R.C0, R.C0, 0.0))), parent=root)
+PARTS = R.PARTS or {1: dict(piv=(hx - R.C0, hy - R.C0, hz), axis=(1, 0, 0), ang=108.0, delay=0.0)}
+tracks = []
+for pid, pp in PARTS.items():
+    if not any(f == pid for (f, kd) in groups): continue
+    pv = np.array(pp['piv']) + np.array([R.C0, R.C0, 0.0])
+    nd = Gb.node('nap' if pid == 1 and not R.PARTS else 'p%d' % pid, tuple(g_to_gl((pv - np.array([R.C0, R.C0, 0])) * SC)), mesh=Gb.mesh('p%d' % pid, prims(pid, tuple(pv))), parent=root)
+    ax = g_to_gl(np.array(pp['axis'], float)); ax = ax / np.linalg.norm(ax); A = pp['ang']; dl = pp['delay']
+    ang = np.radians([0, 0, A * 1.06, A * 0.95, A]); tm = [0, 0.15 + dl, 0.55 + dl, 0.75 + dl, 0.9 + dl]
+    tracks.append((nd, 'rotation', tm, [[ax[0] * math.sin(a / 2), ax[1] * math.sin(a / 2), ax[2] * math.sin(a / 2), math.cos(a / 2)] for a in ang]))
+Gb.animation('mo_nap', tracks)
 Gb.save(OUT)
 print(OUT, os.path.getsize(OUT) // 1024, 'KB', sum(g['n'] for g in groups.values()), 'verts, atlas', PAGE, HH)
 Image.fromarray((np.clip(alb, 0, 1) * 255).astype(np.uint8)).resize((PAGE // 4, HH // 4)).save('/tmp/claude-0/ruong/atlas_prev.png')

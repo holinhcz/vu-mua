@@ -28,6 +28,7 @@ K.INSIDE_K = 0.3
 C0 = 0.5 * T                       # tâm rương (đơn vị game), giữa ô
 TIER = 1
 LIDZ = None
+PART = [0]; PARTS = {}; HFN = {}       # phần động (nắp, cánh sen) + độ gồ riêng theo vật liệu (ruong_trai)
 ROT = 0.0                          # xoay quanh trục đứng (độ) để xem mô hình nhiều góc
 
 
@@ -834,7 +835,11 @@ def hom_tho(S, rng):
 def build(level, rng, with_props=True):
     global LA, LB, ZL, LR, WOODC
     S = Scene(); K.LIGHTS2.clear(); K.GLOWS[:] = []; K.GROUND_GLOW[:] = []
-    if TIER == 11:
+    PART[0] = 0; PARTS.clear(); HFN.clear()
+    if TIER >= 21:
+        import ruong_trai
+        ruong_trai.build(S, rng, TIER)
+    elif TIER == 11:
         gio_tre(S, rng)
     elif TIER == 12:
         hom_go(S, rng)
