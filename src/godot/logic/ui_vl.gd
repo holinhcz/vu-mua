@@ -463,7 +463,64 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 		out.append(_btn(X0 + XW - 128.0, y + 11.0, 58.0, 26.0, "Mua 1", func(): WC.Um(k1), "go" if ok1 else "off"))
 		out.append(_btn(X0 + XW - 64.0, y + 11.0, 58.0, 26.0, "Mua 3", func(): WC.Um(k3), "go" if ok3 else "off"))
 		y += 48.0 + 6.0
+	# (11-26) giống quanh xóm: nhà này mua giùm giống của 2 nhà gần nhất; chưa đủ 2 tim thì lời thêm 25%, cùng hàng (hết là hết) với nhà kia
+	var nb := _xom_giong(a)
+	if nb.size():
+		var th: bool = W._i(a.get("tim")) >= XOM_TIM
+		y += GG - 6.0
+		out.append_array(_sect(y, "Giống quanh xóm", TABC.giong, "kh:pc_gui"))
+		out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, _fitw(String(a.n) + (" mua giùm, giá gốc vì đã thân." if th else " mua giùm, lời 25% · thân " + str(XOM_TIM) + " tim thì giá gốc."), 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left"))
+		y += 44.0
+		for q in nb:
+			var id := String(q[1])
+			var r := "h" + str(q[0]) + "_" + id
+			var o: int = WC.G6(r, 6)
+			var l0: int = WC.F6(id)
+			var l: int = l0 if th else int(ceil(l0 * 1.25))
+			var c := _chip(X0, y, XW, 48.0, "giong")
+			var tw := XW - 46.0 - 132.0
+			c.kids = [_icn(X0 + 24.0, y + 24.0, 30.0, id),
+				_dt(X0 + 46.0, y + 3.0, tw, 15.0, _fitw("Giống " + String(G.crop(id).name).to_lower(), 12.0, 800, tw), 12.0, 800, BROWN, "left"),
+				_dt(X0 + 46.0, y + 18.0, tw, 13.0, _fitw("của " + String(q[2]), 10.0, 700, tw), 10.0, 700, "rgb(90, 130, 50)", "left"),   # chủ giống: dòng riêng, không cắt tên
+				_dt(X0 + 46.0, y + 31.0, tw, 13.0, _fitw(W._sa(l) + " xu/hạt · còn " + str(o), 10.5, 600, tw), 10.5, 600, SUB, "left")]
+			out.append(c)
+			var ok1: bool = o > 0 and W._n(G.g.coins) >= l
+			var ok3: bool = o >= 3 and W._n(G.g.coins) >= l * 3
+			var k1 := r + "|" + id + "|1|" + str(l) + "|6"
+			var k3 := r + "|" + id + "|3|" + str(l) + "|6"
+			out.append(_btn(X0 + XW - 128.0, y + 11.0, 58.0, 26.0, "Mua 1", func(): WC.Um(k1), "go" if ok1 else "off"))
+			out.append(_btn(X0 + XW - 64.0, y + 11.0, 58.0, 26.0, "Mua 3", func(): WC.Um(k3), "go" if ok3 else "off"))
+			y += 48.0 + 6.0
 	return [out, y]
+
+const XOM_TIM := 2   # thân từ chừng này tim: mua giùm giá gốc
+const XOM_N := 3     # tối đa dòng giống quanh xóm
+
+func _xom_giong(_a: Dictionary) -> Array:   # [[nhà, giống, tên chủ]] của 2 nhà gần nhất, bỏ giống trùng nhà này
+	var me = W.r1(u)
+	if me == null:
+		return []
+	var x := float(me.o.gx) + float(me.o.fw) / 2.0
+	var yy := float(me.o.gy) + float(me.o.fd) / 2.0
+	var hs := []
+	for h in W.bl():
+		if int(h.u) == int(u):
+			continue
+		hs.append([Vector2(float(h.o.gx) + float(h.o.fw) / 2.0 - x, float(h.o.gy) + float(h.o.fd) / 2.0 - yy).length(), int(h.u)])
+	hs.sort_custom(func(p, q): return p[0] < q[0])
+	var seen := {}
+	for e in WC.bZ(u):
+		seen[String(e)] = 1
+	var out := []
+	for h in hs.slice(0, 2):
+		var f = W._fam_of(h[1])
+		if f == null:
+			continue
+		for e in WC.bZ(h[1]):
+			if out.size() < XOM_N and not seen.has(String(e)) and not WC.tf(String(e)):
+				seen[String(e)] = 1
+				out.append([h[1], String(e), String(f.n)])
+	return out
 
 # ------------------------------------------------------------------ tab Sở trường
 func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
