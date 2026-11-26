@@ -92,16 +92,8 @@ func _wsv_get(f: String) -> String:
 
 const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "bang_choi", "Lễ hội": "den_long"}
 
-func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước chữ (ảnh mẫu)
-	if not HDI.has(t):
-		return super(y, t)
-	var L: Array = super(y, t)
-	for n in L:
-		Snap._move(n, Vector2(27.0, 0))
-		if float(n.r[0]) + float(n.r[2]) > X0 + XW:
-			n.r[2] = X0 + XW - float(n.r[0])
-	L.append(_dic(X0, y - 5.0, 25.0, _sic(HDI[t])))
-	return L
+func _hd(y: float, t: String, ic := "", rw := 0.0, mid := "", mc := "") -> Array:   # tiêu đề mục chung, icon theo HDI
+	return super(y, t, ic if ic != "" or not HDI.has(t) else "img:" + String(HDI[t]), rw, mid, mc)
 
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
 	return "wx_" + (f if f in ["nang", "han", "rao", "mua"] else "nang")

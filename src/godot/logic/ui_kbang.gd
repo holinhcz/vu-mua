@@ -94,13 +94,42 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn
 	U._layout()
 
-func _hd(y: float, t: String) -> Array:   # tiêu đề phần kiểu Sổ làng: chữ đậm + gạch ngang tới mép phải
-	# (11-26) bộ sen: chữ đậm + chấm tròn vàng + đường kẻ vàng mảnh tới mép phải
-	var tw: float = Box.text_w(t, 13.0, 800) + 6.0
-	var lx := X0 + 2.0 + tw + 6.0
-	return [_dt(X0 + 2.0, y - 1.0, tw, 18.0, t, 13.0, 800, BROWN, "left"),
-		_dbx(lx, y + 5.5, 5.0, 5.0, "rgb(252, 246, 230)", 3.0, "1px solid rgb(200, 158, 80)"),
-		_dbx(lx + 5.0, y + 7.5, XW - tw - 17.0, 1.0, "rgb(214, 176, 104)", 0.0)]
+func _hd(y: float, t: String, ic := "", rw := 0.0, mid := "", mc := "") -> Array:   # (11-26) TIÊU ĐỀ MỤC CHUNG mọi bảng: [icon] chữ đậm + chấm vàng + gạch vàng tới mép phải
+	return _hdx(X0, y, XW - rw, t, ic, mid, mc)
+
+# x, w: bề ngang mục; ic: "img:<ảnh ui/img/troi>" / "kh:<món>" / "d:<hình quà>" / "" không icon; mid: chữ phụ nhỏ ngay sau tên (trước gạch)
+func _hdx(x: float, y: float, w: float, t: String, ic := "", mid := "", mc := "") -> Array:
+	var L := []
+	var tx := x + 2.0
+	if ic != "":
+		L.append(_hic(x, y - 5.0, 25.0, ic))
+		tx = x + 29.0
+	var x1 := x + w
+	var tw: float = minf(Box.text_w(t, 13.0, 800) + 6.0, x1 - tx - 14.0)
+	L.append(_dt(tx, y - 1.0, tw + 4.0, 18.0, _fitw(t, 13.0, 800, tw), 13.0, 800, BROWN, "left"))
+	var lx := tx + tw
+	if mid != "":
+		var mw: float = minf(Box.text_w(mid, 10.5, 600) + 4.0, x1 - lx - 2.0)
+		L.append(_dt(lx + 2.0, y + 1.0, mw, 14.0, _fitw(mid, 10.5, 600, mw - 4.0), 10.5, 600, mc if mc != "" else SUB, "left"))
+		lx += mw + 4.0
+	lx += 6.0
+	if lx + 14.0 < x1:
+		L.append(_dbx(lx, y + 5.5, 5.0, 5.0, "rgb(252, 246, 230)", 3.0, "1px solid rgb(200, 158, 80)"))
+		L.append(_dbx(lx + 5.0, y + 7.5, x1 - lx - 5.0, 1.0, "rgb(214, 176, 104)", 0.0))
+	return L
+
+var _hics := {}
+func _hic(x: float, y: float, s: float, ic: String) -> Dictionary:   # icon tiêu đề mục
+	var k := ic.substr(ic.find(":") + 1)
+	if ic.begins_with("d:"):
+		return _dick(x + s * 0.5, y + s * 0.5, s * 0.86, k)
+	if ic.begins_with("kh:"):
+		var n := _dbx(x, y, s, s, "rgba(0, 0, 0, 0)", 0.0)
+		n.ic = k
+		return n
+	if not _hics.has(k):
+		_hics[k] = Css.img_svg("res://ui/img/troi/" + k + ".webp")
+	return _dic(x, y, s, String(_hics[k]))
 
 func _fitw(s: String, fs: float, fw: int, w: float) -> String:   # cắt chữ thêm "…" cho vừa bề ngang
 	if Box.text_w(s, fs, fw) <= w:
@@ -535,10 +564,8 @@ func _qbox(y: float, cls: String) -> Dictionary:   # (bản 493, chung) ô tìm:
 	sb.kids = [_dic(X0 + XW - 26.0, y + 7.0, 16.0, LUP)]
 	return sb
 
-func _sect(y: float, t: String, col: String) -> Array:   # tiêu đề phần: vạch màu tab + chữ đậm
-	var tw: float = Box.text_w(t, 12.0, 800) + 6.0
-	return [_dbx(X0, y + 2.0, 3.0, 13.0, col, 1.5), _dt(X0 + 8.0, y, tw, 16.0, t, 12.0, 800, BROWN, "left"),
-		_dbx(X0 + 8.0 + tw + 6.0, y + 8.0, XW - tw - 20.0, 1.0, "rgb(222, 204, 164)", 0.0)]
+func _sect(y: float, t: String, _col := "", ic := "") -> Array:   # (11-26) tiêu đề phần = tiêu đề mục chung (_hd)
+	return _hd(y + 1.0, t, ic)
 
 # hàng chip món cần: [[hình, tên, có, cần, (việc khi thiếu)]] -> chip 2 dòng (tên / có-cần, xanh đủ đỏ thiếu); trả [khối, cao, đủ hết]
 func _nchips(x: float, y: float, w: float, list: Array) -> Array:
@@ -696,7 +723,7 @@ func _hire(y0: float, uu, e: Dictionary, col: String, W) -> Array:   # lưới v
 	var o: Array = G.xw.N0.filter(func(k): return G.xw.built(k)).map(func(k): return W.jx(String(k)))   # mã việc thuê (Ruộng muối = "x_ruong")
 	var xj: bool = o.has(e.get("job"))   # (bản 439) các xưởng gom 1 chip "Làm xưởng", chạm mở lưới chọn xưởng
 	if o.size():
-		var xs: String = (String(W.CO.get(e.job, e.job)) + (" · " + String(W._ae(e.jr).get("name", "")).to_lower() if W._tr(e.get("jr")) else "") + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else (str(o.size()) + " xưởng · chọn xưởng")
+		var xs: String = (String(W.CO.get(e.job, e.job)) + (" · " + String(W._ae(e.jr).get("name", "")).to_lower() if W._tr(e.get("jr")) else "") + " · " + str(W.om(e, e.job)) + " xu/phút") if xj else ("Chọn xưởng · " + str(o.size()))
 		var xr: Array = G.xw.sr[W.xj(e.job)].rec if xj else []
 		bt.append({"b": "Làm xưởng", "s": xs, "ic": String(xr[0]) if xr.size() else "gao", "k": "j_xuong", "st": "on" if xj else "off", "act": _hpk.bind("xuong")})
 	if o.is_empty():   # (bản 444) chưa có xưởng: chip mờ trong lưới, chạm hiện cách xây

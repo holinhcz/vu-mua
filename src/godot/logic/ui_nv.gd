@@ -188,13 +188,12 @@ func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiê
 
 const E8D := {20: "Túi xu", 40: "2 vật liệu nâng sao", 60: "Túi xu, 1 phần cơm hồi sức", 80: "Ván gỗ, đinh sắt, gạch nung", 100: "1 sen đỏ"}   # quà trong rương năng động (nv.gd _e8)
 # thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận, tên quà, quà bên trong]]; trả [khối, cao]
-func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Array:   # g: chip tên -> hàng hình
+func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0, ic := "") -> Array:   # g: tiêu đề -> hàng hình
 	var out := []
-	var mw: float = Box.text_w(name, 12.5, 800) + 24.0
-	out.append(_onbtn(X0, y, mw, 26.0, name, null, true))   # tên khối trong chip đỏ (như chip mùa của Trời đất)
 	var vs := str(cur)
 	var tw: float = Box.text_w("/" + str(top), 11.0, 700)
 	var vw: float = Box.text_w(vs, 14.0, 800)
+	out.append_array(_hd(y + 5.0, name, ic, tw + vw + 10.0))   # (11-26) tiêu đề mục chung, số điểm bên phải
 	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
 	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
 	var cs := 34.0
@@ -235,7 +234,7 @@ func _day() -> Array:
 	var L := []
 	for c in N.E8:
 		L.append([int(c.p), String(c.ic), n.cl.has(str(c.p)), N.IL.bind(int(c.p)), String(c.n), String(E8D.get(int(c.p), ""))])
-	var ms := _ms(y, "Năng động", ap, 100, L, g)
+	var ms := _ms(y, "Năng động", ap, 100, L, g, "img:sen")
 	out.append_array(ms[0])
 	y += float(ms[1]) + 2.0 * g
 	# chuỗi ngày đủ 100 năng động
@@ -251,17 +250,13 @@ func _day() -> Array:
 	var rest_ok: bool = int(s.rw) != N.week()
 	var tip := "Ngày nào đủ 100 năng động thì chuỗi thêm 1 ngày (+xu). Mỗi tuần được nghỉ 1 ngày không đứt chuỗi; bỏ quá thì chuỗi lùi về mốc 7 gần nhất. Tròn 7 ngày được quà vòng. Chuỗi dài: xu rương +5% (7 ngày) tới +50% (100 ngày)."
 	var t1 := "Chuỗi " + str(c) + " ngày"
-	var w1: float = Box.text_w(t1, 12.5, 800)
 	var hit := _dbx(X0, y - 2.0, XW, 64.0 + g, "rgba(0, 0, 0, 0)", 0.0)
 	hit.act = _dsay.bind(tip)
 	out.append(hit)
-	var cw1 := w1 + 24.0
-	out.append(_onbtn(X0, y, cw1, 26.0, t1, null, true))   # (11-26) tên khối: chip đỏ như mọi tiêu đề phần
 	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("hôm nay đã đủ 100" if today else "hôm nay chưa đủ 100")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
 	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
-	var t2w := XW - cw1 - 8.0 - rw - 6.0
-	out.append(_dt(X0 + cw1 + 8.0, y + 5.0, t2w, 16.0, _fitw(t2, 10.5, 600, t2w), 10.5, 600, GREEN if today else SUB, "left"))
+	out.append_array(_hd(y + 5.0, t1, "kh:long_den", rw + 6.0, t2, GREEN if today else SUB))   # (11-26) tiêu đề mục chung
 	var rc := _chip(X0 + XW - rw, y + 4.0, rw, 18.0, "fut" if rest_ok else "miss")
 	rc.kids = [_dt(X0 + XW - rw, y + 4.0, rw, 18.0, rt, 10.0, 700, SUB)]
 	out.append(rc)
@@ -303,9 +298,11 @@ func _swap(tid: String) -> void:
 	if N.Pl().sw:
 		_dsay("Đã đổi việc. Mỗi ngày đổi được 1 việc.")
 
-func _shd(y: float, t: String, right: String) -> Array:   # tên phần trong chip nâu vàng + chữ phụ bên phải (như khối Chuỗi)
-	var w: float = Box.text_w(t, 12.5, 800) + 24.0
-	return [_onbtn(X0, y, w, 26.0, t, null, true), _pill(X0 + XW, y + 4.5, right)]   # (11-26) chip đỏ + nhãn thời gian đỏ sát phải
+func _shd(y: float, t: String, right: String) -> Array:   # (11-26) tiêu đề mục chung + nhãn thời gian đỏ sát phải
+	var p := _pill(X0 + XW, y + 4.5, right)
+	var L := _hd(y + 5.0, t, "img:lich", float(p.r[2]) + 6.0)
+	L.append(p)
+	return L
 
 func _pill(xr: float, y: float, t: String) -> Dictionary:   # (11-26) nhãn thời gian đỏ chữ trắng như "còn N ngày" Điểm danh; xr = mép phải
 	var w: float = Box.text_w(t, 10.0, 800) + 14.0
@@ -313,8 +310,6 @@ func _pill(xr: float, y: float, t: String) -> Dictionary:   # (11-26) nhãn th�
 	p.kids[0].css["font-size"] = _cpx(10.0)
 	return p
 
-func _hd(y: float, t: String) -> Array:   # (11-26) tiêu đề phần trong Sổ nhiệm vụ: chip đỏ như "Năng động" (thay chữ + gạch vàng)
-	return [_onbtn(X0, y, Box.text_w(t, 12.5, 800) + 24.0, 26.0, t, null, true)]
 
 
 # ------------------------------------------------------------------ tab Tuần
@@ -333,7 +328,7 @@ func _week() -> Array:
 	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
 	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 2.0
 	var g := clampf((_hb - fix) / 5.0, 6.0, 14.0)
-	var ms := _ms(y, "Điểm tuần", wpt, top, L, g)
+	var ms := _ms(y, "Điểm tuần", wpt, top, L, g, "img:sen")
 	out.append_array(ms[0])
 	y += float(ms[1]) + g
 	# quà mốc cuối: chip cam lửa cả ngang, hình đồ trang trí tuần này
@@ -376,8 +371,8 @@ func _ach() -> Array:
 	for x in N.NVSK:
 		all.append(String(x[1]) + " (" + str(x[0]) + " ngày)")
 	var tip := "Danh hiệu theo chuỗi dài nhất đủ 100 năng động: " + ", ".join(all) + "."
-	out.append_array(_hd(y, "Danh hiệu chuỗi ngày"))
-	y += 33.0
+	out.append_array(_hd(y, "Danh hiệu chuỗi ngày", "kh:long_den"))
+	y += 27.0
 	# (bản 423) một khối: chuỗi dài nhất + danh hiệu đang có; thanh 5 mốc 30 / 60 / 100 / 200 / 365 cách đều
 	var bh := 58.0
 	var bc := _chip(X0, y, XW, bh, "l_b4")
@@ -409,11 +404,11 @@ func _ach() -> Array:
 		out.append(_dbx(mx - 4.5, y + 31.5, 9.0, 9.0, String(NVC.b4[4]) if ok else "rgb(255, 250, 238)", 4.5, _cpx(1.0) + " solid " + ("rgb(176, 100, 10)" if ok else "rgb(214, 170, 100)")))
 		out.append(_dt(mx - 16.0, y + 42.0, 32.0, 11.0, str(th[k + 1]), 9.0, 700, SUB))
 	y += bh + 14.0
-	out.append_array(_hd(y, "Thành tựu"))
+	out.append_array(_hd(y, "Thành tựu", "d:gift"))
 	var sl := _wrap("5 bậc: " + ", ".join(N.T9).to_lower() + ".", 10.0, 600, XW - 4.0)   # (11-26) dài thì xuống dòng, không cắt
 	for i in sl.size():
-		out.append(_dt(X0 + 2.0, y + 30.0 + i * 13.0, XW - 4.0, 13.0, sl[i], 10.0, 600, SUB, "left"))
-	y += 35.0 + sl.size() * 13.0
+		out.append(_dt(X0 + 2.0, y + 23.0 + i * 13.0, XW - 4.0, 13.0, sl[i], 10.0, 600, SUB, "left"))
+	y += 28.0 + sl.size() * 13.0
 	for A in N.L8:   # (11-26) số dài nhất quyết chỗ số cho cả tab
 		var t0: int = N.A8(A)
 		if t0 < 5:
@@ -438,9 +433,9 @@ func _ach() -> Array:
 				"claim" if ok else "go", N.BI.bind(String(A.k)) if ok else _go.bind(String(A.k)), "", null, "Bậc " + N.T9[t].to_lower() + ": " + rw + "."))
 		y += RH + GAPR
 	y += 8.0
-	out.append_array(_hd(y, "Công trình"))
-	out.append(_sub(y + 30.0, "Xong việc này hiện việc tiếp theo."))
-	y += 48.0
+	out.append_array(_hd(y, "Công trình", "kh:pc_cuoc"))
+	out.append(_sub(y + 23.0, "Xong việc này hiện việc tiếp theo."))
+	y += 40.0
 	for L in N.w9():
 		var i: int = N.M9(L)
 		if i >= L.steps.size():
@@ -493,8 +488,8 @@ func _event() -> Array:
 		y += 36.0 + 14.0
 		var st: Dictionary = N.FL[int(x.d)]
 		out.append_array(_hd(y, "Hôm nay: " + String(st.n)))
-		out.append(_sub(y + 30.0, String(st.d)))
-		y += 48.0
+		out.append(_sub(y + 23.0, String(st.d)))
+		y += 40.0
 		var nm := ["Túi xu", "2 vật liệu", "1 sen đỏ"]
 		for i in 3:
 			var ok: bool = dp >= N.GL[i]
@@ -504,7 +499,7 @@ func _event() -> Array:
 			y += RH + GAPR
 		y += 8.0
 		out.append_array(_hd(y, "Cộng dồn 5 ngày"))
-		y += 33.0
+		y += 27.0
 		nm = ["Túi xu lớn", "3 sen đỏ, 6 vật liệu kho", "8 sen đỏ, bùa +50% EXP"]
 		for i in 3:
 			var ok: bool = int(s.p) >= N.WL[i]
@@ -514,8 +509,8 @@ func _event() -> Array:
 			y += RH + GAPR
 	elif ev.id == "cho":
 		out.append_array(_hd(y, "Vé chợ: " + str(s.ve)))
-		out.append(_sub(y + 30.0, "10 điểm năng động = 1 vé · mỗi đơn giao = 2 vé"))
-		y += 48.0
+		out.append(_sub(y + 23.0, "10 điểm năng động = 1 vé · mỗi đơn giao = 2 vé"))
+		y += 40.0
 		for it in N.HI:
 			var lim: bool = it.has("max") and int(s.buy.get(it.id, 0)) >= int(it.max)
 			var ok: bool = int(s.ve) >= int(it.c) and not lim
@@ -524,8 +519,8 @@ func _event() -> Array:
 			y += RH + GAPR
 	elif ev.id == "ngoc":
 		out.append_array(_hd(y, "Đã tiêu " + str(s.sp) + " sen đỏ"))
-		out.append(_sub(y + 30.0, "Làm chín ngay, bù thiếu, đổi sen đỏ… đều tính"))
-		y += 48.0
+		out.append(_sub(y + 23.0, "Làm chín ngay, bù thiếu, đổi sen đỏ… đều tính"))
+		y += 40.0
 		for i in N.VL.size():
 			var M: Dictionary = N.VL[i]
 			var ok: bool = int(s.sp) >= int(M.p)
@@ -543,8 +538,8 @@ func _event() -> Array:
 		nx = {"id": EN[0].id, "n": EN[0].n, "d0": int(EN[0].d0) + 14}
 	if nx != null:
 		y += 6.0
-		out.append_array(_hd(y, "Sắp tới"))
-		y += 33.0
+		out.append_array(_hd(y, "Sắp tới", "img:lich"))
+		y += 27.0
 		var dn := int(nx.d0) - int(x.d)
 		out.append_array(_row(y, ["d:gift", "", "tre"], String(nx.n), "Nhớ để dành sen đỏ" if nx.id == "ngoc" else "Bắt đầu sau " + str(dn) + " ngày", -1.0, "", "", null))
 		y += RH + GAPR

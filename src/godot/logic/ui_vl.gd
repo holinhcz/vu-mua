@@ -88,6 +88,7 @@ func _build() -> void:
 		return
 	sig = _sig()
 	var L := _tabs(f)
+	tua_cut = false   # (11-26) hàng tab nằm dưới đầu bảng, xa dây tua: đủ bề ngang
 	var sh := _kshell([] if sub != "" else L, tab, _tab_go)   # hộp nổi mở: bỏ hàng tab, hộp che luôn chỗ tab
 	var n: Dictionary = sh[0]
 	var vt: Dictionary = sh[1]
@@ -306,14 +307,14 @@ func _viec(f: Dictionary) -> Array:   # _vT.viec; (bản 435) cách đều: tiê
 		out.append_array(b[0])
 		y += float(b[1]) + GG
 	if W._tr(f.get("pq")):
-		out.append_array(_sect(y, "Việc riêng", col))
+		out.append_array(_sect(y, "Việc riêng", col, "kh:pc_gui"))
 		y += 16.0 + GG
 		var r := _job(y, "viec", String(f.pq.t), "", f.pq.it, int(f.pq.xu), "Giao", func(): W.iv(u))
 		out.append_array(r[0])
 		y += float(r[1]) + GG
 	if W._tr(f.get("req")):
 		var c: Dictionary = f.req
-		out.append_array(_sect(y, "Nhà đang cần", col))
+		out.append_array(_sect(y, "Nhà đang cần", col, "kh:pc_gui"))
 		y += 16.0 + GG
 		var r := _job(y, "viec", _cap(String(c.why)), "", W._r_it(c), int(c.xu), "Đưa", func(): W.gb(u))
 		out.append_array(r[0])
@@ -324,12 +325,12 @@ func _viec(f: Dictionary) -> Array:   # _vT.viec; (bản 435) cách đều: tiê
 		y += float(r[1]) + GG
 	var ex := _dam(y + 16.0 + GG)
 	if ex.size():
-		out.append_array(_sect(y, "Đám tiệc", col))
+		out.append_array(_sect(y, "Đám tiệc", col, "kh:com_tam"))
 		out.append_array(ex[0])
 		y += 16.0 + GG + float(ex[1]) + GG
 	ex = _cuoi(y + 16.0 + GG, f)
 	if ex.size():
-		out.append_array(_sect(y, "Cưới hỏi", col))
+		out.append_array(_sect(y, "Cưới hỏi", col, "kh:banh_pia"))
 		out.append_array(ex[0])
 		y += 16.0 + GG + float(ex[1]) + GG
 	return [out, y]
@@ -428,7 +429,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var out := []
 	var col: String = TABC.thue
 	var y := 6.0
-	out.append_array(_sect(y, "Thuê làm phụ", col))
+	out.append_array(_sect(y, "Thuê làm phụ", col, "kh:pc_cuoc"))
 	out.append(_dt(X0 + 2.0, y + 18.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
 	y += 38.0
 	var hr := _hire(y, u, e, col, W)
@@ -440,7 +441,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 	var out := []
 	var y := 6.0
-	out.append_array(_sect(y, "Giống nhà " + String(a.n) + " để dư", TABC.giong))
+	out.append_array(_sect(y, "Giống nhà " + String(a.n) + " để dư", TABC.giong, "kh:lua"))
 	out.append(_dt(X0 + 2.0, y + 18.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
 	y += 38.0
 	for e in WC.bZ(u):
@@ -474,7 +475,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var tk := String(f.get("tp", ""))
 	var Li: Dictionary = W.fam_likes(u)
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
-	out.append_array(_sect(y, "Tính nết: " + String(TT.n), col))
+	out.append_array(_sect(y, "Tính nết: " + String(TT.n), col, "kh:tra_tac"))
 	y += 22.0
 	var c := _chip(X0, y, XW, 10.0, "t_" + tk if CHIPK.has("t_" + tk) else "t_khac")
 	out.append(c)
@@ -517,7 +518,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	var r := String(W.x9(u, f))
 	var o: int = W._i(f.ts)
 	var l: Dictionary = W.W3[r]
-	out.append_array(_sect(y, "Sở trường: " + String(l.n), col))
+	out.append_array(_sect(y, "Sở trường: " + String(l.n), col, "kh:" + String(TALIC.get(r, "lua"))))
 	y += 22.0
 	var c2 := _chip(X0, y, XW, 10.0, "s_" + r if CHIPK.has("s_" + r) else "tal")   # màu theo nghề
 	out.append(c2)
@@ -550,7 +551,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	elif o < 5:
 		var fz: int = W.m_i(o)
 		var lk: bool = W._i(f.get("tim")) < o
-		out.append_array(_rowi(X0 + 10.0, yy + 5.0, 15.0, ["Lên " + str(o + 1), "s", ": " + W._sa(fz), "c", " · học " + G.ao(W.n_l(o))], 10.0, 700, BROWN)[0])   # (bản 452) sao, xu bằng hình
+		out.append_array(_rowi(X0 + 10.0, yy + 5.0, 15.0, ["Lên " + str(o + 1), "s", " · " + W._sa(fz), "c", " · học " + G.ao(W.n_l(o))], 10.0, 700, BROWN)[0])   # (bản 452) sao, xu bằng hình
 		if lk:
 			out.append(_lockc(X0 + XW - 94.0, yy, o))
 		else:
@@ -575,7 +576,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 	var now: float = G._now_ms()
 	var go0 := func(): W.mk(u)
 	var gosk := func(): W.mk(u, "skip")
-	var out := _sect(y, T0, TABC.tal)
+	var out := _sect(y, T0, TABC.tal, "kh:banh_tet")
 	y += 22.0
 	var r: Array
 	if W.t6().has(x.id):
@@ -626,26 +627,19 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 
 # ------------------------------------------------------------------ hộp nổi: trò chuyện, tặng quà
 func _pop(f: Dictionary, y0: float, y1: float, vt: Dictionary) -> Array:   # hộp chip phủ kín thân bảng, sát mép khung tre
-	var box := _chip(float(vt.r[0]), y0, float(vt.r[2]), y1 - y0, "fut")
-	box.css["border-radius"] = _cpx(4.0)
-	var out := [box]
+	var out := [_dbx(float(vt.r[0]), y0, float(vt.r[2]), y1 - y0, "rgba(0, 0, 0, 0)", 0.0)]   # (11-26) không hộp lồng: nội dung nằm thẳng trên giấy khung
 	var r: Array = _chat(f, y0, y1) if sub == "chat" else _gift(f, y0, y1)
 	out.append_array(r)
 	return out
-
-func _phd(x: float, y: float, w: float, t: String, col: String) -> Array:   # (bản 450) tiêu đề hộp nổi: vạch màu + chữ đậm + gạch mảnh
-	var tw: float = minf(Box.text_w(t, 12.5, 800) + 4.0, w - 20.0)
-	return [_dbx(x, y + 2.0, 3.0, 14.0, col, 1.5), _dt(x + 8.0, y, tw, 18.0, _fitw(t, 12.5, 800, tw), 12.5, 800, BROWN, "left"),
-		_dbx(x + 8.0 + tw + 8.0, y + 9.0, maxf(0.0, w - tw - 16.0), 1.0, "rgb(222, 204, 164)", 0.0)]
 
 func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp nổi); (bản 450) mặt + bong bóng có đuôi, câu trả lời chip kem đánh số
 	if cv == null:
 		sub = ""
 		return []
 	var out := []
-	var x0 := X0 + 10.0
-	var w0 := XW - 20.0
-	out.append_array(_phd(x0, y0 + 10.0, w0, "Trò chuyện với " + String(f.n), "rgb(70, 130, 190)"))
+	var x0 := X0
+	var w0 := XW
+	out.append_array(_hdx(x0, y0 + 10.0, w0, "Trò chuyện với " + String(f.n), "kh:tra_tac"))
 	# câu trả lời ở đáy hộp
 	var opts: Array = cv.opts
 	var oh := []
@@ -735,11 +729,11 @@ func _pick(i: int) -> void:   # data-cv
 
 func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp nổi); (bản 450) lưới 2 cột kiểu Thuê làm, thích trước ghét sau, bỏ nút Thôi
 	var out := []
-	var x0 := X0 + 10.0
-	var w0 := XW - 20.0
+	var x0 := X0
+	var w0 := XW
 	var k: Dictionary = f.get("bk") if f.get("bk") is Dictionary else {}
 	var x2: bool = W.is_ngay_rieng(u) and W._tr(k.get("d"))
-	out.append_array(_phd(x0, y0 + 10.0, w0, "Tặng " + String(f.n) + " 1 món", "rgb(200, 70, 60)"))
+	out.append_array(_hdx(x0, y0 + 10.0, w0, "Tặng " + String(f.n) + " 1 món", "d:gift"))
 	out.append(_dt(x0, y0 + 32.0, w0, 14.0, _fitw(("Ngày riêng: quý gấp đôi · " if x2 else "") + "Món thích +thân nhiều · món ghét bị trừ", 10.5, 600, w0), 10.5, 600, SUB, "left"))
 	var ids: Array = W.gift_ids(u)
 	var y := y0 + 56.0

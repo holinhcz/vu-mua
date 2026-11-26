@@ -10,6 +10,7 @@ const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
 const Sen = preload("res://ui/sen.gd")
 const TUA_W := 9.0   # dây tua khung sen lòng vào hàng tab
+var tua_cut := true   # hàng tab sát đỉnh khung (dưới dây tua); bảng dời hàng tab xuống (Nhà dân) thì tắt
 
 var U          # ui.gd
 var G          # game.gd
@@ -373,7 +374,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 	var on_t: Dictionary = K[0] if String(K[0].cls).split(" ").has("on") else K[1]
 	var off_t: Dictionary = K[1] if on_t == K[0] else K[0]
 	var n := L.size()
-	var RW := 305.0 - (TUA_W if Sen.ON and n > 1 else 0.0)   # (11-26) khung sen: chừa chỗ dây tua góc phải
+	var RW := 305.0 - (TUA_W if Sen.ON and n > 1 and tua_cut else 0.0)   # (11-26) khung sen: chừa chỗ dây tua góc phải
 	# U2TRE.ttFit: thử lần lượt [chia đều?, cỡ chữ, đệm ngang] tới khi chữ tab nào cũng vừa một dòng
 	var z0 := _z(off_t)
 	var tw0 := []
