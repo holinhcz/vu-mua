@@ -67,9 +67,12 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
 im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1107 - 797) / im.height
 put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c)
 M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.58, 160, 230]   # ảnh mẫu: dải đỏ 640/1112 = 58% bề ngang
-im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
-put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c)
-M['day']['dy'] = -T / 2; M['day']['fw'] = [0.30, 90, 120]   # ảnh mẫu: chóp đáy (dải + chóp) ~ 30% bề ngang
+def mid(im):   # chóp đáy: chỉ lấy chóp giữa + khúc vàng ngắn hai bên (ảnh mẫu không có dải đỏ dài dưới đáy)
+    im = crop_bb(im); w = im.width
+    return im.crop((int(w * 0.365), 0, int(w * 0.635), im.height))
+im = mid(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
+put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c, mid)
+M['day']['dy'] = -T / 2; M['day']['fw'] = [0.095, 30, 34]   # ảnh mẫu: chóp đáy ~ 30 css
 # hoa sen góc: tràn ra ngoài khung một phần
 put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # ảnh mẫu: lòi trái 12, lên 32 css
 put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 112, [1.0, 1.0], 0.87, 0.64)   # ảnh mẫu: phần lớn nằm trong góc dưới phải
@@ -93,6 +96,10 @@ put('tua', '09_day_tua_do.png', 19, [1.0, 0.0], 0.5, 0.0)
 M['tua']['dx'] = -8; M['tua']['dy'] = 12
 # sóng hồng: lớp giấy, đáy trái (lật ngang cho đáy phải)
 w = load('10_song_hong_day_giay.png'); w = crop_bb(w)
+a = np.array(w).astype(np.float32)   # mép trong (phải) mờ dần, không cắt ngang
+ramp = np.clip((w.width - np.arange(w.width)) / (w.width * 0.28), 0, 1)
+a[:, :, 3] *= ramp[None, :]
+w = Image.fromarray(a.astype(np.uint8), 'RGBA')
 save(w, 'song', 150, 150 * w.height / w.width)
 M['song'] = [150, 150 * w.height / w.width]
 json.dump(M, open(os.path.join(OUT, 'khung.json'), 'w'), indent=1)

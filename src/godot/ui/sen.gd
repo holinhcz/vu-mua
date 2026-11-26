@@ -146,8 +146,8 @@ static func paper(w: float, h: float) -> Texture2D:   # nền giấy cả hộp:
 	var g: Array = m.giay
 	var out := Image.create(int(ceil(w * k)), int(ceil(h * k)), false, Image.FORMAT_RGBA8)
 	out.fill(Color8(int(g[0]), int(g[1]), int(g[2])))
-	var sw := minf(float(m.song[0]), w * 0.46)
-	var sh := float(m.song[1]) * sw / float(m.song[0])
+	var sw := minf(120.0, w * 0.36)   # ảnh mẫu: sóng hồng hai góc đáy, cao như gò mây, giữa chừa trống dưới nút
+	var sh := float(m.song[1]) * sw / float(m.song[0]) * 1.9
 	var t := float(m.T)
 	_put(out, "song", Rect2(t - 1.0, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k)
 	_put(out, "song", Rect2(w - t + 1.0 - sw, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k, true, false)
