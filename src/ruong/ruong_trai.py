@@ -443,7 +443,7 @@ def leaf_disc(S, z0, Rl, mat_top, mat_bot, waves=9, bowl=1.6, lobes=None, n=96):
     def F(U, V, off=0.0):
         th = V * TAU
         r = Rl * U * (1 + 0.04 * np.sin(7 * th + 1.0))
-        z = z0 + bowl * U ** 2 + 0.55 * U ** 3 * np.sin(waves * th) + off
+        z = z0 + bowl * (Rl / 17) * U ** 2 + 0.55 * (Rl / 17) * U ** 3 * np.sin(waves * th) + off
         return np.stack([r * np.cos(th), r * np.sin(th), z], -1)
     grid(S, lambda U, V: F(U, V), 26, n, mat_top, (0, 0, 0), close_v=True, flip=False)
     grid(S, lambda U, V: F(U, V, -0.35), 26, n, mat_bot, (0, 0, 0), close_v=True, flip=True)
@@ -598,16 +598,16 @@ def guongsen(S, rng, z0, r, mpod, mtop, mseed, nseed=7):
 
 
 def sen(S, rng, gold):
-    Rl = 17.0
+    Rl = 11.0; RD = 8.2                                # lá sen + đế gọn lại (lá chỉ rộng hơn búp chút)
     R.LA = R.LB = 12.0; R.ZL = 20.0; R.LR = 12.0
     body()
     if gold:
         SON = newmat(mat_son('#a8261e')); VB = newmat(mat_kl('#f0c24e', hammer=False, streak=0.02, leaf=True))
         from kho3d import tube, disc
-        tube(S, R.Pl(0, 0, 0), R.Pl(0, 0, 2.2), 12.5, SON, nr=64, nl=3); disc(S, R.Pl(0, 0, 2.2), (0, 0, 1), 12.5, SON, nr=6, na=64)
-        for z, rr in ((0.35, 12.9), (2.0, 12.9)): torus(S, z, rr, 0.45, VB)
-        for k in range(12):
-            a = k * TAU / 12; ell(S, (12.6 * math.cos(a), 12.6 * math.sin(a), 1.2), 0.7, 0.7, 0.7, flat('#2fae6a') if k % 2 else flat('#d81c3a'))
+        tube(S, R.Pl(0, 0, 0), R.Pl(0, 0, 2.2), RD, SON, nr=64, nl=3); disc(S, R.Pl(0, 0, 2.2), (0, 0, 1), RD, SON, nr=6, na=64)
+        for z, rr in ((0.35, RD + 0.35), (2.0, RD + 0.35)): torus(S, z, rr, 0.42, VB)
+        for k in range(10):
+            a = k * TAU / 10; ell(S, ((RD + 0.15) * math.cos(a), (RD + 0.15) * math.sin(a), 1.2), 0.6, 0.6, 0.6, flat('#2fae6a') if k % 2 else flat('#d81c3a'))
         z0 = 2.4
         LT = newmat(m_la('#2a8058', '#d8b850', 22, edge='#c8a040', bloom='#6cb090')); LB_ = newmat(m_la('#4a9a6a', '#d8d080', 22))
         CANS = [newmat(m_canh('#f6c64a', '#d85870', '#b07418', kind='son', foot='#fae08a', tipexp=4.5)),
@@ -617,7 +617,11 @@ def sen(S, rng, gold):
         PT = newmat(m_ngoc('#48a874', '#8ad8a8')); SEED = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#d81c3a'), (len(uv), 1)), nrm), kind='ngoc')
         rings = [(8, 3.6, 13.5, 4.6, 0.32, -0.72, 74, 0.0, 0.0), (8, 3.1, 11.4, 4.0, 0.24, -0.80, 58, math.pi / 8, 0.12), (8, 2.7, 9.0, 3.2, 0.16, -0.9, 36, 0.0, 0.24)]
     else:
-        z0 = 0.6
+        from kho3d import tube, disc                    # đế gỗ gụ tiện tròn, viền đồng (bậc 3 mộc hơn bậc 4)
+        GO = newmat(mat_son('#5a3018', wood=True)); DO = newmat(mat_kl('#c0924a', hammer=False, streak=0.03)); R.KIND[DO] = 'vang'
+        tube(S, R.Pl(0, 0, 0), R.Pl(0, 0, 2.0), RD, GO, nr=64, nl=3); disc(S, R.Pl(0, 0, 2.0), (0, 0, 1), RD, GO, nr=6, na=64)
+        torus(S, 0.3, RD + 0.25, 0.32, GO); torus(S, 1.85, RD + 0.25, 0.32, DO)
+        z0 = 2.2
         LT = newmat(m_la('#35703c', '#8eb486', 22, edge='#8a7a40', bloom='#9cb8aa')); LB_ = newmat(m_la('#6a9a5a', '#b0cc98', 22, edge='#9a8a50'))
         CAN = newmat(m_canh('#f2bdd0', '#e45890', '#d04a7a', foot='#dfe6a4', tipexp=0.55)); CANS = [CAN, CAN, CAN]; POD = newmat(m_guong('#9cb244', '#c8cc66')); R.HFN[POD] = h_guong
         PT = newmat(m_guong('#d6d06a', '#c0c454')); SEED = newmat(m_com('#6f8e34', '#58782a'))
@@ -627,7 +631,7 @@ def sen(S, rng, gold):
     leaf_disc(S, z0, Rl, LT, LB_)
     GIOT = newmat(lambda uv, prm, pos, nrm: (np.tile(hexc('#e8f6f2'), (len(uv), 1)), nrm), kind='ngoc')
     for (U, th, rd) in ((0.62, 0.5, 0.55), (0.68, 0.6, 0.3), (0.55, 2.4, 0.45), (0.78, 3.9, 0.6), (0.5, 5.3, 0.4)):
-        rr = Rl * U * (1 + 0.04 * math.sin(7 * th + 1.0)); zz = z0 + 1.6 * U ** 2 + 0.55 * U ** 3 * math.sin(9 * th)
+        rr = Rl * U * (1 + 0.04 * math.sin(7 * th + 1.0)); zz = z0 + 1.6 * (Rl / 17) * U ** 2 + 0.55 * (Rl / 17) * U ** 3 * math.sin(9 * th)
         ell(S, (rr * math.cos(th), rr * math.sin(th), zz + rd * 0.2), rd, rd * 0.92, rd * 0.62, GIOT, nu=7, nv_=14)
     VANG = newmat(mat_kl('#e0a538', hammer=False, streak=0.02, leaf=True)); R.KIND[VANG] = 'vang'
     guongsen(S, rng, z0 + 4.6, 2.7, POD, PT, SEED)
