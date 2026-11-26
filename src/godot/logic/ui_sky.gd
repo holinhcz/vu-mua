@@ -29,7 +29,7 @@ const SKC := {
 	"wx_mua": ["rgb(232, 244, 254)", "rgb(214, 236, 252)", "rgb(196, 226, 248)", "rgb(80, 116, 150)"],
 	"t_sang": ["rgb(255, 248, 206)", "rgb(255, 238, 176)", "rgb(254, 226, 146)", "rgb(214, 160, 40)"],   # (11-26) ô giờ: sáng vàng, chiều cam, tối xanh đêm
 	"t_chieu": ["rgb(255, 230, 196)", "rgb(254, 214, 166)", "rgb(252, 198, 138)", "rgb(206, 128, 60)"],
-	"t_toi": ["rgb(84, 116, 190)", "rgb(66, 96, 170)", "rgb(50, 78, 150)", "rgb(40, 60, 120)"],
+	"t_toi": ["rgb(132, 160, 220)", "rgb(114, 144, 208)", "rgb(98, 128, 194)", "rgb(70, 96, 160)"],   # xanh đêm pha nhạt
 	"m0": ["rgb(255, 232, 240)", "rgb(252, 214, 228)", "rgb(248, 196, 214)", "rgb(217, 85, 126)"],   # ô lễ theo mùa (nhạt của chip mùa)
 	"m1": ["rgb(255, 238, 210)", "rgb(254, 224, 180)", "rgb(252, 208, 150)", "rgb(224, 138, 30)"],
 	"m2": ["rgb(226, 242, 252)", "rgb(206, 232, 250)", "rgb(186, 220, 246)", "rgb(46, 134, 193)"],
@@ -75,7 +75,7 @@ const IC := {
 	"sen": _SV + "<g stroke='#d8507e' stroke-width='1' stroke-linejoin='round'><path d='M16 6 C20 11 20 18 16 24 C12 18 12 11 16 6Z' fill='#f7a8c4'/><path d='M16 24 C10 22 6 17 5 11 C10 12 14 17 16 24Z' fill='#f492b6'/><path d='M16 24 C22 22 26 17 27 11 C22 12 18 17 16 24Z' fill='#f492b6'/><path d='M16 24 C11 25 6 24 2 20 C7 18 12 20 16 24Z' fill='#f7b8cf'/><path d='M16 24 C21 25 26 24 30 20 C25 18 20 20 16 24Z' fill='#f7b8cf'/></g></svg>",
 	"loa": _SV + "<path d='M4 13 H10 L22 6 V26 L10 19 H4 Z' fill='#e2473f' stroke='#9c2a24' stroke-width='1.6' stroke-linejoin='round'/><rect x='6' y='19' width='4' height='8' rx='1.5' fill='#9c2a24'/><path d='M4.5 14 H10' stroke='#ff9a90' stroke-width='1.4'/><g fill='none' stroke='#e2473f' stroke-width='2' stroke-linecap='round'><path d='M25 12 q3 4 0 8'/><path d='M27.5 9 q5 7 0 14'/></g></svg>",
 }
-const ICP := ["gio", "canh", "radio", "loa", "sen", "mai", "lich", "nut_play"]   # (11-26) icon ảnh (bộ 12 icon của Link), còn lại vẽ svg
+const ICP := ["gio", "canh", "radio", "loa", "sen", "mai", "lich", "nut_play", "bang_choi", "den_long"]   # (11-26) icon ảnh (bộ 12 icon của Link), còn lại vẽ svg
 static var _ics := {}
 func _sic(k: String) -> String:
 	if not _ics.has(k):
@@ -94,17 +94,17 @@ func _wsv_get(f: String) -> String:
 		_wsv[f] = Css.img_svg(WPIC[f])
 	return _wsv[f]
 
-const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "sen", "Lễ hội": "sen"}
+const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "bang_choi", "Lễ hội": "den_long"}
 
 func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước chữ (ảnh mẫu)
 	if not HDI.has(t):
 		return super(y, t)
 	var L: Array = super(y, t)
 	for n in L:
-		Snap._move(n, Vector2(22.0, 0))
+		Snap._move(n, Vector2(27.0, 0))
 		if float(n.r[0]) + float(n.r[2]) > X0 + XW:
 			n.r[2] = X0 + XW - float(n.r[0])
-	L.append(_dic(X0, y - 3.0, 20.0, _sic(HDI[t])))
+	L.append(_dic(X0, y - 5.0, 25.0, _sic(HDI[t])))
 	return L
 
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
