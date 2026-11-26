@@ -359,6 +359,28 @@ def petal(S, sp, phi, mat, cup=0.35, thick=0.28, nu=28, nv_=16, dr=0.0, wk=1.35)
     return (Rr[0] * d[0], Rr[0] * d[1], Zz[0]), tuple(t)
 
 
+def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=82, open_in=14, smin=0.6):
+    """BÔNG SEN THẬT (v4 11-26 Link "sen gì 3-4 cánh, không chồng"): N cánh xếp xoắn theo góc vàng 137.5°,
+    mỗi cánh rộng ~70° nên chỗ nào cũng chồng 3 lớp; cánh trong là bản thu nhỏ (vị tự quanh tâm gốc) của cánh ngoài
+    nên các mặt cánh lồng nhau, búp khép không đâm xuyên. Mặt cánh = mảnh mặt tròn xoay (cong theo búp), chót nhọn."""
+    GA = math.radians(137.508)
+    for i in range(N):
+        sc = 1.0 - (1.0 - smin) * i / max(N - 1, 1)
+        phi = i * GA
+        def F(U, V, sc=sc, phi=phi, i=i):
+            Rr = (0.55 + (r0 - 0.55) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)) * sc
+            Zz = z0 + L * U * sc + 0.6 * np.sin(np.pi * U) * sc
+            A = A0 * (0.45 + 0.55 * np.sin(np.pi * np.clip(U, 0, 1) ** 0.6)) * (1 - U ** 3.2) + 0.01
+            a = phi + (V - 0.5) * 2 * A
+            rr = Rr * (1 + 0.015 * (V - 0.5) ** 2)                 # mép hơi vểnh nhẹ
+            return np.stack([rr * np.cos(a), rr * np.sin(a), Zz], -1)
+        b = (r0 * sc * math.cos(phi), r0 * sc * math.sin(phi), z0)
+        k = i / max(N - 1, 1)
+        part(100 + i, b, (-math.sin(phi), math.cos(phi), 0.0), open_out + (open_in - open_out) * k ** 0.8, delay=0.32 * k)
+        grid(S, F, 30, 18, mats[min(int(k * len(mats)), len(mats) - 1)], (0, 0, 0), flip=False)
+    body()
+
+
 def leaf_disc(S, z0, Rl, mat_top, mat_bot, waves=9, bowl=1.6, lobes=None, n=96):
     def F(U, V, off=0.0):
         th = V * TAU
@@ -546,7 +568,7 @@ def sen(S, rng, gold):
     else:
         z0 = 0.6
         LT = newmat(m_la('#3e7a3c', '#a8c890', 22, edge='#8a7a40', bloom='#a4bcaa')); LB_ = newmat(m_la('#6a9a5a', '#b0cc98', 22, edge='#9a8a50'))
-        CAN = newmat(m_canh('#fbf2e6', '#e8689a', '#d8507e')); CANS = [CAN, CAN, CAN]; POD = newmat(m_guong('#9cb244', '#c8cc66')); R.HFN[POD] = h_guong
+        CAN = newmat(m_canh('#fbe8ee', '#e45890', '#d04a7a', tipexp=0.55)); CANS = [CAN, CAN, CAN]; POD = newmat(m_guong('#9cb244', '#c8cc66')); R.HFN[POD] = h_guong
         PT = newmat(m_guong('#d6d06a', '#c0c454')); SEED = newmat(m_com('#6f8e34', '#58782a'))
         rings = [(6, 3.4, 13.0, 4.8, 0.34, -0.72, 58, 0.0, 0.0), (6, 2.9, 11.0, 4.1, 0.24, -0.80, 40, math.pi / 6, 0.12), (6, 2.5, 8.6, 3.3, 0.16, -0.9, 22, 0.0, 0.24)]
     R.HFN[LT] = h_la(22); R.HFN[LB_] = h_la(22)
@@ -557,20 +579,10 @@ def sen(S, rng, gold):
         rr = Rl * U * (1 + 0.04 * math.sin(7 * th + 1.0)); zz = z0 + 1.6 * U ** 2 + 0.55 * U ** 3 * math.sin(9 * th)
         ell(S, (rr * math.cos(th), rr * math.sin(th), zz + rd * 0.12), rd, rd * 0.9, rd * 0.38, GIOT, nu=5, nv_=12)
     VANG = newmat(mat_kl('#e0a538', hammer=False, streak=0.02, leaf=True)); R.KIND[VANG] = 'vang'
-    coins(S, rng, z0 + 0.9, 3.0, 8, VANG)
     guongsen(S, rng, z0 + 4.6, 2.7, POD, PT, SEED)
     if not gold:
         ell(S, (0, 0, z0 + 7.0), 0.9, 0.9, 0.9, VANG)
-    pid = 1
-    rings = [(n, r0 * 1.3, L * 1.3, W * 1.3, a0, a1, ang, ph0, dl) for (n, r0, L, W, a0, a1, ang, ph0, dl) in rings]
-    for i, sp in enumerate(ring_fit(rings, z0 + 1.0, 0.42, 0.28)):
-        for k in range(sp['n']):
-            phi = sp['ph0'] + k * TAU / sp['n']
-            b = (sp['R'][0] * math.cos(phi), sp['R'][0] * math.sin(phi), sp['Z'][0])
-            part(pid, b, (-math.sin(phi), math.cos(phi), 0.0), sp['ang'], delay=sp['dl'])
-            petal(S, sp, phi, CANS[i], cup=0.42 if k % 2 == 0 else 0.3, dr=0.0 if k % 2 == 0 else 0.75)
-            pid += 1
-        body()
+    bong_sen(S, z0 + 0.8, 24 if gold else 18, CANS, open_out=70 if gold else 62, open_in=16 if gold else 10)
     if gold:
         ell(S, (0, 0, z0 + 7.1), 0.9, 0.9, 1.0, flat('#d81c3a'))
     body()
