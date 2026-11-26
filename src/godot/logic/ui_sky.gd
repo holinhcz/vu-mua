@@ -71,9 +71,8 @@ const IC := {
 	"nan": _SV + "<path d='M4 15 L16 5 L28 15' fill='none' stroke='#b0442c' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/><path d='M7 14 V28 H25 V14 L16 7 Z' fill='#f3d9a8' stroke='#8a5a2b' stroke-width='1.6'/><rect x='13' y='19' width='6' height='9' fill='#a0663a'/><path d='M20 9 l3 5 -4 3 3 5' fill='none' stroke='#c0392b' stroke-width='1.8' stroke-linecap='round'/></svg>",
 	"sen": _SV + "<g stroke='#d8507e' stroke-width='1' stroke-linejoin='round'><path d='M16 6 C20 11 20 18 16 24 C12 18 12 11 16 6Z' fill='#f7a8c4'/><path d='M16 24 C10 22 6 17 5 11 C10 12 14 17 16 24Z' fill='#f492b6'/><path d='M16 24 C22 22 26 17 27 11 C22 12 18 17 16 24Z' fill='#f492b6'/><path d='M16 24 C11 25 6 24 2 20 C7 18 12 20 16 24Z' fill='#f7b8cf'/><path d='M16 24 C21 25 26 24 30 20 C25 18 20 20 16 24Z' fill='#f7b8cf'/></g></svg>",
 	"loa": _SV + "<path d='M4 13 H10 L22 6 V26 L10 19 H4 Z' fill='#e2473f' stroke='#9c2a24' stroke-width='1.6' stroke-linejoin='round'/><rect x='6' y='19' width='4' height='8' rx='1.5' fill='#9c2a24'/><path d='M4.5 14 H10' stroke='#ff9a90' stroke-width='1.4'/><g fill='none' stroke='#e2473f' stroke-width='2' stroke-linecap='round'><path d='M25 12 q3 4 0 8'/><path d='M27.5 9 q5 7 0 14'/></g></svg>",
-	"hoa": _SV + "<g fill='#ffffff' stroke='#f0c0c8' stroke-width='0.8'><circle cx='16' cy='8' r='6'/><circle cx='23.6' cy='13.5' r='6'/><circle cx='20.7' cy='22.5' r='6'/><circle cx='11.3' cy='22.5' r='6'/><circle cx='8.4' cy='13.5' r='6'/></g><circle cx='16' cy='16' r='4.2' fill='#f6c341' stroke='#d89a20' stroke-width='1'/></svg>",
 }
-const ICP := ["gio", "canh", "radio", "loa", "sen", "hoa", "lich", "nut_play"]   # (11-26) icon ảnh (bộ 12 icon của Link), còn lại vẽ svg
+const ICP := ["gio", "canh", "radio", "loa", "sen", "mai", "lich", "nut_play"]   # (11-26) icon ảnh (bộ 12 icon của Link), còn lại vẽ svg
 static var _ics := {}
 func _sic(k: String) -> String:
 	if not _ics.has(k):
@@ -85,7 +84,7 @@ const MUA_C := ["linear-gradient(rgb(242, 138, 168) 0%, rgb(230, 108, 146) 50%, 
 	"linear-gradient(rgb(247, 181, 71) 0%, rgb(236, 158, 48) 50%, rgb(224, 138, 30) 100%)",
 	"linear-gradient(rgb(91, 179, 224) 0%, rgb(68, 156, 208) 50%, rgb(46, 134, 193) 100%)",
 	"linear-gradient(rgb(242, 198, 75) 0%, rgb(228, 176, 50) 50%, rgb(212, 154, 30) 100%)"]
-const MUA_I := ["hoa", "han", "nuoc", "gio"]
+const MUA_I := ["mai", "han", "nuoc", "gio"]
 const IC_SONG_T := "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><g fill='none' stroke-linecap='round'><path d='M3 11 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#ffffff' stroke-width='3.4'/><path d='M3 18 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#e4f4ff' stroke-width='3.4'/><path d='M3 25 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#c4e6fb' stroke-width='3.4'/></g></svg>"   # sóng trắng trên chip mùa thu
 func _wsv_get(f: String) -> String:
 	if not _wsv.has(f):
@@ -227,8 +226,6 @@ func _tabt() -> Array:
 	mb.kids[0].r = [X0 + 22.0, y - 2.0, mw - 26.0, 30.0]
 	var mi: String = MUA_I[sea]
 	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _wsv_get(mi) if mi == "han" else (IC_SONG_T if mi == "nuoc" else _sic(mi))))
-	if sea == 3:   # nền vàng: chữ nâu đậm cho dễ đọc
-		mb.kids[0].css["color"] = "rgb(96, 54, 8)"
 	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))
