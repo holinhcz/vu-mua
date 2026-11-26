@@ -42,6 +42,8 @@ func _kshell(L: Array, cur: String, go: Callable, th := 0.0) -> Array:   # th > 
 		_seg_tabs(tabs, L, cur, go, bd)
 	var vb := float(vt.r[1]) + float(vt.r[3])
 	vt.r = [vt.r[0], vy, vt.r[2], vb - vy]
+	if Sen.ON:   # (11-26) khung sen: đáy dùng được chung mọi bảng, dừng trên chóp đáy + hoa sen góc phải (như tab Thành tựu)
+		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - SEN_DAY]
 	_hb = float(vt.r[3])
 	return [n, vt, vy, th0]
 
@@ -72,6 +74,20 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 		_kshift(n, d * 0.5)
 		vy += d * 0.5
 		_hb = ch
+	if ch > _hb + 8.0:   # (11-26) cuộn: đáy vùng cuộn không cắt ngang khối nào (không ló vệt dòng kế); dòng lố thì ẩn, kéo lên mới thấy
+		var cut := _hb
+		var moved := true
+		while moved:
+			moved = false
+			for k in kids:
+				if k is Dictionary and k.has("r"):
+					var t0 := float(k.r[1])
+					var b0 := t0 + float(k.r[3])
+					if t0 < cut and b0 > cut + 0.5:
+						cut = b0 if b0 <= _hb + 3.0 else t0 - 2.0
+						moved = true
+		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - (_hb - cut)]
+		_hb = cut
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
 	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn
@@ -93,7 +109,7 @@ func _fitw(s: String, fs: float, fw: int, w: float) -> String:   # cắt chữ t
 	return s.strip_edges() + "…"
 
 # ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
-const SEN_DAY := 34.0   # chừa đáy vùng cuộn dưới khung sen
+const SEN_DAY := 30.0   # khung sen: đáy thân chung cách đáy khung (chóp đáy, hoa sen góc phải)
 const X0 := 16.5      # mép trái nội dung (như thẻ trong Kho / Sổ làng)
 const XW := 305.0     # rộng nội dung
 const BROWN := "rgb(74, 52, 20)"

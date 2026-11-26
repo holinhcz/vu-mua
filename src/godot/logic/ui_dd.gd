@@ -49,7 +49,7 @@ func _tab7() -> Array:
 	var g := 6.0
 	var cw := (XW - g * 3.0) / 4.0
 	var fh := 44.0
-	var rh := (_hb - 8.0 - g - g - fh - 10.0) * 0.5
+	var rh := (_hb - 8.0 - g - g - fh - 6.0) * 0.5
 	var y1 := 8.0
 	var y2 := y1 + rh + g
 	for i in 7:
@@ -159,7 +159,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	for w in range(1, r):
 		if not E.got(w):
 			misses += 1
-	var bot := 60.0   # (11-26) hàng bù + nút hôm nay, chừa chóp đỏ đáy khung   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
+	var bot := 38.0   # (11-26) hàng bù + nút hôm nay (đáy chung khung sen đã chừa chóp đáy)   # chỗ nút / dòng hôm nay + dòng bù dưới lịch
 	var DW := ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
 	var g := 4.0
 	var cw := (XW - g * 6.0) / 7.0
@@ -195,8 +195,7 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 			out.append(_dt(X0 + 2.0, ty + 15.0, lw2, 14.0, "còn " + str(5 - M) + " lần · " + str(3 + M) + " sen/lần", 10.5, 700, BROWN, "left"))
 		else:
 			out.append(_dt(X0 + 2.0, ty + 7.0, lw2, 15.0, "Hết lượt bù tháng này", 11.0, 700, SUB, "left"))
-	var ey := ty + 34.0
-	return [out, ey + 26.0]
+	return [out, ty + 32.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
 	var got: bool = E.got(w)

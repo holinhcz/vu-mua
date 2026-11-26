@@ -144,6 +144,11 @@ func _build() -> void:
 		tw = "mua" if tw == "rao" else "nang"
 	var sh := _kshell([["t", "Thời tiết", tn_mai, _wsv_get(tw)], ["l", "Lịch làng", lehot, _sic("lich")]], cd, _tab_go)
 	var r: Array = _tabt() if cd == "t" else _tabl()
+	var d := _hb - float(r[1])   # (11-26) còn dư chỗ (ô bị giới hạn cỡ): dựng lại cho đáy khối cuối đúng đáy chung khung
+	if d > 1.0:
+		_dx = d
+		r = _tabt() if cd == "t" else _tabl()
+		_dx = 0.0
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
 # ------------------------------------------------------------------ một hàng chip: [ô trái nhỏ], tên đậm + 1 dòng, nút chip xanh phải
@@ -239,9 +244,9 @@ func _tabt() -> Array:
 	var WN := _warns()
 	var nwarn := WN.size()
 	# (bản 402) cả bảng giãn / co cùng một tỉ lệ k cho vừa khung: chip bây giờ 72, dự báo 68, hàng cảnh báo 44 (x k)
-	var gaps := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 22.0 + maxf(0.0, nwarn - 1) * 6.0 + 26.0
+	var gaps := 10.0 + 40.0 + 12.0 + 22.0 + 12.0 + 22.0 + maxf(0.0, nwarn - 1) * 6.0 + 2.0
 	var k := clampf((_hb - gaps) / (72.0 + 68.0 + nwarn * 44.0), 0.75, 1.6)
-	_rh = 44.0 * k
+	_rh = 44.0 * k + _dx / maxf(1.0, nwarn)   # chỗ dư dồn đều vào hàng cảnh báo
 	var ny := y + 40.0
 	var nh := minf(72.0 * k, 84.0)
 	var nc := _chip(X0, ny, XW, nh, _wk(a))
@@ -302,8 +307,9 @@ func _tabt() -> Array:
 		var q: Array = WN[i]
 		out.append_array(_row(ry, rh, String(q[0]), q[6] if q.size() > 6 else null, String(q[1]), String(q[2]), String(q[3]), q[4]))
 		ry += rh + (g if i < WN.size() - 1 else 0.0)
-	return [out, ry + 26.0]   # chừa sóng hồng đáy khung
+	return [out, ry + 2.0]   # đáy chung khung sen (ui_kbang SEN_DAY) đã chừa sóng hồng
 
+var _dx := 0.0   # (11-26) chỗ dư lần dựng trước (đáy chung khung)
 var _rh := 44.0   # cao hàng cảnh báo (thiếu chỗ thì thấp lại, tính ở _tabt)
 
 # cảnh báo, tin tức: [loại chip, tên, dòng phụ, mô tả chạm, nút?]
@@ -433,8 +439,8 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 	var g := 6.0
 	var nT := T.size()
 	var nL := LE.size()
-	var gaps := 10.0 + 22.0 + maxf(0.0, nT - 1) * g + 12.0 + 22.0 + maxf(0.0, nL - 1) * g + 26.0
-	var k := clampf((_hb - gaps) / (nT * 46.0 + nL * 58.0), 0.85, 1.5)
+	var gaps := 10.0 + 22.0 + maxf(0.0, nT - 1) * g + 12.0 + 22.0 + maxf(0.0, nL - 1) * g + 2.0
+	var k := clampf((_hb - gaps) / (nT * 46.0 + nL * 58.0), 0.85, 1.5) + _dx / (nT * 46.0 + nL * 58.0)   # chỗ dư (lần dựng 2) giãn đều các hàng
 	var out := []
 	var y := 10.0
 	out.append_array(_hd(y, "Hôm nay trong làng"))
@@ -450,7 +456,7 @@ func _tabl() -> Array:   # (bản 404) dựng danh sách trước, rồi cả ta
 		var q: Array = LE[i][1]
 		out.append_array(_row(y, 58.0 * k, String(q[0]), q[1], String(q[2]), String(q[3]), String(q[4]), q[5]))
 		y += 58.0 * k + (g if i < nL - 1 else 0.0)
-	return [out, y + 26.0]   # chừa sóng hồng + hoa sen góc đáy
+	return [out, y + 2.0]   # đáy chung khung sen đã chừa sóng hồng + hoa sen góc đáy
 
 static func _tr(v) -> bool:
 	return not (v == null or v is bool and not v or (v is float or v is int) and v == 0 or v is String and v == "")

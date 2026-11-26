@@ -111,27 +111,8 @@ func _build() -> void:
 	for t in TABS:
 		L.append([t[0], t[1], int(R.get(t[0], 0)) > 0])
 	var sh := _kshell(L, tab, _tab_go)
-	if Sen.ON:   # (11-26) khung sen: vùng cuộn dừng trên chóp đáy, hoa sen góc phải (như Trời đất): dòng dư ẩn, kéo lên mới thấy
-		var vt: Dictionary = sh[1]
-		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - SEN_DAY]
-		_hb -= SEN_DAY
 	_cw = CW
 	var r: Array = _week() if tab == "tuan" else (_ach() if tab == "tt" else (_event() if tab == "sk" else _day()))
-	if float(r[1]) > _hb + 8.0:   # (11-26) cuộn: mép dưới vùng cuộn không cắt ngang dòng nào (không ló vệt dòng kế)
-		var cut := _hb
-		var moved := true
-		while moved:
-			moved = false
-			for k in r[0]:
-				if k is Dictionary and k.has("r"):
-					var t0 := float(k.r[1])
-					var b0 := t0 + float(k.r[3])
-					if t0 < cut and b0 > cut + 0.5:
-						cut = b0 + 2.0 if b0 <= _hb + 14.0 else t0 - 2.0   # lố ít: nới xuống cho đủ dòng; lố nhiều: dòng ẩn hẳn
-						moved = true
-		var vt2: Dictionary = sh[1]
-		vt2.r = [vt2.r[0], vt2.r[1], vt2.r[2], float(vt2.r[3]) - (_hb - cut)]
-		_hb = cut
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
 # ------------------------------------------------------------------ khối chung
@@ -245,7 +226,7 @@ func _day() -> Array:
 	var ap: int = N.r5()
 	var out := []
 	# cách đều: g = chip tên -> nội dung, 2g = giữa hai khối; giãn sao cho đáy khung vừa đúng 4 dòng việc
-	var fix := 8.0 + (93.0 + 60.0 + 26.0 + 4.0 * RH + 3.0 * GAPR) + 4.0
+	var fix := 8.0 + (93.0 + 60.0 + 26.0 + 4.0 * RH + 3.0 * GAPR) + 2.0
 	var g := clampf((_hb - fix) / 7.0, 6.0, 14.0)
 	var y := 8.0
 	var L := []
@@ -312,7 +293,7 @@ func _day() -> Array:
 		out.append_array(_row(y, [_ti(String(t.id)), "+" + str(N.pt(t)), _gk(String(t.id))], String(t.n), "", float(c2) / float(m), G.fmt_n(mini(c2, m)) + "/" + G.fmt_n(m),
 			"done" if dn else "go", _go.bind(String(t.id)), "", sw))
 		y += RH + GAPR
-	return [out, y + 4.0]
+	return [out, y - GAPR + 2.0]   # (11-26) đáy dòng cuối cách đáy thân 2 (đáy chung)
 
 func _swap(tid: String) -> void:
 	N.swap(tid)
@@ -347,7 +328,7 @@ func _week() -> Array:
 		var wd := ["Túi xu", "3 sen đỏ, ván gỗ, đinh sắt, gạch nung", "Xu, bùa +50% kinh nghiệm 1 ngày", String(dc0[1]) + ", 3 sen đỏ"]
 		L.append([N.wk_p(i), String(N.NVWCH[i].ic), w.cl.has("m" + str(i)), N.wk_chest.bind(i), String(N.NVWCH[i].n), String(wd[i])])
 	# cách đều như tab Hằng ngày: g chip tên -> nội dung, 2g giữa khối; đáy khung vừa đúng 5 dòng việc
-	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 4.0
+	var fix := 8.0 + (93.0 + RH + 26.0 + 5.0 * RH + 4.0 * GAPR) + 2.0
 	var g := clampf((_hb - fix) / 5.0, 6.0, 14.0)
 	var ms := _ms(y, "Điểm tuần", wpt, top, L, g)
 	out.append_array(ms[0])
@@ -372,7 +353,7 @@ func _week() -> Array:
 		out.append_array(_row(y, [_ti(String(t.id)), "+" + str(t.pt), _gk(String(t.id))], String(t.n), "", float(c) / float(m), G.fmt_n(mini(c, m)) + "/" + G.fmt_n(m),
 			"done" if c >= m else "go", _go.bind(String(t.id))))
 		y += RH + GAPR
-	return [out, y + 4.0]
+	return [out, y - GAPR + 2.0]   # (11-26) đáy dòng cuối cách đáy thân 2 (đáy chung)
 
 # ------------------------------------------------------------------ tab Thành tựu
 func _ach() -> Array:
@@ -470,7 +451,7 @@ func _ach() -> Array:
 				G.fmt_n(mini(c, int(st.m))) + "/" + G.fmt_n(int(st.m)), "claim" if ok else "go", N.zI.bind(String(L.k)) if ok else _go.bind("ln_" + String(L.k)),
 				"", null, "Thưởng " + G.fmt_n(R.xu) + " xu, " + str(R.m) + " vật liệu " + String(L.n).to_lower() + "."))
 		y += RH + GAPR
-	return [out, y + 4.0]
+	return [out, y - GAPR + 2.0]   # (11-26) đáy dòng cuối cách đáy thân 2 (đáy chung)
 
 # ------------------------------------------------------------------ tab Sự kiện
 func _event() -> Array:
@@ -564,7 +545,7 @@ func _event() -> Array:
 		var dn := int(nx.d0) - int(x.d)
 		out.append_array(_row(y, ["d:gift", "", "tre"], String(nx.n), "Nhớ để dành sen đỏ" if nx.id == "ngoc" else "Bắt đầu sau " + str(dn) + " ngày", -1.0, "", "", null))
 		y += RH + GAPR
-	return [out, y + 4.0]
+	return [out, y - GAPR + 2.0]   # (11-26) đáy dòng cuối cách đáy thân 2 (đáy chung)
 
 func _wrap(t: String, fs: float, fw: int, w: float) -> Array:   # xuống dòng theo bề ngang
 	var L := []
