@@ -408,11 +408,15 @@ static func _sen_look(n: Dictionary) -> Dictionary:   # bộ sen: tab đỏ, chi
 		o2.css["box-shadow"] = SEN_VIEN
 		_white(o2)
 		return o2
-	if cl.has("khchip") and cl.has("on"):   # chip lọc đang chọn: xanh đậm viền vàng
-		var o3: Dictionary = n.duplicate()
-		o3.css = n.css.duplicate()
-		o3.css["background-image"] = SEN_XANH
-		o3.css["box-shadow"] = SEN_VIEN
+	if cl.has("khchip"):   # chip lọc: chữ + icon nằm giữa dọc (mẫu chụp lệch lên 1 px); đang chọn: xanh đậm viền vàng
+		var o3: Dictionary = n.duplicate(true)
+		if o3.has("tr"):
+			o3.tr[1] = float(o3.tr[1]) + 1.0
+		for kk in o3.get("kids", []):
+			_move(kk, Vector2(0, 1.0))
+		if cl.has("on"):
+			o3.css["background-image"] = SEN_XANH
+			o3.css["box-shadow"] = SEN_VIEN
 		return o3
 	if cl.has("primary") and String(n.get("tag", "")) == "button":
 		var o4: Dictionary = n.duplicate()

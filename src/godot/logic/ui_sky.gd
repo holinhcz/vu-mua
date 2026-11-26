@@ -210,6 +210,8 @@ func _tabt() -> Array:
 	var mw: float = Box.text_w(mt, 13.0, 800) + 52.0
 	var mb := _onbtn(X0, y - 2.0, mw, 30.0, mt, null, true)
 	mb.kids[0].css["font-size"] = _cpx(13.0)
+	mb.css["background-image"] = Snap.SEN_DO   # như chip lọc đang chọn bên Kho: viền vàng, tông đỏ
+	mb.css["box-shadow"] = Snap.SEN_VIEN
 	mb.kids[0].r = [X0 + 22.0, y - 2.0, mw - 26.0, 30.0]
 	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _sic("hoa")))
 	out.append(mb)
