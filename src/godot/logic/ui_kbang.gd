@@ -72,8 +72,6 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 		_kshift(n, d * 0.5)
 		vy += d * 0.5
 		_hb = ch
-	if Sen.ON and ch > _hb + 8.0:   # (11-26) khung sen: dòng cuối cuộn lên được khỏi chóp đáy, hoa sen góc phải
-		ch += SEN_DAY
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
 	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn

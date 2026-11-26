@@ -110,7 +110,9 @@ func _build() -> void:
 	for t in TABS:
 		L.append([t[0], t[1], int(R.get(t[0], 0)) > 0])
 	var sh := _kshell(L, tab, _tab_go)
-	if Sen.ON:   # (11-26) khung sen: dòng việc xếp vừa trên chóp đáy, hoa sen góc phải (dài hơn thì cuộn)
+	if Sen.ON:   # (11-26) khung sen: vùng cuộn dừng trên chóp đáy, hoa sen góc phải (như Trời đất): dòng dư ẩn, kéo lên mới thấy
+		var vt: Dictionary = sh[1]
+		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - SEN_DAY]
 		_hb -= SEN_DAY
 	var r: Array = _week() if tab == "tuan" else (_ach() if tab == "tt" else (_event() if tab == "sk" else _day()))
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
