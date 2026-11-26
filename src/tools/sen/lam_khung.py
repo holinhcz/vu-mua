@@ -26,19 +26,9 @@ def crop_bb(im):
     return im.crop(im.getbbox())
 
 
-def pale(im):   # tre nhạt như ảnh mẫu Kho (vàng mật nhạt, không cam): giảm bão hoà, sáng lên chút
-    a = np.array(im).astype(np.float32)
-    rgb = a[:, :, :3]
-    g = rgb.mean(2, keepdims=True)
-    rgb = g + (rgb - g) * 0.8
-    rgb = rgb * 0.92 + np.array([238, 214, 160], np.float32) * 0.08
-    a[:, :, :3] = np.clip(rgb, 0, 255)
-    return Image.fromarray(a.astype(np.uint8), 'RGBA')
-
-
 M = {"T": T, "giay": [251, 242, 229]}
 # ---- tre: lấy hết từ ảnh góc (cùng độ dày, cùng ánh sáng): góc cong, ống trơn ngang/dọc, mắt tre ngang/dọc
-g = pale(load('01_goc_tre_tron.png'))
+g = load('01_goc_tre_tron.png')   # giữ màu vàng gốc: cùng màu thanh vàng của chóp
 OX, OY = 100, 116                     # mép ngoài ống ngang (trên) / ống dọc (trái) của ảnh góc
 C = 700                               # góc cắt tới trước mắt tre đầu (mắt ở ~600-672)
 goc = g.crop((OX, OY, C, C))
@@ -63,27 +53,19 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
     return im
 
 
-def fade_ends(im, y0, frac):   # đầu thanh vàng dưới chân chóp mờ dần vào ống tre khung (không lòi đầu thanh)
-    a = np.array(im).astype(np.float32); w = a.shape[1]
-    x = np.arange(w); r = np.clip(np.minimum(x, w - 1 - x) / (w * frac), 0, 1)
-    a[y0:, :, 3] *= r[None, :]
-    return Image.fromarray(a.astype(np.uint8), 'RGBA')
-
-
 def rot(deg):
     return lambda im: crop_bb(im).rotate(deg, resample=Image.BICUBIC, expand=True)
 
 
 # chóp đỉnh: thanh vàng dưới chân chóp đè đúng giữa ống tre trên
-im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1107 - 797) / im.height
-put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c, lambda im: fade_ends(crop_bb(im), 1045 - 797, 0.1))
-M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.58, 160, 230]   # ảnh mẫu: dải đỏ 640/1112 = 58% bề ngang
-def mid(im):   # chóp đáy: chỉ lấy chóp giữa + khúc vàng ngắn hai bên (ảnh mẫu không có dải đỏ dài dưới đáy)
-    im = crop_bb(im); w = im.width
-    return fade_ends(im.crop((int(w * 0.365), 0, int(w * 0.635), im.height)), 1020 - 794, 0.22)
-im = mid(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
-put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c, mid)
-M['day']['dy'] = -T / 2; M['day']['fw'] = [0.095, 30, 34]   # ảnh mẫu: chóp đáy ~ 30 css
+# thanh vàng chân chóp CHÍNH LÀ một khúc ống tre trên: cỡ chóp lấy theo thanh dày đúng T (thanh 90 px ảnh gốc), đè khít ống tre,
+# đầu thanh tròn nằm trên ống như một mắt tre (không mờ, không cắt)
+im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1112 - 797) / im.height
+put('dinh', '04_chop_do_dinh.png', im.width * T / 90.0, [0.5, 0.0], 0.5, bar_c)
+M['dinh']['dy'] = T / 2
+im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
+put('day', '05_chop_do_day.png', im.width * T / 70.0, [0.5, 1.0], 0.5, bar_c)   # thanh 70 px = T
+M['day']['dy'] = -T / 2
 # hoa sen góc: tràn ra ngoài khung một phần
 put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 78, [0.0, 0.0], 0.22, 0.36, rot(28))   # xéo theo góc: lá rủ xuống mép trái
 put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 96, [1.0, 1.0], 0.78, 0.66, rot(24))   # xéo theo góc dưới phải

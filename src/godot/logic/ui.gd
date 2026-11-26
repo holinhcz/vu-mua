@@ -1885,9 +1885,9 @@ func _build_kho() -> void:
 		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
 		if not bp.is_empty():
 			var cx := float(bp.r[0]) + float(bp.r[2]) * 0.5
-			var cy := float(bp.r[1]) + float(bp.r[3]) * 0.5 - 4.0
-			Snap._move(bp, Vector2(0, -4))
-			bp.r = [cx - 78.0, cy - 15.0, 156.0, 30.0]
+			var cy := float(bp.r[1]) + float(bp.r[3]) * 0.5 - 8.0
+			Snap._move(bp, Vector2(0, -8))
+			bp.r = [cx - 78.0, cy - 14.0, 156.0, 28.0]
 			for kk in bp.get("kids", []):
 				kk.css = kk.css.duplicate()
 				kk.css["font-size"] = "15px"
