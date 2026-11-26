@@ -486,8 +486,9 @@ def trai_dua(S, rng):
         th = V * TAU; r = 0.62 * prof_c(th) * np.sin(np.pi / 2 * U) ** 0.55; z = zb + (zc - zb) * U ** 1.4
         return np.stack([r * np.cos(th), r * np.sin(th), z], -1)
     shell(S, cav, 20, 72, COM, flip=True)
-    coins(S, rng, zb + 1.5, 2.0, 12, VANG)
-    ell(S, (0.4, 0.3, zb + 3.2), 1.1, 1.1, 1.3, flat('#d81c3a'))
+    COIN = newmat(mat_kl('#f8cc50', hammer=False, streak=0.02, leaf=False)); R.KIND[COIN] = 'son'
+    for dz, rc_, nc in ((1.5, 2.0, 12), (3.2, 3.4, 18), (4.6, 4.2, 22), (5.6, 3.6, 16)): coins(S, rng, zb + dz, rc_, nc, COIN)   # quà: vàng chất đầy gần miệng
+    ell(S, (0.4, 0.3, zb + 6.6), 1.1, 1.1, 1.3, flat('#d81c3a')); ell(S, (-1.8, -0.9, zb + 6.2), 0.8, 0.8, 0.9, flat('#2fae6a'))
     # vòng tre lót đáy + dây mây buộc + thẻ gỗ sen
     pts = [(5.6 * math.cos(t), 5.6 * math.sin(t), 1.5) for t in np.linspace(0, TAU, 33)]
     for p0, p1 in zip(pts, pts[1:]): tb(S, p0, p1, 0.9, M_BAMBOO, (0.4, 0.2, 0), nr=7, nl=2)
@@ -536,8 +537,9 @@ def trai_bi(S, rng):
     for k in range(18):                               # hột bí trong lòng
         a = rng.random() * TAU; d = 2 + rng.random() * 5
         ell(S, (d * math.cos(a), d * math.sin(a), zb + 0.6 + rng.random() * 1.2), 0.9, 0.55, 0.22, HAT, axes=(np.array([math.cos(a + 1), math.sin(a + 1), 0]), np.array([-math.sin(a + 1), math.cos(a + 1), 0]), np.array([0, 0, 1.0])), nu=4, nv_=10)
-    coins(S, rng, zb + 1.2, 5.5, 18, VANG)
-    ell(S, (-1.0, 0.6, zb + 3.2), 1.2, 1.2, 1.4, flat('#2fae6a'))
+    COIN = newmat(mat_kl('#f8cc50', hammer=False, streak=0.02, leaf=False)); R.KIND[COIN] = 'son'
+    for dz, rc_, nc in ((1.2, 5.5, 18), (3.4, 6.0, 26), (5.4, 6.4, 30), (7.0, 5.4, 24)): coins(S, rng, zb + dz, rc_, nc, COIN)   # quà: vàng chất đầy gần miệng
+    ell(S, (-1.0, 0.6, zb + 7.9), 1.2, 1.2, 1.4, flat('#2fae6a')); ell(S, (1.6, -1.2, zb + 7.6), 1.0, 1.0, 1.1, flat('#d81c3a'))
     # logo sen vàng trên đĩa sơn son trước bụng bí
     zm = Hb * 0.42
     # NẮP: chỏm bí + cuống + tua + lá bí
