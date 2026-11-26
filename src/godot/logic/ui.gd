@@ -4,6 +4,8 @@ extends CanvasLayer
 # (module "ring"), bảng ô chưa mở (#ppop), Kho, thông báo (ta). Vẽ theo điểm ảnh thật (Css.K = dpr).
 
 const Css = preload("res://ui/css.gd")
+const Sen = preload("res://ui/sen.gd")
+const SEN_LE := 13.0   # lề hai bên bảng khung sen (css px)
 const Snap = preload("res://ui/snap.gd")
 const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
@@ -191,6 +193,8 @@ func _layout() -> void:
 	# bảng toàn màn (#pov 338x610, giữa màn): màn thấp hơn khuôn (điện thoại còn thanh trình duyệt trên dưới) thì thu cả bảng
 	# cho vừa chiều cao, như bản web để .pwin cao 100% màn; không thì đáy bảng bị cắt
 	var fp := minf(1.0, vh / VH0)
+	if Sen.ON:   # (11-26) khung sen: bảng chừa lề hai bên như ảnh mẫu (hoa sen, dây tua lòi ra ngoài khung không bị cắt)
+		fp = minf(fp, (vw - 2.0 * SEN_LE) / VW0)
 	for a in anchors:
 		var b: Control = a[0]
 		if is_instance_valid(b):

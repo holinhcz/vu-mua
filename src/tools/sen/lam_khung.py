@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 SRC, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 P = 6.0          # điểm ảnh lưu / css px
-T = 6.0          # tre dày (css px) — đo ảnh mẫu Kho: tre ~19 px / bảng 1112 px = 5,8 css
+T = 7.0          # tre dày (css px) — đo ảnh mẫu Kho: tre ~19 px / bảng 1112 px = 5,8 css
 Q = 141.0 / T    # điểm ảnh ảnh gốc / css px của tre (ống tre ảnh góc dày 141 px)
 
 
@@ -30,8 +30,8 @@ def pale(im):   # tre nhạt như ảnh mẫu Kho (vàng mật nhạt, không ca
     a = np.array(im).astype(np.float32)
     rgb = a[:, :, :3]
     g = rgb.mean(2, keepdims=True)
-    rgb = g + (rgb - g) * 0.55
-    rgb = rgb * 0.82 + np.array([238, 214, 160], np.float32) * 0.18
+    rgb = g + (rgb - g) * 0.8
+    rgb = rgb * 0.92 + np.array([238, 214, 160], np.float32) * 0.08
     a[:, :, :3] = np.clip(rgb, 0, 255)
     return Image.fromarray(a.astype(np.uint8), 'RGBA')
 
