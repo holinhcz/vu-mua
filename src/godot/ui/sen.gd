@@ -62,7 +62,7 @@ static func _deco(n: String, w: float, h: float) -> Rect2:   # mảnh trang trí
 	var p := Vector2(float(q.a[0]) * w + float(q.get("dx", 0.0)), float(q.a[1]) * h + float(q.get("dy", 0.0)))
 	return Rect2(p - Vector2(float(q.c[0]) * sz.x, float(q.c[1]) * sz.y), sz)
 
-const DECO := ["dinh", "day", "hoa_tt", "hoa_dp", "tua", "dong"]   # thứ tự vẽ (sau đè trước)
+const DECO := ["dinh", "day", "hoa_tt", "hoa_dp", "tua", "dong"]   # dây tua treo dưới nút đóng   # thứ tự vẽ (sau đè trước)
 
 static func bounds(w: float, h: float) -> Rect2:
 	var r := Rect2(0, 0, w, h)
@@ -121,7 +121,7 @@ static func bar(w: float, h: float) -> Texture2D:   # thanh tre ngang bên trong
 		return _tex[key]
 	var m := meta()
 	var out := Image.create(int(ceil(w * k)), int(ceil(h * k)), false, Image.FORMAT_RGBA8)
-	var t := minf(h, float(m.ong_n[0]))
+	var t := minf(h, 4.6)   # ảnh mẫu: thanh ngăn mảnh hơn khung (15 px / 1112)
 	var y := (h - t) * 0.5
 	_put(out, "ong_n", Rect2(0, y, w, t), Vector2.ZERO, k)
 	var mn: Array = m.mat_n
@@ -146,7 +146,7 @@ static func paper(w: float, h: float) -> Texture2D:   # nền giấy cả hộp:
 	var g: Array = m.giay
 	var out := Image.create(int(ceil(w * k)), int(ceil(h * k)), false, Image.FORMAT_RGBA8)
 	out.fill(Color8(int(g[0]), int(g[1]), int(g[2])))
-	var sw := minf(float(m.song[0]), w * 0.42)
+	var sw := minf(float(m.song[0]), w * 0.46)
 	var sh := float(m.song[1]) * sw / float(m.song[0])
 	var t := float(m.T)
 	_put(out, "song", Rect2(t - 1.0, h - t - sh + 1.0, sw, sh), Vector2.ZERO, k)

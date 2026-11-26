@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 SRC, OUT = sys.argv[1], sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 P = 6.0          # điểm ảnh lưu / css px
-T = 8.0          # tre dày (css px)
+T = 6.0          # tre dày (css px) — đo ảnh mẫu Kho: tre ~19 px / bảng 1112 px = 5,8 css
 Q = 141.0 / T    # điểm ảnh ảnh gốc / css px của tre (ống tre ảnh góc dày 141 px)
 
 
@@ -66,13 +66,13 @@ def put(name, fname, css_w, anchor, cx, cy, cut=None):
 # chóp đỉnh: thanh vàng dưới chân chóp đè đúng giữa ống tre trên
 im = crop_bb(load('04_chop_do_dinh.png')); bar_c = (1107 - 797) / im.height
 put('dinh', '04_chop_do_dinh.png', 132, [0.5, 0.0], 0.5, bar_c)
-M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.66, 170, 250]   # rộng theo hộp: 66% bề ngang (170..250)
+M['dinh']['dy'] = T / 2; M['dinh']['fw'] = [0.58, 160, 230]   # ảnh mẫu: dải đỏ 640/1112 = 58% bề ngang
 im = crop_bb(load('05_chop_do_day.png')); bar_c = (1069 - 794) / im.height
 put('day', '05_chop_do_day.png', 112, [0.5, 1.0], 0.5, bar_c)
-M['day']['dy'] = -T / 2; M['day']['fw'] = [0.42, 110, 170]
+M['day']['dy'] = -T / 2; M['day']['fw'] = [0.30, 90, 120]   # ảnh mẫu: chóp đáy (dải + chóp) ~ 30% bề ngang
 # hoa sen góc: tràn ra ngoài khung một phần
-put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 88, [0.0, 0.0], 0.36, 0.40)
-put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 116, [1.0, 1.0], 0.66, 0.58)
+put('hoa_tt', '06_hoa_sen_goc_tren_trai.png', 86, [0.0, 0.0], 0.14, 0.40)   # ảnh mẫu: lòi trái 12, lên 32 css
+put('hoa_dp', '07_hoa_sen_goc_duoi_phai.png', 112, [1.0, 1.0], 0.87, 0.64)   # ảnh mẫu: phần lớn nằm trong góc dưới phải
 
 
 # nút đóng: vẽ dấu x kem viền nâu lên nút đỏ
@@ -87,13 +87,13 @@ def with_x(im):
     return im
 
 
-put('dong', '08_nut_dong_do_khong_X.png', 34, [1.0, 0.0], 0.5, 0.5, with_x)
-M['dong']['dx'] = -6; M['dong']['dy'] = 1
-put('tua', '09_day_tua_do.png', 18, [1.0, 0.0], 0.5, 0.0)
-M['tua']['dx'] = 2; M['tua']['dy'] = 22
+put('dong', '08_nut_dong_do_khong_X.png', 30, [1.0, 0.0], 0.5, 0.5, with_x)
+M['dong']['dx'] = -20; M['dong']['dy'] = -4   # ảnh mẫu: tâm nút trên thanh tre trên, cách mép phải 20
+put('tua', '09_day_tua_do.png', 19, [1.0, 0.0], 0.5, 0.0)
+M['tua']['dx'] = -8; M['tua']['dy'] = 12
 # sóng hồng: lớp giấy, đáy trái (lật ngang cho đáy phải)
 w = load('10_song_hong_day_giay.png'); w = crop_bb(w)
-save(w, 'song', 140, 140 * w.height / w.width)
-M['song'] = [140, 140 * w.height / w.width]
+save(w, 'song', 150, 150 * w.height / w.width)
+M['song'] = [150, 150 * w.height / w.width]
 json.dump(M, open(os.path.join(OUT, 'khung.json'), 'w'), indent=1)
 print(json.dumps(M, indent=1))

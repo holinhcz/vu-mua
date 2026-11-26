@@ -1878,9 +1878,15 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
-		var bp := Snap.find(n, "primary")   # (11-25) khung sen: nút Bán hết nhích lên, chừa chóp đỏ giữa đáy khung
+		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
 		if not bp.is_empty():
-			Snap._move(bp, Vector2(0, -7))
+			var cx := float(bp.r[0]) + float(bp.r[2]) * 0.5
+			var cy := float(bp.r[1]) + float(bp.r[3]) * 0.5 - 4.0
+			Snap._move(bp, Vector2(0, -4))
+			bp.r = [cx - 78.0, cy - 15.0, 156.0, 30.0]
+			for kk in bp.get("kids", []):
+				kk.css = kk.css.duplicate()
+				kk.css["font-size"] = "15px"
 		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
 			var vg := Snap.find(n, "u2vg")
 			var vk: Array = vg.get("kids", [])
@@ -1900,6 +1906,11 @@ func _build_kho() -> void:
 					kh_tpl_sel = li
 			kh_grid0s = Rect2(g2.r[0], g2.r[1], g2.r[2], g2.r[3])
 			g2.kids = []
+			if not kh_tpl_sel.is_empty():   # thẻ đang chọn: phóng như thẻ thường (bộ sen)
+				var lx := float(kh_tpl_sel.r[0]) - float(g2.r[0])
+				var ks2 := (float(g2.r[2]) - lx * 2.0 - 15.0) / 4.0 / float(kh_tpl_sel.r[2])
+				if ks2 > 1.01:
+					_tpl_scale(kh_tpl_sel, Vector2(float(kh_tpl_sel.r[0]), float(kh_tpl_sel.r[1])), ks2)
 		if nm == "kho":
 			var grid := Snap.find(n, "khgrid")
 			var lis: Array = grid.get("kids", [])
@@ -1916,6 +1927,13 @@ func _build_kho() -> void:
 			if lis.size() > 0:
 				kh_li0 = Vector2(lis[0].r[0], lis[0].r[1])
 			grid.kids = []
+			# (11-26) bộ sen: thẻ món to như ảnh mẫu Kho (4 thẻ lấp đầy bề ngang lưới)
+			var ks := (float(grid.r[2]) - (kh_li0.x - float(grid.r[0])) * 2.0 - 15.0) / 4.0 / float(kh_tpl.r[2])
+			if ks > 1.01:
+				kh_ks = ks
+				for tp in [kh_tpl, kh_tpl_hot]:
+					_tpl_scale(tp, Vector2(float(tp.r[0]), float(tp.r[1])), ks)
+
 		var ids := {}
 		var b := _build(n, ids)
 		b.visible = false
@@ -2066,6 +2084,17 @@ func _cat(t: String) -> String:   # rP
 	if n != "":
 		return "chebien"
 	return "khac"
+
+var kh_ks := 1.0   # thẻ món Kho phóng (bộ sen)
+
+func _tpl_scale(n: Dictionary, o: Vector2, k: float) -> void:   # phóng cả cây mẫu chụp quanh điểm o (khung + chữ)
+	if n.has("r"):
+		n.r = [o.x + (float(n.r[0]) - o.x) * k, o.y + (float(n.r[1]) - o.y) * k, float(n.r[2]) * k, float(n.r[3]) * k]
+	if n.has("css") and n.css.has("font-size"):
+		n.css = n.css.duplicate()
+		n.css["font-size"] = str(Css.px(String(n.css["font-size"])) * k) + "px"
+	for c in n.get("kids", []):
+		_tpl_scale(c, o, k)
 
 func _kho_items() -> Array:
 	var e := []
