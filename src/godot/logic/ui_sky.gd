@@ -59,6 +59,33 @@ static func _sv_cuon(sz: float, flip: bool) -> String:   # hoa văn cuộn vàng
 		+ "<path d='M3 17 C7 17 10 15.5 11 13' stroke='#b27a24' stroke-width='2.2'/><path d='M3 17 C7 17 10 15.5 11 13' stroke='#f2c860' stroke-width='1.1'/>" \
 		+ "<circle cx='3.2' cy='16.8' r='1.6' fill='#e6b448' stroke='#b27a24' stroke-width='0.8'/></g></svg>"
 
+# (11-26) icon trái hàng cảnh báo + tiêu đề mục + chip mùa (svg vẽ tay, kiểu ảnh mẫu)
+const _SV := "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
+const IC := {
+	"gio": _SV + "<g fill='none' stroke-linecap='round'><path d='M4 12 H18 a4 4 0 1 0 -4 -4' stroke='#2f7fc8' stroke-width='4'/><path d='M4 12 H18 a4 4 0 1 0 -4 -4' stroke='#7cc4f4' stroke-width='2'/><path d='M3 18 H24 a4 4 0 1 1 -4 4' stroke='#2f7fc8' stroke-width='4'/><path d='M3 18 H24 a4 4 0 1 1 -4 4' stroke='#7cc4f4' stroke-width='2'/><path d='M7 24 H13' stroke='#2f7fc8' stroke-width='4'/><path d='M7 24 H13' stroke='#7cc4f4' stroke-width='2'/></g></svg>",
+	"canh": _SV + "<path d='M16 3 L30 28 H2 Z' fill='#f6c341' stroke='#c0392b' stroke-width='2.6' stroke-linejoin='round'/><path d='M16 4.5 L28.5 27 H3.5 Z' fill='#fff2c4' opacity='0.5'/><rect x='14' y='10' width='4' height='10' rx='2' fill='#c0392b'/><circle cx='16' cy='24' r='2.2' fill='#c0392b'/></svg>",
+	"radio": _SV + "<path d='M8 10 L22 4' stroke='#7a4a1e' stroke-width='1.8' stroke-linecap='round'/><circle cx='22' cy='4' r='1.8' fill='#7a4a1e'/><rect x='2' y='10' width='28' height='19' rx='4' fill='#f0a34a' stroke='#8a4f1a' stroke-width='1.8'/><rect x='4' y='12' width='24' height='3' rx='1.5' fill='#ffd08a' opacity='0.8'/><circle cx='11' cy='20' r='5.6' fill='#7a4a1e'/><circle cx='11' cy='20' r='4' fill='#a8692e'/><g stroke='#7a4a1e' stroke-width='1.8' stroke-linecap='round'><path d='M19 17 H26'/><path d='M19 20.5 H26'/><path d='M19 24 H26'/></g></svg>",
+	"nuoc": _SV + "<g fill='none' stroke-linecap='round'><path d='M3 12 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#2f7fc8' stroke-width='3.4'/><path d='M3 19 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#4aa3e6' stroke-width='3.4'/><path d='M3 26 q3.25 -4 6.5 0 t6.5 0 t6.5 0 t6.5 0' stroke='#7cc4f4' stroke-width='3.4'/></g></svg>",
+	"man": _SV + "<path d='M16 3 C10 11 7 15 7 20 a9 9 0 0 0 18 0 C25 15 22 11 16 3Z' fill='#9fd3f5' stroke='#2f7fc8' stroke-width='2'/><g fill='#ffffff' stroke='#8aa' stroke-width='0.6'><rect x='11' y='18' width='4' height='4' transform='rotate(20 13 20)'/><rect x='17' y='20' width='4' height='4' transform='rotate(-15 19 22)'/><rect x='14' y='24' width='3.4' height='3.4'/></g></svg>",
+	"cay": _SV + "<rect x='14' y='18' width='4' height='11' rx='1.5' fill='#8a5a2b'/><circle cx='16' cy='12' r='9' fill='#56a83c' stroke='#2f7a28' stroke-width='1.6'/><circle cx='12.5' cy='9.5' r='3' fill='#8ccf5c'/><path d='M4 29 H28' stroke='#8a5a2b' stroke-width='2' stroke-linecap='round'/></svg>",
+	"nan": _SV + "<path d='M4 15 L16 5 L28 15' fill='none' stroke='#b0442c' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/><path d='M7 14 V28 H25 V14 L16 7 Z' fill='#f3d9a8' stroke='#8a5a2b' stroke-width='1.6'/><rect x='13' y='19' width='6' height='9' fill='#a0663a'/><path d='M20 9 l3 5 -4 3 3 5' fill='none' stroke='#c0392b' stroke-width='1.8' stroke-linecap='round'/></svg>",
+	"sen": _SV + "<g stroke='#d8507e' stroke-width='1' stroke-linejoin='round'><path d='M16 6 C20 11 20 18 16 24 C12 18 12 11 16 6Z' fill='#f7a8c4'/><path d='M16 24 C10 22 6 17 5 11 C10 12 14 17 16 24Z' fill='#f492b6'/><path d='M16 24 C22 22 26 17 27 11 C22 12 18 17 16 24Z' fill='#f492b6'/><path d='M16 24 C11 25 6 24 2 20 C7 18 12 20 16 24Z' fill='#f7b8cf'/><path d='M16 24 C21 25 26 24 30 20 C25 18 20 20 16 24Z' fill='#f7b8cf'/></g></svg>",
+	"loa": _SV + "<path d='M4 13 H10 L22 6 V26 L10 19 H4 Z' fill='#e2473f' stroke='#9c2a24' stroke-width='1.6' stroke-linejoin='round'/><rect x='6' y='19' width='4' height='8' rx='1.5' fill='#9c2a24'/><path d='M4.5 14 H10' stroke='#ff9a90' stroke-width='1.4'/><g fill='none' stroke='#e2473f' stroke-width='2' stroke-linecap='round'><path d='M25 12 q3 4 0 8'/><path d='M27.5 9 q5 7 0 14'/></g></svg>",
+	"hoa": _SV + "<g fill='#ffffff' stroke='#f0c0c8' stroke-width='0.8'><circle cx='16' cy='8' r='6'/><circle cx='23.6' cy='13.5' r='6'/><circle cx='20.7' cy='22.5' r='6'/><circle cx='11.3' cy='22.5' r='6'/><circle cx='8.4' cy='13.5' r='6'/></g><circle cx='16' cy='16' r='4.2' fill='#f6c341' stroke='#d89a20' stroke-width='1'/></svg>",
+}
+const HDI := {"Dự báo": "sen", "Cảnh báo, tin tức": "loa", "Hôm nay trong làng": "sen", "Lễ hội": "sen"}
+
+func _hd(y: float, t: String) -> Array:   # tiêu đề mục có icon trước chữ (ảnh mẫu)
+	if not HDI.has(t):
+		return super(y, t)
+	var L: Array = super(y, t)
+	for n in L:
+		Snap._move(n, Vector2(22.0, 0))
+		if float(n.r[0]) + float(n.r[2]) > X0 + XW:
+			n.r[2] = X0 + XW - float(n.r[0])
+	L.append(_dic(X0, y - 3.0, 20.0, IC[HDI[t]]))
+	return L
+
 static func _wk(f: String) -> String:   # loại chip theo thời tiết
 	return "wx_" + (f if f in ["nang", "han", "rao", "mua"] else "nang")
 
@@ -108,7 +135,10 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 	var c := _chip(X0, y, XW, h, kind)
 	var x := X0 + 10.0
 	var ks := []
-	if lt != null:   # ô trái: [dòng 1, dòng 2] hoặc [svg]
+	if lt is String:   # icon trái không ô (ảnh mẫu)
+		ks.append(_dic(X0 + 10.0, y + (h - 30.0) * 0.5, 30.0, IC[lt]))
+		x = X0 + 50.0
+	elif lt != null:   # ô trái: [dòng 1, dòng 2] hoặc [svg]
 		var lw := 50.0
 		var L: Array = lt
 		var lk: String = String(L[2]) if L.size() > 2 else "fut"
@@ -160,9 +190,11 @@ func _tabt() -> Array:
 	# mùa + ngày trong mùa
 	var y := 10.0
 	var mt: String = T8[sea]
-	var mw: float = Box.text_w(mt, 13.0, 800) + 30.0
+	var mw: float = Box.text_w(mt, 13.0, 800) + 52.0
 	var mb := _onbtn(X0, y - 2.0, mw, 30.0, mt, null, true)
 	mb.kids[0].css["font-size"] = _cpx(13.0)
+	mb.kids[0].r = [X0 + 22.0, y - 2.0, mw - 26.0, 30.0]
+	mb.kids.append(_dic(X0 + 9.0, y + 4.0, 18.0, IC.hoa))
 	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))
@@ -238,7 +270,7 @@ func _tabt() -> Array:
 	var rh := _rh
 	for i in WN.size():
 		var q: Array = WN[i]
-		out.append_array(_row(ry, rh, String(q[0]), null, String(q[1]), String(q[2]), String(q[3]), q[4]))
+		out.append_array(_row(ry, rh, String(q[0]), q[6] if q.size() > 6 else null, String(q[1]), String(q[2]), String(q[3]), q[4]))
 		ry += rh + (g if i < WN.size() - 1 else 0.0)
 	return [out, ry + 8.0]
 
@@ -262,34 +294,34 @@ func _warns() -> Array:
 		if nx >= 1 and nx <= 2:
 			var K: Dictionary = W.WL.TNK[String(ev.k)]
 			var t := ("Ngày mai: " if nx == 1 else "Ngày mốt: ") + String(K.n)
-			L.append(["sen", t, String(K.d), String(K.w) + ". " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))], 1])
+			L.append(["sen", t, String(K.d), String(K.w) + ". " + String(K.d), ["Phòng chống", _go(U.tn_open.bind("phong"))], 1, "canh"])
 		elif nx > 2 and nx <= 7:   # còn xa hơn 7 ngày thì chưa báo
-			L.append(["fut", "Thiên tai kế tiếp · còn " + str(nx) + " ngày", "Báo loại thiên tai trước 2 ngày để kịp phòng chống.", "Mỗi tháng 2 trận thiên tai. Trận tới còn " + str(nx) + " ngày, trước 2 ngày sẽ báo là bão, lũ, hạn, dịch hay cháy.", null, 7])
+			L.append(["fut", "Thiên tai kế tiếp · còn " + str(nx) + " ngày", "Báo loại thiên tai trước 2 ngày để kịp phòng chống.", "Mỗi tháng 2 trận thiên tai. Trận tới còn " + str(nx) + " ngày, trước 2 ngày sẽ báo là bão, lũ, hạn, dịch hay cháy.", null, 7, "canh"])
 		var tp: Array = W.WD.tn_pill_txt()
 		if tp.size() and not bool(tp[1]):
-			L.append(["sen", String(tp[0]).split(" · ")[0], "Bà con cần giúp sửa nhà, góp đồ.", String(tp[0]), ["Giúp", _go(U.tn_open.bind("nan"))], 2])
+			L.append(["sen", String(tp[0]).split(" · ")[0], "Bà con cần giúp sửa nhà, góp đồ.", String(tp[0]), ["Giúp", _go(U.tn_open.bind("nan"))], 2, "nan"])
 	# nước nổi: mùa thu ngày 2..6
 	var dd: int = posmod(o, 28) % 7 + 1
 	if W.WR.qs():
 		var fs := "Phù sa bồi, cây lớn nhanh 4%. Cá linh về, ven sông có điên điển, bông súng, kèo nèo."
-		L.append(["wx_rao", "Nước nổi về sông Vàm", fs, fs, null, 4])
+		L.append(["wx_rao", "Nước nổi về sông Vàm", fs, fs, null, 4, "nuoc"])
 	elif G.cfg.s == "auto":
 		var to := posmod(2 * 7 + 1 - (posmod(o, 28)), 28)   # tới ngày 2 mùa thu
 		if to >= 1 and to <= 7:
-			L.append(["fut", "Nước nổi · còn " + str(to) + " ngày", "Mùa thu nước sông lên, cá linh về.", "Còn " + str(to) + " ngày nữa nước nổi về sông Vàm (mùa thu, ngày 2–6).", null, 4])
+			L.append(["fut", "Nước nổi · còn " + str(to) + " ngày", "Mùa thu nước sông lên, cá linh về.", "Còn " + str(to) + " ngày nữa nước nổi về sông Vàm (mùa thu, ngày 2–6).", null, 4, "nuoc"])
 	# hạn mặn
 	var n4: bool = W.WR.n4()
 	var ac: int = W.WR.ac()
 	if n4 or (ac >= 0 and ac <= 4):
 		var ms := "Nước mặn đang lấn vô sông, ruộng chậm lớn." if n4 else "Chừng " + str(ac) + " ngày nữa mặn lấn vô sông Vàm. Trữ nước ngọt sẵn."
-		L.append(["sen" if n4 else "fut", "Hạn mặn", ms, ms, ["Xem", _go(W.WRU.open_man)], 4])
+		L.append(["sen" if n4 else "fut", "Hạn mặn", ms, ms, ["Xem", _go(W.WRU.open_man)], 4, "man"])
 	# gió chướng
 	if sea == 3 or sea == 0:
 		var cg: bool = W.WCA.cg()
 		var gs := "Đang có gió, ra đồng thả diều (bảng nhân vật › Diều)." if cg else "Mùa này chiều 14–18 giờ có gió thả diều."
-		L.append(["got" if cg else "fut", "Gió chướng", gs, gs, null, 6])
+		L.append(["got" if cg else "fut", "Gió chướng", gs, gs, null, 6, "gio"])
 	var rs := "Bản tin thời tiết ngày mai, giá cả, cải lương."
-	L.append(["fut", "Radio", rs, rs, ["Mở radio", _go(W.WCU.open_rd)], 8])
+	L.append(["fut", "Radio", rs, rs, ["Mở radio", _go(W.WCU.open_rd)], 8, "radio"])
 	# cây ngã đè ruộng (mưa dầm, giông)
 	var fl: Dictionary = G.troi.bao.wx().fell
 	var nf := 0
@@ -301,7 +333,7 @@ func _warns() -> Array:
 				fk = String(k)
 	if nf:
 		var fd := "Cây ngã đè ruộng thì ruộng ngưng lớn tới khi dọn. Chạm cây ngã để dọn."
-		L.append(["sen", str(nf) + " cây ngã sau giông", "Đè ruộng thì ruộng ngưng lớn, dọn sớm.", fd, ["Tới dọn", _cam_to.bind(fk)], 3])
+		L.append(["sen", str(nf) + " cây ngã sau giông", "Đè ruộng thì ruộng ngưng lớn, dọn sớm.", fd, ["Tới dọn", _cam_to.bind(fk)], 3, "cay"])
 	L.sort_custom(func(a, b): return int(a[5]) < int(b[5]))
 	return L.slice(0, 4)   # tối đa 4 dòng, bỏ bớt dòng ít gấp
 
