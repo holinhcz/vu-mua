@@ -364,31 +364,39 @@ def bong_sen(S, z0, N, mats, r0=3.4, Rb=5.4, L=16.0, A0=0.8, open_out=68, open_i
     Búp khép: cánh trong là bản vị tự thu nhỏ của cánh ngoài -> mặt cánh lồng nhau, không đâm xuyên.
     Lúc NỞ mỗi cánh BIẾN HÌNH (morph) sang dáng cánh sen nở thật: muỗng bầu khum lòng, xoè ra từ gốc, chót hơi vểnh lên (không móc)."""
     GA = math.radians(137.508)
+    _u = np.linspace(0, 1, 2001); _b = 0.05 + (r0 - 0.05) * (1 - _u) ** 1.2 + Rb * np.sin(np.pi * _u ** 0.85) * (1 - 0.25 * _u)
+    UM = float(_u[_b.argmax()]); RM = float(_b.max()) - 0.05
     for i in range(N):
         sc = 1.0 - (1.0 - smin) * i / max(N - 1, 1)
         phi = i * GA; k = i / max(N - 1, 1)
         d = np.array([math.cos(phi), math.sin(phi), 0.0]); t = np.array([-math.sin(phi), math.cos(phi), 0.0]); zz = np.array([0, 0, 1.0])
-        def Rc(U, sc=sc): return (0.05 + (r0 - 0.05) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)) * sc
+        def Rc(U, sc=sc):                                                 # dáng búp: bụng bầu, nửa trên là VÒM TRÒN (siêu elip) -> đỉnh búp tròn, không nhọn
+            U = np.asarray(U, dtype=float)
+            base = 0.05 + (r0 - 0.05) * (1 - U) ** 1.2 + Rb * np.sin(np.pi * U ** 0.85) * (1 - 0.25 * U)
+            s_ = np.clip((U - UM) / (1 - UM), 0, 1)
+            dome = RM * np.clip(1 - s_ ** 2.3, 0, 1) ** (1 / 2.3) + 0.05
+            return np.where(U < UM, base, dome) * sc
         def Aw(U): return A0 * (0.45 + 0.55 * np.sin(np.pi / 2 * np.clip(U / 0.55, 0, 1))) * (1 - 0.15 * U ** 4) + 0.01        # búp khép: cánh rộng tới chót -> đỉnh búp kín
         def F(U, V, sc=sc, phi=phi):
-            Rr = Rc(U); Zz = z0 + L * U * sc + 0.6 * np.sin(np.pi * U) * sc
+            U = 1 - (1 - np.asarray(U, dtype=float)) ** 1.7                # dồn hàng lưới về phía đỉnh vòm -> đỉnh tròn mịn, không gãy khúc
+            Rr = Rc(U); scz = 1 - (1 - sc) * 0.2; Zz = z0 + L * U * scz + 0.6 * np.sin(np.pi * U) * scz   # cánh trong cao gần bằng cánh ngoài -> đỉnh búp liền một vòm, không lòi mép
             a = phi + (V - 0.5) * 2 * Aw(U)
             return np.stack([Rr * np.cos(a), Rr * np.sin(a), Zz], -1)
         al = math.radians(open_out + (open_in - open_out) * k ** 0.8); be = 0.45 * al
-        us = np.linspace(0, 1, 200); th = al - be * us ** 1.3; Ls = L * sc * (1.08 - 0.16 * (1 - k))
+        us = np.linspace(0, 1, 200); th = al - be * us ** 1.3; Ls = 16.0 * sc * (1.08 - 0.16 * (1 - k))
         sr = r0 * sc + np.concatenate([[0], np.cumsum(np.sin(th) * Ls / 199)[:-1]]); sz = z0 + np.concatenate([[0], np.cumsum(np.cos(th) * Ls / 199)[:-1]])
         uu_ = np.linspace(0, 1, 200); Wm = 1.08 * float(np.max(Rc(uu_) * Aw(uu_)))
         def Fo(U, V, sc=sc, Wm=Wm, k=k, d=d, t=t, sr=sr, sz=sz, th=th, us=us):
             rad = np.interp(U, us, sr); hz = np.interp(U, us, sz); tt = np.interp(U, us, th)
-            ex = 2.4 + 3.6 * (1 - k) ** 1.5                              # cánh ngoài chót tròn bầu hơn, cánh trong giữ dáng thuôn
-            w = Wm * (1 + 0.15 * (1 - k)) * (0.42 + 0.58 * np.sin(np.pi * np.clip(U, 0, 1) ** (0.65 + 0.35 * (1 - k)))) * np.sqrt(np.clip(1 - U ** ex, 0, 1)) + 0.04   # cánh sen nở: bầu dục, chót tròn (chỉ nhú mũi nhỏ)
+            ex = 5.0 + 2.0 * (1 - k)                              # cánh ngoài chót tròn bầu hơn, cánh trong giữ dáng thuôn
+            w = Wm * (1 + 0.15 * (1 - k)) * (0.52 + 0.48 * np.sin(np.pi * np.clip(U, 0, 1) ** (0.65 + 0.35 * (1 - k)))) * np.sqrt(np.clip(1 - U ** ex, 0, 1)) + 0.04   # cánh sen nở: bầu dục, chót tròn (chỉ nhú mũi nhỏ)
             vv = (V - 0.5) * 2
             o = np.cos(tt)[..., None] * d - np.sin(tt)[..., None] * zz
-            return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * w * vv ** 2 + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
+            return rad[..., None] * d + hz[..., None] * zz + (vv * w)[..., None] * t - o * (cup * (1 - 0.6 * np.clip(U, 0, 1) ** 3) * w * vv ** 2 + 0.25 * np.sin(np.pi * U) * w * 0)[..., None]
         b = (r0 * sc * math.cos(phi), r0 * sc * math.sin(phi), z0)
         part(100 + i, b, (-math.sin(phi), math.cos(phi), 0.0), 0.0, delay=0.32 * k)
         R.MORPHF[0] = (lambda U, V, Fo=Fo: R.rot(Fo(U, V) + np.array([R.C0, R.C0, 0.0])))
-        grid(S, F, 30, 18, mats[min(int(k * len(mats)), len(mats) - 1)], (0, 0, 0), flip=False)
+        grid(S, F, 40, 18, mats[min(int(k * len(mats)), len(mats) - 1)], (0, 0, 0), flip=False)
         R.MORPHF[0] = None
     body()
 
