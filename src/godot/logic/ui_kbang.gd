@@ -17,6 +17,7 @@ func _init(ui) -> void:
 func step(dt: float) -> void:   # dựng lại khi trạng thái đổi
 	if not on:
 		return
+	_fx_step(dt)
 	_sig_t -= dt
 	if _sig_t > 0.0:
 		return
@@ -267,6 +268,18 @@ func _dic(x: float, y: float, s: float, svg: String, op := 1.0) -> Dictionary:
 	n.css = n.css.duplicate()
 	n.css["opacity"] = str(op)
 	return n
+
+# (11-26) MỐC ĐỦ CHỜ NHẬN (chung: Năng động, Điểm tuần, mốc Điểm danh): ô lắc (fx "lac"), tia sáng vàng xoay sau ô (fx "tia"), nhãn đỏ "Nhận"
+const TIA := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><radialGradient id=\"g\" cx=\"50\" cy=\"50\" r=\"50\" gradientUnits=\"userSpaceOnUse\"><stop offset=\"0.3\" stop-color=\"rgb(255,196,40)\" stop-opacity=\"1\"/><stop offset=\"1\" stop-color=\"rgb(255,196,40)\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"h\" cx=\"50\" cy=\"50\" r=\"34\" gradientUnits=\"userSpaceOnUse\"><stop offset=\"0.4\" stop-color=\"rgb(255,236,150)\" stop-opacity=\"0.9\"/><stop offset=\"1\" stop-color=\"rgb(255,236,150)\" stop-opacity=\"0\"/></radialGradient></defs><path d=\"M50 50L99.7 44.8L99.7 55.2ZM50 50L95.7 70.3L90.5 79.4ZM50 50L79.4 90.5L70.3 95.7ZM50 50L55.2 99.7L44.8 99.7ZM50 50L29.7 95.7L20.6 90.5ZM50 50L9.5 79.4L4.3 70.3ZM50 50L0.3 55.2L0.3 44.8ZM50 50L4.3 29.7L9.5 20.6ZM50 50L20.6 9.5L29.7 4.3ZM50 50L44.8 0.3L55.2 0.3ZM50 50L70.3 4.3L79.4 9.5ZM50 50L90.5 20.6L95.7 29.7Z\" fill=\"url(#g)\"/><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"url(#h)\"/></svg>"
+func _fx_tia(cx: float, cy: float, s: float) -> Dictionary:   # tia sáng sau ô mốc (thêm vào trước ô: nằm dưới)
+	var n := _dic(cx - s * 0.5, cy - s * 0.5, s, TIA)
+	n.fx = "tia"
+	return n
+
+func _fx_nhan(cx: float, y: float) -> Dictionary:   # nhãn đỏ chữ trắng "Nhận" dưới ô mốc
+	var p := _onbtn(cx - 20.0, y, 40.0, 16.0, "Nhận", null, true)
+	p.kids[0].css["font-size"] = _cpx(10.0)
+	return p
 
 func _dtick(x: float, y: float, s := 11.0) -> Dictionary:   # dấu ✓ = ảnh tick chung (Snap)
 	var n := _cl(D.cell.got.kids[2])

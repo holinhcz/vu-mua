@@ -208,16 +208,19 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0) -> Arra
 		var cx := bxl + bxw * float(p) / float(maxi(1, top))
 		var got: bool = m[2]
 		var ok := cur >= p
+		if ok and not got:   # (11-26) đủ mốc chờ nhận: tia sáng sau ô
+			out.append(_fx_tia(cx, iy + cs * 0.5, cs * 1.9))
 		var c := _chip(cx - cs * 0.5, iy, cs, cs, "got" if got else ("now" if ok else "fut"))
 		var ks := [_dick(cx, iy + cs * 0.5, 24.0, String(m[1]), 0.5 if got else 1.0)]
 		c.kids = ks
 		if ok and not got:
 			c.act = m[3]
+			c.fx = "lac"
 		elif m.size() > 4:   # (bản 504) chạm quà chưa nhận / đã nhận: bong bóng hình, tên, quà bên trong
 			c.act = _dtip.bind(String(m[5]), "gift:" + String(m[1]), String(m[4]) + " · mốc " + str(p) + (" · đã nhận" if got else ""))
 		out.append(c)
 		out.append(_dbx(cx - 1.0, by - 1.0, 2.0, 9.0, "rgb(190, 160, 100)" if not ok else "rgb(32, 112, 58)", 1.0))
-		out.append(_dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 9.5, 700, SUB))
+		out.append(_fx_nhan(cx, by + 9.0) if ok and not got else _dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 9.5, 700, SUB))
 	return [out, by + 11.0 + 12.0 - y]
 
 # ------------------------------------------------------------------ tab Hằng ngày

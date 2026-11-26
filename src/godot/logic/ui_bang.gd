@@ -232,6 +232,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 	in0 = _in0(inner)
 	var io := Vector2(float(inn.r[0]), float(inn.r[1]))
 	var used := {}
+	_fx = []
 	for k in kids:
 		var key0: String = String(k.get("key", "")) if k.has("key") else JSON.stringify(k)
 		var key := key0
@@ -260,6 +261,8 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			inner._kids.move_child(node, -1)
 			inner._kids.move_child(inner._fg, -1)   # lớp chữ của khung luôn trên cùng (như Box.add)
 		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
+		if k.has("fx"):
+			_fx.append([node, String(k.fx)])
 	for key in _pool.keys():   # khối không còn: bỏ
 		if not used.has(key):
 			var c1 = _pool[key][0]
@@ -431,6 +434,25 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		out.append(c)
 		x += w + 4.5
 	seg.kids = out
+
+# (11-26) hiệu ứng khối (fx trong bản dựng): "lac" lắc vài cái rồi nghỉ, "tia" xoay chậm + sáng mờ đều
+var _fx := []
+var _fxt := 0.0
+func _fx_step(dt: float) -> void:
+	if _fx.is_empty():
+		return
+	_fxt += dt
+	var p := fmod(_fxt, 1.6)
+	for e in _fx:
+		var c: Control = e[0]
+		if not is_instance_valid(c):
+			continue
+		c.pivot_offset = c.size * 0.5
+		if e[1] == "lac":
+			c.rotation = sin(p * 34.0) * 0.16 * (1.0 - p / 0.55) if p < 0.55 else 0.0
+		else:
+			c.rotation = fmod(_fxt * 0.7, TAU)
+			c.modulate.a = 0.75 + 0.25 * sin(_fxt * 3.0)
 
 func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bản dựng
 	var n: Dictionary = b.get_meta("snap", {})

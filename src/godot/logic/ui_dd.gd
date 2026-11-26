@@ -135,16 +135,19 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
+		if ok and not got:   # (11-26) đủ mốc chờ nhận: tia sáng sau ô (chung với Sổ nhiệm vụ)
+			out.append(_fx_tia(cx, iy + ms * 0.5, ms * 1.9))
 		var ring := _chip(cx - ms * 0.5, iy, ms, ms, "got" if got else ("now" if ok else "fut"))   # vàng = đủ ngày, chờ bấm Nhận
 		ring.kids = [_dick(cx, iy + ms * 0.5, 32.0, String(R.ic))]
 		if got:
 			ring.kids.append(_dtick(cx + ms * 0.5 - 13.0, iy + 3.0, 10.0))
 		if ok and not got:
 			ring.act = E.eF.bind(n)
+			ring.fx = "lac"
 		else:
 			ring.act = _dtip.bind(String(R.t), "gift:" + String(R.ic), "Mốc " + str(n) + " ngày" + ("" if ok else " · còn " + str(n - v) + " ngày"))   # (bản 504) bong bóng: hình quà, tên, số lượng
 		out.append(ring)
-		out.append(_dt(cx - 30.0, ly, 60.0, 14.0, "Nhận" if ok and not got else (str(n) + " ngày"), 10.0, 800, GREEN if got else (GOLD if ok else (BROWN if nxt else SUB))))
+		out.append(_fx_nhan(cx, ly - 1.0) if ok and not got else _dt(cx - 30.0, ly, 60.0, 14.0, str(n) + " ngày", 10.0, 800, GREEN if got else (BROWN if nxt else SUB)))
 		if nxt:   # (11-26) mốc kế tiếp: "còn N ngày" trên nhãn đỏ chữ trắng, nổi rõ
 			var ct := "còn " + str(n - v) + " ngày"
 			var cw2: float = Box.text_w(ct, 10.0, 800) + 14.0
