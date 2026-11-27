@@ -13,10 +13,13 @@ extends "res://logic/ui_kbang.gd"
 # Logic dùng lại của ui.gd: U.od_src, U._od_order, U._od_deliver / _od_get / _od_lack_btn / _od_swap, U.od_ud.
 
 const HEAD := 26.0
-const FOOT := 116.0   # dải chi tiết đáy
+const FW := 112.0     # dải chi tiết đáy khi khách đang tới
+const IR := 26.0      # dòng món ở dải đáy
+const RG6 := 6.0      # cách giữa hai kệ giỏ
+const KE_H := 20.0    # kệ tre dưới giỏ (thanh + chân) tới tên khách
 const GA := 336.0 / 616.0   # giỏ: cao / rộng
 const GV := 0.512     # vành trước giữa giỏ (phần chiều cao)
-const GT := 12.0      # chừa trên giỏ cho bong bóng ló khỏi miệng
+const GT := 10.0      # chừa trên giỏ cho bong bóng ló khỏi miệng
 const BW := 94.0      # giỏ rộng
 const SZ := {1: 40.0, 2: 34.0, 3: 28.0}   # bong bóng theo số món
 const XS := {1: [0.5], 2: [0.35, 0.65], 3: [0.25, 0.5, 0.75]}
@@ -80,18 +83,24 @@ func _build() -> void:
 		if cs.size():
 			_kfix(n, vt, cs, 26.0, false)
 	if sel >= 0:
-		_kfix(n, vt, _foot(sel, U._od_list()[sel], plan[sel]), FOOT, true)
+		var so: Dictionary = U._od_list()[sel]
+		_kfix(n, vt, _foot(sel, so, plan[sel]), _foot_h(so, plan[sel]), true)
 	var out := []
 	var cw := XW / 3.0
-	var bw := minf(BW, cw - 2.0)
-	var ch := GT + bw * GA + 18.0
 	var rows := ceili(L.size() / 3.0)
-	if src == "" and rows > 0:   # giỏ giãn đều theo chiều cao thân (không dồn hết khoảng trống xuống dưới)
-		ch = clampf(float(vt.r[3]) / rows, ch, ch + 18.0)
+	var avail := float(vt.r[3])
+	var bw := minf(BW, cw - 2.0)
+	if src == "" and rows > 0:   # kệ giỏ sít nhau (cách RG6); không vừa thân thì thu giỏ nhỏ lại cho vừa, không cuộn
+		bw = clampf((avail - rows * (GT + KE_H) - (rows - 1) * RG6) / (rows * GA), 70.0, bw)
+	var ch := GT + bw * GA + KE_H
+	var gh := rows * ch + maxf(0.0, rows - 1) * RG6
+	var y0 := maxf(0.0, (avail - gh) * 0.5) if src == "" else 0.0   # ít đơn: cụm kệ nằm giữa thân
+	for r in rows:
+		out.append(_ke(y0 + r * (ch + RG6) + GT + bw * GA * 0.95))
 	for q in L.size():
 		var f: int = L[q][1]
-		out.append_array(_gio(X0 + (q % 3) * cw + (cw - bw) * 0.5, (q / 3) * ch, bw, cw, f, U._od_list()[f], plan[f]))
-	var y := rows * ch
+		out.append_array(_gio(X0 + (q % 3) * cw + (cw - bw) * 0.5, y0 + (q / 3) * (ch + RG6), bw, cw, f, U._od_list()[f], plan[f]))
+	var y := y0 + gh
 	if src != "":
 		var mn := _menu(y + 6.0)
 		out.append_array(mn[0])
@@ -165,6 +174,13 @@ func _rank(plan: Array) -> void:   # cấp giỏ theo hạng thưởng các đơ
 	for r in n:
 		_cap[fs[r]] = 4 if r < n4 else (3 if r < n4 + n3 else (2 if r < n4 + n3 + n2 else 1))
 
+const KE := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 20\" preserveAspectRatio=\"none\"><defs><linearGradient id=\"t\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"rgb(236,206,120)\"/><stop offset=\"0.5\" stop-color=\"rgb(206,164,74)\"/><stop offset=\"1\" stop-color=\"rgb(150,108,40)\"/></linearGradient></defs><rect x=\"10\" y=\"8\" width=\"7\" height=\"12\" rx=\"2\" fill=\"rgb(150,108,40)\"/><rect x=\"283\" y=\"8\" width=\"7\" height=\"12\" rx=\"2\" fill=\"rgb(150,108,40)\"/><rect x=\"0\" y=\"1\" width=\"300\" height=\"9\" rx=\"4.5\" fill=\"url(#t)\" stroke=\"rgb(122,84,30)\" stroke-width=\"0.8\"/><g fill=\"rgb(150,108,40)\"><rect x=\"48\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"112\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"186\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"250\" y=\"1\" width=\"2.4\" height=\"9\"/></g><rect x=\"6\" y=\"2.5\" width=\"288\" height=\"1.6\" rx=\"0.8\" fill=\"rgb(255,240,190)\" fill-opacity=\"0.8\"/></svg>"
+
+func _ke(y: float) -> Dictionary:   # kệ tre ngang dưới một hàng giỏ (thanh tre có mắt + 2 chân), giỏ đứng trên kệ
+	var d := _dic(X0 - 4.0, y, XW + 8.0, KE)
+	d.r = [X0 - 4.0, y, XW + 8.0, 13.0]
+	return d
+
 func _art(c: int, lop: String, x: float, y: float, w: float, h: float) -> Dictionary:   # một lớp hình giỏ cấp c
 	return _pic(x, y, w, h, "res://ui/img/gio/gio" + str(c) + "_" + lop + ".webp")
 
@@ -188,6 +204,13 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	var ok: bool = pl != null and pl.ok
 	var is_sel := f == sel
 	var by := y + GT - (4.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
+	if c == 4:   # giỏ cấp 4: tia sáng xoay sau giỏ
+		out.append(_fx_tia(x + w * 0.5, by + h * 0.45, w * 1.05))
+	elif c == 3 and not (ok or is_sel):   # cấp 3: quầng vàng nhạt
+		var g3 := _dic(x - 6.0, by - 6.0, w + 12.0, SANG % ["rgb(255,214,110)", "rgb(255,214,110)"])
+		g3.r = [x - 6.0, by - 6.0, w + 12.0, h + 12.0]
+		g3.css["opacity"] = "0.6"
+		out.append(g3)
 	if ok or is_sel:   # quầng: xanh = đủ hàng (nhấp nháy), vàng = đang chọn
 		var gc := "rgb(255,200,60)" if is_sel else "rgb(110,220,90)"
 		var gl := _dic(x - 8.0, by - 10.0, w + 16.0, SANG % [gc, gc])
@@ -218,13 +241,24 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		out.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
 	if pl != null and o.get("hot", -1) == G.day():
 		out.append(_tem(x - 2.0, by + h * 0.45))
-	var nm: String = String(o.who) if pl != null else "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
-	var nx := x + (w - cw) * 0.5
-	out.append(_dt(nx, y + GT + h + 2.0, cw, 14.0, _fitw(nm, 10.5, 800, cw - 4.0), 10.5, 800, BROWN if pl != null else SUB))
 	if pl == null:   # khách đang tới: giỏ mờ
-		for q in [-2, -3]:
-			out[out.size() + q].css["opacity"] = "0.45"
-	var hit := _dbx(nx, y, cw, GT + h + 18.0, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
+		out[out.size() - 1].css["opacity"] = "0.45"
+		out[out.size() - 2].css["opacity"] = "0.45"
+	# tên khách + sao cấp giỏ (★ = cấp), dưới kệ
+	var nx := x + (w - cw) * 0.5
+	var ny := y + GT + h + KE_H - 15.0
+	if pl == null:
+		var wt: String = "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
+		out.append(_dt(nx, ny, cw, 14.0, _fitw(wt, 10.5, 800, cw - 4.0), 10.5, 800, SUB))
+	else:
+		var sw := c * 9.0 + 2.0
+		var nm: String = _fitw(String(o.who), 10.5, 800, cw - 4.0 - sw)
+		var nw: float = Box.text_w(nm, 10.5, 800) + 1.0
+		var sx := nx + (cw - nw - sw) * 0.5
+		out.append(_dt(sx, ny, nw, 14.0, nm, 10.5, 800, BROWN, "left"))
+		for q in c:
+			out.append(_pic(sx + nw + 2.0 + q * 9.0, ny + 2.5, 9.0, 9.0, "res://ui/img/bong/sao.png"))
+	var hit := _dbx(nx, y, cw, GT + h + KE_H, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
 	var ff := f
 	hit.act = func():
 		sel = ff
@@ -235,17 +269,22 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 func _face(who: String) -> String:   # chân dung tròn chung của xóm (vlface/m*), cố định theo tên khách
 	return "res://ui/img/vlface/m" + str(absi(who.hash()) % 8) + ".webp"
 
-func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của đơn đang chọn (y từ 0, cao FOOT)
+func _foot_h(o: Dictionary, pl) -> float:   # cao dải đáy: đầu 46 + dòng món + nút 30
+	if pl == null:
+		return FW
+	return 46.0 + o.items.size() * (IR + 2.0) + 4.0 + 30.0
+
+func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của đơn đang chọn (y từ 0, cao _foot_h)
 	var out := [_dbx(X0, 0.0, XW, 1.5, GOLD_L, 0.0)]
 	var who := String(o.get("who", ""))
-	var fr := _dbx(X0, 8.0, 38.0, 38.0, "rgb(243, 230, 200)", 19.0, _cpx(2.0) + " solid rgb(255, 255, 255)", "0px 0px 0px 2px rgb(232, 160, 32)")
-	fr.kids = [_pic(X0 + 2.0, 10.0, 34.0, 34.0, _face(who))]
+	var fr := _dbx(X0, 6.0, 34.0, 34.0, "rgb(243, 230, 200)", 17.0, _cpx(2.0) + " solid rgb(255, 255, 255)", "0px 0px 0px 2px rgb(232, 160, 32)")
+	fr.kids = [_pic(X0 + 2.0, 8.0, 30.0, 30.0, _face(who))]
 	out.append(fr)
-	var tw := XW - 46.0 - 90.0
-	out.append(_dt(X0 + 46.0, 8.0, tw, 18.0, _fitw(who, 14.0, 800, tw), 14.0, 800, BROWN, "left"))
+	var tw := XW - 42.0 - 90.0
+	out.append(_dt(X0 + 42.0, 5.0, tw, 18.0, _fitw(who, 14.0, 800, tw), 14.0, 800, BROWN, "left"))
 	if pl == null:   # khách đang tới
 		var s: float = (float(o.w) - G._now_ms()) / 1000.0
-		out.append(_dt(X0 + 46.0, 27.0, tw + 90.0, 16.0, "Khách mới tới sau " + U.rf(s), 12.0, 700, SUB, "left"))
+		out.append(_dt(X0 + 42.0, 23.0, tw + 90.0, 16.0, "Khách mới tới sau " + U.rf(s), 12.0, 700, SUB, "left"))
 		out.append_array(_bar(X0, 58.0, XW, clampf(1.0 - s * 1000.0 / G.Y8, 0.0, 1.0), 5.0))
 		if src == "":
 			var b := _btn(X0, 80.0, XW, 30.0, "", func(): G.call_now(f), "plain")
@@ -257,35 +296,39 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 				b.kids.append(k)
 			out.append(b)
 		return out
-	out.append(_dt(X0 + 46.0, 27.0, tw, 16.0, _fitw(String(o.shop), 12.0, 700, tw), 12.0, 700, SUB, "left"))
+	out.append(_dt(X0 + 42.0, 23.0, tw, 16.0, _fitw(String(o.shop), 12.0, 700, tw), 12.0, 700, SUB, "left"))
 	# thưởng: xu + sao xanh, hai dòng bên phải
 	var s1: String = "+" + G.fmt_n(int(o.reward))
 	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
 	var rw: Array = _rowi(0.0, 0.0, 18.0, [s1, "c"], 14.0, 800, "rgb(214, 128, 20)")
 	var re: Array = _rowi(0.0, 0.0, 18.0, [s2, "i:pic:res://ui/img/bong/sao_xanh.png"], 14.0, 800, XP_C)
 	for k in rw[0]:
-		Snap._move(k, Vector2(X0 + XW - float(rw[1]), 8.0))
+		Snap._move(k, Vector2(X0 + XW - float(rw[1]), 5.0))
 		out.append(k)
 	for k in re[0]:
-		Snap._move(k, Vector2(X0 + XW - float(re[1]), 27.0))
+		Snap._move(k, Vector2(X0 + XW - float(re[1]), 23.0))
 		out.append(k)
-	# từng món: hình + có/cần
-	var ix := X0
+	# từng món một dòng: hình, tên, có/cần (đủ: xanh + tích; thiếu: đỏ)
+	var iy := 46.0
 	for q in o.items.size():
 		var id: String = String(o.items[q][0])
 		var need := int(o.items[q][1])
 		var have: int = int(pl.have[q])
 		var good := have >= need
-		var ic := _icn(ix + 13.0, 64.0, 26.0, id)
-		if not good:
-			ic.css["opacity"] = "0.45"
-		out.append(ic)
+		var row := _dbx(X0, iy, XW, IR, "rgb(236, 246, 228)" if good else "rgb(250, 238, 218)", 7.0)   # nền phẳng dòng món (không viền); chữ là con của nền (không bị nền đè)
 		var qs: String = G.fmt_n(have) + "/" + str(need)
 		var qw: float = Box.text_w(qs, 12.0, 800) + 2.0
-		out.append(_dt(ix + 29.0, 56.0, qw, 16.0, qs, 12.0, 800, GREEN if good else DOWN_C, "left"))
-		ix += 29.0 + qw + 12.0
+		var rx0 := X0 + XW - 8.0 - (16.0 if good else 0.0)
+		var nw := rx0 - qw - X0 - 36.0
+		row.kids = [_icn(X0 + 15.0, iy + IR * 0.5, 22.0, id),
+			_dt(X0 + 30.0, iy, nw, IR, _fitw(String(G.item_name(id)), 12.0, 700, nw), 12.0, 700, BROWN, "left"),
+			_dt(rx0 - qw, iy, qw, IR, qs, 12.0, 800, GREEN if good else DOWN_C, "right")]
+		if good:
+			row.kids.append(_dtick(X0 + XW - 20.0, iy + (IR - 13.0) * 0.5, 13.0))
+		out.append(row)
+		iy += IR + 2.0
 	# nút: Giao hàng / Đi lấy + bù sen, Đổi
-	var by := 80.0
+	var by := iy + 4.0
 	var bh := 30.0
 	var rx := X0 + XW
 	if src == "":
