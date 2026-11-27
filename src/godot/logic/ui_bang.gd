@@ -263,7 +263,6 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			inner._kids.move_child(inner._fg, -1)   # lớp chữ của khung luôn trên cùng (như Box.add)
 		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
 		if k.has("fx"):
-			node.set_meta("fx0", node.position)   # chỗ gốc (hiệu ứng chạy ngang "quet")
 			_fx.append([node, String(k.fx)])
 	for key in _pool.keys():   # khối không còn: bỏ
 		if not used.has(key):
@@ -461,16 +460,6 @@ func _fx_step(dt: float) -> void:
 			c.rotation = sin(p * 34.0) * 0.16 * (1.0 - p / 0.55) if p < 0.55 else 0.0
 		elif e[1] == "nhay":   # (11-27) viền sáng nhấp nháy (thẻ đơn đủ hàng)
 			c.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * sin(_fxt * 4.0))
-		elif e[1].begins_with("quet:"):   # (11-27) vệt ánh kim quét ngang: chạy 0,9 giây, nghỉ 2,1 giây (span = quãng chạy, css)
-			var q := fmod(_fxt, 3.0) / 0.9
-			var p0: Vector2 = c.get_meta("fx0", c.position)
-			c.position.x = p0.x + float(e[1].substr(5)) * Css.K * minf(q, 1.0)
-			c.modulate.a = sin(PI * q) if q < 1.0 else 0.0
-		elif e[1].begins_with("lap:"):   # (11-27) đốm lấp lánh: sáng lên rồi tắt, lệch pha theo số sau "lap:"
-			var k := fmod(_fxt * 1.3 + float(e[1].substr(4)), 2.0)
-			var a := sin(PI * k) if k < 1.0 else 0.0
-			c.modulate.a = a
-			c.scale = Vector2.ONE * (0.4 + 0.6 * a)
 		else:
 			c.rotation = fmod(_fxt * 0.7, TAU)
 			c.modulate.a = 0.75 + 0.25 * sin(_fxt * 3.0)

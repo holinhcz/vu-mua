@@ -1957,7 +1957,6 @@ func _mat_id(name: String) -> String:
 
 # ------------------------------------------------------------------ chạm ô ruộng (c2 bản web)
 # ------------------------------------------------------------------ đơn hàng (#pn-orders, ws / jp bản web)
-const OD_HD := ["#b5653a", "#5f8a3c", "#c4932c", "#4f7896", "#7a5a8c", "#3f8a7a", "#a34d70"]
 var od_on := false
 var od_src := ""              # (bản 353) "" = Đơn hàng; quancom / taphoa / cafe = khách quán (w_quan.cards) trên cùng bảng
 var od_L := []                # danh sách thẻ của od_src (làm mới mỗi lần _ord_sync)
@@ -2024,30 +2023,6 @@ static func rf(t: float) -> String:   # RF(ao): 4p 59s / 12p / 40s
 	if m:
 		return str(m) + "p" + ((" " + str(e) + "s") if e else "")
 	return str(e) + "s"
-
-func _od_colors() -> Dictionary:
-	# K9: màu chữ cái theo tên khách, trùng màu thì lấy màu kế
-	var used := {}
-	var out := {}
-	for f in G.g.orders.size():
-		var c: Dictionary = G.g.orders[f]
-		if G.ord_wait(c):
-			continue
-		var a := 0
-		for ch in String(c.who):
-			a = (a * 31 + ch.unicode_at(0)) & 0xffffffff
-			if a >= 0x80000000:
-				a -= 0x100000000
-		var h := absi(a) % OD_HD.size()
-		var s: String = OD_HD[h]
-		var p := 0
-		while used.has(s) and p < OD_HD.size():
-			p += 1
-			h = (h + 1) % OD_HD.size()
-			s = OD_HD[h]
-		used[s] = 1
-		out[f] = s
-	return out
 
 func qk_open(k: String) -> void:   # bảng khách quán: dùng chung bảng Đơn hàng
 	ord_open(k)
