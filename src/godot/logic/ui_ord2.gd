@@ -4,7 +4,9 @@ extends "res://logic/ui_kbang.gd"
 #   Thân (cuộn): mỗi đơn một giỏ tre nhìn nghiêng 2.5D, 3 cột, đặt thẳng trên nền bảng; giỏ 4 cấp theo hạng thưởng trong bảng
 #     (cấp 4 sơn son đai đồng = đơn thưởng cao nhất, cấp 3 ~22% kế, cấp 2 ~30% kế, còn lại cấp 1 tre tươi):
 #     bong bóng món nằm trong lòng giỏ (chỉ hình món; vòng tiến độ có/cần quanh bóng; món thiếu bóng trong, hình mờ),
-#     tên khách dưới giỏ; đủ hàng quầng xanh nhấp nháy + dấu tích; đơn gấp tem GẤP; giỏ đang chọn nhô lên + quầng vàng.
+#     tên khách + sao cấp dưới đế; đủ hàng quầng xanh nhấp nháy + dấu tích + giỏ nảy + đốm sáng bay lên; đơn gấp tem GẤP;
+#     giỏ đang chọn nhô lên + quầng vàng + nảy bung lúc chọn; bong bóng nhấp nhô; cấp 3-4 vệt ánh kim quét thân giỏ, cấp 4 lấp lánh.
+#   Giao: bong bóng vỡ thành bọt, giỏ nhấc khỏi đế bay vòng lên ô xu, hoa giấy, xu + sao bay theo đường cong; giỏ mới rơi xuống đế nảy.
 #   Đáy (cố định): chi tiết giỏ đang chọn: mặt khách, tên, quán, thưởng xu + sao xanh, từng món có/cần, nút Giao hàng /
 #     Đi lấy + bù sen + Đổi; khách đang tới: giờ chờ, thanh, Gọi. Giao: xu + sao bay về ô xu / ô cấp.
 #   Mỗi giỏ đặt trên đế gỗ tràm 4 chân (ui/img/gio/de.webp, 616x455, cùng góc trên trái + bề ngang với giỏ).
@@ -32,6 +34,8 @@ const DOWN_C := "rgb(214, 69, 65)"
 var src := ""
 var sel := -1   # đơn đang chọn (chỉ số trong U._od_list)
 var _cap := {}   # đơn f -> cấp giỏ 1..4
+var _sel_t := 0.0   # lúc vừa chọn giỏ (giây, nảy bung một nhịp)
+var _drop := {}     # đơn f -> lúc vừa giao (giỏ mới rơi xuống đế)
 
 func _init(ui) -> void:
 	super(ui)
@@ -197,13 +201,6 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	var ok: bool = pl != null and pl.ok
 	var is_sel := f == sel
 	var by := y + GT - (4.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
-	if c == 4:   # giỏ cấp 4: tia sáng xoay sau giỏ
-		out.append(_fx_tia(x + w * 0.5, by + h * 0.45, w * 1.05))
-	elif c == 3 and not (ok or is_sel):   # cấp 3: quầng vàng nhạt
-		var g3 := _dic(x - 6.0, by - 6.0, w + 12.0, SANG % ["rgb(255,214,110)", "rgb(255,214,110)"])
-		g3.r = [x - 6.0, by - 6.0, w + 12.0, h + 12.0]
-		g3.css["opacity"] = "0.6"
-		out.append(g3)
 	if ok or is_sel:   # quầng: xanh = đủ hàng (nhấp nháy), vàng = đang chọn
 		var gc := "rgb(255,200,60)" if is_sel else "rgb(110,220,90)"
 		var gl := _dic(x - 8.0, by - 10.0, w + 16.0, SANG % [gc, gc])
@@ -211,8 +208,30 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		if ok and not is_sel:
 			gl.fx = "nhay"
 		out.append(gl)
-	out.append(_pic(x, y + GT, w, w * 455.0 / 616.0, "res://ui/img/gio/de.webp"))   # đế gỗ tràm (đứng yên khi giỏ nhô lên)
-	out.append(_art(c, "sau", x, by, w, h))
+	out.append(_pic(x, y + GT, w, w * 455.0 / 616.0, "res://ui/img/gio/de.webp"))   # đế gỗ tràm (đứng yên khi giỏ nảy)
+	# giỏ = một khối (giỏ sau, bong bóng, giỏ trước, dấu tích, tem): nảy / rơi / bay đi cùng nhau; đế đứng yên
+	var g := _dbx(x - 4.0, y, w + 8.0, GT + h, "rgba(0, 0, 0, 0)", 0.0)
+	g.gk = f
+	var gf := []
+	var now := Time.get_ticks_msec() / 1000.0
+	if _drop.has(f) and now - float(_drop[f]) < 1.4:
+		gf.append("roi:" + str(_drop[f]))   # giỏ mới rơi xuống đế sau khi giao
+	elif is_sel and now - _sel_t < 0.6:
+		gf.append("chon:" + str(_sel_t))   # vừa chọn: nảy bung một nhịp
+	elif ok:
+		gf.append("nay")
+	if ok:
+		gf.append("hat:xanh")   # đủ hàng: đốm sáng bay lên
+	if c == 4 and pl != null:
+		gf.append("hat:lap")    # giỏ cấp 4: lấp lánh
+	if not gf.is_empty():
+		g.fx = "|".join(gf)
+	var sau := _art(c, "sau", x, by, w, h)
+	var tru := _art(c, "truoc", x, by, w, h)
+	if c >= 3:   # cấp 3, 4: vệt ánh kim quét qua thân giỏ
+		sau.fx = "kim" if c == 4 else "kim3"
+		tru.fx = sau.fx
+	g.kids = [sau]
 	if pl != null:
 		var ni: int = mini(3, o.items.size())
 		var s: float = SZ[ni]
@@ -223,21 +242,23 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 			var good := have >= need
 			var cx: float = x + w * float(XS[ni][q])
 			var cy: float = by + GV * h - s * 0.32 - (3.0 if ni == 3 and q == 1 else 0.0)   # chân bóng lọt dưới vành trước
-			out.append(_vong(cx, cy, s * 0.5 + 3.0, float(have) / maxf(1.0, need), GREEN if good else "rgb(240,160,32)"))
-			var op := "1" if good else "0.7"
-			out.append(_dic(cx - s * 0.5, cy - s * 0.5, s, BONG % [op, op, op]))
+			var r := s * 0.5 + 3.0
+			var bb := _dbx(cx - r, cy - r, r * 2.0, r * 2.0, "rgba(0, 0, 0, 0)", 0.0)   # một bong bóng: vòng + bóng + hình, nhấp nhô lệch nhịp
+			bb.fx = "nhap:" + str(q * 2.1 + f * 0.7)
+			var op := "1" if good else "0.85"
 			var ic := _icn(cx, cy, s * 0.72, id)
 			if not good:
-				ic.css["opacity"] = "0.5"   # món thiếu: hình mờ trong bóng trong
-			out.append(ic)
-	out.append(_art(c, "truoc", x, by, w, h))
+				ic.css["opacity"] = "0.6"   # món thiếu: hình mờ trong bóng đục
+			bb.kids = [_vong(cx, cy, r, float(have) / maxf(1.0, need), GREEN if good else "rgb(240,160,32)"), _dic(cx - s * 0.5, cy - s * 0.5, s, BONG % [op, op, op]), ic]
+			g.kids.append(bb)
+	g.kids.append(tru)
 	if ok:
-		out.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
+		g.kids.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
 	if pl != null and o.get("hot", -1) == G.day():
-		out.append(_tem(x - 2.0, by + h * 0.45))
+		g.kids.append(_tem(x - 2.0, by + h * 0.45))
 	if pl == null:   # khách đang tới: giỏ mờ (đế giữ nguyên)
-		out[out.size() - 1].css["opacity"] = "0.45"
-		out[out.size() - 2].css["opacity"] = "0.45"
+		g.css["opacity"] = "0.45"
+	out.append(g)
 	# tên khách + sao cấp giỏ (★ = cấp), dưới kệ
 	var nx := x + (w - cw) * 0.5
 	var ny := y + GT + w * DE_A + 1.0
@@ -256,6 +277,7 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	var ff := f
 	hit.act = func():
 		sel = ff
+		_sel_t = Time.get_ticks_msec() / 1000.0
 		_build()
 	out.append(hit)
 	return out
@@ -333,7 +355,8 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 		rx -= 8.0
 	if pl.ok:
 		out.append(_btn(X0, by, rx - X0, bh, "Giao hàng", func():
-			_burst()
+			_giao(f)
+			_drop[f] = Time.get_ticks_msec() / 1000.0
 			U._od_deliver(f)))
 	else:
 		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() and src == "" else 0
@@ -356,11 +379,125 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 		out.append(_btn(X0, by, rx - X0, bh, "Đi lấy ›", func(): U._od_get(f), "plain"))
 	return out
 
-func _burst() -> void:   # giao: xu bay về ô xu, sao xanh bay về ô cấp, tung ra từ nút vừa bấm
-	var b: Control = U.last_btn
-	if b == null or not is_instance_valid(b):
+func _gnode(f: int) -> Control:   # khối giỏ của đơn f đang hiện
+	if inner == null:
+		return null
+	for c in inner._kids.get_children():
+		if c is Control and int(c.get_meta("snap", {}).get("gk", -1)) == f:
+			return c
+	return null
+
+func _giao(f: int) -> void:   # giao: bong bóng vỡ bụp thành bọt, giỏ nhấc khỏi đế bay vòng lên ô xu, hoa giấy + xu + sao bay theo đường cong
+	var g := _gnode(f)
+	if g == null:
 		return
-	var c: Vector2 = b.get_global_transform_with_canvas() * (b.size * 0.5)
+	var L: CanvasLayer = U.fx_layer()
+	var xf: Transform2D = g.get_global_transform_with_canvas()
+	var fly := Control.new()
+	fly.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fly.position = xf.origin
+	fly.scale = xf.get_scale()
+	fly.size = g.size
+	fly.pivot_offset = g.size * 0.5
+	L.add_child(fly)
+	var gc: Vector2 = xf * (g.size * 0.5)
+	for k in g.kids():
+		var sn: Dictionary = k.get_meta("snap", {})
+		if sn.has("pic"):   # lớp giỏ sau / trước bay theo
+			var tr := TextureRect.new()
+			tr.texture = Css.image(String(sn.pic))
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.position = k.position
+			tr.size = k.size
+			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fly.add_child(tr)
+		elif String(sn.get("fx", "")).begins_with("nhap:"):   # bong bóng: vỡ thành bọt, hình món phồng lên rồi tan
+			var bc: Vector2 = k.get_global_transform_with_canvas() * (k.size * 0.5)
+			_bot(L, bc, k.size.x * xf.get_scale().x)
+			for kk in k.kids():
+				var s2: Dictionary = kk.get_meta("snap", {})
+				if s2.has("ic"):
+					var t: Texture2D = U.item_ic(String(s2.ic), kk.size.x * xf.get_scale().x)
+					if t != null:
+						var ir := TextureRect.new()
+						ir.texture = t
+						ir.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+						ir.size = kk.size * xf.get_scale()
+						ir.pivot_offset = ir.size * 0.5
+						ir.position = bc - ir.size * 0.5
+						ir.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						L.add_child(ir)
+						var tw0 := ir.create_tween()
+						tw0.tween_property(ir, "scale", Vector2(1.5, 1.5), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+						tw0.parallel().tween_property(ir, "modulate:a", 0.0, 0.3).set_delay(0.1)
+						tw0.tween_callback(ir.queue_free)
+	_hoa(L, gc)
+	_burst(gc)
+	var tg: Control = U.hid.get("#coinsPill")
+	var dst: Vector2 = tg.get_global_rect().get_center() if tg != null and is_instance_valid(tg) else Vector2(gc.x, 0.0)
+	var a := fly.position
+	var b := dst - fly.size * fly.scale * 0.5
+	var ctl := Vector2((a.x + b.x) * 0.5 - 60.0 * Css.K, minf(a.y, b.y) - 90.0 * Css.K)
+	var tw := fly.create_tween()
+	tw.tween_property(fly, "position", a - Vector2(0, 10.0 * Css.K), 0.16).set_delay(0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var a2 := a - Vector2(0, 10.0 * Css.K)
+	var sc0 := xf.get_scale()
+	var step := func(t: float):
+		var u := 1.0 - t
+		fly.position = u * u * a2 + 2.0 * u * t * ctl + t * t * b
+		fly.scale = sc0 * lerpf(1.0, 0.25, t)
+		fly.rotation = -0.5 * t
+		fly.modulate.a = 1.0 - maxf(0.0, t - 0.7) / 0.3
+	tw.tween_method(step, 0.0, 1.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tw.tween_callback(fly.queue_free)
+
+func _bot(L: CanvasLayer, c: Vector2, d: float) -> void:   # bọt vỡ (hạt trắng tung ra một lần)
+	var p := CPUParticles2D.new()
+	p.texture = dot_tex("tron")
+	p.position = c
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.amount = 12
+	p.lifetime = 0.5
+	p.spread = 180.0
+	p.gravity = Vector2(0, 60.0 * Css.K)
+	p.initial_velocity_min = d * 1.2
+	p.initial_velocity_max = d * 2.4
+	p.scale_amount_min = d / 32.0 * 0.12
+	p.scale_amount_max = d / 32.0 * 0.26
+	var rp := Gradient.new()
+	rp.set_color(0, Color(1, 1, 1, 0.95))
+	rp.set_color(1, Color(0.85, 0.93, 1.0, 0.0))
+	p.color_ramp = rp
+	p.emitting = true
+	L.add_child(p)
+	p.finished.connect(p.queue_free)
+
+func _hoa(L: CanvasLayer, c: Vector2) -> void:   # hoa giấy nổ nhẹ
+	var p := CPUParticles2D.new()
+	p.position = c
+	p.one_shot = true
+	p.explosiveness = 0.9
+	p.amount = 28
+	p.lifetime = 1.1
+	p.direction = Vector2(0, -1)
+	p.spread = 70.0
+	p.gravity = Vector2(0, 320.0 * Css.K)
+	p.initial_velocity_min = 120.0 * Css.K
+	p.initial_velocity_max = 220.0 * Css.K
+	p.angular_velocity_min = -360.0
+	p.angular_velocity_max = 360.0
+	p.scale_amount_min = 3.0 * Css.K
+	p.scale_amount_max = 5.0 * Css.K
+	var cr := Gradient.new()
+	cr.offsets = PackedFloat32Array([0.0, 0.25, 0.5, 0.75, 1.0])
+	cr.colors = PackedColorArray([Color8(232, 64, 52), Color8(250, 196, 40), Color8(70, 180, 90), Color8(60, 140, 230), Color8(240, 120, 180)])
+	p.color_initial_ramp = cr
+	p.emitting = true
+	L.add_child(p)
+	p.finished.connect(p.queue_free)
+
+func _burst(c: Vector2) -> void:   # xu bay về ô xu, sao xanh bay về ô cấp, theo đường cong (tung ra rồi vòng lên)
 	var L: CanvasLayer = U.fx_layer()
 	var tg := {"coin": U.hid.get("#coinsPill"), "sao": U.hid.get("#pcAv")}
 	var n := 10
@@ -376,14 +513,23 @@ func _burst() -> void:   # giao: xu bay về ô xu, sao xanh bay về ô cấp, 
 		tr.pivot_offset = tr.size * 0.5
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var ang := TAU * q / float(n + 4)
-		var mid := c + Vector2(cos(ang), sin(ang)) * randf_range(30.0, 60.0) * Css.K - tr.size * 0.5
-		tr.position = c - tr.size * 0.5
+		var a := c - tr.size * 0.5
+		var mid := a + Vector2(cos(ang), sin(ang)) * randf_range(30.0, 60.0) * Css.K
+		var b := dst - tr.size * 0.5
+		var ctl := Vector2(mid.x + randf_range(-50.0, 50.0) * Css.K, minf(mid.y, b.y) - randf_range(20.0, 70.0) * Css.K)
+		tr.position = a
+		tr.modulate.a = 0.0
 		L.add_child(tr)
 		var tw := tr.create_tween()
-		tw.tween_property(tr, "position", mid, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tw.tween_interval(0.05 + 0.03 * q)
-		tw.tween_property(tr, "position", dst - tr.size * 0.5, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.parallel().tween_property(tr, "scale", Vector2(0.6, 0.6), 0.5)
+		tw.tween_interval(0.18)
+		tw.tween_property(tr, "modulate:a", 1.0, 0.05)
+		tw.tween_property(tr, "position", mid, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(0.03 * q)
+		var st := func(u: float):
+			var v := 1.0 - u
+			tr.position = v * v * mid + 2.0 * v * u * ctl + u * u * b
+			tr.scale = Vector2.ONE * lerpf(1.0, 0.6, u)
+		tw.tween_method(st, 0.0, 1.0, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		tw.tween_callback(tr.queue_free)
 
 func _tem(x: float, y: float) -> Dictionary:   # tem "GẤP": nền đỏ viền trắng, nghiêng

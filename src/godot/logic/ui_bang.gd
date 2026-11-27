@@ -262,8 +262,7 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 			inner._kids.move_child(node, -1)
 			inner._kids.move_child(inner._fg, -1)   # lớp chữ của khung luôn trên cùng (như Box.add)
 		U._move(node, Vector2(float(k.r[0]), float(k.r[1])) - io)
-		if k.has("fx"):
-			_fx.append([node, String(k.fx)])
+		_reg_fx(node, k)
 	for key in _pool.keys():   # khối không còn: bỏ
 		if not used.has(key):
 			var c1 = _pool[key][0]
@@ -443,24 +442,178 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		x += w + 4.5
 	seg.kids = out
 
-# (11-26) hiệu ứng khối (fx trong bản dựng): "lac" lắc vài cái rồi nghỉ, "tia" xoay chậm + sáng mờ đều
+# (11-26) hiệu ứng khối (fx trong bản dựng, cả khối con): "lac" lắc vài cái rồi nghỉ, "tia" xoay chậm + sáng mờ đều,
+# (11-27) "nhay" sáng mờ nhấp nháy, "nhap:<pha>" nhấp nhô lên xuống, "nay" nảy co giãn (chân dưới) vài giây một lần,
+#   "chon:<giây>" nảy bung một nhịp lúc vừa chọn, "roi:<giây>" rơi xuống bật nảy (sau <giây>), "kim" / "kim3" vệt ánh kim
+#   quét qua đúng hình (shader trên lớp hình), "hat:xanh" đốm sáng bay lên, "hat:lap" lấp lánh quanh khối (hạt CPUParticles2D).
+#   Nhiều hiệu ứng một khối: nối bằng "|".
 var _fx := []
 var _fxt := 0.0
+
+func _reg_fx(node: Control, k: Dictionary) -> void:   # gom hiệu ứng của khối + khối con (đệ quy), ghi chỗ gốc để hiệu ứng dời chỗ
+	if k.has("fx"):
+		node.set_meta("fx0", node.position)
+		for f in String(k.fx).split("|"):
+			if f.begins_with("kim"):
+				var fg = node.get("_fg")
+				if fg is CanvasItem:
+					fg.material = _kim_mat(f == "kim3")
+			elif f.begins_with("hat:"):
+				_hat(node, f.substr(4))
+			else:
+				_fx.append([node, f])
+	if node.has_method("kids"):
+		var ks: Array = node.kids()
+		var dk: Array = k.get("kids", [])
+		for i in mini(ks.size(), dk.size()):
+			if dk[i] is Dictionary:
+				_reg_fx(ks[i], dk[i])
+
+static var _KIM := {}
+static func _kim_mat(slow: bool) -> ShaderMaterial:   # vệt sáng chéo quét qua phần có hình (alpha), nghỉ giữa hai lần quét
+	var key := "s" if slow else "f"
+	if not _KIM.has(key):
+		var sh := Shader.new()
+		sh.code = """shader_type canvas_item;
+uniform float per = 3.0;
+uniform float str = 0.55;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV) * COLOR;
+	float t = mod(TIME, per) / per * 2.2 - 0.6;
+	float d = UV.x * 0.8 + UV.y * 0.4 - t;
+	float b = smoothstep(0.09, 0.0, abs(d));
+	c.rgb += vec3(1.0, 0.94, 0.72) * b * str * c.a;
+	COLOR = c;
+}"""
+		var m := ShaderMaterial.new()
+		m.shader = sh
+		m.set_shader_parameter("per", 4.5 if slow else 2.8)
+		m.set_shader_parameter("str", 0.4 if slow else 0.6)
+		_KIM[key] = m
+	return _KIM[key]
+
+static var _TEX := {}
+static func dot_tex(kind: String) -> Texture2D:   # hình hạt: "tron" chấm tròn mờ viền, "lap" ánh sao 4 cánh
+	if not _TEX.has(kind):
+		var n := 32
+		var im := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in n:
+			for x in n:
+				var dx := absf(x - 15.5) / 15.5
+				var dy := absf(y - 15.5) / 15.5
+				var a := 0.0
+				if kind == "lap":
+					a = clampf(1.0 - dx * 6.0, 0.0, 1.0) * (1.0 - dy) + clampf(1.0 - dy * 6.0, 0.0, 1.0) * (1.0 - dx)
+					a = clampf(a + clampf(1.0 - sqrt(dx * dx + dy * dy) * 2.2, 0.0, 1.0), 0.0, 1.0)
+				else:
+					a = clampf(1.0 - sqrt(dx * dx + dy * dy), 0.0, 1.0)
+					a = a * a
+				im.set_pixel(x, y, Color(1, 1, 1, a))
+		_TEX[kind] = ImageTexture.create_from_image(im)
+	return _TEX[kind]
+
+func _hat(node: Control, kind: String) -> void:   # hạt liên tục gắn vào khối (đốm sáng bay lên / lấp lánh)
+	if node.has_meta("hat"):
+		return
+	var p := CPUParticles2D.new()
+	var sz := node.size
+	p.texture = dot_tex("lap" if kind == "lap" else "tron")
+	p.local_coords = true
+	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	var ramp := Gradient.new()
+	if kind == "lap":
+		p.position = sz * Vector2(0.5, 0.55)
+		p.emission_rect_extents = sz * Vector2(0.45, 0.4)
+		p.amount = 5
+		p.lifetime = 1.1
+		p.gravity = Vector2.ZERO
+		p.initial_velocity_min = 0.0
+		p.initial_velocity_max = 0.0
+		p.scale_amount_min = 0.25 * Css.K
+		p.scale_amount_max = 0.45 * Css.K
+		var cv := Curve.new()
+		cv.add_point(Vector2(0, 0))
+		cv.add_point(Vector2(0.5, 1))
+		cv.add_point(Vector2(1, 0))
+		p.scale_amount_curve = cv
+		ramp.set_color(0, Color(1.0, 0.97, 0.8, 1))
+		ramp.set_color(1, Color(1.0, 0.85, 0.4, 1))
+	else:
+		p.position = sz * Vector2(0.5, 0.4)
+		p.emission_rect_extents = sz * Vector2(0.35, 0.08)
+		p.amount = 8
+		p.lifetime = 1.4
+		p.direction = Vector2(0, -1)
+		p.spread = 20.0
+		p.gravity = Vector2(0, -14.0 * Css.K)
+		p.initial_velocity_min = 8.0 * Css.K
+		p.initial_velocity_max = 22.0 * Css.K
+		p.scale_amount_min = 0.12 * Css.K
+		p.scale_amount_max = 0.24 * Css.K
+		ramp.set_color(0, Color(0.85, 1.0, 0.55, 0.95))
+		ramp.set_color(1, Color(1.0, 0.95, 0.5, 0.0))
+	p.color_ramp = ramp
+	node.add_child(p)
+	node.set_meta("hat", p)
+
+static func bounce_out(t: float) -> float:   # nảy khi chạm đất (0..1)
+	if t < 1.0 / 2.75:
+		return 7.5625 * t * t
+	if t < 2.0 / 2.75:
+		t -= 1.5 / 2.75
+		return 7.5625 * t * t + 0.75
+	if t < 2.5 / 2.75:
+		t -= 2.25 / 2.75
+		return 7.5625 * t * t + 0.9375
+	t -= 2.625 / 2.75
+	return 7.5625 * t * t + 0.984375
+
 func _fx_step(dt: float) -> void:
 	if _fx.is_empty():
 		return
 	_fxt += dt
 	var p := fmod(_fxt, 1.6)
+	var now := Time.get_ticks_msec() / 1000.0
 	for e in _fx:
 		var c: Control = e[0]
 		if not is_instance_valid(c):
 			continue
-		c.pivot_offset = c.size * 0.5
-		if e[1] == "lac":
+		var f: String = e[1]
+		var p0: Vector2 = c.get_meta("fx0", c.position)
+		if f == "lac":
+			c.pivot_offset = c.size * 0.5
 			c.rotation = sin(p * 34.0) * 0.16 * (1.0 - p / 0.55) if p < 0.55 else 0.0
-		elif e[1] == "nhay":   # (11-27) viền sáng nhấp nháy (thẻ đơn đủ hàng)
+		elif f == "nhay":   # (11-27) viền sáng nhấp nháy (thẻ đơn đủ hàng)
 			c.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * sin(_fxt * 4.0))
+		elif f.begins_with("nhap:"):   # nhấp nhô (bong bóng nổi trong giỏ)
+			c.position.y = p0.y + sin(_fxt * 2.4 + float(f.substr(5))) * 1.4 * Css.K
+		elif f == "nay" or f.begins_with("chon:"):   # nảy co giãn, chân dưới đứng yên
+			c.pivot_offset = Vector2(c.size.x * 0.5, c.size.y)
+			var q := -1.0
+			var amp := 1.0
+			if f.begins_with("chon:"):
+				var age := now - float(f.substr(5))
+				if age < 0.45:
+					q = age / 0.45
+					amp = 1.3
+			else:
+				var pp := fmod(_fxt + float(c.get_instance_id() % 7) * 0.31, 2.6)
+				if pp < 0.55:
+					q = pp / 0.55
+			if q >= 0.0:
+				var k := (1.0 - q) * amp
+				c.scale = Vector2(1.0 + 0.07 * cos(TAU * q) * k, 1.0 - 0.07 * cos(TAU * q) * k)
+				c.position.y = p0.y - 5.0 * Css.K * sin(PI * q) * amp
+			else:
+				c.scale = Vector2.ONE
+				c.position.y = p0.y
+		elif f.begins_with("roi:"):   # rơi xuống bật nảy (giỏ mới sau khi giao)
+			var age := now - float(f.substr(4))
+			var q := clampf((age - 0.45) / 0.65, 0.0, 1.0)
+			c.modulate.a = 0.0 if age < 0.45 else 1.0
+			c.position.y = p0.y - 46.0 * Css.K * (1.0 - bounce_out(q))
 		else:
+			c.pivot_offset = c.size * 0.5
 			c.rotation = fmod(_fxt * 0.7, TAU)
 			c.modulate.a = 0.75 + 0.25 * sin(_fxt * 3.0)
 
