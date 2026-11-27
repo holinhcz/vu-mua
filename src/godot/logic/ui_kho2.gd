@@ -11,6 +11,7 @@ const TK := ["hang", "vl", "dd"]
 const CW := 71.75    # thẻ món: 4 cột, cách 6
 const CH := 98.0
 const CG := 6.0
+const NW := 500   # tên + số lượng trong thẻ: chữ thường, không đậm
 const NPAD := 5.0   # lề hai bên tên trong thẻ
 const HTOP := 6.0    # lề trên dải đầu (dưới tre)
 const HEAD := 28.0   # dải đầu
@@ -141,23 +142,23 @@ func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: Stri
 	if not low.is_empty():
 		Snap._move(ic, Vector2(0, -6.0))
 	var tw := CW - 2.0 * NPAD   # tên chừa lề hai bên
-	var L2 := [nm] if Box.text_w(nm, 11.0, 700) <= tw else _wrap(nm, 11.0, 700, tw)   # dài thì xuống dòng, giữ cỡ chữ
+	var L2 := [nm] if Box.text_w(nm, 11.0, NW) <= tw else _wrap(nm, 11.0, NW, tw)   # dài thì xuống dòng, giữ cỡ chữ
 	c.kids = [ic]
 	if L2.size() == 1:
-		c.kids.append(_dt(x + NPAD, ny, tw, 16.0, nm, 11.0, 700, col))
+		c.kids.append(_dt(x + NPAD, ny, tw, 16.0, nm, 11.0, NW, col))
 	else:
-		c.kids.append(_dt(x + NPAD, ny - 3.0, tw, 14.0, String(L2[0]), 11.0, 700, col))
-		c.kids.append(_dt(x + NPAD, ny + 11.0, tw, 14.0, _fitw(" ".join(L2.slice(1)), 11.0, 700, tw), 11.0, 700, col))
+		c.kids.append(_dt(x + NPAD, ny - 3.0, tw, 14.0, String(L2[0]), 11.0, NW, col))
+		c.kids.append(_dt(x + NPAD, ny + 11.0, tw, 14.0, _fitw(" ".join(L2.slice(1)), 11.0, NW, tw), 11.0, NW, col))
 	c.kids.append_array(low)
 	if cnt != "":
-		c.kids.append(_badge(x + CW - 4.0, y + 4.0, cnt, GREEN if cnt_hi else "rgb(236, 224, 196)", "rgb(255, 255, 255)" if cnt_hi else SUB, true))
+		c.kids.append(_badge(x + CW - 4.0, y + 4.0, cnt, GREEN if cnt_hi else "rgb(236, 224, 196)", "rgb(255, 255, 255)" if cnt_hi else SUB, true, NW))
 	return [c]
 
-func _badge(x: float, y: float, t: String, bg: String, col: String, right := false) -> Dictionary:   # nhãn số nhỏ (góc thẻ): chữ nằm trong hộp (không bị nền đè)
-	var bw: float = Box.text_w(t, 9.0, 800) + 8.0
+func _badge(x: float, y: float, t: String, bg: String, col: String, right := false, fw := 800) -> Dictionary:   # nhãn số nhỏ (góc thẻ): chữ nằm trong hộp (không bị nền đè)
+	var bw: float = Box.text_w(t, 9.0, fw) + 8.0
 	var bx := x - bw if right else x
 	var b := _dbx(bx, y, bw, 14.0, bg, 4.0)
-	b.kids = [_dt(bx, y, bw, 14.0, t, 9.0, 800, col)]
+	b.kids = [_dt(bx, y, bw, 14.0, t, 9.0, fw, col)]
 	return b
 
 func _kgrid(y: float, items: Array) -> Array:   # items: [card fn(x, y) -> Array]; trả [khối, đáy]
