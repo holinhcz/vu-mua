@@ -89,10 +89,13 @@ func _build() -> void:
 	U.kho_on = true
 	sig = _sig()
 	var L := TABS.map(func(x): return [x[0], x[1], false, TIC.get(x[0], "")])
-	var sh := _kshell(L, tab, _tab_go)
+	var sh := _kshell(L, tab, _tab_go, HEAD + 6.0)   # dải đầu (sức chứa) nằm trên hàng tab như Kho cũ
 	var n: Dictionary = sh[0]
 	var vt: Dictionary = sh[1]
-	_kfix(n, vt, _head(), HEAD, false)
+	var card := _find(n, "khcard")
+	for b in _head():
+		Snap._move(b, Vector2(0, float(sh[3])))
+		card.kids.append(b)
 	var r: Array
 	if tab == "vl":
 		r = _vl(n, vt)
