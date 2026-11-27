@@ -95,7 +95,6 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	_build_gv()
 	_build_rm()
 	_build_lock()
-	_build_kho()
 	_build_ord()
 	_build_pc()
 	nvp = load("res://logic/ui_nv.gd").new(self)
@@ -1856,201 +1855,14 @@ func _lock_buy() -> void:
 		lock_close()
 
 # ------------------------------------------------------------------ Kho
-var kho_roots := []          # Hàng hóa, Vật liệu, Đồ dùng
-var kho_ids := []
 var kho_tab := 0
 var kho_on := false
-var kh_tpl_hot := {}
-var kh_tpl := {}
-var kh_grid0 := Rect2()
-var kh_li0 := Vector2(16, 243)   # góc thẻ đầu tiên
-var kh_grid0s := Rect2()     # lưới khi đang chọn một món (khDet mở, lưới thấp lại)
-var kh_tpl_sel := {}         # thẻ đang chọn (viền xanh, nền xanh nhạt)
-var kh_det: Control = null   # #khDet: món đang chọn, giá, số lượng, nút bán
 var kh_q := 1                # vi.q
 var kh_sel := ""
 var kh_f := "all"
 var kh_sort := "n"
-var kh_sig := ""
-var kh_conf := 0.0
-var kh_pool := {}            # thẻ món Kho đã dựng: khoá -> Control
-var kh_chips := []           # [Box, cat, snap]
-var kh_chip_on := {}
-var kh_chip_off := {}
 const KH_CAT := [["all", "Tất cả"], ["nong", "Nông sản"], ["trai", "Trái cây"], ["nuoi", "Vật nuôi"], ["song", "Cá"], ["chebien", "Chế biến"], ["khac", "Khác"]]
 const KH_SORT := [["n", "Nhiều nhất"], ["v", "Đáng giá nhất"], ["p", "Giá lên"], ["a", "Tên A–Z"]]
-
-func _build_kho() -> void:
-	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
-		var d: Dictionary = Snap.load_snap(nm)
-		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
-		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
-		if not bp.is_empty() and nm != "kho_sel":   # kho_sel: "primary" là nút Bán 1 trong chi tiết món, không phải Bán hết
-			var cx := float(bp.r[0]) + float(bp.r[2]) * 0.5
-			var cy := float(bp.r[1]) + float(bp.r[3]) * 0.5 - 8.0
-			Snap._move(bp, Vector2(0, -8))
-			bp.r = [cx - 78.0, cy - 14.0, 156.0, 28.0]
-			for kk in bp.get("kids", []):
-				kk.css = kk.css.duplicate()
-				kk.css["font-size"] = "15px"
-		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
-			var vg := Snap.find(n, "u2vg")
-			var vk: Array = vg.get("kids", [])
-			var slot := []
-			for t in vk:
-				slot.append(Vector2(float(t.r[0]), float(t.r[1])))
-			var keep := []
-			for t in vk:
-				if _mat_id(String(Snap.find(t, "u2vn").get("text", ""))) != "":
-					Snap._move(t, slot[keep.size()] - Vector2(float(t.r[0]), float(t.r[1])))
-					keep.append(t)
-					var tn := Snap.find(t, "u2vn")   # (11-27) tên chữ 12, rộng hết thẻ, tối đa 2 dòng ("Lá dừa nước" không vỡ)
-					if not tn.is_empty():   # mọi tên cùng cỡ
-						tn.css = tn.css.duplicate()
-						tn.css["font-size"] = "12.5px"
-						tn.css["line-height"] = "13.5px"
-						var bot := float(tn.r[1]) + float(tn.r[3])
-						var hh := 27.0 if String(tn.get("text", "")).length() > 8 else 13.5   # 1 dòng: đáy chữ ngang đáy tên 2 dòng
-						tn.r = [float(t.r[0]) + 2.0, bot - hh, float(t.r[2]) - 4.0, hh]
-						tn.erase("tr")
-			vg.kids = keep
-		if nm == "kho_sel":
-			var g2 := Snap.find(n, "khgrid")
-			for li in g2.get("kids", []):
-				if String(li.cls).split(" ").has("sel"):
-					kh_tpl_sel = li
-			kh_grid0s = Rect2(g2.r[0], g2.r[1], g2.r[2], g2.r[3])
-			g2.kids = []
-			if not kh_tpl_sel.is_empty():   # thẻ đang chọn: phóng như thẻ thường (bộ sen)
-				var lx := float(kh_tpl_sel.r[0]) - float(g2.r[0])
-				var ks2 := (float(g2.r[2]) - lx * 2.0 - 15.0) / 4.0 / float(kh_tpl_sel.r[2])
-				if ks2 > 1.01:
-					_tpl_scale(kh_tpl_sel, Vector2(float(kh_tpl_sel.r[0]), float(kh_tpl_sel.r[1])), ks2)
-		if nm == "kho":
-			var grid := Snap.find(n, "khgrid")
-			var lis: Array = grid.get("kids", [])
-			for li in lis:
-				if String(li.cls).split(" ").has("hot") and kh_tpl_hot.is_empty():
-					kh_tpl_hot = li
-				elif kh_tpl.is_empty() and not String(li.cls).split(" ").has("hot"):
-					kh_tpl = li
-			if kh_tpl.is_empty() and lis.size() > 0:
-				kh_tpl = lis[0]
-			if kh_tpl_hot.is_empty():
-				kh_tpl_hot = kh_tpl
-			kh_grid0 = Rect2(grid.r[0], grid.r[1], grid.r[2], grid.r[3])
-			if lis.size() > 0:
-				kh_li0 = Vector2(lis[0].r[0], lis[0].r[1])
-			grid.kids = []
-			# (11-26) bộ sen: thẻ món to như ảnh mẫu Kho (4 thẻ lấp đầy bề ngang lưới)
-			var ks := (float(grid.r[2]) - (kh_li0.x - float(grid.r[0])) * 2.0 - 15.0) / 4.0 / float(kh_tpl.r[2])
-			if ks > 1.01:
-				kh_ks = ks
-				for tp in [kh_tpl, kh_tpl_hot]:
-					_tpl_scale(tp, Vector2(float(tp.r[0]), float(tp.r[1])), ks)
-
-		var ids := {}
-		var b := _build(n, ids)
-		b.visible = false
-		root.add_child(b)
-		anchors.append([b, 0.5, 0.5])
-		kho_roots.append(b)
-		kho_ids.append(ids)
-		_click(ids.get("#pClose"), kho_close, "scale")
-		_click(ids.get(".khst"), func(): if khp != null: khp.open(), "scale")
-		var bk = ids.get(".pbk")
-		if bk != null:
-			_stop(bk)
-			tap_close(bk, kho_close)
-		var win = ids.get(".pwin")
-		if win != null:
-			_stop(win)
-		# tabs
-		var seg = ids.get(".khseg")
-		if seg != null:
-			var j := 0
-			for t in _buttons(seg, []):
-				var jj := j
-				_click(t, func(): _kho_tab(jj))
-				j += 1
-	var ids0: Dictionary = kho_ids[0]
-
-	_click(ids0.get("#sellAll"), _kho_sell_all)
-	_build_det()
-	for idq in [ids0, kho_ids[3]]:
-		_click(idq.get(".u2sort"), _kho_sort)
-		var chips = idq.get("#khChips")
-		if chips != null:
-			var L := _buttons(chips, [])
-			# (bản 538) hàng chip dài hơn khung (Cá, Chế biến, Khác bị khuất): kéo ngang để cuộn, như overflow-x của web
-			var hs = VScroll.new()
-			hs.hz = true
-			var xl := 1e9
-			var xr := 0.0
-			for c in L:   # c.r theo khung chip (con): rộng nội dung = mép phải chip cuối + đệm trái bằng đệm đầu hàng
-				xl = minf(xl, c.r.position.x)
-				xr = maxf(xr, c.r.end.x)
-			hs.setup(chips, xr + maxf(0.0, xl), chips.r.size.x)
-			kh_hs.append(hs)
-			for q in L.size():
-				var sn: Dictionary = _sm(L[q])
-				if String(sn.cls).split(" ").has("on"):
-					kh_chip_on = sn
-				elif kh_chip_off.is_empty():
-					kh_chip_off = sn
-				var cat: String = _kh_cat_of(sn, q)   # (11-27) mục theo chữ trên chip (thứ tự con có lúc lệch: chạm Cá ra Vật nuôi)
-				kh_chips.append([L[q], cat, sn])
-				var cc := cat
-				_click(L[q], func():
-					if _kh_hs_moved():
-						return
-					kh_f = cc; kh_sig = ""; kh_sc.s = 0.0; _kho_chips(), "scale94")
-	# Vật liệu: chạm ô để xem
-	for b in _qall(kho_roots[1], "u2vt", []):
-		var bb: Control = b
-		_click(bb, func(): _kho_vl_pick(bb), "scale94")
-
-func _kh_cat_of(sn: Dictionary, q: int) -> String:
-	var tx := ""
-	for k in sn.get("kids", []):
-		if k is Dictionary and String(k.get("text", "")) != "":
-			tx = String(k.text).strip_edges()
-	for c in KH_CAT:
-		if String(c[1]) == tx:
-			return String(c[0])
-	return String(KH_CAT[q][0]) if q < KH_CAT.size() else "khac"
-
-var kh_hs := []   # (bản 538) cuộn ngang hàng chip lọc (Hàng hóa + khi đang chọn món)
-
-func _kh_hs_moved() -> bool:
-	for h in kh_hs:
-		if h.moved():
-			return true
-	return false
-
-func _kh_hs_show() -> void:   # chip đang chọn khuất thì cuộn tới (mở Kho lọc sẵn mục Cá từ màn câu cá)
-	for h in kh_hs:
-		if h.box == null or not is_instance_valid(h.box):
-			continue
-		for c in kh_chips:
-			if c[1] == kh_f and c[0].get_parent() != null and h.box.is_ancestor_of(c[0]):
-				var x0: float = c[0].r.position.x
-				var x1: float = c[0].r.end.x
-				var vw0: float = h.box.r.size.x
-				if x0 < h.s:
-					h.to(x0 - 4.0)
-				elif x1 > h.s + vw0:
-					h.to(x1 - vw0 + 30.0)
-
-func _kho_sort() -> void:
-	var k := 0
-	for q in KH_SORT.size():
-		if KH_SORT[q][0] == kh_sort:
-			k = q
-	kh_sort = KH_SORT[(k + 1) % KH_SORT.size()][0]
-	kh_sig = ""
-	say("Sắp xếp: " + KH_SORT[(k + 1) % KH_SORT.size()][1])
-	_kho_sync()
 
 func kho_open() -> void:
 	for p in _pans():
@@ -2068,13 +1880,8 @@ func kho_open() -> void:
 	rm_close()
 	lock_close()
 	kho_on = true
-	if Sen.ON:
-		khop.open_tab(kho_tab)
-		khop.open()
-		return
-	kh_sig = ""
-	kh_sc.s = 0.0
-	_kho_tab(kho_tab)
+	khop.open_tab(kho_tab)
+	khop.open()
 
 func _kho_full(n: int, cap: int) -> void:
 	if khp != null:
@@ -2084,25 +1891,12 @@ func kho_close() -> void:
 	kho_on = false
 	if khop != null and khop.on:
 		khop.close()
-	for b in kho_roots:
-		b.visible = false
 
 func _kho_tab(j: int) -> void:
 	if j != kho_tab:
 		kh_sel = ""
 	kho_tab = j
-	if Sen.ON:
-		khop.open_tab(j)
-		return
-	_kho_show()
-
-func _kho_show() -> void:
-	# Hàng hóa có 2 dáng: chưa chọn (nút Bán hết) / đang chọn một món (khDet)
-	var vis := kho_tab if not (kho_tab == 0 and kh_sel != "") else 3
-	for q in kho_roots.size():
-		kho_roots[q].visible = kho_on and q == vis
-	kh_sig = ""
-	_kho_sync()
+	khop.open_tab(j)
 
 func _cat(t: String) -> String:   # rP
 	if G.D.crops.has(t):
@@ -2118,17 +1912,6 @@ func _cat(t: String) -> String:   # rP
 	if n != "":
 		return "chebien"
 	return "khac"
-
-var kh_ks := 1.0   # thẻ món Kho phóng (bộ sen)
-
-func _tpl_scale(n: Dictionary, o: Vector2, k: float) -> void:   # phóng cả cây mẫu chụp quanh điểm o (khung + chữ)
-	if n.has("r"):
-		n.r = [o.x + (float(n.r[0]) - o.x) * k, o.y + (float(n.r[1]) - o.y) * k, float(n.r[2]) * k, float(n.r[3]) * k]
-	if n.has("css") and n.css.has("font-size"):
-		n.css = n.css.duplicate()
-		n.css["font-size"] = str(Css.px(String(n.css["font-size"])) * k) + "px"
-	for c in n.get("kids", []):
-		_tpl_scale(c, o, k)
 
 func _kho_items() -> Array:
 	var e := []
@@ -2148,168 +1931,6 @@ func _kho_items() -> Array:
 		return nb < na)
 	return e
 
-func _kho_chips() -> void:
-	if kh_chip_on.is_empty() or kh_chip_off.is_empty():
-		return
-	for c in kh_chips:
-		var b: Control = c[0]
-		var on: bool = c[1] == kh_f
-		var tp: Dictionary = kh_chip_on if on else kh_chip_off
-		b.style(Snap.css_of(tp), b.z)
-		b.place(b.r)
-		var sp := _q(b, "", "span")
-		if sp != null and not sp.texts.is_empty():
-			var sc: Dictionary = Snap.find(tp, "", "span")
-			sp.texts[0].col = Css.color(sc.css.get("color", "rgb(90,62,20)") if not sc.is_empty() else "rgb(90,62,20)")
-			sp.texts[0].w = int(sc.css.get("font-weight", "600")) if not sc.is_empty() else 600
-			sp.redraw()
-		# the icon in front: white on the green chip, its own colour otherwise
-		for k in b.kids():
-			if not k.has_meta("snap") and not k.pics.is_empty():
-				k.modulate = Color(10, 10, 10, 1) if on else Color.WHITE
-	for h in kh_hs:   # place() vừa trả chip về chỗ gốc: dời lại theo cuộn ngang, chip đang chọn khuất thì cuộn tới
-		h.off = 0.0
-		h.to(h.s)
-	_kh_hs_show()
-	kh_sig = ""
-	_kho_sync()
-
-func _kho_sync() -> void:
-	if not kho_on or Sen.ON:   # khung sen: Kho mới (khop) tự dựng lại theo _sig
-		return
-	if kho_tab == 1:
-		_kho_vl_sync()
-		return
-	if kho_tab == 2:
-		kdp.sync(kho_ids[2])
-		return
-	if kho_tab != 0:
-		return
-	if kh_sel != "" and int(G.g.barn.get(kh_sel, 0)) <= 0:
-		kh_sel = ""
-	var selm := kh_sel != ""
-	if kho_roots[3].visible != selm or kho_roots[0].visible == selm:
-		_kho_show()
-	var ids: Dictionary = kho_ids[3] if selm else kho_ids[0]
-	var grid: Control = ids.get(".khgrid")
-	var grid0 := kh_grid0s if selm else kh_grid0
-	var e := _kho_items()
-	var tot_n = G.kho_n()
-	var worth := 0
-	for t in G.g.barn.keys():
-		worth += int(G.g.barn[t]) * G.price(t)
-	var sell_n := 0
-	var sell_v := 0
-	for t in e:
-		var c := int(G.g.barn[t])
-		var keep := mini(G.LY, c) if G.D.crops.has(t) else 0
-		sell_v += G.sell_value(t, c - keep)
-		sell_n += c - keep
-	var sig := kh_f + kh_sort + kh_sel + str(kh_q) + "|" + str(G.price(kh_sel) if selm else 0) + "|" + str(tot_n) + "/" + str(G.kho_cap()) + "★" + str(G.kho_star()) + "|" + str(worth) + "|" + str(sell_v) + "|" + str(G.day()) + "|" + str(kh_conf > 0.0)
-	for t in e:
-		sig += t + str(G.g.barn[t]) + ","
-	if sig == kh_sig:
-		return
-	kh_sig = sig
-	# đầu kho: thanh đầy, "Đáng giá N", sức chứa n/cap ★1
-	if khp != null:
-		khp.sync_panel(ids, tot_n, G.kho_cap())
-	var wb = ids.get(".khworth2")
-	if wb != null:
-		var wbb := _q(wb, "", "b")
-		_txt(wbb, G.fmt_n(worth))
-		if wbb != null and not wbb.texts.is_empty():   # <b> co theo số, đồng xu nằm ngay sau (số lớn không đè lên xu)
-			var t0: Dictionary = wbb.texts[0]
-			var tw: float = Box.text_w(t0.s, t0.size, t0.w)
-			var xi := _q(wb, "xui")
-			var gap: float = (xi.r.position.x - wbb.r.end.x) if xi != null and not wbb.has_meta("wgap") else float(wbb.get_meta("wgap", 6.5))
-			wbb.set_meta("wgap", gap)
-			wbb.place(Rect2(wbb.r.position, Vector2(tw + 1.0, wbb.r.size.y)))
-			t0.rect = Rect2(t0.rect.position, Vector2(tw + 1.0, t0.rect.size.y))
-			wbb.redraw()
-			if xi != null:
-				_move(xi, Vector2(wbb.r.end.x + gap, xi.r.position.y))
-	# lưới món: mỗi thẻ dựng một lần rồi giữ (kh_pool, khoá = món + kiểu thẻ + số + giá + được giá + mũi tên); đổi gì thì
-	# chỉ thẻ đó dựng lại, các thẻ khác chỉ dời chỗ. Trước đây đổi một món là xoá hết rồi dựng lại cả nghìn thẻ.
-	var o := grid0.position
-	var col := 4
-	var x0 := kh_li0.x
-	var y0 := kh_li0.y
-	var dx := float(kh_tpl.r[2]) + 5.0
-	var dy := float(kh_tpl.r[3]) + 6.0
-	var idx := 0
-	var used := {}
-	for t in e:
-		var hx: float = G.hot_x(t)
-		var sel_on: bool = t == kh_sel and not kh_tpl_sel.is_empty()
-		var r: float = G.rel(t)
-		var key: String = t + "|" + ("s" if sel_on else ("h" if hx > 1.0 else "n")) + "|" + str(G.g.barn[t]) + "|" + str(G.price(t)) + "|" + str(hx) + "|" + ("u" if r > 1.08 else ("d" if r < 0.92 else ""))
-		var cb = kh_pool.get(key)
-		if cb == null or not is_instance_valid(cb):
-			var tp: Dictionary = kh_tpl_hot if hx > 1.0 else kh_tpl
-			if sel_on:
-				tp = kh_tpl_sel.duplicate(true)
-				if hx <= 1.0:
-					tp.erase("::before")
-			var nd := Snap.moved(tp, Vector2(x0, y0) - Vector2(float(tp.r[0]), float(tp.r[1])))
-			_kh_fill(nd, t, hx)
-			cb = _build(nd, {}, o)
-			var btn := _q(cb, "khb")
-			var tt: String = t
-			if btn != null:
-				_click(btn, func():
-					if kh_sc.moved():
-						return   # vừa kéo cuộn, không phải chạm
-					kh_sel = "" if kh_sel == tt else tt
-					kh_q = 1
-					kh_sig = ""
-					_kho_sync(), "scale94")
-			kh_pool[key] = cb
-		if cb.get_parent() != grid._kids:
-			if cb.get_parent() != null:
-				cb.get_parent().remove_child(cb)
-			grid.add(cb)
-		_move(cb, Vector2(x0 + (idx % col) * dx, y0 + int(idx / col) * dy) - o)
-		used[key] = 1
-		idx += 1
-	for k in kh_pool.keys():   # thẻ món đã đổi / hết: bỏ
-		if not used.has(k):
-			var c0 = kh_pool[k]
-			if is_instance_valid(c0):
-				c0.queue_free()
-			kh_pool.erase(k)
-	var rows := int(ceil(idx / float(col)))
-	# lưới cuộn dọc (.khgrid overflow-y auto bản web): khung giữ cỡ gốc, cắt phần dư, kéo / lăn chuột để cuộn
-	grid.place(Rect2(grid.r.position, Vector2(grid.r.size.x, grid0.size.y)))
-	kh_sc.setup(grid, rows * dy + 8.0, grid0.size.y)
-	if selm:
-		_det_sync()
-	# Bán hết +N (chạm 2 lần), giữ 4 hạt mỗi thứ
-	var sa = ids.get("#sellAll")
-	if sa != null:
-		if kh_conf > 0.0:
-			_txt(sa, "Chạm lần nữa để bán hết")
-		else:
-			_txt(sa, ("Bán hết" + ("" if kh_f == "all" else " mục " + _cat_name(kh_f).to_lower()) + " +" + G.fmt_n(sell_v)) if sell_n > 0 else ("Mục này trống" if tot_n > 0 else "Kho đang trống"))
-		sa.modulate.a = 1.0 if sell_n > 0 else 0.55
-		var xi := _q(sa, "xui")
-		if xi != null:
-			xi.visible = sell_n > 0 and kh_conf <= 0.0
-			var tw := Box.text_w(sa.texts[0].s, sa.texts[0].size, sa.texts[0].w)
-			var total = tw + (6.0 + xi.r.size.x if xi.visible else 0.0)
-			# (bản 305) nút rộng theo chữ ("Bán hết mục nông sản +631" dài hơn nút chụp), giữa nút đứng yên, đệm 14 hai bên
-			if not sa.has_meta("r0"):
-				sa.set_meta("r0", sa.r)
-			var r0: Rect2 = sa.get_meta("r0")
-			var bw: float = maxf(r0.size.x, total + 28.0)
-			if absf(bw - sa.r.size.x) > 0.01:
-				sa.place(Rect2(Vector2(r0.get_center().x - bw * 0.5, r0.position.y), Vector2(bw, r0.size.y)))
-			var tx = (sa.r.size.x - total) * 0.5
-			sa.texts[0].rect = Rect2(tx, sa.texts[0].rect.position.y, tw + 2.0, sa.texts[0].rect.size.y)
-			sa.texts[0].al = "left"
-			_move(xi, Vector2(tx + tw + 6.0, xi.r.position.y))
-			sa.redraw()
-
 static func _xn(x: float) -> String:
 	# 2 -> "2", 1.5 -> "1,5" (như web: String(số))
 	if absf(x - round(x)) < 0.001:
@@ -2322,272 +1943,6 @@ func _cat_name(c: String) -> String:
 			return q[1]
 	return ""
 
-func _kh_fill(nd: Dictionary, t: String, hx: float) -> void:
-	var ic := Snap.find(nd, "khic")
-	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + t + ".svg")
-	# (bản 249) hình món to hơn bản web (34,5 -> 44): giữ giữa theo ngang, lấn lên lề trên thẻ, chưa chạm dòng tên
-	if not ic.is_empty():
-		var r0: Array = ic.r
-		var nz := 44.0
-		var nr := [float(r0[0]) - (nz - float(r0[2])) * 0.5, float(nd.r[1]) + 5.5, nz, nz]
-		ic.r = nr
-		for k in ic.get("kids", []):
-			k.r = nr.duplicate()
-	for k in ic.get("kids", []):
-		if k.tag == "svg" and sv != "":
-			k.svg = sv
-	var cnt := Snap.find(nd, "cnt")
-	if not cnt.is_empty():
-		cnt.text = G.fmt_k(int(G.g.barn[t]))
-		cnt.erase("tr")
-	var nm := Snap.find(nd, "khnm")
-	if not nm.is_empty():
-		nm.text = G.item(t).get("name", t)
-		nm.erase("tr")
-		nm.css["white-space"] = "nowrap"
-		# span co theo chữ (flow-root, padding 0 2px), nằm giữa thẻ: đổi tên thì đo lại bề ngang, không cắt chữ
-		var nfs := Css.px(nm.css.get("font-size", "14px")) * float(nm.get("z", 1.0))
-		var nw: float = minf(float(nd.r[2]), Box.text_w(nm.text, nfs, int(nm.css.get("font-weight", "500"))) + 4.0)
-		nm.r = [float(nd.r[0]) + (float(nd.r[2]) - nw) * 0.5, nm.r[1], nw, nm.r[3]]
-	if nd.has("::before") and hx > 1.0:
-		nd["::before"].content = "\"" + ("×" + _xn(hx)) + "\""
-	var pr := Snap.find(nd, "khpr")
-	if not pr.is_empty():
-		var r: float = G.rel(t)
-		var ft := "up" if r > 1.08 else ("down" if r < 0.92 else "")
-		pr.text = G.fmt_n(G.price(t))
-		pr.erase("tr")
-		var fs := Css.px(pr.css.get("font-size", "14px")) * float(pr.get("z", 1.0))
-		var fw := int(pr.css.get("font-weight", "500"))
-		var tw: float = Box.text_w(pr.text, fs, fw)
-		var kids: Array = pr.get("kids", [])
-		var img := {}
-		var ka := {}
-		for k in kids:
-			if k.tag == "img":
-				img = k
-			elif String(k.cls).split(" ").has("ka"):
-				ka = k
-		# [giá][xu] giữa thẻ, mũi tên ▲▼ ngay sau (absolute left:100%)
-		var iw: float = float(img.r[2]) if not img.is_empty() else 0.0
-		var gap := 3.0
-		var w := tw + gap + iw
-		var cx: float = float(nd.r[0]) + float(nd.r[2]) * 0.5
-		var x := cx - w * 0.5
-		pr.r = [x, pr.r[1], w, pr.r[3]]
-		pr.css["text-align"] = "left"
-		if not img.is_empty():
-			img.r = [x + tw + gap, img.r[1], img.r[2], img.r[3]]
-		var keep := []
-		for k in kids:
-			if k.tag == "img":
-				keep.append(k)
-		if ft != "":
-			var tpl: Dictionary = ka if not ka.is_empty() else {}
-			if not tpl.is_empty():
-				tpl.text = "▲" if ft == "up" else "▼"
-				tpl.erase("tr")
-				tpl.r = [x + w + 3.0, tpl.r[1], tpl.r[2], tpl.r[3]]
-				if ft == "up":
-					tpl.css["color"] = "rgb(47, 158, 68)"
-				keep.append(tpl)
-		pr.kids = keep
-		# text box = only the price part
-		pr["tr"] = [x, float(pr.r[1]), tw + 1.0, float(pr.r[3])]
-
-func _kho_sell_all() -> void:
-	# web: chạm 1 -> "Chạm lần nữa để bán hết" (nút giữ màu xanh, 3 s), chạm 2 -> bán, chừa 4 hạt mỗi thứ
-	var n := 0
-	for t in _kho_items():
-		n += int(G.g.barn[t]) - (mini(G.LY, int(G.g.barn[t])) if G.D.crops.has(t) else 0)
-	if n <= 0:
-		return
-	if kh_conf <= 0.0:
-		kh_conf = 3.0
-		kh_sig = ""
-		_kho_sync()
-		return
-	kh_conf = 0.0
-	G.sell_all(_kho_items())
-	kh_sig = ""
-	_kho_sync()
-
-func _kho_conf_off() -> void:
-	var sa = kho_ids[0].get("#sellAll")
-	if sa != null:
-		sa.style(Snap.css_of(_sm(sa)), sa.z)
-		sa.place(sa.r)
-
-# ------------------------------------------------------------------ #khDet (món đang chọn)
-var kd := {}                 # phần của khDet
-
-func _build_det() -> void:
-	var ids: Dictionary = kho_ids[3]
-	kh_det = ids.get("#khDet")
-	if kh_det == null:
-		return
-	_stop(kh_det)
-	kd.dic = _q(kh_det, "khdic")
-	var tx := _q(kh_det, "khdtx")
-	kd.nm = _q(tx, "", "b")
-	kd.co = _q(tx, "khco")
-	kd.hot = _q(tx, "khhot")
-	var pr := _q(kh_det, "kdpr")
-	kd.pr = _q(pr, "", "b")
-	kd.xui = _q(pr, "xui")
-	kd.kdu = _q(pr, "kdu")
-	kd.ka = _q(pr, "ka")
-	var st := _q(kh_det, "kdst")
-	var bs := []
-	for k in st.kids():
-		bs.append(k)
-	kd.minus = bs[0]
-	kd.out = bs[1]
-	kd.plus = bs[2]
-	kd.all = bs[3]
-	# lúc chụp: "−" đang tắt (1 cái), "+" đang bật -> hai dáng nút
-	var sm: Dictionary = _sm(kd.minus)
-	var sp: Dictionary = _sm(kd.plus)
-	kd.off = [Snap.css_of(sm), Css.color(sm.css.get("color", "rgb(0,0,0)"))]
-	kd.on = [Snap.css_of(sp), Css.color(sp.css.get("color", "rgb(0,0,0)"))]
-	kd.sell = _q(kh_det, "kdsell")
-	kd.sxui = _q(kd.sell, "xui")
-	kd.hint = _q(kh_det, "kdhint")
-	_click(kd.minus, func(): _det_q(kh_q - 1), "scale94")
-	_click(kd.plus, func(): _det_q(kh_q + 1), "scale94")
-	_click(kd.all, func(): _det_q(99999999), "scale94")
-	_click(kd.sell, _det_sell, "scale94")
-
-func _det_sell() -> void:
-	var t := kh_sel
-	if t == "":
-		return
-	G.sell(t, kh_q)
-	if int(G.g.barn.get(t, 0)) <= 0:
-		kh_sel = ""
-	kh_sig = ""
-	_kho_sync()
-
-func _det_btn(b: Control, off: bool) -> void:
-	var st: Array = kd.off if off else kd.on
-	b.style(st[0], b.z)
-	b.place(b.r)
-	if not b.texts.is_empty():
-		b.texts[0].col = st[1]
-		b.redraw()
-
-func _det_q(n: int) -> void:
-	if kh_sel == "":
-		return
-	kh_q = clampi(n, 1, maxi(1, int(G.g.barn.get(kh_sel, 0))))
-	kh_sig = ""
-	_kho_sync()
-
-func _inline(b: Control, x: float) -> float:
-	# đặt hộp chữ b ở x (css, trong cha), rộng theo chữ; trả về mép phải
-	if b == null or b.texts.is_empty():
-		return x
-	var t: Dictionary = b.texts[0]
-	var w: float = Box.text_w(t.s, t.size, t.w) + 1.0
-	b.place(Rect2(Vector2(x, b.r.position.y), Vector2(w, b.r.size.y)))
-	t.rect = Rect2(0, t.rect.position.y, w, t.rect.size.y)
-	t.al = "left"
-	b.redraw()
-	return x + w
-
-func _det_sync() -> void:
-	if kh_det == null or kh_sel == "":
-		return
-	var s := kh_sel
-	var h := int(G.g.barn.get(s, 0))
-	kh_q = clampi(kh_q, 1, maxi(1, h))
-	var M := kh_q
-	var p: int = G.price(s)
-	var d: float = G.rel(s)
-	var hx: float = G.hot_x(s)
-	# hình món
-	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + s + ".svg")
-	if sv != "" and kd.dic != null and kd.dic.kids().size() > 0:
-		_set_svg(kd.dic.kids()[0], sv)
-	# Lúa · có 6   🔥 Được giá ×2 hôm nay
-	_txt(kd.nm, String(G.item(s).get("name", s)))
-	var x := _inline(kd.nm, kd.nm.r.position.x)
-	_txt(kd.co, "· có " + G.fmt_n(h))
-	x = _inline(kd.co, x + 4.0)
-	kd.hot.visible = hx > 1.0
-	if hx > 1.0:
-		_txt(kd.hot, "🔥 Được giá ×" + _xn(hx) + " hôm nay")
-		_inline(kd.hot, x + 7.0)
-	# 8 [xu] /cái ▼
-	_txt(kd.pr, G.fmt_n(p))
-	x = _inline(kd.pr, kd.pr.r.position.x)
-	if kd.xui != null:
-		_move(kd.xui, Vector2(x + 5.0, kd.xui.r.position.y))
-		x = kd.xui.r.position.x + kd.xui.r.size.x
-	x = _inline(kd.kdu, x + 3.0)
-	if kd.ka != null:
-		kd.ka.visible = d > 1.08 or d < 0.92
-		if kd.ka.visible:
-			_txt(kd.ka, "▲" if d > 1.08 else "▼")
-			kd.ka.texts[0].col = Color8(47, 158, 68) if d > 1.08 else Color8(214, 69, 65)
-			_inline(kd.ka, x + 3.0)
-	# − 1 + Hết
-	_txt(kd.out, G.fmt_n(M))
-	_det_btn(kd.minus, M <= 1)
-	_det_btn(kd.plus, M >= h)
-	# Bán M · +X [xu]
-	_txt(kd.sell, "Bán " + G.fmt_n(M) + " · +" + G.fmt_n(G.sell_value(s, M)))
-	if kd.sxui != null:
-		var t0: Dictionary = kd.sell.texts[0]
-		var tw: float = Box.text_w(t0.s, t0.size, t0.w)
-		var total: float = tw + 6.0 + kd.sxui.r.size.x
-		var tx0: float = (kd.sell.r.size.x - total) * 0.5
-		t0.rect = Rect2(tx0, t0.rect.position.y, tw + 2.0, t0.rect.size.y)
-		t0.al = "left"
-		_move(kd.sxui, Vector2(tx0 + tw + 6.0, kd.sxui.r.position.y))
-		kd.sell.redraw()
-	# Nên giữ lại N để gieo
-	var xk: int = G.LY if G.D.crops.has(s) else 0
-	var E := h - M
-	var R := ""
-	if G.w_all != null and G.w_all.WKU != null:   # NTWEB eG: tính cả số cần cho đơn (NF)
-		R = G.w_all.WKU.det_hint(s, M)
-	elif xk > 0 and E < xk:
-		R = "Bán hết, không chừa lại để gieo" if E <= 0 else "Nên giữ lại " + G.fmt_n(mini(xk, h)) + " để gieo"
-	kd.hint.visible = R != ""
-	if R != "":
-		_txt(kd.hint, R)
-
-# Vật liệu
-var kh_vl := "Rơm khô"   # ô đang chọn (mẫu chụp chọn sẵn rơm khô)
-
-func _kho_vl_pick(b: Control) -> void:
-	var n: Dictionary = _sm(b)
-	var nm := Snap.find(n, "u2vn")
-	kh_vl = nm.get("text", "")
-	kh_sig = ""
-	_kho_vl_ic(Snap.find(n, "u2vi"))
-	_kho_vl_sync()
-
-func _kho_vl_ic(ti: Dictionary) -> void:   # (11-25) hình ở khung chi tiết theo ô vừa chạm (trước đây luôn là rơm khô)
-	var dv = kho_ids[1].get(".u2vd")
-	if dv == null or ti.is_empty():
-		return
-	var old := _q(dv, "u2vi")
-	if old == null:
-		return
-	var sv: String = Snap.find(ti, "", "svg").get("svg", "")
-	var nd: Dictionary = _sm(old).duplicate(true)
-	var k := Snap.find(nd, "", "svg")
-	if sv == "" or k.is_empty():
-		return
-	k.svg = sv
-	var p: Control = old.get_parent()
-	var nb := Snap.build(nd, Vector2(float(_sm(dv).r[0]), float(_sm(dv).r[1])), {})
-	p.add_child(nb)
-	p.move_child(nb, old.get_index())
-	old.queue_free()
-
 func _mat_id(name: String) -> String:
 	if G.D.mat is Dictionary:
 		for k in G.D.mat.keys():
@@ -2596,34 +1951,6 @@ func _mat_id(name: String) -> String:
 				return k
 	return ""
 
-func _kho_vl_sync() -> void:
-	var ids: Dictionary = kho_ids[1]
-	var mats: Dictionary = G.g.get("mats", {})
-	for b in _qall(kho_roots[1], "u2vt", []):
-		var n: Dictionary = _sm(b)
-		var nm: String = Snap.find(n, "u2vn").get("text", "")
-		var id := _mat_id(nm)
-		var c := int(mats.get(id, 0))
-		var vc := _q(b, "u2vc")
-		_txt(vc, str(c))
-		var vi := _q(b, "u2vi")
-		if vi != null:
-			vi.modulate.a = 1.0 if c > 0 else 0.35
-	var det = ids.get(".u2vdt")
-	if det != null and kh_vl != "":
-		var b0 := _q(det, "", "b")
-		_txt(b0, kh_vl)
-		var sm := _q(det, "", "small")
-		_txt(sm, "Đang có " + str(int(mats.get(_mat_id(kh_vl), 0))))
-		var ds = ids.get(".u2vds")
-		var mid := _mat_id(kh_vl)
-		if ds != null and mid != "":   # dùng để / cách nhận theo từng vật liệu
-			var ps: Array = ds.kids()
-			if ps.size() >= 2:
-				_txt(ps[0], String(G.MAT_DUNG.get(String(G.D.mat[mid].get("g", "")), "nâng sao")))
-				var pc := str(int(round(float(G.D.drop.get("rate", 0.0)) * 100.0))) + "%"
-				var cau: bool = G.D.drop.nhom.cau.has(mid)
-				_txt(ps[1], ("Câu cá, thăm lờ, giăng câu: " if cau else "Làm việc gì cũng có thể rơi: ") + pc + (" (hoặc nung ở lò gạch)." if mid == "gach" else "."))
 
 # ------------------------------------------------------------------ chạm ô ruộng (c2 bản web)
 # ------------------------------------------------------------------ đơn hàng (#pn-orders, ws / jp bản web)
@@ -3546,7 +2873,6 @@ func _lack_close() -> void:
 		od_lk = null
 
 const VScroll = preload("res://logic/vscroll.gd")
-var kh_sc = VScroll.new()   # cuộn lưới Kho (dùng chung vscroll.gd)
 var gv_sc = VScroll.new()   # cuộn khay giống ô ruộng (bản 276: nhiều giống quá 3 hàng thì kéo được)
 var _scs := []              # (bản 287) cuộn của các bảng khối Godot (w_ui_base._panel): ui._input đưa sự kiện vào
 
@@ -3555,7 +2881,7 @@ func scroll_add(v) -> void:
 	_scs.append(v)
 
 func scroll_moved() -> bool:   # vừa kéo cuộn một bảng (nhả tay không tính là bấm)
-	for v in [kh_sc, gv_sc, od_sc] + _scs + kh_hs:
+	for v in [gv_sc, od_sc] + _scs:
 		if v.moved():
 			return true
 	return false
@@ -4046,8 +3372,6 @@ func _process(dt: float) -> void:
 				lock_close()
 			else:
 				_lock_sync()
-		if kho_on:
-			_kho_sync()
 		if bfp != null:
 			bfp.sync()
 		_hm_badge()
@@ -4070,11 +3394,6 @@ func _process(dt: float) -> void:
 		dim.size = get_viewport().get_visible_rect().size
 		dim_mat.set_shader_parameter("a", dim_a)
 		dim.queue_redraw()
-	if kh_conf > 0.0:
-		kh_conf -= dt
-		if kh_conf <= 0.0:
-			_kho_conf_off()
-			kh_sig = ""
 	if tip_b != null:
 		_tip_t -= dt
 		if is_instance_valid(tip_b):
@@ -4103,10 +3422,6 @@ func _input(e: InputEvent) -> void:
 	if _fing.is_empty():
 		_hold = false
 	_od_input(e)
-	if kho_on:
-		kh_sc.input(e)
-		for h in kh_hs:
-			h.input(e)
 	gv_sc.input(e)
 	for v in _scs:
 		if v.area != null and is_instance_valid(v.area):

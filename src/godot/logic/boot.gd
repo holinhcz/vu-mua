@@ -228,12 +228,12 @@ func _test_hook() -> void:
 			"odgo": ui._od_deliver(int(a[1]))
 			"odsen": ui._od_lack_btn(int(a[1]))
 			"odget": ui._od_get(int(a[1]))
-			"sel": ui.kh_sel = a[1]; ui.kh_q = 1; ui.kh_sig = ""; ui._kho_sync()
+			"sel": ui.kh_sel = a[1]; ui.kh_q = 1
 			"plant": G.plant(int(a[1]), a[2]); G.mark()
 			"wet": G.p(int(a[1])).w = G.water_hold(G.p(int(a[1]))); G.mark()
 			"ripe": G.p(int(a[1])).g = 999999.0; G.mark()
 			"bug": G.p(int(a[1])).b = 1; G.mark()
-			"sellall": ui._kho_sell_all()
+			"sellall": ui.khop._sell_all(); ui.khop._sell_all()
 			"nv": ui.nvp.open(a[1] if a.size() > 1 else "")
 			"dd": ui.dd_open(a[1] if a.size() > 1 else "")
 			"toast": G.toast.emit(":".join(a.slice(1)))   # thử câu báo

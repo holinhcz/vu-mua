@@ -179,9 +179,8 @@ func _kho_go(g) -> void:
 	ui.kh_sel = ""
 	ui.kho_open()
 	ui._kho_tab(0)
-	ui._kho_chips()
 	for c in ui.root.get_children() + ui.get_children():
-		if c != ui.root and not (c in ui.kho_roots) and c is CanvasItem and c.visible:
+		if c != ui.root and c != ui.khop.box and c is CanvasItem and c.visible:
 			_pvis.append(c)
 			c.visible = false
 	var tm := Timer.new()   # Kho đóng (nút X) -> trả màn câu
@@ -192,7 +191,6 @@ func _kho_go(g) -> void:
 		if not ui.kho_on:
 			tm.queue_free()
 			ui.kh_f = "all"
-			ui._kho_chips()
 			_pan_end(g))
 
 func _pan_end(g) -> void:

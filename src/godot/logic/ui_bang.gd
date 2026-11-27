@@ -426,7 +426,12 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 			var isz := 24.0
 			var ix := x + (w - tw - isz - 5.0) * 0.5
 			c.tr = [ix + isz + 5.0, c.tr[1], tw, c.tr[3]]
-			c.kids.append(call("_dic", ix, float(c.tr[1]) + (float(c.tr[3]) - isz) * 0.5, isz, String(L[i][3])))
+			var sv := String(L[i][3])
+			if L[i][0] == cur and sv.begins_with("<svg"):   # (11-27) tab đang chọn (xanh): icon trắng
+				var re := RegEx.new()
+				re.compile("(fill|stroke)=\"(?!none)[^\"]*\"")
+				sv = re.sub(sv, "$1=\"rgb(255,255,255)\"", true)
+			c.kids.append(call("_dic", ix, float(c.tr[1]) + (float(c.tr[3]) - isz) * 0.5, isz, sv))
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)

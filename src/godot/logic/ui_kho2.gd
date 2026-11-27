@@ -9,7 +9,7 @@ extends "res://logic/ui_kbang.gd"
 const TABS := [["hang", "Hàng hóa"], ["vl", "Vật liệu"], ["dd", "Đồ dùng"]]
 const TK := ["hang", "vl", "dd"]
 const CW := 71.75    # thẻ món: 4 cột, cách 6
-const CH := 82.0
+const CH := 92.0
 const CG := 6.0
 const HEAD := 30.0   # dải đầu
 const FOOT := 78.0   # dải chi tiết đáy (mọi tab cùng cao)
@@ -129,18 +129,19 @@ func _head() -> Array:   # thanh sức chứa, Đáng giá, chip n/cap ★
 	out.append(c)
 	return out
 
-func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: String, cnt_hi: bool, low: Array, dim := false) -> Array:   # thẻ món chung 3 tab
+func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: String, cnt_hi: bool, low: Array, dim := false) -> Array:   # thẻ món chung 3 tab: hình 44, tên (dài thì 2 dòng), dòng giá (Hàng hóa) sát đáy
 	var c := _chip(x, y, CW, CH, "got" if sel else "fut")
-	var fs := 11.0
-	while fs > 9.5 and Box.text_w(nm, fs, 700) > CW - 6.0:   # tên dài: thu chữ rồi mới cắt
-		fs -= 0.5
 	var col := BROWN if not dim else SUB
-	if low.is_empty() and Box.text_w(nm, fs, 700) > CW - 6.0:   # không có dòng giá: tên dài xuống 2 dòng
-		var L2 := _wrap(nm, 10.0, 700, CW - 6.0)
-		c.kids = [ic, _dt(x + 2.0, y + 44.0, CW - 4.0, 14.0, String(L2[0]), 10.0, 700, col),
-			_dt(x + 2.0, y + 58.0, CW - 4.0, 14.0, _fitw(" ".join(L2.slice(1)), 10.0, 700, CW - 6.0), 10.0, 700, col)]
+	var ny := y + 50.0 if low.size() else y + 58.0   # không dòng giá: hình + tên dời xuống giữa thẻ
+	if not low.is_empty():
+		Snap._move(ic, Vector2(0, -6.0))
+	var L2 := [nm] if Box.text_w(nm, 11.0, 700) <= CW - 6.0 else _wrap(nm, 10.0, 700, CW - 6.0)
+	c.kids = [ic]
+	if L2.size() == 1:
+		c.kids.append(_dt(x + 2.0, ny, CW - 4.0, 16.0, nm, 11.0, 700, col))
 	else:
-		c.kids = [ic, _dt(x + 2.0, y + 44.0, CW - 4.0, 16.0, _fitw(nm, fs, 700, CW - 6.0), fs, 700, col)]
+		c.kids.append(_dt(x + 2.0, ny - 2.0, CW - 4.0, 13.0, String(L2[0]), 10.0, 700, col))
+		c.kids.append(_dt(x + 2.0, ny + 11.0, CW - 4.0, 13.0, _fitw(" ".join(L2.slice(1)), 10.0, 700, CW - 6.0), 10.0, 700, col))
 	c.kids.append_array(low)
 	if cnt != "":
 		c.kids.append(_badge(x + CW - 4.0, y + 4.0, cnt, GREEN if cnt_hi else "rgb(236, 224, 196)", "rgb(255, 255, 255)" if cnt_hi else SUB, true))
@@ -198,7 +199,7 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 	var out := []
 	var chips := []   # chip lọc: 7 mục + nút xếp, 2 hàng x 4, đứng yên dưới dải đầu (không cuộn theo lưới)
 	var F: Array = U.KH_CAT.duplicate()
-	F.append(["*sort", "Xếp: " + _sort_name()])
+	F.append(["*sort", "Sắp xếp"])
 	var fw := (XW - 3.0 * CG) / 4.0
 	for i in F.size():
 		var k := String(F[i][0])
@@ -245,10 +246,10 @@ func _hcard(t: String, x: float, y: float) -> Array:
 	var ar := "▲" if r > 1.08 else ("▼" if r < 0.92 else "")
 	var tw := pw + 15.0 + (12.0 if ar != "" else 0.0)
 	var px := x + (CW - tw) * 0.5
-	var low := [_dt(px, y + 61.0, pw + 1.0, 15.0, ps, 11.0, 800, "rgb(214, 128, 20)", "left"), _dick(px + pw + 8.0, y + 68.5, 12.0, "coin")]
+	var low := [_dt(px, y + CH - 19.0, pw + 1.0, 15.0, ps, 11.0, 800, "rgb(214, 128, 20)", "left"), _dick(px + pw + 8.0, y + CH - 11.5, 12.0, "coin")]
 	if ar != "":
-		low.append(_dt(px + pw + 15.0, y + 61.0, 12.0, 15.0, ar, 9.0, 800, UP if ar == "▲" else DOWN, "left"))
-	var cs := _kcard(x, y, t == U.kh_sel, _icn(x + CW * 0.5, y + 24.0, 36.0, t), String(G.item(t).get("name", t)), G.fmt_n(int(G.g.barn[t])), t == U.kh_sel, low)
+		low.append(_dt(px + pw + 15.0, y + CH - 19.0, 12.0, 15.0, ar, 9.0, 800, UP if ar == "▲" else DOWN, "left"))
+	var cs := _kcard(x, y, t == U.kh_sel, _icn(x + CW * 0.5, y + 30.0, 44.0, t), String(G.item(t).get("name", t)), G.fmt_n(int(G.g.barn[t])), t == U.kh_sel, low)
 	if hx > 1.0:
 		var hs: String = "×" + U._xn(hx)
 		cs[0].kids.append(_badge(x + 4.0, y + 4.0, hs, DOWN, "rgb(255, 255, 255)"))
@@ -270,6 +271,7 @@ func _sort_next() -> void:
 		if U.KH_SORT[j][0] == U.kh_sort:
 			i = j
 	U.kh_sort = String(U.KH_SORT[(i + 1) % U.KH_SORT.size()][0])
+	G.toast.emit("Xếp: " + _sort_name())
 
 func _sellall(e: Array) -> Array:
 	var n := 0
@@ -347,7 +349,7 @@ func _vl(n: Dictionary, vt: Dictionary) -> Array:
 		var qq: Array = q
 		items.append(func(x: float, y: float) -> Array:
 			var c2 := int(mats.get(String(qq[0]), 0))
-			var cs := _kcard(x, y, vl == qq[0], _dic(x + (CW - 36.0) * 0.5, y + 6.0, 36.0, String(qq[2]), 1.0 if c2 > 0 else 0.4), String(qq[1]), str(c2), vl == qq[0], [], c2 <= 0)
+			var cs := _kcard(x, y, vl == qq[0], _dic(x + (CW - 44.0) * 0.5, y + 10.0, 44.0, String(qq[2]), 1.0 if c2 > 0 else 0.4), String(qq[1]), str(c2), vl == qq[0], [], c2 <= 0)
 			var kk := String(qq[0])
 			cs[0].act = func(): vl = kk
 			return cs)
@@ -376,12 +378,12 @@ func _dd(n: Dictionary, vt: Dictionary) -> Array:
 	var dl := _wrap(String(E.d), 10.5, 600, XW)
 	if run:
 		dl.append("⏱ Còn " + U.kdp.MA(float(E.run)))
-	_kfix(n, vt, _detail(_ddsvg(E), "", String(E.n), ("Có ×" + str(E.c)) if int(E.c) > 0 else "Đang dùng", GREEN, dl.slice(0, 2), String(E.btn), go), FOOT, true)
+	_kfix(n, vt, _detail(_ddsvg(E), "", String(E.n), (("Có ×" + str(E.c)) + (" · đang chạy" if run else "")) if int(E.c) > 0 else "Đang dùng", GREEN, dl.slice(0, 2), String(E.btn), go), FOOT, true)
 	var items := []
 	for x0 in L:
 		var it: Dictionary = x0
 		items.append(func(x: float, y: float) -> Array:
-			var cs := _kcard(x, y, it.k == dsel, _dic(x + (CW - 36.0) * 0.5, y + 6.0, 36.0, _ddsvg(it), 1.0 if int(it.c) > 0 else 0.4), String(it.n), str(it.c) if int(it.c) > 0 else "", it.k == dsel, [])
+			var cs := _kcard(x, y, it.k == dsel, _dic(x + (CW - 44.0) * 0.5, y + 10.0, 44.0, _ddsvg(it), 1.0 if int(it.c) > 0 else 0.4), String(it.n), str(it.c) if int(it.c) > 0 else "", it.k == dsel, [])
 			var kk := String(it.k)
 			cs[0].act = func(): dsel = kk
 			return cs)
