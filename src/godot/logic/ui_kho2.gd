@@ -9,8 +9,9 @@ extends "res://logic/ui_kbang.gd"
 const TABS := [["hang", "Hàng hóa"], ["vl", "Vật liệu"], ["dd", "Đồ dùng"]]
 const TK := ["hang", "vl", "dd"]
 const CW := 71.75    # thẻ món: 4 cột, cách 6
-const CH := 92.0
+const CH := 98.0
 const CG := 6.0
+const NPAD := 5.0   # lề hai bên tên trong thẻ
 const HEAD := 30.0   # dải đầu
 const FOOT := 78.0   # dải chi tiết đáy (mọi tab cùng cao)
 const FOOT_B := 30.0 # dải nút Bán hết
@@ -135,13 +136,14 @@ func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: Stri
 	var ny := y + 50.0 if low.size() else y + 58.0   # không dòng giá: hình + tên dời xuống giữa thẻ
 	if not low.is_empty():
 		Snap._move(ic, Vector2(0, -6.0))
-	var L2 := [nm] if Box.text_w(nm, 11.0, 700) <= CW - 6.0 else _wrap(nm, 10.0, 700, CW - 6.0)
+	var tw := CW - 2.0 * NPAD   # tên chừa lề hai bên
+	var L2 := [nm] if Box.text_w(nm, 11.0, 700) <= tw else _wrap(nm, 11.0, 700, tw)   # dài thì xuống dòng, giữ cỡ chữ
 	c.kids = [ic]
 	if L2.size() == 1:
-		c.kids.append(_dt(x + 2.0, ny, CW - 4.0, 16.0, nm, 11.0, 700, col))
+		c.kids.append(_dt(x + NPAD, ny, tw, 16.0, nm, 11.0, 700, col))
 	else:
-		c.kids.append(_dt(x + 2.0, ny - 2.0, CW - 4.0, 13.0, String(L2[0]), 10.0, 700, col))
-		c.kids.append(_dt(x + 2.0, ny + 11.0, CW - 4.0, 13.0, _fitw(" ".join(L2.slice(1)), 10.0, 700, CW - 6.0), 10.0, 700, col))
+		c.kids.append(_dt(x + NPAD, ny - 3.0, tw, 14.0, String(L2[0]), 11.0, 700, col))
+		c.kids.append(_dt(x + NPAD, ny + 11.0, tw, 14.0, _fitw(" ".join(L2.slice(1)), 11.0, 700, tw), 11.0, 700, col))
 	c.kids.append_array(low)
 	if cnt != "":
 		c.kids.append(_badge(x + CW - 4.0, y + 4.0, cnt, GREEN if cnt_hi else "rgb(236, 224, 196)", "rgb(255, 255, 255)" if cnt_hi else SUB, true))
