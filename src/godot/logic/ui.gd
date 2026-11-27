@@ -71,6 +71,7 @@ var ccp = null               # CÂU CÁ BỜ KÊNH (ui_cc.gd, nút "Câu cá" tr
 var dgp = null               # ĐUA GÀ (ui_dg.gd, #dgBtn trong Giải trí)
 var carop = null             # CỜ CARO (ui_caro.gd, #caroBtn trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
+var khop = null              # (11-27) Kho trên khung chung (ui_kho2.gd), thay 4 bản chụp web khi Sen.ON
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
 func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
@@ -104,6 +105,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	bdp = load("res://logic/ui_bd.gd").new(self)
 	khp = load("res://logic/ui_kho.gd").new(self)
 	kdp = load("res://logic/ui_kdd.gd").new(self)
+	khop = load("res://logic/ui_kho2.gd").new(self)
 	bfp = load("res://logic/ui_bf.gd").new(self)
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
@@ -1891,8 +1893,6 @@ func _build_kho() -> void:
 			for kk in bp.get("kids", []):
 				kk.css = kk.css.duplicate()
 				kk.css["font-size"] = "15px"
-		if Sen.ON:   # (11-27) đáy chung khung sen
-			_kho_day(n, nm)
 		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
 			var vg := Snap.find(n, "u2vg")
 			var vk: Array = vg.get("kids", [])
@@ -2068,6 +2068,10 @@ func kho_open() -> void:
 	rm_close()
 	lock_close()
 	kho_on = true
+	if Sen.ON:
+		khop.open_tab(kho_tab)
+		khop.open()
+		return
 	kh_sig = ""
 	kh_sc.s = 0.0
 	_kho_tab(kho_tab)
@@ -2078,6 +2082,8 @@ func _kho_full(n: int, cap: int) -> void:
 
 func kho_close() -> void:
 	kho_on = false
+	if khop != null and khop.on:
+		khop.close()
 	for b in kho_roots:
 		b.visible = false
 
@@ -2085,6 +2091,9 @@ func _kho_tab(j: int) -> void:
 	if j != kho_tab:
 		kh_sel = ""
 	kho_tab = j
+	if Sen.ON:
+		khop.open_tab(j)
+		return
 	_kho_show()
 
 func _kho_show() -> void:
@@ -2111,50 +2120,6 @@ func _cat(t: String) -> String:   # rP
 	return "khac"
 
 var kh_ks := 1.0   # thẻ món Kho phóng (bộ sen)
-
-# (11-27) Kho theo ĐÁY CHUNG khung sen (Sen.DAY): đáy nội dung mọi dải đáy (nút Bán hết, chi tiết món, chi tiết vật liệu / đồ dùng)
-# nằm đúng đường đáy chung; lưới thấp lại theo.
-func kho_day_y(win: Dictionary) -> float:   # đường đáy chung (tọa độ mẫu chụp): đáy thân (trong vòng tre) - Sen.DAY
-	return float(win.r[1]) + float(win.r[3]) - 6.75 - Sen.DAY
-
-func kho_cbot(n: Dictionary) -> float:   # đáy nội dung thật của khối (chữ, nút, hình), bỏ nền
-	var b := -1.0
-	for k in n.get("kids", []):
-		if not (k is Dictionary) or not k.has("r"):
-			continue
-		var kb := kho_cbot(k) if k.get("kids", []).size() else float(k.r[1]) + float(k.r[3])
-		if String(k.get("text", "")) != "" or String(k.get("cls", "")).find("btn") >= 0 or String(k.get("tag", "")) == "button":
-			kb = maxf(kb, float(k.r[1]) + float(k.r[3]))
-		b = maxf(b, kb)
-	return b
-
-func _kho_day(n: Dictionary, nm: String) -> void:
-	var win := Snap.find(n, "pwin")
-	if win.is_empty():
-		return
-	var y := kho_day_y(win)
-	var sh := 0.0
-	var bands := []
-	for cl in ["khdock", "u2vd"]:
-		var c := Snap.find(n, cl)
-		if not c.is_empty():
-			bands.append(c)
-	if nm == "kho":
-		var bp := Snap.find(n, "primary")
-		if not bp.is_empty():
-			bands.append(bp)
-	for c in bands:
-		var cb := kho_cbot(c) if c.get("kids", []).size() else float(c.r[1]) + float(c.r[3])
-		var d := cb - y
-		if d > 0.0:
-			Snap._move(c, Vector2(0, -d))
-			sh = maxf(sh, d)
-	if sh <= 0.0:
-		return
-	for cl in ["khcard", "khgrid", "u2vg", "u2vw"]:   # lưới, thân: thấp lại bằng chỗ dải đáy nhấc lên
-		var g := Snap.find(n, cl)
-		if not g.is_empty() and cl != "u2vw":
-			g.r[3] = float(g.r[3]) - sh
 
 func _tpl_scale(n: Dictionary, o: Vector2, k: float) -> void:   # phóng cả cây mẫu chụp quanh điểm o (khung + chữ)
 	if n.has("r"):
@@ -2210,7 +2175,7 @@ func _kho_chips() -> void:
 	_kho_sync()
 
 func _kho_sync() -> void:
-	if not kho_on:
+	if not kho_on or Sen.ON:   # khung sen: Kho mới (khop) tự dựng lại theo _sig
 		return
 	if kho_tab == 1:
 		_kho_vl_sync()
@@ -3830,7 +3795,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:

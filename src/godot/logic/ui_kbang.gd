@@ -68,6 +68,23 @@ func _kshift(n: Dictionary, dy: float) -> void:   # dời cả khung (trừ nề
 		if k is Dictionary and not String(k.get("cls", "")).begins_with("pbk"):
 			Snap._move(k, Vector2(0, dy))
 
+# (11-27) KHỐI CỐ ĐỊNH (không cuộn) ở đầu / đáy thân: vùng cuộn thu lại, khối gắn vào khung (Kho: đầu sức chứa, dải chi tiết, nút Bán hết)
+# blocks: tọa độ y tính từ đỉnh dải (0..h); trả đỉnh dải (tọa độ khung)
+func _kfix(n: Dictionary, vt: Dictionary, blocks: Array, h: float, bottom: bool) -> float:
+	var card := _find(n, "khcard")
+	var y0: float
+	if bottom:
+		y0 = float(vt.r[1]) + float(vt.r[3]) - h
+		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - h - GG]
+	else:
+		y0 = float(vt.r[1])
+		vt.r = [vt.r[0], float(vt.r[1]) + h + GG, vt.r[2], float(vt.r[3]) - h - GG]
+	_hb = float(vt.r[3])
+	for b in blocks:
+		Snap._move(b, Vector2(0, y0))
+		card.kids.append(b)
+	return y0
+
 func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -> void:
 	if fit and ch + 8.0 < _hb:
 		var d := _hb - ch
