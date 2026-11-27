@@ -196,6 +196,7 @@ func _layout() -> void:
 	var fp := minf(1.0, vh / VH0)
 	if Sen.ON:   # (11-26) khung sen: bảng chừa lề hai bên như ảnh mẫu (hoa sen, dây tua lòi ra ngoài khung không bị cắt)
 		fp = minf(fp, (vw - 2.0 * SEN_LE) / VW0)
+	Box.PS = fp   # (11-27) chữ trong bảng bù tỉ lệ thu bảng: cỡ chữ = px thật như trên S26
 	for a in anchors:
 		var b: Control = a[0]
 		if is_instance_valid(b):
