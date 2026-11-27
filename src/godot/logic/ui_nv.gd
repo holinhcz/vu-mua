@@ -253,7 +253,7 @@ func _day() -> Array:
 	var hit := _dbx(X0, y - 2.0, XW, 64.0 + g, "rgba(0, 0, 0, 0)", 0.0)
 	hit.act = _dsay.bind(tip)
 	out.append(hit)
-	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("hôm nay đã đủ 100" if today else "hôm nay chưa đủ 100")
+	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("đã đủ 100" if today else "chưa đủ 100")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
 	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
 	out.append_array(_hd(y + 5.0, t1, "lua", rw + 6.0, t2, GREEN if today else SUB))   # (11-26) tiêu đề mục chung
@@ -381,12 +381,12 @@ func _ach() -> Array:
 	out.append(_dbx(X0 + 1.5, y + 8.0, 3.0, bh - 16.0, String(NVC.b4[4]), 1.5))
 	out.append(_icn(X0 + 25.0, y + bh * 0.5, 28.0, "d:gift"))
 	var x0 := X0 + 46.0
-	var ct := cur if cur != "" else "Chưa có danh hiệu"
+	var ct := cur if cur != "" else "Chưa có"
 	var cw: float = Box.text_w(ct, 10.0, 700) + 16.0
 	var tc := _chip(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, "b4" if cur != "" else "miss")
 	tc.kids = [_dt(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, ct, 10.0, 700, BROWN if cur != "" else "rgb(110, 104, 92)")]
 	out.append(tc)
-	var tl := "Chuỗi dài nhất " + str(best) + " ngày"
+	var tl := "Dài nhất " + str(best) + " ngày"
 	out.append(_dt(x0, y + 8.0, X0 + XW - 14.0 - cw - x0, 16.0, _fitw(tl, 12.0, 800, X0 + XW - 14.0 - cw - x0), 12.0, 800, BROWN, "left"))
 	var bw := X0 + XW - 18.0 - x0
 	var th := [0]

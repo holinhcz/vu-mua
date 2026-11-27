@@ -40,7 +40,7 @@ func _build() -> void:
 	_kmount(sh[0], sh[1], sh[2], r[0], float(r[1]))
 
 # ------------------------------------------------------------------ tab Quà 7 ngày đầu (bản 386): lưới 4 + 3, ô ngày 7 rộng gấp đôi
-const T7 := [["1.000 xu"], ["5 sen đỏ"], ["Gói", "vật liệu"], ["Xe đạp"], ["10 sen đỏ", "+ bùa EXP"], ["Vật liệu", "+ 3 phần cơm"], ["Xuồng ba lá", "+ 20 sen đỏ"]]
+const T7 := [["1.000 xu"], ["5 sen đỏ"], ["Gói", "vật liệu"], ["Xe đạp"], ["10 sen đỏ", "+ bùa EXP"], ["Vật liệu", "+ 3 cơm"], ["Xuồng ba lá", "+ 20 sen đỏ"]]
 
 func _tab7() -> Array:
 	var p: int = int(E.Sp().l7.get("n", 0))
@@ -97,7 +97,7 @@ func _tab7() -> Array:
 	return [out, fy + fh + 10.0]
 
 # ------------------------------------------------------------------ tab Điểm danh tháng (bản 386)
-const R8S := ["1.500 xu", "5 sen đỏ", "Vật liệu lớn", "10 sen + bùa"]
+const R8S := ["1.500 xu", "5 sen đỏ", "Vật liệu", "10 sen, bùa"]   # (11-27) ngắn: cỡ chữ S26 không đè nhãn mốc bên cạnh
 
 func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề phần + chip đặt thẳng trên nền khung
 	var e: Array = E.B8()
