@@ -20,7 +20,7 @@ const FW := 112.0     # dải chi tiết đáy khi khách đang tới
 const IR := 26.0      # dòng món ở dải đáy
 const RG6 := 6.0      # cách giữa hai kệ giỏ
 const DE_A := 386.0 / 616.0   # đế gỗ: đáy chân / rộng (ảnh 616x455, cùng góc trên trái với giỏ)
-const TEN_H := 16.0   # tên khách + sao dưới đế
+const TEN_H := 20.0   # tên khách + sao dưới đế (cách chân đế 4)
 const GA := 336.0 / 616.0   # giỏ: cao / rộng
 const GV := 0.512     # vành trước giữa giỏ (phần chiều cao)
 const GT := 10.0      # chừa trên giỏ cho bong bóng ló khỏi miệng
@@ -104,10 +104,26 @@ func _build() -> void:
 		bw = clampf((avail - rows * (GT + TEN_H) - (rows - 1) * RG6) / (rows * DE_A), 70.0, bw)
 	var ch := GT + bw * DE_A + TEN_H
 	var gh := rows * ch + maxf(0.0, rows - 1) * RG6
-	var y0 := maxf(0.0, (avail - gh) * 0.5) if src == "" else 0.0   # ít đơn: cụm kệ nằm giữa thân
+	# cụm giỏ cân giữa thân theo phần NHÌN THẤY: đỉnh bong bóng cao nhất hàng đầu .. đáy tên khách hàng cuối (trên = dưới)
+	var vtop := GT
+	for q in mini(3, L.size()):
+		var e: Dictionary = U._od_list()[L[q][1]]
+		if plan[L[q][1]] != null:
+			var ni: int = mini(3, e.items.size())
+			var s0: float = SZ[ni]
+			vtop = minf(vtop, GT - (6.0 if int(L[q][1]) == sel else 0.0) + GV * bw * GA - s0 * 0.32 - (3.0 if ni == 3 else 0.0) - (s0 * 0.5 + 3.0))
+	# khoảng trống nhìn thấy chia đều: trên cụm (tính cả GG dưới thanh tiến độ) = giữa các hàng = dưới cụm (tính cả GG trên dải đáy)
+	var vh := ch - vtop - (TEN_H - 18.0)   # một hàng nhìn thấy: đỉnh bóng .. đáy tên
+	var rg := RG6
+	var y0 := 0.0
+	if src == "" and rows > 0:
+		var G2 := maxf(GG, (avail + 2.0 * GG - rows * vh) / (rows + 1))
+		rg = maxf(RG6, G2 - vtop - (TEN_H - 18.0))
+		y0 = maxf(-vtop, G2 - GG - vtop)
+	gh = rows * ch + maxf(0.0, rows - 1) * rg
 	for q in L.size():
 		var f: int = L[q][1]
-		out.append_array(_gio(X0 + (q % 3) * cw + (cw - bw) * 0.5, y0 + (q / 3) * (ch + RG6), bw, cw, f, U._od_list()[f], plan[f]))
+		out.append_array(_gio(X0 + (q % 3) * cw + (cw - bw) * 0.5, y0 + (q / 3) * (ch + rg), bw, cw, f, U._od_list()[f], plan[f]))
 	var y := y0 + gh
 	if src != "":
 		var mn := _menu(y + 6.0)
@@ -189,13 +205,16 @@ func _vong(cx: float, cy: float, r: float, p: float, col: String) -> Dictionary:
 	var a := TAU * clampf(p, 0.0, 1.0)
 	var arc := ""
 	if p >= 0.999:
-		arc = "<circle cx=\"20\" cy=\"20\" r=\"18\" fill=\"none\" stroke=\"%s\" stroke-width=\"3.6\"/>" % col
+		arc = "<circle cx=\"20\" cy=\"20\" r=\"17.5\" fill=\"none\" stroke=\"%s\" stroke-width=\"4.5\"/>" % col
 	elif p > 0.001:
-		arc = "<path d=\"M20 2 A18 18 0 %d 1 %.2f %.2f\" fill=\"none\" stroke=\"%s\" stroke-width=\"3.6\" stroke-linecap=\"round\"/>" % [1 if a > PI else 0, 20.0 + 18.0 * sin(a), 20.0 - 18.0 * cos(a), col]
-	var sv := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><circle cx=\"20\" cy=\"20\" r=\"18\" fill=\"none\" stroke=\"rgb(255,255,255)\" stroke-opacity=\"0.7\" stroke-width=\"3.6\"/>" + arc + "</svg>"
+		arc = "<path d=\"M20 2.5 A17.5 17.5 0 %d 1 %.2f %.2f\" fill=\"none\" stroke=\"%s\" stroke-width=\"4.5\" stroke-linecap=\"round\"/>" % [1 if a > PI else 0, 20.0 + 17.5 * sin(a), 20.0 - 17.5 * cos(a), col]
+	# rãnh nền: trắng ngoài + xám nâu trong (thấy rõ phần còn thiếu)
+	var sv := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><circle cx=\"20\" cy=\"20\" r=\"17.5\" fill=\"none\" stroke=\"rgb(255,255,255)\" stroke-opacity=\"0.9\" stroke-width=\"5.5\"/><circle cx=\"20\" cy=\"20\" r=\"17.5\" fill=\"none\" stroke=\"rgb(150,120,90)\" stroke-opacity=\"0.35\" stroke-width=\"3.2\"/>" + arc + "</svg>"
 	return _dic(cx - r, cy - r, r * 2.0, sv)
 
-const BONG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><defs><radialGradient id=\"g\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"rgb(255,255,255)\" stop-opacity=\"%s\"/><stop offset=\"0.6\" stop-color=\"rgb(236,244,252)\" stop-opacity=\"%s\"/><stop offset=\"1\" stop-color=\"rgb(200,220,240)\" stop-opacity=\"%s\"/></radialGradient></defs><circle cx=\"20\" cy=\"20\" r=\"19\" fill=\"url(#g)\" stroke=\"rgb(255,255,255)\" stroke-opacity=\"0.85\" stroke-width=\"1\"/><ellipse cx=\"13\" cy=\"10\" rx=\"5\" ry=\"3.2\" transform=\"rotate(-25 13 10)\" fill=\"rgb(255,255,255)\" fill-opacity=\"0.95\"/></svg>"
+const BONG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><defs><radialGradient id=\"g\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"rgb(255,255,255)\" stop-opacity=\"%s\"/><stop offset=\"0.6\" stop-color=\"rgb(236,244,252)\" stop-opacity=\"%s\"/><stop offset=\"1\" stop-color=\"rgb(200,220,240)\" stop-opacity=\"%s\"/></radialGradient></defs><circle cx=\"20\" cy=\"20\" r=\"19\" fill=\"url(#g)\" stroke=\"rgb(255,255,255)\" stroke-opacity=\"0.95\" stroke-width=\"1.4\"/><ellipse cx=\"13\" cy=\"10\" rx=\"5\" ry=\"3.2\" transform=\"rotate(-25 13 10)\" fill=\"rgb(255,255,255)\" fill-opacity=\"0.95\"/></svg>"
+const SAO := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><path d=\"M10 1.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z\" fill=\"rgb(250,186,30)\" stroke=\"rgb(140,80,10)\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/><path d=\"M10 4.5l1.6 3.3\" stroke=\"rgb(255,236,150)\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></svg>"
+const MUI := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 7\" preserveAspectRatio=\"none\"><path d=\"M1 1H11L6 6.5Z\" fill=\"rgb(240,170,30)\" stroke=\"rgb(160,96,10)\" stroke-width=\"0.9\" stroke-linejoin=\"round\"/></svg>"
 const SANG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 80\"><defs><radialGradient id=\"g\"><stop offset=\"0\" stop-color=\"%s\" stop-opacity=\"0.85\"/><stop offset=\"1\" stop-color=\"%s\" stop-opacity=\"0\"/></radialGradient></defs><ellipse cx=\"50\" cy=\"42\" rx=\"50\" ry=\"40\" fill=\"url(#g)\"/></svg>"
 
 func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) -> Array:   # một đơn: đồ đựng + bong bóng món + tên
@@ -204,11 +223,11 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	var c: int = _cap.get(f, 1)
 	var ok: bool = pl != null and pl.ok
 	var is_sel := f == sel
-	var by := y + GT - (4.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
+	var by := y + GT - (6.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
 	if ok or is_sel:   # quầng: xanh = đủ hàng (nhấp nháy), vàng = đang chọn
 		var gc := "rgb(255,200,60)" if is_sel else "rgb(110,220,90)"
-		var gl := _dic(x - 8.0, by - 10.0, w + 16.0, SANG % [gc, gc])
-		gl.r = [x - 8.0, by - 10.0, w + 16.0, h + 20.0]
+		var gl := _dic(x - 10.0, by - 12.0, w + 20.0, SANG % [gc, gc])
+		gl.r = [x - 10.0, by - 12.0, w + 20.0, h + 30.0] if is_sel else [x - 8.0, by - 10.0, w + 16.0, h + 20.0]
 		if ok and not is_sel:
 			gl.fx = "nhay"
 		out.append(gl)
@@ -260,11 +279,11 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 			if not good and is_sel and now - _sel_t < 0.7:
 				bf.append("do:" + str(_sel_t))     # vừa chọn: món thiếu nháy đỏ
 			bb.fx = "|".join(bf)
-			var op := "1" if good else "0.85"
-			var ic := _icn(cx, cy, s * 0.72, id)
+			var op := "1" if good else "0.18"   # món thiếu: bóng trong suốt, chỉ còn viền + vệt sáng
+			var ic := _icn(cx, cy, s * 0.8, id)
 			if not good:
-				ic.css["opacity"] = "0.6"   # món thiếu: hình mờ trong bóng đục
-			bb.kids = [_vong(cx, cy, r, float(have) / maxf(1.0, need), GREEN if good else "rgb(240,160,32)"), _dic(cx - s * 0.5, cy - s * 0.5, s, BONG % [op, op, op]), ic]
+				ic.css["opacity"] = "0.6"   # món thiếu: hình đủ màu, mờ 60%
+			bb.kids = [_vong(cx, cy, r, float(have) / maxf(1.0, need), GREEN if good else "rgb(226,112,18)"), _dic(cx - s * 0.5, cy - s * 0.5, s, BONG % [op, op, op]), ic]
 			g.kids.append(bb)
 	g.kids.append(tru)
 	if ok:
@@ -278,18 +297,22 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	out.append(g)
 	# tên khách + sao cấp giỏ (★ = cấp), dưới kệ
 	var nx := x + (w - cw) * 0.5
-	var ny := y + GT + w * DE_A + 1.0
+	var ny := y + GT + w * DE_A + 4.0
 	if pl == null:
 		var wt: String = "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
 		out.append(_dt(nx, ny, cw, 14.0, _fitw(wt, 10.5, 800, cw - 4.0), 10.5, 800, SUB))
 	else:
-		var sw := c * 9.0 + 2.0
+		var sw := c * 11.0 + 2.0
 		var nm: String = _fitw(String(o.who), 10.5, 800, cw - 4.0 - sw)
 		var nw: float = Box.text_w(nm, 10.5, 800) + 1.0
 		var sx := nx + (cw - nw - sw) * 0.5
 		out.append(_dt(sx, ny, nw, 14.0, nm, 10.5, 800, BROWN, "left"))
-		for q in c:
-			out.append(_pic(sx + nw + 2.0 + q * 9.0, ny + 2.5, 9.0, 9.0, "res://ui/img/bong/sao.png"))
+		for q in c:   # sao cấp giỏ: vàng đậm viền nâu
+			out.append(_dic(sx + nw + 2.0 + q * 11.0, ny + 1.5, 11.0, SAO))
+	if is_sel:   # mũi tên vàng dưới tên: dải đáy đang là của giỏ này
+		var ar := _dic(x + w * 0.5 - 6.0, ny + 15.0, 12.0, MUI)
+		ar.r = [x + w * 0.5 - 6.0, ny + 15.0, 12.0, 7.0]
+		out.append(ar)
 	var hit := _dbx(nx, y, cw, GT + w * DE_A + TEN_H, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
 	var ff := f
 	hit.act = func():
@@ -348,7 +371,7 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 		var need := int(o.items[q][1])
 		var have: int = int(pl.have[q])
 		var good := have >= need
-		var row := _dbx(X0, iy, XW, IR, "rgb(236, 246, 228)" if good else "rgb(250, 238, 218)", 7.0)   # nền phẳng dòng món (không viền); chữ là con của nền (không bị nền đè)
+		var row := _dbx(X0, iy, XW, IR, "rgb(230, 245, 222)" if good else "rgb(253, 231, 226)", 7.0)   # nền phẳng dòng món (đủ xanh nhạt / thiếu hồng nhạt); chữ là con của nền
 		var qs: String = G.fmt_n(have) + "/" + str(need)
 		var qw: float = Box.text_w(qs, 12.0, 800) + 2.0
 		var rx0 := X0 + XW - 8.0 - (16.0 if good else 0.0)
@@ -358,6 +381,7 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 			_dt(rx0 - qw, iy, qw, IR, qs, 12.0, 800, GREEN if good else DOWN_C, "right")]
 		if good:
 			row.kids.append(_dtick(X0 + XW - 20.0, iy + (IR - 13.0) * 0.5, 13.0))
+		row.kids.append(_dbx(X0, iy + 4.0, 3.0, IR - 8.0, GREEN if good else DOWN_C, 1.5))   # vạch màu mép trái
 		out.append(row)
 		iy += IR + 2.0
 	# nút: Giao hàng / Đi lấy + bù sen, Đổi
@@ -368,14 +392,14 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 		var conf: bool = U.od_ud.i == f
 		var dw := 62.0 if conf else 56.0
 		rx -= dw
-		out.append(_btn(rx, by, dw, bh, "Đổi?" if conf else "Đổi", func():
+		out.append(_b14(rx, by, dw, bh, "Đổi?" if conf else "Đổi", func():
 			if U.od_ud.i == f and G._now_ms() < float(U.od_ud.t):   # chạm lần 2: giỏ cũ trượt ra, giỏ mới trượt vào
 				_doi(f)
 				_swap[f] = Time.get_ticks_msec() / 1000.0
 			U._od_swap(f), "red" if conf else "plain"))
 		rx -= 8.0
 	if pl.ok:
-		out.append(_btn(X0, by, rx - X0, bh, "Giao hàng", func():
+		out.append(_b14(X0, by, rx - X0, bh, "Giao hàng", func():
 			_giao(f)
 			_drop[f] = Time.get_ticks_msec() / 1000.0
 			U._od_deliver(f)))
@@ -397,8 +421,21 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 				sb.css["opacity"] = "0.6"
 			out.append(sb)
 			rx -= 8.0
-		out.append(_btn(X0, by, rx - X0, bh, "Đi lấy ›", func(): U._od_get(f), "plain"))
+		out.append(_vang(X0, by, rx - X0, bh, "Đi lấy ›", func(): U._od_get(f)))
 	return out
+
+func _b14(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # nút chung, chữ 14 (cả hàng nút một cỡ)
+	var b := _btn(x, y, w, h, t, cb, kind)
+	if b.kids.size() and b.kids[0] is Dictionary and b.kids[0].has("css"):
+		b.kids[0].css["font-size"] = _cpx(14.0)
+	return b
+
+func _vang(x: float, y: float, w: float, h: float, t: String, cb) -> Dictionary:   # nút chính vàng nổi (Đi lấy)
+	var b := _dbx(x, y, w, h, "rgb(250, 200, 80)", 10.0, _cpx(2.0) + " solid rgb(255, 240, 190)", "0px 0px 0px 2px rgb(200, 136, 28), 0px 3px 0px 1px rgb(164, 102, 14)")
+	b.css["background-image"] = "linear-gradient(rgb(255, 222, 120) 0%, rgb(244, 178, 52) 100%)"
+	b.kids = [_dt(x, y, w, h, t, 14.0, 800, "rgb(106, 58, 8)")]
+	b.act = cb
+	return b
 
 func _gnode(f: int) -> Control:   # khối giỏ của đơn f đang hiện
 	if inner == null:
