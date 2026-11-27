@@ -44,6 +44,8 @@ static func _tall_n(n: Dictionary, T: float) -> void:
 			r[1] = y0 - T
 			if n.has("tr"):
 				n.tr[1] = float(n.tr[1]) - T
+		elif y0 < TCUT and float(r[3]) < 200.0 and y0 > TCUT - 60.0:   # (11-27) khối nhỏ vắt ngang vạch cắt (dải chi tiết món Kho đáy): đứng yên theo đáy, không kéo cao (hình, thanh tre bị giãn dọc)
+			return
 		elif y0 < TCUT:
 			r[1] = y0 - T
 			r[3] = float(r[3]) + T

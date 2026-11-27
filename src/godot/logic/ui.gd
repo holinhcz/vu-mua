@@ -1882,8 +1882,10 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
+		if Sen.ON:   # (11-27) khung sen: phần đáy (nút Bán hết, chi tiết món, khung chi tiết vật liệu) dời lên khỏi chóp đáy + hoa sen góc phải (đáy chung như các bảng)
+			_kho_day(n, KHO_DAY)
 		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
-		if not bp.is_empty():
+		if not bp.is_empty() and nm != "kho_sel":   # kho_sel: "primary" là nút Bán 1 trong chi tiết món, không phải Bán hết
 			var cx := float(bp.r[0]) + float(bp.r[2]) * 0.5
 			var cy := float(bp.r[1]) + float(bp.r[3]) * 0.5 - 8.0
 			Snap._move(bp, Vector2(0, -8))
@@ -1902,6 +1904,15 @@ func _build_kho() -> void:
 				if _mat_id(String(Snap.find(t, "u2vn").get("text", ""))) != "":
 					Snap._move(t, slot[keep.size()] - Vector2(float(t.r[0]), float(t.r[1])))
 					keep.append(t)
+					var tn := Snap.find(t, "u2vn")   # (11-27) tên chữ 12, rộng hết thẻ, tối đa 2 dòng ("Lá dừa nước" không vỡ)
+					if not tn.is_empty():   # mọi tên cùng cỡ
+						tn.css = tn.css.duplicate()
+						tn.css["font-size"] = "12.5px"
+						tn.css["line-height"] = "13.5px"
+						var bot := float(tn.r[1]) + float(tn.r[3])
+						var hh := 27.0 if String(tn.get("text", "")).length() > 8 else 13.5   # 1 dòng: đáy chữ ngang đáy tên 2 dòng
+						tn.r = [float(t.r[0]) + 2.0, bot - hh, float(t.r[2]) - 4.0, hh]
+						tn.erase("tr")
 			vg.kids = keep
 		if nm == "kho_sel":
 			var g2 := Snap.find(n, "khgrid")
@@ -2090,6 +2101,38 @@ func _cat(t: String) -> String:   # rP
 	return "khac"
 
 var kh_ks := 1.0   # thẻ món Kho phóng (bộ sen)
+
+const KHO_DAY := 24.0   # khung sen: đáy thân Kho cách đáy khung thêm chừng này
+
+func _kho_day(n: Dictionary, d: float) -> void:   # thu đáy thân Kho: khối nằm ở dải đáy dời lên d, lưới / thẻ thấp lại d
+	var win := Snap.find(n, "pwin")
+	if win.is_empty():
+		return
+	var dk := Snap.find(n, "khdock")   # dải chi tiết món (Hàng hóa đang chọn): dời lên
+	if not dk.is_empty():
+		Snap._move(dk, Vector2(0, -d))
+	for cl in ["khcard", "u2vd", "u2vg"]:
+		var c := Snap.find(n, cl)
+		if c.is_empty():
+			continue
+		if cl == "u2vd":   # khung chi tiết vật liệu: cả khối dời lên
+			Snap._move(c, Vector2(0, -d))
+			continue
+		var cb := float(c.r[1]) + float(c.r[3])
+		if cl == "khcard":   # thẻ thân Hàng hóa: khối con ở dải đáy (chi tiết món, nút Bán hết) dời lên, lưới thấp lại
+			for k in c.get("kids", []):
+				_kho_day_kid(k, cb, d)
+		c.r[3] = float(c.r[3]) - d
+
+func _kho_day_kid(k: Dictionary, cb: float, d: float) -> void:
+	var kt := float(k.r[1])
+	var kb := kt + float(k.r[3])
+	if kt >= cb - 150.0 and kb > cb - 60.0 and float(k.r[3]) < 150.0:   # khối dải đáy
+		Snap._move(k, Vector2(0, -d))
+	elif kb > cb - 60.0:   # khối cao chạm đáy (lưới, thân): thấp lại, xét con
+		k.r[3] = float(k.r[3]) - d
+		for c in k.get("kids", []):
+			_kho_day_kid(c, cb, d)
 
 func _tpl_scale(n: Dictionary, o: Vector2, k: float) -> void:   # phóng cả cây mẫu chụp quanh điểm o (khung + chữ)
 	if n.has("r"):
