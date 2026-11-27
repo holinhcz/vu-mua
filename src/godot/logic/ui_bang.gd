@@ -383,7 +383,9 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 	var fs0 := _px(off_t, "font-size") / z0
 	var weq := (RW - (n - 1) * 4.5) / n
 	var pick := [true, fs0, 8.0]
-	for P in [[true, 14.0, 8.0], [true, 14.0, 5.0], [false, 14.0, 8.0], [false, 14.0, 5.0], [false, 13.0, 8.0], [false, 13.0, 5.0], [false, 12.0, 8.0], [false, 12.0, 5.0], [false, 12.0, 3.0]]:
+	var F1 := Box.FS_M / z0   # (11-27) chữ tab = cỡ Thường (bằng chip, nút); chật thì xuống cỡ Nhỏ
+	var F0 := Box.FS_S / z0
+	for P in [[true, F1, 8.0], [true, F1, 5.0], [false, F1, 8.0], [false, F1, 5.0], [false, F0, 8.0], [false, F0, 5.0], [false, F0, 3.0]]:
 		pick = P
 		var sum := (n - 1) * 4.5
 		var ok := true

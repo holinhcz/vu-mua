@@ -318,7 +318,7 @@ func kids() -> Array:
 
 func text(s: String, rect: Rect2, fsize: float, weight: int, col: Color, al := "center", sh := [], wrap := false) -> int:
 	# rect = the text element's box in css px (local); font size already in css px on screen
-	texts.append({"s": s, "rect": rect, "size": fsize, "w": weight, "col": col, "al": al, "sh": sh, "wrap": wrap})
+	texts.append({"s": s, "rect": rect, "size": fq(fsize), "w": weight, "col": col, "al": al, "sh": sh, "wrap": wrap})
 	_fg.queue_redraw()
 	return texts.size() - 1
 
@@ -335,7 +335,25 @@ func pic(t: Texture2D, rect: Rect2, mod := Color.WHITE, sh = null) -> int:
 func redraw() -> void:
 	_fg.queue_redraw()
 
+# (11-27) BỘ CỠ CHỮ CHUNG cả game: Nhỏ 10.5 / Thường 12 / Tiêu đề 14 / Đặc biệt 17 (css px trên màn).
+# Mọi chữ (vẽ + đo) quy về cỡ gần nhất trong bộ; chữ trang trí rất nhỏ (< 6.5) hoặc số khổng lồ (> 24) giữ nguyên.
+const FS_S := 10.5
+const FS_M := 12.0
+const FS_T := 14.0
+const FS_X := 17.0
+static func fq(f: float) -> float:
+	if f < 6.5 or f > 24.0:
+		return f
+	if f <= 11.25:
+		return FS_S
+	if f <= 13.0:
+		return FS_M
+	if f <= 15.5:
+		return FS_T
+	return FS_X
+
 static func text_w(s: String, fsize: float, weight: int) -> float:
+	fsize = fq(fsize)
 	# glyphs are drawn at a whole pixel size; widths are taken back to the exact css size so lines break where the browser breaks them
 	var px := fsize * Css.K
 	var n := maxi(1, int(round(px)))
@@ -479,6 +497,7 @@ func _draw_fg() -> void:
 		if t.s == "":
 			continue
 		var f := Css.font(t.w)
+		t.size = fq(t.size)   # chữ đổi cỡ sau khi dựng (gán thẳng texts[].size) cũng theo bộ cỡ chung
 		var fs := int(round(t.size * k))
 		var rr: Rect2 = t.rect
 		var ax := 0.5
