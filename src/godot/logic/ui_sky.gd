@@ -223,7 +223,7 @@ func _tabt() -> Array:
 	var mi: String = MUA_I[sea]
 	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _wsv_get(mi) if mi == "han" else (IC_SONG_T if mi == "nuoc" else _sic(mi))))
 	out.append(mb)
-	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
+	var st := (("Còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower()) if dd < 7 else ("Mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"   # (11-27) bỏ "Ngày n/7": thanh 7 ngày đã cho thấy, chữ vừa một dòng
 	var sw0 := XW - mw - 14.0   # (11-27) vừa đúng bề ngang thanh 7 ngày bên dưới (không chạm mép)
 	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, sw0, 20.0 if auto else 26.0, _fitw(st, 11.5, 700, sw0), 11.5, 700, BROWN, "left"))
 	if auto:   # thanh 7 ngày
