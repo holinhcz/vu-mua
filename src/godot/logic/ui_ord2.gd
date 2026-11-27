@@ -7,6 +7,7 @@ extends "res://logic/ui_kbang.gd"
 #     tên khách dưới giỏ; đủ hàng quầng xanh nhấp nháy + dấu tích; đơn gấp tem GẤP; giỏ đang chọn nhô lên + quầng vàng.
 #   Đáy (cố định): chi tiết giỏ đang chọn: mặt khách, tên, quán, thưởng xu + sao xanh, từng món có/cần, nút Giao hàng /
 #     Đi lấy + bù sen + Đổi; khách đang tới: giờ chờ, thanh, Gọi. Giao: xu + sao bay về ô xu / ô cấp.
+#   Mỗi giỏ đặt trên đế gỗ tràm 4 chân (ui/img/gio/de.webp, 616x455, cùng góc trên trái + bề ngang với giỏ).
 #   Hình giỏ (hinh/giotre, vẽ bằng src/giotre/giotre.py): ui/img/gio/gioN_sau.webp (cả giỏ, dưới bóng) + gioN_truoc.webp
 #     (thành + vành trước, đè chân bóng), khung 616x336; vành trước giữa giỏ ở 0,51 chiều cao.
 #   Bảng quán: khung "món giờ này" dưới giỏ.
@@ -16,7 +17,8 @@ const HEAD := 26.0
 const FW := 112.0     # dải chi tiết đáy khi khách đang tới
 const IR := 26.0      # dòng món ở dải đáy
 const RG6 := 6.0      # cách giữa hai kệ giỏ
-const KE_H := 20.0    # kệ tre dưới giỏ (thanh + chân) tới tên khách
+const DE_A := 386.0 / 616.0   # đế gỗ: đáy chân / rộng (ảnh 616x455, cùng góc trên trái với giỏ)
+const TEN_H := 16.0   # tên khách + sao dưới đế
 const GA := 336.0 / 616.0   # giỏ: cao / rộng
 const GV := 0.512     # vành trước giữa giỏ (phần chiều cao)
 const GT := 10.0      # chừa trên giỏ cho bong bóng ló khỏi miệng
@@ -91,12 +93,10 @@ func _build() -> void:
 	var avail := float(vt.r[3])
 	var bw := minf(BW, cw - 2.0)
 	if src == "" and rows > 0:   # kệ giỏ sít nhau (cách RG6); không vừa thân thì thu giỏ nhỏ lại cho vừa, không cuộn
-		bw = clampf((avail - rows * (GT + KE_H) - (rows - 1) * RG6) / (rows * GA), 70.0, bw)
-	var ch := GT + bw * GA + KE_H
+		bw = clampf((avail - rows * (GT + TEN_H) - (rows - 1) * RG6) / (rows * DE_A), 70.0, bw)
+	var ch := GT + bw * DE_A + TEN_H
 	var gh := rows * ch + maxf(0.0, rows - 1) * RG6
 	var y0 := maxf(0.0, (avail - gh) * 0.5) if src == "" else 0.0   # ít đơn: cụm kệ nằm giữa thân
-	for r in rows:
-		out.append(_ke(y0 + r * (ch + RG6) + GT + bw * GA * 0.95))
 	for q in L.size():
 		var f: int = L[q][1]
 		out.append_array(_gio(X0 + (q % 3) * cw + (cw - bw) * 0.5, y0 + (q / 3) * (ch + RG6), bw, cw, f, U._od_list()[f], plan[f]))
@@ -174,13 +174,6 @@ func _rank(plan: Array) -> void:   # cấp giỏ theo hạng thưởng các đơ
 	for r in n:
 		_cap[fs[r]] = 4 if r < n4 else (3 if r < n4 + n3 else (2 if r < n4 + n3 + n2 else 1))
 
-const KE := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 20\" preserveAspectRatio=\"none\"><defs><linearGradient id=\"t\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"rgb(236,206,120)\"/><stop offset=\"0.5\" stop-color=\"rgb(206,164,74)\"/><stop offset=\"1\" stop-color=\"rgb(150,108,40)\"/></linearGradient></defs><rect x=\"10\" y=\"8\" width=\"7\" height=\"12\" rx=\"2\" fill=\"rgb(150,108,40)\"/><rect x=\"283\" y=\"8\" width=\"7\" height=\"12\" rx=\"2\" fill=\"rgb(150,108,40)\"/><rect x=\"0\" y=\"1\" width=\"300\" height=\"9\" rx=\"4.5\" fill=\"url(#t)\" stroke=\"rgb(122,84,30)\" stroke-width=\"0.8\"/><g fill=\"rgb(150,108,40)\"><rect x=\"48\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"112\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"186\" y=\"1\" width=\"2.4\" height=\"9\"/><rect x=\"250\" y=\"1\" width=\"2.4\" height=\"9\"/></g><rect x=\"6\" y=\"2.5\" width=\"288\" height=\"1.6\" rx=\"0.8\" fill=\"rgb(255,240,190)\" fill-opacity=\"0.8\"/></svg>"
-
-func _ke(y: float) -> Dictionary:   # kệ tre ngang dưới một hàng giỏ (thanh tre có mắt + 2 chân), giỏ đứng trên kệ
-	var d := _dic(X0 - 4.0, y, XW + 8.0, KE)
-	d.r = [X0 - 4.0, y, XW + 8.0, 13.0]
-	return d
-
 func _art(c: int, lop: String, x: float, y: float, w: float, h: float) -> Dictionary:   # một lớp hình giỏ cấp c
 	return _pic(x, y, w, h, "res://ui/img/gio/gio" + str(c) + "_" + lop + ".webp")
 
@@ -218,6 +211,7 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		if ok and not is_sel:
 			gl.fx = "nhay"
 		out.append(gl)
+	out.append(_pic(x, y + GT, w, w * 455.0 / 616.0, "res://ui/img/gio/de.webp"))   # đế gỗ tràm (đứng yên khi giỏ nhô lên)
 	out.append(_art(c, "sau", x, by, w, h))
 	if pl != null:
 		var ni: int = mini(3, o.items.size())
@@ -241,12 +235,12 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		out.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
 	if pl != null and o.get("hot", -1) == G.day():
 		out.append(_tem(x - 2.0, by + h * 0.45))
-	if pl == null:   # khách đang tới: giỏ mờ
+	if pl == null:   # khách đang tới: giỏ mờ (đế giữ nguyên)
 		out[out.size() - 1].css["opacity"] = "0.45"
 		out[out.size() - 2].css["opacity"] = "0.45"
 	# tên khách + sao cấp giỏ (★ = cấp), dưới kệ
 	var nx := x + (w - cw) * 0.5
-	var ny := y + GT + h + KE_H - 15.0
+	var ny := y + GT + w * DE_A + 1.0
 	if pl == null:
 		var wt: String = "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
 		out.append(_dt(nx, ny, cw, 14.0, _fitw(wt, 10.5, 800, cw - 4.0), 10.5, 800, SUB))
@@ -258,7 +252,7 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		out.append(_dt(sx, ny, nw, 14.0, nm, 10.5, 800, BROWN, "left"))
 		for q in c:
 			out.append(_pic(sx + nw + 2.0 + q * 9.0, ny + 2.5, 9.0, 9.0, "res://ui/img/bong/sao.png"))
-	var hit := _dbx(nx, y, cw, GT + h + KE_H, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
+	var hit := _dbx(nx, y, cw, GT + w * DE_A + TEN_H, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
 	var ff := f
 	hit.act = func():
 		sel = ff
