@@ -37,7 +37,7 @@ func _kshell(L: Array, cur: String, go: Callable, th := 0.0) -> Array:   # th > 
 	var vy := ty0
 	if L.size():
 		_mv(tabs, float(tabs.r[0]), ty0)
-		vy = ty0 + float(tabs.r[3]) + 6.0
+		vy = ty0 + float(tabs.r[3]) + GG   # (11-27) tab -> thân: khoảng cách phần chung (GG)
 		var bd := _cl(ST.ttdot)
 		bd.text = ""   # (bản 489) chấm đỏ trơn, không ghi số
 		_seg_tabs(tabs, L, cur, go, bd)

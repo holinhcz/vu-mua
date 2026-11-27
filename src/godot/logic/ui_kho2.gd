@@ -12,7 +12,8 @@ const CW := 71.75    # thẻ món: 4 cột, cách 6
 const CH := 98.0
 const CG := 6.0
 const NPAD := 5.0   # lề hai bên tên trong thẻ
-const HEAD := 30.0   # dải đầu
+const HTOP := 6.0    # lề trên dải đầu (dưới tre)
+const HEAD := 28.0   # dải đầu
 const FOOT := 78.0   # dải chi tiết đáy (mọi tab cùng cao)
 const FOOT_B := 30.0 # dải nút Bán hết
 const UP := "rgb(47, 158, 68)"
@@ -89,12 +90,12 @@ func _build() -> void:
 	U.kho_on = true
 	sig = _sig()
 	var L := TABS.map(func(x): return [x[0], x[1], false, TIC.get(x[0], "")])
-	var sh := _kshell(L, tab, _tab_go, HEAD + 6.0)   # dải đầu (sức chứa) nằm trên hàng tab như Kho cũ
+	var sh := _kshell(L, tab, _tab_go, HTOP + HEAD + GG)   # dải đầu (sức chứa) nằm trên hàng tab như Kho cũ: lề trên HTOP, cách tab GG
 	var n: Dictionary = sh[0]
 	var vt: Dictionary = sh[1]
 	var card := _find(n, "khcard")
 	for b in _head():
-		Snap._move(b, Vector2(0, float(sh[3])))
+		Snap._move(b, Vector2(0, float(sh[3]) + HTOP))
 		card.kids.append(b)
 	var r: Array
 	if tab == "vl":
@@ -182,8 +183,8 @@ func _detail(svg: String, ic_id: String, nm: String, sub: String, sub_col: Strin
 		bw = maxf(64.0, Box.text_w(btn, 11.0, 800) + 24.0)
 		out.append(_btn(X0 + XW - bw, 10.0, bw, 28.0, btn, act if ok else null, "go" if ok else "off"))
 	var tw := XW - 42.0 - (bw + 8.0 if bw > 0.0 else 0.0)
-	out.append(_dt(X0 + 42.0, 7.0, tw, 17.0, _fitw(nm, 13.0, 800, tw), 13.0, 800, BROWN, "left"))
-	out.append(_dt(X0 + 42.0, 25.0, tw, 14.0, _fitw(sub, 10.5, 700, tw), 10.5, 700, sub_col, "left"))
+	out.append(_dt(X0 + 42.0, 6.0, tw, 16.0, _fitw(nm, 13.0, 800, tw), 13.0, 800, BROWN, "left"))   # tên 6..22, cách 6, dòng phụ 28..42, cách 6, hàng dưới 48
+	out.append(_dt(X0 + 42.0, 28.0, tw, 14.0, _fitw(sub, 10.5, 700, tw), 10.5, 700, sub_col, "left"))
 	var y := 48.0
 	for r in rows:
 		out.append(_dt(X0, y, XW, 14.0, _fitw(String(r), 10.5, 600, XW), 10.5, 600, SUB, "left"))
