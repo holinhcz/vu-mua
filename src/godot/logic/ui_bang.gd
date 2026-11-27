@@ -445,14 +445,18 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 # (11-26) hiệu ứng khối (fx trong bản dựng, cả khối con): "lac" lắc vài cái rồi nghỉ, "tia" xoay chậm + sáng mờ đều,
 # (11-27) "nhay" sáng mờ nhấp nháy, "nhap:<pha>" nhấp nhô lên xuống, "nay" nảy co giãn (chân dưới) vài giây một lần,
 #   "chon:<giây>" nảy bung một nhịp lúc vừa chọn, "roi:<giây>" rơi xuống bật nảy (sau <giây>), "kim" / "kim3" vệt ánh kim
-#   quét qua đúng hình (shader trên lớp hình), "hat:xanh" đốm sáng bay lên, "hat:lap" lấp lánh quanh khối (hạt CPUParticles2D).
+#   quét qua đúng hình (shader trên lớp hình), "hat:xanh" đốm sáng bay lên, "hat:lap" lấp lánh quanh khối (hạt CPUParticles2D),
+#   "bat:<giây>" bật phồng một nhịp, "do:<giây>" nháy đỏ, "rung" rung quanh góc nghiêng sẵn, "truot:<giây>" trượt vào từ phải.
 #   Nhiều hiệu ứng một khối: nối bằng "|".
 var _fx := []
 var _fxt := 0.0
 
-func _reg_fx(node: Control, k: Dictionary) -> void:   # gom hiệu ứng của khối + khối con (đệ quy), ghi chỗ gốc để hiệu ứng dời chỗ
+func _reg_fx(node: Control, k: Dictionary, top := true) -> void:   # gom hiệu ứng của khối + khối con (đệ quy), ghi chỗ gốc để hiệu ứng dời chỗ
 	if k.has("fx"):
-		node.set_meta("fx0", node.position)
+		if top or not node.has_meta("fx0"):   # khối con dùng lại: giữ chỗ gốc cũ (đang lệch vì hiệu ứng thì không lấy làm gốc -> hết giật mỗi lần dựng lại)
+			node.set_meta("fx0", node.position)
+		if not node.has_meta("r0"):
+			node.set_meta("r0", node.rotation)
 		for f in String(k.fx).split("|"):
 			if f.begins_with("kim"):
 				var fg = node.get("_fg")
@@ -467,7 +471,7 @@ func _reg_fx(node: Control, k: Dictionary) -> void:   # gom hiệu ứng của k
 		var dk: Array = k.get("kids", [])
 		for i in mini(ks.size(), dk.size()):
 			if dk[i] is Dictionary:
-				_reg_fx(ks[i], dk[i])
+				_reg_fx(ks[i], dk[i], false)
 
 static var _KIM := {}
 static func _kim_mat(slow: bool) -> ShaderMaterial:   # vệt sáng chéo quét qua phần có hình (alpha), nghỉ giữa hai lần quét
@@ -585,8 +589,25 @@ func _fx_step(dt: float) -> void:
 			c.rotation = sin(p * 34.0) * 0.16 * (1.0 - p / 0.55) if p < 0.55 else 0.0
 		elif f == "nhay":   # (11-27) viền sáng nhấp nháy (thẻ đơn đủ hàng)
 			c.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * sin(_fxt * 4.0))
-		elif f.begins_with("nhap:"):   # nhấp nhô (bong bóng nổi trong giỏ)
-			c.position.y = p0.y + sin(_fxt * 2.4 + float(f.substr(5))) * 1.4 * Css.K
+		elif f.begins_with("nhap:"):   # nhấp nhô (bong bóng nổi trong giỏ): sóng sin chậm, dời mịn từng điểm ảnh lẻ
+			c.position.y = p0.y + sin(_fxt * 1.9 + float(f.substr(5))) * 1.3 * Css.K
+		elif f.begins_with("bat:"):   # bật phồng một nhịp (bóng vừa có thêm hàng)
+			c.pivot_offset = c.size * 0.5
+			var ab := now - float(f.substr(4))
+			c.scale = Vector2.ONE * (1.0 + 0.32 * sin(PI * ab / 0.4) * (1.0 - ab / 0.4)) if ab < 0.4 else Vector2.ONE
+		elif f.begins_with("do:"):   # nháy đỏ 2 lần (món còn thiếu, lúc vừa chọn giỏ)
+			var ad := now - float(f.substr(3))
+			var kd := absf(sin(PI * ad / 0.3)) if ad < 0.6 else 0.0
+			c.modulate = Color(1.0, 1.0 - 0.55 * kd, 1.0 - 0.55 * kd, 1.0)
+		elif f == "rung":   # rung lắc nhẹ quanh góc nghiêng sẵn (tem GẤP), nghỉ giữa hai lần
+			c.pivot_offset = c.size * 0.5
+			var pr := fmod(_fxt, 2.2)
+			c.rotation = float(c.get_meta("r0", 0.0)) + (sin(pr * 30.0) * 0.12 * (1.0 - pr / 0.5) if pr < 0.5 else 0.0)
+		elif f.begins_with("truot:"):   # trượt vào từ bên phải (giỏ đơn mới sau khi đổi)
+			var at := now - float(f.substr(6))
+			var qt := clampf((at - 0.25) / 0.45, 0.0, 1.0)
+			c.modulate.a = 0.0 if at < 0.25 else qt
+			c.position.x = p0.x + 60.0 * Css.K * pow(1.0 - qt, 3.0)
 		elif f == "nay" or f.begins_with("chon:"):   # nảy co giãn, chân dưới đứng yên
 			c.pivot_offset = Vector2(c.size.x * 0.5, c.size.y)
 			var q := -1.0

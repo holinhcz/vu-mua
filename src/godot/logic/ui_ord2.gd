@@ -36,6 +36,9 @@ var sel := -1   # đơn đang chọn (chỉ số trong U._od_list)
 var _cap := {}   # đơn f -> cấp giỏ 1..4
 var _sel_t := 0.0   # lúc vừa chọn giỏ (giây, nảy bung một nhịp)
 var _drop := {}     # đơn f -> lúc vừa giao (giỏ mới rơi xuống đế)
+var _swap := {}     # đơn f -> lúc vừa đổi (giỏ mới trượt vào)
+var _had := {}      # "f:q" -> số có lần dựng trước (có thêm hàng -> bóng bật)
+var _pop := {}      # "f:q" -> lúc vừa có thêm hàng
 
 func _init(ui) -> void:
 	super(ui)
@@ -67,10 +70,11 @@ func _sig() -> String:
 func _build() -> void:
 	U.od_on = true
 	var lp: Array = U._od_order()
-	var L: Array = lp[0]
+	var L: Array = lp[0].duplicate()
 	var plan: Array = lp[1]
-	if sel < 0 or sel >= U._od_list().size():
-		sel = int(L[0][1]) if L.size() else -1
+	L.sort_custom(func(a, b): return int(a[1]) < int(b[1]))   # giỏ giữ nguyên chỗ (không xếp lại khi đủ hàng): giao / đổi xong giỏ mới về đúng ô cũ
+	if sel < 0 or sel >= U._od_list().size():   # mặc định: đơn đủ hàng đầu tiên, không có thì đơn đầu
+		sel = int(lp[0][0][1]) if L.size() else -1   # lp[0] xếp đơn đủ hàng lên trước
 	sig = _sig()
 	_rank(plan)
 	var sh := _kshell([], "", func(_k): pass)
@@ -216,6 +220,8 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	var now := Time.get_ticks_msec() / 1000.0
 	if _drop.has(f) and now - float(_drop[f]) < 1.4:
 		gf.append("roi:" + str(_drop[f]))   # giỏ mới rơi xuống đế sau khi giao
+	elif _swap.has(f) and now - float(_swap[f]) < 1.0:
+		gf.append("truot:" + str(_swap[f]))   # đổi đơn: giỏ mới trượt vào
 	elif is_sel and now - _sel_t < 0.6:
 		gf.append("chon:" + str(_sel_t))   # vừa chọn: nảy bung một nhịp
 	elif ok:
@@ -244,7 +250,16 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 			var cy: float = by + GV * h - s * 0.32 - (3.0 if ni == 3 and q == 1 else 0.0)   # chân bóng lọt dưới vành trước
 			var r := s * 0.5 + 3.0
 			var bb := _dbx(cx - r, cy - r, r * 2.0, r * 2.0, "rgba(0, 0, 0, 0)", 0.0)   # một bong bóng: vòng + bóng + hình, nhấp nhô lệch nhịp
-			bb.fx = "nhap:" + str(q * 2.1 + f * 0.7)
+			var kq := str(f) + ":" + str(q) + ":" + id
+			if _had.has(kq) and have > int(_had[kq]):
+				_pop[kq] = now
+			_had[kq] = have
+			var bf := ["nhap:" + str(q * 2.1 + f * 0.7)]
+			if _pop.has(kq) and now - float(_pop[kq]) < 0.5:
+				bf.append("bat:" + str(_pop[kq]))   # vừa có thêm hàng: bóng bật phồng
+			if not good and is_sel and now - _sel_t < 0.7:
+				bf.append("do:" + str(_sel_t))     # vừa chọn: món thiếu nháy đỏ
+			bb.fx = "|".join(bf)
 			var op := "1" if good else "0.85"
 			var ic := _icn(cx, cy, s * 0.72, id)
 			if not good:
@@ -255,7 +270,9 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 	if ok:
 		g.kids.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
 	if pl != null and o.get("hot", -1) == G.day():
-		g.kids.append(_tem(x - 2.0, by + h * 0.45))
+		var tm := _tem(x - 2.0, by + h * 0.45)
+		tm.fx = "rung"   # đơn gấp: tem rung
+		g.kids.append(tm)
 	if pl == null:   # khách đang tới: giỏ mờ (đế giữ nguyên)
 		g.css["opacity"] = "0.45"
 	out.append(g)
@@ -351,7 +368,11 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 		var conf: bool = U.od_ud.i == f
 		var dw := 62.0 if conf else 56.0
 		rx -= dw
-		out.append(_btn(rx, by, dw, bh, "Đổi?" if conf else "Đổi", func(): U._od_swap(f), "red" if conf else "plain"))
+		out.append(_btn(rx, by, dw, bh, "Đổi?" if conf else "Đổi", func():
+			if U.od_ud.i == f and G._now_ms() < float(U.od_ud.t):   # chạm lần 2: giỏ cũ trượt ra, giỏ mới trượt vào
+				_doi(f)
+				_swap[f] = Time.get_ticks_msec() / 1000.0
+			U._od_swap(f), "red" if conf else "plain"))
 		rx -= 8.0
 	if pl.ok:
 		out.append(_btn(X0, by, rx - X0, bh, "Giao hàng", func():
@@ -387,10 +408,7 @@ func _gnode(f: int) -> Control:   # khối giỏ của đơn f đang hiện
 			return c
 	return null
 
-func _giao(f: int) -> void:   # giao: bong bóng vỡ bụp thành bọt, giỏ nhấc khỏi đế bay vòng lên ô xu, hoa giấy + xu + sao bay theo đường cong
-	var g := _gnode(f)
-	if g == null:
-		return
+func _fly(g: Control, bub: bool) -> Control:   # bản sao giỏ (lớp sau / trước, bóng nếu bub) trên lớp hiệu ứng, cùng chỗ trên màn
 	var L: CanvasLayer = U.fx_layer()
 	var xf: Transform2D = g.get_global_transform_with_canvas()
 	var fly := Control.new()
@@ -400,18 +418,49 @@ func _giao(f: int) -> void:   # giao: bong bóng vỡ bụp thành bọt, giỏ 
 	fly.size = g.size
 	fly.pivot_offset = g.size * 0.5
 	L.add_child(fly)
+	for k in g.kids():
+		var sn: Dictionary = k.get_meta("snap", {})
+		var src_k: Array = []
+		if sn.has("pic"):
+			src_k = [k]
+		elif bub and String(sn.get("fx", "")).begins_with("nhap:"):
+			for kk in k.kids():
+				if kk.get_meta("snap", {}).has("ic"):
+					src_k = [kk]
+		for kk in src_k:
+			var s2: Dictionary = kk.get_meta("snap", {})
+			var tr := TextureRect.new()
+			tr.texture = Css.image(String(s2.pic)) if s2.has("pic") else U.item_ic(String(s2.ic), kk.size.x * xf.get_scale().x)
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.position = kk.get_global_transform_with_canvas().origin - xf.origin
+			tr.position /= xf.get_scale()
+			tr.size = kk.size
+			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fly.add_child(tr)
+	return fly
+
+func _doi(f: int) -> void:   # đổi đơn: giỏ cũ (cả món) trượt sang trái rồi mờ đi
+	var g := _gnode(f)
+	if g == null:
+		return
+	var fly := _fly(g, true)
+	var a := fly.position
+	var tw := fly.create_tween()
+	tw.tween_property(fly, "position", a + Vector2(-70.0 * Css.K, 0.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(fly, "modulate:a", 0.0, 0.35).set_delay(0.1)
+	tw.tween_callback(fly.queue_free)
+
+func _giao(f: int) -> void:   # giao: bong bóng vỡ bụp thành bọt, giỏ nhấc khỏi đế bay vòng lên ô xu, hoa giấy + xu + sao bay theo đường cong
+	var g := _gnode(f)
+	if g == null:
+		return
+	var L: CanvasLayer = U.fx_layer()
+	var xf: Transform2D = g.get_global_transform_with_canvas()
+	var fly := _fly(g, false)
 	var gc: Vector2 = xf * (g.size * 0.5)
 	for k in g.kids():
 		var sn: Dictionary = k.get_meta("snap", {})
-		if sn.has("pic"):   # lớp giỏ sau / trước bay theo
-			var tr := TextureRect.new()
-			tr.texture = Css.image(String(sn.pic))
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.position = k.position
-			tr.size = k.size
-			tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			fly.add_child(tr)
-		elif String(sn.get("fx", "")).begins_with("nhap:"):   # bong bóng: vỡ thành bọt, hình món phồng lên rồi tan
+		if String(sn.get("fx", "")).begins_with("nhap:"):   # bong bóng: vỡ thành bọt, hình món phồng lên rồi tan
 			var bc: Vector2 = k.get_global_transform_with_canvas() * (k.size * 0.5)
 			_bot(L, bc, k.size.x * xf.get_scale().x)
 			for kk in k.kids():
