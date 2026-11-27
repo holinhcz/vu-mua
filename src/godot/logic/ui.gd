@@ -1882,8 +1882,6 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
-		if Sen.ON and nm != "kho":   # (11-27) khung sen: dải chi tiết món, khung chi tiết vật liệu dời lên khỏi chóp đáy + hoa sen góc phải (nút Bán hết giữ chỗ: lưới không hụt)
-			_kho_day(n, KHO_DAY)
 		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
 		if not bp.is_empty() and nm != "kho_sel":   # kho_sel: "primary" là nút Bán 1 trong chi tiết món, không phải Bán hết
 			var cx := float(bp.r[0]) + float(bp.r[2]) * 0.5
@@ -1893,6 +1891,8 @@ func _build_kho() -> void:
 			for kk in bp.get("kids", []):
 				kk.css = kk.css.duplicate()
 				kk.css["font-size"] = "15px"
+		if Sen.ON:   # (11-27) đáy chung khung sen
+			_kho_day(n, nm)
 		if nm == "kho2":   # (11-25) Vật liệu: bỏ ô vật liệu đã gộp (then, bao, tôn, bạt, bảng, cân), dồn ô còn lại lên
 			var vg := Snap.find(n, "u2vg")
 			var vk: Array = vg.get("kids", [])
@@ -2112,37 +2112,49 @@ func _cat(t: String) -> String:   # rP
 
 var kh_ks := 1.0   # thẻ món Kho phóng (bộ sen)
 
-const KHO_DAY := 24.0   # khung sen: đáy thân Kho cách đáy khung thêm chừng này
+# (11-27) Kho theo ĐÁY CHUNG khung sen (Sen.DAY): đáy nội dung mọi dải đáy (nút Bán hết, chi tiết món, chi tiết vật liệu / đồ dùng)
+# nằm đúng đường đáy chung; lưới thấp lại theo.
+func kho_day_y(win: Dictionary) -> float:   # đường đáy chung (tọa độ mẫu chụp): đáy thân (trong vòng tre) - Sen.DAY
+	return float(win.r[1]) + float(win.r[3]) - 6.75 - Sen.DAY
 
-func _kho_day(n: Dictionary, d: float) -> void:   # thu đáy thân Kho: khối nằm ở dải đáy dời lên d, lưới / thẻ thấp lại d
+func kho_cbot(n: Dictionary) -> float:   # đáy nội dung thật của khối (chữ, nút, hình), bỏ nền
+	var b := -1.0
+	for k in n.get("kids", []):
+		if not (k is Dictionary) or not k.has("r"):
+			continue
+		var kb := kho_cbot(k) if k.get("kids", []).size() else float(k.r[1]) + float(k.r[3])
+		if String(k.get("text", "")) != "" or String(k.get("cls", "")).find("btn") >= 0 or String(k.get("tag", "")) == "button":
+			kb = maxf(kb, float(k.r[1]) + float(k.r[3]))
+		b = maxf(b, kb)
+	return b
+
+func _kho_day(n: Dictionary, nm: String) -> void:
 	var win := Snap.find(n, "pwin")
 	if win.is_empty():
 		return
-	var dk := Snap.find(n, "khdock")   # dải chi tiết món (Hàng hóa đang chọn): dời lên
-	if not dk.is_empty():
-		Snap._move(dk, Vector2(0, -d))
-	for cl in ["khcard", "u2vd", "u2vg"]:
+	var y := kho_day_y(win)
+	var sh := 0.0
+	var bands := []
+	for cl in ["khdock", "u2vd"]:
 		var c := Snap.find(n, cl)
-		if c.is_empty():
-			continue
-		if cl == "u2vd":   # khung chi tiết vật liệu: cả khối dời lên
+		if not c.is_empty():
+			bands.append(c)
+	if nm == "kho":
+		var bp := Snap.find(n, "primary")
+		if not bp.is_empty():
+			bands.append(bp)
+	for c in bands:
+		var cb := kho_cbot(c) if c.get("kids", []).size() else float(c.r[1]) + float(c.r[3])
+		var d := cb - y
+		if d > 0.0:
 			Snap._move(c, Vector2(0, -d))
-			continue
-		var cb := float(c.r[1]) + float(c.r[3])
-		if cl == "khcard":   # thẻ thân Hàng hóa: khối con ở dải đáy (chi tiết món, nút Bán hết) dời lên, lưới thấp lại
-			for k in c.get("kids", []):
-				_kho_day_kid(k, cb, d)
-		c.r[3] = float(c.r[3]) - d
-
-func _kho_day_kid(k: Dictionary, cb: float, d: float) -> void:
-	var kt := float(k.r[1])
-	var kb := kt + float(k.r[3])
-	if kt >= cb - 150.0 and kb > cb - 60.0 and float(k.r[3]) < 150.0:   # khối dải đáy
-		Snap._move(k, Vector2(0, -d))
-	elif kb > cb - 60.0:   # khối cao chạm đáy (lưới, thân): thấp lại, xét con
-		k.r[3] = float(k.r[3]) - d
-		for c in k.get("kids", []):
-			_kho_day_kid(c, cb, d)
+			sh = maxf(sh, d)
+	if sh <= 0.0:
+		return
+	for cl in ["khcard", "khgrid", "u2vg", "u2vw"]:   # lưới, thân: thấp lại bằng chỗ dải đáy nhấc lên
+		var g := Snap.find(n, cl)
+		if not g.is_empty() and cl != "u2vw":
+			g.r[3] = float(g.r[3]) - sh
 
 func _tpl_scale(n: Dictionary, o: Vector2, k: float) -> void:   # phóng cả cây mẫu chụp quanh điểm o (khung + chữ)
 	if n.has("r"):

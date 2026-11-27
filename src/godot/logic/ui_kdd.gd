@@ -183,8 +183,10 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 	ds.kids[0].text = String(E.d)
 	if run and ds.kids.size() > 1:
 		ds.kids[1].text = "⏱ Còn " + MA(float(E.run))
-	if U.Sen.ON:   # (11-27) khung sen: khung chi tiết dời lên khỏi chóp đáy + hoa sen góc phải (như Vật liệu)
-		Snap._move(d, Vector2(0, -U.KHO_DAY))
+	if Sen.ON:   # (11-27) khung sen: khung chi tiết dời lên khỏi chóp đáy + hoa sen góc phải (như Vật liệu)
+		var dd: float = U.kho_cbot(d) - (610.0 - 6.75 - Sen.DAY)   # đáy chung khung sen (như Vật liệu)
+		if dd > 0.0:
+			Snap._move(d, Vector2(0, -dd))
 	var db: Control = U._build(d, {}, o)
 	vw.add(db)
 	built.append(db)

@@ -10,6 +10,7 @@ const D := "res://ui/img/sen/"
 const USE_W := 220.0
 const USE_H := 200.0
 const MAT := 40.0     # mắt tre cách nhau ~ (css px)
+const DAY := 30.0    # ĐÁY CHUNG mọi bảng khung sen: nội dung dừng cách đáy thân chừng này (sóng hồng, chóp đáy, hoa sen góc phải)
 const ON := true      # bộ giao diện sen (khung, thanh tre, tab, chip đỏ)
 
 static var M := {}

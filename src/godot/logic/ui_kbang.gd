@@ -142,7 +142,7 @@ func _fitw(s: String, fs: float, fw: int, w: float) -> String:   # cắt chữ t
 	return s.strip_edges() + "…"
 
 # ------------------------------------------------------------------ khối dựng tay (bản 386): tọa độ cuối (khung Kho), y tính từ đỉnh thân
-const SEN_DAY := 30.0   # khung sen: đáy thân chung cách đáy khung (chóp đáy, hoa sen góc phải)
+const SEN_DAY := Sen.DAY   # đáy chung khung sen (ui/sen.gd)
 const X0 := 16.5      # mép trái nội dung (như thẻ trong Kho / Sổ làng)
 const XW := 305.0     # rộng nội dung
 const BROWN := "rgb(74, 52, 20)"
