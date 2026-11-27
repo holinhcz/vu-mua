@@ -71,6 +71,7 @@ var ccp = null               # CÂU CÁ BỜ KÊNH (ui_cc.gd, nút "Câu cá" tr
 var dgp = null               # ĐUA GÀ (ui_dg.gd, #dgBtn trong Giải trí)
 var carop = null             # CỜ CARO (ui_caro.gd, #caroBtn trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
+var ordp = null              # (11-27) Đơn hàng trên khung chung (ui_ord2.gd)
 var khop = null              # (11-27) Kho trên khung chung (ui_kho2.gd), thay 4 bản chụp web khi Sen.ON
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -105,6 +106,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	khp = load("res://logic/ui_kho.gd").new(self)
 	kdp = load("res://logic/ui_kdd.gd").new(self)
 	khop = load("res://logic/ui_kho2.gd").new(self)
+	ordp = load("res://logic/ui_ord2.gd").new(self)
 	bfp = load("res://logic/ui_bf.gd").new(self)
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
@@ -1956,58 +1958,15 @@ func _mat_id(name: String) -> String:
 # ------------------------------------------------------------------ chạm ô ruộng (c2 bản web)
 # ------------------------------------------------------------------ đơn hàng (#pn-orders, ws / jp bản web)
 const OD_HD := ["#b5653a", "#5f8a3c", "#c4932c", "#4f7896", "#7a5a8c", "#3f8a7a", "#a34d70"]
-const OD_IT := 33.75          # khoảng cách 2 dòng món trong thẻ
-const OD_COL := 160.0         # cột 2 lệch cột 1
-const OD_GAP := 6.0           # gap 8px x .75
-const OD_UL := 416.22         # khung danh sách đơn cao nhất (2 hàng thẻ đầy)
-func _od_ulh() -> float:   # cao danh sách thật (khung chung kéo cao: lấy theo mẫu đã giãn)
-	var ul := Snap.find(od_shell.get("no", {}), "orders")
-	return float(ul.r[3]) if not ul.is_empty() else OD_UL
 var od_on := false
 var od_src := ""              # (bản 353) "" = Đơn hàng; quancom / taphoa / cafe = khách quán (w_quan.cards) trên cùng bảng
 var od_L := []                # danh sách thẻ của od_src (làm mới mỗi lần _ord_sync)
-var od_tpl := {}              # mẫu thẻ, dòng món, nút (từ số đo bản web)
-var od_shell := {}            # "has"/"no": khung bảng (chưa có thẻ)
-var od_box: Control = null
-var od_ids := {}
-var od_ul: Control = null
-var od_ul0 := Vector2.ZERO
-var od_shsig := ""
-var od_cards := {}            # i -> {b, sig}
 var od_ud := {"i": -1, "t": 0.0}
-var od_sc = preload("res://logic/vscroll.gd").new()   # (bản 287) cuộn danh sách đơn: dùng chung vscroll.gd như Kho
-var od_scroll: float:
-	get: return od_sc.s
-	set(v): od_sc.s = v
-var od_hmax: float:
-	get: return od_sc.hmax
-	set(v): od_sc.hmax = v
 var od_lk: Control = null
 var od_lk_tpl := {}
 var od_xu_span := {}
 
-func _od_lis(nm: String) -> Array:
-	return Snap.find(Snap.load_snap(nm)["#pov"][0], "orders").get("kids", [])
-
-func _build_ord() -> void:
-	var L0 := _od_lis("ord")
-	var L1 := _od_lis("ord_ok")
-	od_tpl.no = L0[0]
-	od_tpl.ok = L1[0]
-	for li in _od_lis("ord_wait"):
-		if String(li.cls).split(" ").has("odw"):
-			od_tpl.wait = li
-	var is0: Array = Snap.find(L0[0], "odis").kids
-	od_tpl.it_no = is0[0]
-	od_tpl.it_ph = is0[1]
-	od_tpl.it_ok = Snap.find(L1[0], "odis").kids[0]
-	od_tpl.hot = Snap.find(L0[1], "hot")["::after"]
-	od_tpl.sen = Snap.find(_od_lis("ord_sen")[0], "odsen")
-	od_tpl.sw_on = Snap.find(_od_lis("ord_sw")[0], "odsw")
-	for k in [["no", "ord"], ["has", "ord_ok"]]:
-		var n: Dictionary = Snap.load_snap(k[1])["#pov"][0].duplicate(true)
-		Snap.find(n, "orders").kids = []
-		od_shell[k[0]] = n
+func _build_ord() -> void:   # (11-27) Đơn hàng vẽ ở ui_ord2.gd; đây chỉ còn mẫu popup "Còn thiếu một chút!"
 	# ô "xu" của popup thiếu xu (Khai hoang ... còn thiếu xu:), cùng khổ ô món
 	var xl: Dictionary = Snap.load_snap("pc_lack")[".nglkov"][0].duplicate(true)
 	var xb := Snap.find(xl, "nglk")
@@ -2053,63 +2012,6 @@ static func _nshift(n: Dictionary, dx: float) -> void:
 	if n.has("tr"):
 		n.tr = [float(n.tr[0]) + dx, n.tr[1], n.tr[2], n.tr[3]]
 
-static func _od_dash(n: Dictionary, off := 1.5, op := 0.3, rad := 10.0) -> void:
-	# css outline 1.5px dashed rgba(150,112,48,op), outline-offset -off (x .75): ô trống .odph, thẻ khách đang tới .odw
-	var z := float(n.get("z", 1.0))
-	var W: float = float(n.r[2])
-	var H: float = float(n.r[3])
-	var sw := 1.5 * z
-	var c := (off - 0.75) * z
-	var rr := maxf(0.0, rad * z - c)
-	n.svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %.2f %.2f\"><rect x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" rx=\"%.2f\" fill=\"none\" stroke=\"rgb(150,112,48)\" stroke-opacity=\"%.2f\" stroke-width=\"%.2f\" stroke-dasharray=\"%.2f %.2f\"/></svg>" % [W, H, c, c, W - 2.0 * c, H - 2.0 * c, rr, op, sw, sw * 3.0, sw * 2.0]
-
-static func _od_arrow(n: Dictionary) -> void:
-	# .odget::after: mũi tên 15px (x .75) ngay sau chữ "Đi lấy", cách 5px
-	var a: Dictionary = n.get("::after", {})
-	var bgi: String = a.get("bgi", "")
-	var i := bgi.find("data:image/svg+xml,")
-	if i < 0:
-		return
-	var sv := bgi.substr(i + 19)
-	sv = sv.substr(0, sv.rfind("\"")).uri_decode()
-	n.erase("::after")
-	var z := float(n.get("z", 1.0))
-	var w := 15.0 * z
-	var tw := _tw(n, n.text)
-	var g := 5.0 * z
-	var x: float = float(n.r[0]) + (float(n.r[2]) - (tw + g + w)) * 0.5
-	n.tr = [x, n.tr[1], tw + 0.5, n.tr[3]]
-	n.css["text-align"] = "left"
-	var kids: Array = n.get("kids", [])
-	kids.append({"tag": "svg", "id": "", "cls": "", "z": z, "css": {}, "kids": [], "svg": sv,
-		"r": [x + tw + g, float(n.r[1]) + (float(n.r[3]) - w) * 0.5, w, w]})
-	n.kids = kids
-
-var _fits := {}
-func _fit_svg(id: String) -> String:
-	# như web (PA): viewBox ôm sát hình (getBBox), cạnh = max(rộng, cao) x 1,08, giữ tâm
-	if _fits.has(id):
-		return _fits[id]
-	var sv: String = FileAccess.get_file_as_string("res://ui/svg/kh/" + id + ".svg")
-	var out := sv
-	var m := RegEx.create_from_string("viewBox=\"([^\"]*)\"").search(sv)
-	if m != null:
-		var v := m.get_string(1).split(" ", false)
-		var img := Image.new()
-		var q := 8.0
-		if v.size() == 4 and Css.svg_load(img, sv, q * 64.0 / float(v[2])) == OK:
-			var u := img.get_used_rect()
-			if u.size.x > 0:
-				var k: float = float(v[2]) / img.get_width()
-				var bw := u.size.x * k
-				var bh := u.size.y * k
-				var cx: float = float(v[0]) + (u.position.x + u.size.x * 0.5) * k
-				var cy: float = float(v[1]) + (u.position.y + u.size.y * 0.5) * k
-				var sz := maxf(bw, bh) * 1.08
-				out = sv.replace(m.get_string(0), "viewBox=\"%.1f %.1f %.1f %.1f\" data-fit=\"1\"" % [cx - sz * 0.5, cy - sz * 0.5, sz, sz])
-	_fits[id] = out
-	return out
-
 static func rf(t: float) -> String:   # RF(ao): 4p 59s / 12p / 40s
 	var s := int(maxf(1.0, ceil(t)))
 	var h := s / 3600
@@ -2153,8 +2055,7 @@ func qk_open(k: String) -> void:   # bảng khách quán: dùng chung bảng Đ�
 func _od_list() -> Array:
 	return G.g.orders if od_src == "" else od_L
 
-func ord_open(src := "") -> void:
-	od_src = src
+func ord_open(src := "") -> void:   # (11-27) bảng Đơn hàng trên khung chung (ui_ord2.gd); src: "" đơn hàng / quancom / taphoa / cafe
 	if nvp != null:
 		nvp.close()
 	pc_close()
@@ -2162,19 +2063,16 @@ func ord_open(src := "") -> void:
 	rm_close()
 	lock_close()
 	kho_close()
-	od_on = true
-	od_shsig = ""
-	od_scroll = 0.0
-	_ord_sync()
+	for p in _pans():
+		if p != null and p != ordp:
+			p.close()
+	ordp.open(src)
 
 func ord_close() -> void:
-	od_on = false
 	_lack_close()
-	if od_box != null:
-		anchors.erase(_anchor_of(od_box))
-		od_box.queue_free()
-		od_box = null
-	od_cards = {}
+	if ordp != null and ordp.on:
+		ordp.close()
+	od_on = false
 
 func _anchor_of(b: Control):
 	for a in anchors:
@@ -2194,470 +2092,10 @@ func _od_order() -> Array:
 	L.sort_custom(func(a, b): return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
 	return [L, plan]
 
-func _ord_sync() -> void:
-	if not od_on:
-		return
-	var now: float = G._now_ms()
-	if od_ud.i >= 0 and now >= od_ud.t:
-		od_ud.i = -1
-	var lp: Array = _od_order()
-	var L: Array = lp[0]
-	var plan: Array = lp[1]
-	var okn := 0
-	var m := 0
-	for f in plan.size():
-		if plan[f] != null:
-			m += 1
-			if plan[f].ok:
-				okn += 1
-	# hàng thẻ: cao 200,6, hàng toàn khách đang tới thì 108,6
-	var rows := []
-	for q in L.size():
-		var rw := q / 2
-		if rows.size() <= rw:
-			rows.append(true)
-		if L[q][0] != 3:
-			rows[rw] = false
-	var hw: float = float(od_tpl.wait.r[3])
-	var hn: float = float(od_tpl.no.r[3])
-	var H := 0.0
-	for rw in rows.size():
-		H += (hw if rows[rw] else hn) + (OD_GAP if rw > 0 else 0.0)
-	var chp: Dictionary = {}
-	var cH := 0.0
-	if od_src != "":   # (bản 357) riêng bảng khách quán: hàng chip (nâng sao, danh tiếng, giá / trễ / khách) trên các thẻ
-		chp = _od_chips()
-		cH = float(chp.r[3]) + OD_GAP
-		H += cH
-	var Hc := H
-	var mn: Dictionary = {}
-	if od_src != "":   # (bản 354) riêng bảng khách quán: hàng "món giờ này" dưới các thẻ
-		mn = _od_menu()
-		H += (OD_GAP if Hc > 0.0 else 0.0) + float(mn.r[3])
-	var pad: float = float(od_tpl.no.r[1]) - float(Snap.find(od_shell.no, "orders").r[1])
-	var ch := H + 2.0 * pad
-	var dy := 0.0 if Sen.ON else maxf(0.0, OD_UL - ch)   # (11-26) khung chung: không thấp xuống
-	var ssig: String = ("has" if okn > 0 else "no") + "|" + str(okn) + "/" + str(m) + "|" + str(int(G.g.delivered)) + "|" + str(snappedf(dy, 0.1)) + "|" + od_src
-	if ssig != od_shsig:
-		od_shsig = ssig
-		_od_shell(okn, m, dy)
-	od_hmax = maxf(0.0, ch - _od_ulh())
-	od_scroll = clampf(od_scroll, 0.0, od_hmax)
-	# thẻ
-	var cols := _od_colors()
-	var ul0 := od_ul0
-	var y := float(od_tpl.no.r[1]) + dy + cH
-	var keep := {}
-	if not chp.is_empty():
-		var cy := float(od_tpl.no.r[1]) + dy - od_scroll
-		var csig := str(cy) + JSON.stringify(chp.get("sig", ""))
-		keep[-2] = 1
-		var cc = od_cards.get(-2)
-		if cc == null or cc.sig != csig:
-			if cc != null:
-				cc.b.queue_free()
-			var cb := _build(Snap.moved(chp, Vector2(float(od_tpl.no.r[0]), cy) - Vector2(float(chp.r[0]), float(chp.r[1]))), {}, ul0)
-			od_ul.add(cb)
-			var qk := od_src
-			_click(_q(cb, "qkc_sao"), func(): if not _od_dragged(): ord_close(); spp.open_quan(qk), "down")
-			_click(_q(cb, "qkc_gia"), func(): if not _od_dragged(): G.w_all.WQ.gia_next(qk); _ord_sync(), "down")
-			od_cards[-2] = {"b": cb, "sig": csig}
-	for q in L.size():
-		var rw := q / 2
-		if q % 2 == 0 and rw > 0:
-			y += (hw if rows[rw - 1] else hn) + OD_GAP
-		var f: int = L[q][1]
-		var o: Dictionary = _od_list()[f]
-		var at := Vector2(float(od_tpl.no.r[0]) + (q % 2) * OD_COL, y - od_scroll)
-		var full: bool = not rows[rw]
-		var sig := str(at) + JSON.stringify(o) + "|" + JSON.stringify(plan[f]) + "|" + str(cols.get(f, "")) + "|" + str(int(G.g.ngoc)) + "|" + str(od_ud.i == f) + "|" + str(full)
-		for it in o.items:
-			sig += str(G.hot_x(it[0]) > 1.0)
-		if plan[f] == null:
-			var s: float = (float(o.w) - now) / 1000.0
-			sig += "|" + rf(s) + "|" + str(G.call_cost(o)) + "|" + str(int(clampf(100.0 - s * 1000.0 / G.Y8 * 100.0, 0.0, 100.0)))
-		keep[f] = 1
-		var c = od_cards.get(f)
-		if c != null and c.sig == sig:
-			continue
-		if c != null:
-			c.b.queue_free()
-		var nd := _od_card(o, plan[f], f, cols.get(f, OD_HD[0]), full, now)
-		var b := _build(Snap.moved(nd, at - Vector2(float(nd.r[0]), float(nd.r[1]))), {}, ul0)
-		od_ul.add(b)
-		_od_hook(b, f)
-		od_cards[f] = {"b": b, "sig": sig}
-	if not mn.is_empty():
-		var my := float(od_tpl.no.r[1]) + dy + Hc + (OD_GAP if Hc > cH else 0.0) - od_scroll
-		var msig := str(my) + JSON.stringify(mn.get("ids", []))
-		keep[-1] = 1
-		var mc = od_cards.get(-1)
-		if mc == null or mc.sig != msig:
-			if mc != null:
-				mc.b.queue_free()
-			var mb := _build(Snap.moved(mn, Vector2(float(od_tpl.no.r[0]), my) - Vector2(float(mn.r[0]), float(mn.r[1]))), {}, ul0)
-			od_ul.add(mb)
-			od_cards[-1] = {"b": mb, "sig": msig}
-	for f in od_cards.keys():
-		if not keep.has(f):
-			od_cards[f].b.queue_free()
-			od_cards.erase(f)
-
-func _od_shell(okn: int, m: int, dy: float) -> void:
-	if od_box != null:
-		anchors.erase(_anchor_of(od_box))
-		od_box.queue_free()
-	od_cards = {}
-	var n: Dictionary = od_shell["has" if okn > 0 else "no"].duplicate(true)
-	# đầu bảng: "Giao được N/M đơn", "✓ N đã giao"
-	var tn := Snap.find(n, "odtn")
-	var tl: Array = Snap.find(n, "odtl").kids
-	_set_t(tn, str(okn) + "/" + str(m), float(tn.r[0]))
-	tn.css["color"] = "rgb(63, 154, 58)" if okn > 0 else "rgb(163, 132, 58)"
-	var tw := _tw(tn, tn.text)
-	tn.r = [tn.r[0], tn.r[1], tw, tn.r[3]]
-	var em: Dictionary = tl[2]
-	if od_src != "":   # khách quán: "Giao được N/M khách" (tạp hóa: đơn)
-		_set_t(em, "đơn" if G.w_all.WQ.kd(od_src) == "taphoa" else "khách", float(em.r[0]))
-	_nshift(em, float(tn.r[0]) + tw + OD_GAP * 0.75 - float(em.r[0]))
-	var td := Snap.find(n, "odtd")
-	var tk: Array = td.kids
-	var bd: Dictionary = tk[1]
-	var right: float = float(td.r[0]) + float(td.r[2])
-	var g := 4.5
-	var bw := _tw(bd, str(int(G.g.delivered)))
-	var sw := _tw(td, td.text)
-	var x0 := right - (float(tk[0].r[2]) + g + bw + g + sw)
-	_nshift(tk[0], x0 - float(tk[0].r[0]))
-	_set_t(bd, str(int(G.g.delivered)), x0 + float(tk[0].r[2]) + g)
-	bd.r = [bd.tr[0], bd.r[1], bw, bd.r[3]]
-	_set_t(td, td.text, x0 + float(tk[0].r[2]) + g + bw + g)
-	td.r = [x0, td.r[1], right - x0, td.r[3]]
-	if od_src != "":   # (bản 357) bảng quán: góc phải trống (sao, danh tiếng, giá... ở hàng chip dưới đầu bảng)
-		td.kids = []
-		td.text = ""
-	if Sen.ON:   # (11-26) khung sen: hoa sen góc trên trái che đầu dòng "Giao được": dời dòng sang phải
-		Snap._move(Snap.find(n, "odtl"), Vector2(26.0, 0))
-		Snap._move(Snap.find(n, "odtd"), Vector2(-18.0, 0))   # dây tua góc phải che chữ "đã giao"
-	# ít thẻ: khung thấp xuống (đầu bảng, khăn trên, hoa dời xuống; đáy giữ chỗ)
-	if dy > 0.0:
-		_od_low(Snap.find(n, "pwin"), dy)
-	var ul: Dictionary = Snap.find(n, "orders")
-	od_ul0 = Vector2(float(ul.r[0]), float(ul.r[1]))
-	var ids := {}
-	od_box = _build(n, ids)
-	root.add_child(od_box)
-	anchors.append([od_box, 0.5, 0.5 if Sen.ON else 1])   # (11-26) khung chung: giữa màn, chừa lề như các bảng
-	od_ids = ids
-	od_ul = ids.get("#orders")
-	od_ul._kids.clip_contents = true
-	_stop(od_ul)
-	_click(ids.get("#pClose"), ord_close, "scale")
-	var bk = ids.get(".pbk")
-	if bk != null:
-		_stop(bk)
-		tap_close(bk, ord_close)
-	var win = ids.get(".pwin")
-	if win != null:
-		_stop(win)
-	_layout()
-
-static func _od_low(n: Dictionary, dy: float) -> void:
-	var y0 := float(n.r[1])
-	var y1 := y0 + float(n.r[3])
-	if y0 < 300.0 and y1 >= 590.0:
-		n.r = [n.r[0], y0 + dy, n.r[2], float(n.r[3]) - dy]
-		if n.has("tr"):
-			n.tr = [n.tr[0], float(n.tr[1]) + dy, n.tr[2], n.tr[3]]
-	elif y1 < 300.0:
-		Snap._move(n, Vector2(0, dy))
-		return
-	for k in n.get("kids", []):
-		_od_low(k, dy)
-
-func _od_card(o: Dictionary, pl, f: int, col: String, full: bool, now: float) -> Dictionary:
-	if pl == null:
-		return _od_wait(o, full, now)
-	var ok: bool = pl.ok
-	var nd: Dictionary = (od_tpl.ok if ok else od_tpl.no).duplicate(true)
-	if o.get("hot", -1) == G.day():
-		nd.cls = String(nd.cls) + " u2oh"
-	# khách: chữ cái đầu của tên, màu riêng
-	var av := Snap.find(nd, "odav")
-	var nm: String = String(o.who).split(" ")[-1]
-	var cx: float = float(av.r[0]) + float(av.r[2]) * 0.5
-	_set_t(av, nm.substr(0, 1), cx - _tw(av, nm.substr(0, 1)) * 0.5)
-	av.css["background-color"] = col
-	var on: Array = Snap.find(nd, "odn").kids
-	for q in 2:
-		_set_t(on[q], String(o.who if q == 0 else o.shop), float(on[q].r[0]))
-		on[q].r = [on[q].r[0], on[q].r[1], on[q].tr[2], on[q].r[3]]
-		on[q].css["white-space"] = "nowrap"
-	if od_src != "":   # khách quán: không có nút đổi đơn
-		var hq := Snap.find(nd, "odh")
-		hq.kids = hq.kids.filter(func(k): return not String(k.cls).split(" ").has("odsw"))
-	elif od_ud.i == f:
-		var hd := Snap.find(nd, "odh")
-		for q in hd.kids.size():
-			if String(hd.kids[q].cls).split(" ").has("odsw"):
-				hd.kids[q] = od_tpl.sw_on.duplicate(true)
-	# món
-	var odis := Snap.find(nd, "odis")
-	var its := []
-	for q in 3:
-		var t: Dictionary
-		if q < o.items.size():
-			var id: String = o.items[q][0]
-			var need := int(o.items[q][1])
-			# (bản 284-285) số = đang có trong kho (20/6); kho đủ / dư là xanh, kể cả khi nhiều đơn cùng cần món đó
-			var have := int(G.g.barn.get(id, 0))
-			t = (od_tpl.it_ok if have >= need else od_tpl.it_no).duplicate(true)
-			if G.hot_x(id) > 1.0:
-				t.cls = String(t.cls) + " hot"
-				t["::after"] = od_tpl.hot.duplicate(true)
-			var ic := Snap.find(t, "odic")
-			var sv := _fit_svg(id)
-			for k in ic.get("kids", []):
-				if k.tag == "svg" and sv != "":
-					k.svg = sv
-			var oq := Snap.find(t, "odq")
-			var b0: Dictionary = oq.kids[0]
-			var r1: float = float(oq.r[0]) + float(oq.r[2])
-			var qs: String = Qty.text(have, need)   # (bản 291) "có/cần" một khối chữ chung (qty.gd)
-			b0.css = Qty.css(b0.css, have >= need)
-			var bw := _tw(b0, qs)
-			var x := r1 - bw
-			_set_t(b0, qs, x, bw)
-			b0.r = [x, b0.r[1], bw, b0.r[3]]
-			Qty.down(b0)
-			oq.text = ""
-			oq.r = [x, oq.r[1], bw, oq.r[3]]
-			var sm := Snap.find(t, "", "small")
-			_set_t(sm, G.item_name(id), float(sm.r[0]))
-			var aw := maxf(10.0, x - float(sm.r[0]) - 4.0)
-			if float(sm.tr[2]) > aw:   # (bản 347) tên dài: xuống 2 hàng, canh giữa hàng theo chiều cao
-				var lh := float(sm.r[3])
-				var cy := float(sm.r[1]) + lh * 0.5
-				var dy := float(sm.tr[1]) - float(sm.r[1])
-				sm.r = [sm.r[0], cy - lh, aw, lh * 2.0]
-				sm.tr = [sm.tr[0], cy - lh + dy, aw, float(sm.tr[3]) + lh]
-				sm.css["white-space"] = "normal"
-			else:
-				sm.r = [sm.r[0], sm.r[1], aw, sm.r[3]]
-				sm.tr = [sm.tr[0], sm.tr[1], minf(float(sm.tr[2]), aw), sm.tr[3]]
-				sm.css["white-space"] = "nowrap"
-		else:
-			t = od_tpl.it_ph.duplicate(true)
-			_od_dash(t)
-		its.append(Snap.moved(t, Vector2(0, float(odis.kids[0].r[1]) + q * OD_IT - float(t.r[1]))))
-	odis.kids = its
-	# thưởng: "+xu [xu]  +EXP [★]" giữa thẻ
-	var odr := Snap.find(nd, "odr")
-	var rb: Dictionary = odr.kids[0]
-	var rx: Dictionary = odr.kids[1]
-	var g := 5.0 * 0.75
-	var s1: String = "+" + G.fmt_n(int(o.reward))
-	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
-	var w1 := _tw(rb, s1)
-	var w2 := _tw(rx, s2)
-	var i1: Dictionary = rb.kids[0]
-	var i2: Dictionary = rx.kids[0]
-	var W1 := w1 + g + float(i1.r[2])
-	var W2 := w2 + g + float(i2.r[2])
-	var x1: float = float(odr.r[0]) + (float(odr.r[2]) - (W1 + OD_GAP + W2)) * 0.5
-	_set_t(rb, s1, x1, w1)
-	rb.r = [x1, rb.r[1], W1, rb.r[3]]
-	i1.r = [x1 + w1 + g, i1.r[1], i1.r[2], i1.r[3]]
-	var x2 := x1 + W1 + OD_GAP
-	_set_t(rx, s2, x2, w2)
-	rx.r = [x2, rx.r[1], W2, rx.r[3]]
-	i2.r = [x2 + w2 + g, i2.r[1], i2.r[2], i2.r[3]]
-	if not ok:
-		# Đi lấy + nút bù bằng sen đỏ (mờ khi không đủ sen)
-		var acts := Snap.find(nd, "odacts")
-		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() and od_src == "" else 0
-		var kids := []
-		var get_n: Dictionary = {}
-		for k in acts.kids:
-			if String(k.cls).split(" ").has("odget"):
-				get_n = k
-		kids.append(get_n)
-		if cost > 0:
-			var sn: Dictionary = acts.kids[1]
-			if int(G.g.ngoc) >= cost:
-				sn = od_tpl.sen.duplicate(true)
-			var sb: Dictionary = Snap.find(sn, "", "b")
-			var im: Dictionary = Snap.find(sn, "xui")
-			im.src = "pearl"
-			var bw := _tw(sb, str(cost))
-			var tot := float(im.r[2]) + 3.0 + bw
-			var w := maxf(float(sn.r[2]), tot + 12.0)
-			var sx: float = float(acts.r[0]) + float(acts.r[2]) - w
-			sn.r = [sx, sn.r[1], w, sn.r[3]]
-			var ix := sx + (w - tot) * 0.5
-			im.r = [ix, im.r[1], im.r[2], im.r[3]]
-			_set_t(sb, str(cost), ix + float(im.r[2]) + 3.0, bw)
-			sb.r = [sb.tr[0], sb.r[1], bw, sb.r[3]]
-			var gw: float = sx - 4.5 - float(acts.r[0])
-			var dw: float = gw - float(get_n.r[2])
-			if absf(dw) > 0.01:
-				get_n.r = [get_n.r[0], get_n.r[1], gw, get_n.r[3]]
-				if get_n.has("tr"):
-					get_n.tr = [float(get_n.tr[0]) + dw * 0.5, get_n.tr[1], get_n.tr[2], get_n.tr[3]]
-			kids.append(sn)
-		else:
-			get_n.r = [get_n.r[0], get_n.r[1], acts.r[2], get_n.r[3]]
-			if get_n.has("tr"):
-				get_n.tr = [float(get_n.tr[0]) + (float(acts.r[2]) - 95.5) * 0.5, get_n.tr[1], get_n.tr[2], get_n.tr[3]]
-		_od_arrow(get_n)
-		acts.kids = kids
-	return nd
-
-func _od_wait(o: Dictionary, full: bool, now: float) -> Dictionary:
-	# khách mới đang tới: 🛶, "Khách mới · 4p 59s", thanh chờ, "Gọi · N [sen]"
-	var nd: Dictionary = od_tpl.wait.duplicate(true)
-	var s: float = (float(o.w) - now) / 1000.0
-	var b: Dictionary = Snap.find(nd, "odwm").kids[0]
-	var tm: Dictionary = b.kids[0]
-	var t1 := _tw(b, "Khách mới · ")
-	var t2 := _tw(tm, rf(s))
-	var cx: float = float(nd.r[0]) + float(nd.r[2]) * 0.5
-	var x := cx - (t1 + t2) * 0.5
-	_set_t(b, b.text, x, t1)
-	b.r = [x, b.r[1], t1 + t2, b.r[3]]
-	_set_t(tm, rf(s), x + t1, t2)
-	tm.r = [x + t1, tm.r[1], t2, tm.r[3]]
-	var bar: Dictionary = Snap.find(nd, "odbar")
-	var fi: Dictionary = bar.kids[0]
-	var p := clampf(100.0 - s * 1000.0 / G.Y8 * 100.0, 0.0, 100.0)
-	fi.r = [fi.r[0], fi.r[1], float(bar.r[2]) * round(p) / 100.0, fi.r[3]]
-	var bt := Snap.find(nd, "odb2")
-	var wc := Snap.find(bt, "odwc")
-	var im := Snap.find(bt, "xui")
-	im.src = "pearl"
-	var n := str(G.call_cost(o))
-	var a1 := _tw(bt, bt.text)
-	var a2 := _tw(wc, n)
-	var g := 5.0 * 0.75
-	var tot: float = a1 + g + a2 + g + float(im.r[2])
-	var bx: float = float(bt.r[0]) + (float(bt.r[2]) - tot) * 0.5
-	_set_t(bt, bt.text, bx, a1)
-	_set_t(wc, n, bx + a1 + g, a2)
-	wc.r = [wc.tr[0], wc.r[1], a2, wc.r[3]]
-	im.r = [bx + a1 + g + a2 + g, im.r[1], im.r[2], im.r[3]]
-	if full:
-		# cùng hàng với thẻ đầy: thẻ kéo cao bằng, ruột ở giữa (justify-content center)
-		var d: float = (float(od_tpl.no.r[3]) - float(nd.r[3])) * 0.5
-		for k in nd.kids:
-			Snap._move(k, Vector2(0, d))
-		nd.r = [nd.r[0], nd.r[1], nd.r[2], od_tpl.no.r[3]]
-	if od_src != "":   # khách quán tới theo giờ: không gọi sớm bằng sen
-		var wb := Snap.find(nd, "odb2")
-		_q_drop(nd, wb)
-	_od_dash(nd, 5.0, 0.35, 14.0)
-	return nd
-
-func _od_chips() -> Dictionary:   # (bản 357) hàng chip kiểu Kho: [sao] 0/5 · 🏅 Danh tiếng 2,6 · 🪙 Giá: Bình dân / ⏱ Trễ 0/3 / 🤝 Khách 100%
-	var WQ = G.w_all.WQ
-	var lbl: Dictionary = Snap.find(od_tpl.wait, "odwm").kids[0].duplicate(true)
-	lbl.erase("kids")
-	var x0 := float(od_tpl.no.r[0])
-	var y0 := float(od_tpl.no.r[1])
-	var H := 28.0
-	var pad := 10.0
-	var gap := 6.0
-	var ih := 16.0
-	var kids := []
-	var x := x0
-	var sig := ""
-	for c in WQ.chips(od_src):
-		var t: String = c[1]
-		var tw := _tw(lbl, t)
-		var pic: String = c[2] if c.size() > 2 else ""
-		var w := pad * 2.0 + tw + ((ih + 4.0) if pic != "" else 0.0)
-		var ch: Dictionary = {"tag": "div", "cls": "qkc qkc_" + String(c[0]), "r": [x, y0, w, H], "css": {}, "kids": []}
-		Snap.chip_look(ch, "qkc", true)
-		var tx := x + pad
-		if pic != "":
-			ch.kids.append({"tag": "div", "cls": "", "r": [tx, y0 + (H - ih) * 0.5, ih, ih], "css": {}, "pic": pic, "kids": []})
-			tx += ih + 4.0
-		var lb: Dictionary = lbl.duplicate(true)
-		var lh := float(lb.r[3])
-		var dty: float = float(lb.get("tr", lb.r)[1]) - float(lb.r[1])
-		lb.r = [tx, y0 + (H - lh) * 0.5, tw, lh]
-		_set_t(lb, t, tx, tw)
-		lb.tr = [tx, y0 + (H - lh) * 0.5 + dty, tw + 0.5, lb.get("tr", lb.r)[3]]
-		ch.kids.append(lb)
-		kids.append(ch)
-		x += w + gap
-		sig += t + "|"
-	return {"tag": "div", "cls": "", "r": [x0, y0, OD_COL + float(od_tpl.no.r[2]), H], "css": {}, "kids": kids, "sig": sig}
-
-func _od_menu() -> Dictionary:   # (bản 354) bảng khách quán: khung nét đứt rộng 2 cột, chữ + hình các món giờ này
-	var WQ = G.w_all.WQ
-	var ids: Array = WQ.menu_now(od_src)
-	var nd: Dictionary = od_tpl.wait.duplicate(true)
-	var lb: Dictionary = Snap.find(nd, "odwm").kids[0].duplicate(true)
-	lb.erase("kids")
-	var ic0: Dictionary = Snap.find(od_tpl.it_ok, "odic")
-	var x0 := float(nd.r[0])
-	var y0 := float(nd.r[1])
-	var W := OD_COL + float(od_tpl.no.r[2])
-	var pad := 9.0
-	var t: String = WQ.menu_title(od_src)
-	var tw := _tw(lb, t)
-	var lh := float(lb.r[3])
-	var dty: float = float(lb.get("tr", lb.r)[1]) - float(lb.r[1])
-	lb.r = [x0 + pad, y0 + pad, tw, lh]
-	_set_t(lb, t, x0 + pad, tw)
-	lb.tr = [x0 + pad, y0 + pad + dty, tw + 0.5, lb.get("tr", lb.r)[3]]
-	var kids := [lb]
-	var iw := float(ic0.r[2])
-	var gap := 5.0
-	var per := maxi(1, int(floor((W - 2.0 * pad + gap) / (iw + gap))))
-	var yi := y0 + pad + lh + 6.0
-	for q in ids.size():
-		var ic: Dictionary = ic0.duplicate(true)
-		var sv := _fit_svg(String(ids[q]))
-		for k in ic.get("kids", []):
-			if k.tag == "svg" and sv != "":
-				k.svg = sv
-		var x := x0 + pad + (q % per) * (iw + gap)
-		var y := yi + (q / per) * (iw + gap)
-		kids.append(Snap.moved(ic, Vector2(x - float(ic.r[0]), y - float(ic.r[1]))))
-	var rows := ceili(ids.size() / float(per)) if ids.size() else 0
-	var h := pad + lh + (6.0 + rows * (iw + gap) - gap if rows > 0 else 0.0) + pad
-	nd.kids = kids
-	nd.r = [x0, y0, W, h]
-	nd["ids"] = ids
-	_od_dash(nd, 5.0, 0.35, 14.0)
-	return nd
-
-static func _od_parent(n: Dictionary, x: Dictionary) -> Dictionary:   # node cha của x trong cây n
-	for k in n.get("kids", []):
-		if k == x:
-			return n
-		var p := _od_parent(k, x)
-		if not p.is_empty():
-			return p
-	return {}
-
-static func _q_drop(n: Dictionary, x: Dictionary) -> void:   # bỏ node x khỏi cây n
-	for k in n.get("kids", []):
-		if k == x:
-			n.kids.erase(k)
-			return
-		_q_drop(k, x)
-
-func _od_hook(b: Control, f: int) -> void:
-	_click(_q(b, "odgo"), func(): if not _od_dragged(): _od_deliver(f), "down")
-	_click(_q(b, "odget"), func(): if not _od_dragged(): _od_get(f), "down")
-	_click(_q(b, "odsen"), func(): if not _od_dragged(): _od_lack_btn(f), "down")
-	_click(_q(b, "odsw"), func(): if not _od_dragged(): _od_swap(f), "down")
-	_click(_q(b, "odb2"), func(): if not _od_dragged(): G.call_now(f); _ord_sync(), "down")
-
-func _od_dragged() -> bool:
-	return od_sc.moved()
+func _ord_sync() -> void:   # dựng lại bảng Đơn hàng (đổi đơn, giao, mua bù...)
+	if ordp != null and ordp.on:
+		ordp.sig = ""
+		ordp._build()
 
 func _od_deliver(f: int) -> void:
 	if od_src != "":
@@ -2882,21 +2320,10 @@ func scroll_add(v) -> void:
 	_scs.append(v)
 
 func scroll_moved() -> bool:   # vừa kéo cuộn một bảng (nhả tay không tính là bấm)
-	for v in [gv_sc, od_sc] + _scs:
+	for v in [gv_sc] + _scs:
 		if v.moved():
 			return true
 	return false
-
-func _od_input(e: InputEvent) -> void:
-	# kéo dọc danh sách đơn khi nhiều hơn 2 hàng thẻ
-	if not od_on or od_ul == null or od_hmax <= 0.0:
-		od_sc.input(e)
-		return
-	if od_sc.area != od_ul:
-		od_sc.area = od_ul
-		od_sc.mover = func(_v): _ord_sync()
-	od_sc.input(e)
-
 
 # ------------------------------------------------------------------ khai hoang: bảng chạm biển (Vm "parcel" + Qm + xC bản web)
 var pc_id := ""
@@ -3122,7 +2549,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -3376,8 +2803,6 @@ func _process(dt: float) -> void:
 		if bfp != null:
 			bfp.sync()
 		_hm_badge()
-		if od_on:
-			_ord_sync()
 		if G.w_all != null:   # NTWEB bảng cây, chợ nổi, lễ hội, nút viên
 			G.w_all.ui_tick()
 	if pc_id != "":
@@ -3422,7 +2847,6 @@ func _input(e: InputEvent) -> void:
 	get_tree().set_meta("ui_modal", _hold or any_open() or (bdp != null and bdp.mode == "shop"))
 	if _fing.is_empty():
 		_hold = false
-	_od_input(e)
 	gv_sc.input(e)
 	for v in _scs:
 		if v.area != null and is_instance_valid(v.area):
