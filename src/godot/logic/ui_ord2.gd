@@ -145,7 +145,7 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 		return _wait(x, y, w, h, f, o)
 	var ok: bool = pl.ok
 	var out := []
-	var c := _chip(x, y, w, h, "got" if ok else "fut")
+	var c := _chip(x, y, w, h, "sel" if ok else "fut")
 	out.append(c)
 	# đầu thẻ: chữ cái, tên, nghề, đổi đơn
 	var nm: String = String(o.who).split(" ")[-1]
@@ -172,7 +172,7 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 		var need := int(it[1])
 		var have := int(G.g.barn.get(id, 0))
 		var good := have >= need
-		var r := _dbx(x + 6.0, iy, w - 12.0, IH, "rgb(236, 246, 226)" if good else "rgb(255, 250, 240)", 6.0, "1px solid " + ("rgb(150, 200, 120)" if good else "rgb(230, 210, 170)"))
+		var r := _dbx(x + 6.0, iy, w - 12.0, IH, "rgb(226, 242, 212)" if good else "rgb(248, 238, 218)", 6.0)   # trong thẻ: nền phẳng, không viền
 		var qs: String = G.fmt_n(have) + "/" + str(need)
 		var qw: float = Box.text_w(qs, 10.5, 800) + 2.0
 		var nw := w - 12.0 - 30.0 - qw - 10.0

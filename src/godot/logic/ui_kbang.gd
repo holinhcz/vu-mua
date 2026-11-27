@@ -231,6 +231,7 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 	"s_chan": ["rgb(250, 222, 200)", "rgb(252, 230, 212)", "rgb(254, 240, 228)", "rgb(200, 130, 80)"],
 	"s_xuong": ["rgb(232, 220, 246)", "rgb(238, 228, 250)", "rgb(244, 238, 252)", "rgb(138, 104, 186)"],
 	"fut": ["rgb(255, 250, 238)", "rgb(253, 246, 230)", "rgb(250, 240, 220)", "rgb(216, 180, 110)"],   # (11-26) bộ sen: kem, viền vàng
+	"sel": ["rgb(214, 240, 200)", "rgb(224, 244, 212)", "rgb(234, 248, 226)", "rgb(52, 140, 52)"],   # (11-27) đang chọn / đủ món
 	"got": ["rgb(196, 232, 184)", "rgb(208, 238, 198)", "rgb(222, 244, 214)", "rgb(76, 160, 70)"],
 	"now": ["rgb(255, 226, 140)", "rgb(255, 236, 170)", "rgb(255, 245, 205)", "rgb(214, 150, 20)"],
 	"miss": ["rgb(200, 196, 186)", "rgb(208, 204, 195)", "rgb(218, 215, 207)", "rgb(145, 137, 123)"],
@@ -242,12 +243,17 @@ const CHIPK := {   # [gradient trên, giữa, dưới, viền]
 func _ck(kind: String) -> Array:   # màu chip theo loại; bảng con thêm loại riêng thì ghi đè hàm này
 	return CHIPK[kind]
 
-func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
+# (11-27) VIỀN 3 TẦNG (khung chung):
+#   khối nội dung (thẻ, ô, hàng thông tin): _chip mặc định = viền mảnh 1 lớp cùng tông nền;
+#   bấm được / đang chọn (tab, chip lọc, nút): _chip(..., true), _onbtn có việc bấm = gờ vàng 3 lớp (Snap.SEN_VIEN);
+#   bên trong khối (dòng món, nhãn số, ô hình): _dbx nền phẳng, không viền.
+const VIEN_MONG := "rgba(255, 255, 255, 0.55) 0px 1px 0px 0px inset"   # vệt sáng trên (chip mảnh)
+func _chip(x: float, y: float, w: float, h: float, kind: String, bold := false) -> Dictionary:
 	# góc bo, viền trong, vệt sáng, bóng: lấy nguyên chip chung (Snap.chip_look); chỉ thay nền + màu viền theo trạng thái
 	var C: Array = _ck(kind)
 	var n := _dbx(x, y, w, h, "rgba(0, 0, 0, 0)")
 	n.cls = "ddchip"
-	var ck := ",".join(PackedStringArray(C)) + ("|now" if kind == "now" else "")
+	var ck := ",".join(PackedStringArray(C)) + ("|now" if kind == "now" else "") + ("|b" if bold else "")
 	if _CKC.has(ck):   # (bản 475) nhớ kiểu chip theo màu: bớt xử lý chuỗi khi dựng bảng nhiều chip (Làm thuê 40 nhà)
 		n.css = (_CKC[ck] as Dictionary).duplicate()
 		return n
@@ -256,6 +262,17 @@ func _chip(x: float, y: float, w: float, h: float, kind: String) -> Dictionary:
 	n.css["background-image"] = "linear-gradient(" + String(C[0]) + " 0%, " + String(C[1]) + " 50%, " + String(C[2]) + " 100%)"
 	var sh := String(n.css["box-shadow"])
 	# (11-26) bộ sen: mọi chip viền vàng kép như ảnh mẫu: vàng đậm 2px, chỉ kem, chỉ vàng nhạt bên trong
+	if kind == "sel":   # đang chọn / đủ để làm (thẻ món đang chọn, đơn đủ món): viền xanh đậm 2 lớp, nổi hẳn
+		n.css["box-shadow"] = "rgb(52, 140, 52) 0px 0px 0px 1.6px inset, rgba(255, 255, 255, 0.7) 0px 0px 0px 2.6px inset, " + VIEN_MONG
+		n.css["border-radius"] = _cpx(12.0)
+		_CKC[ck] = n.css.duplicate()
+		return n
+	if not bold:   # khối nội dung: viền mảnh 1 lớp, sậm hơn tông nền (không chìm vào giấy), vệt sáng trên
+		var bc := Css.color(String(C[3])).darkened(0.18)
+		n.css["box-shadow"] = "rgb(%d, %d, %d) 0px 0px 0px 1.2px inset, " % [bc.r8, bc.g8, bc.b8] + VIEN_MONG
+		n.css["border-radius"] = _cpx(12.0)
+		_CKC[ck] = n.css.duplicate()
+		return n
 	sh = SEN_BD + sh.substr(sh.find(")") + 1)
 	# viền vàng kim như ảnh mẫu: nét nâu vàng ngoài 1px, dải vàng 3px sáng phía trên, sậm phía dưới
 	sh = sh.replace("0px 0px 0px 1px inset", "0px 0px 0px 0.8px inset, rgb(250, 214, 110) 0px 0px 0px 1.6px inset, rgb(236, 184, 70) 0px 0px 0px 2.2px inset, rgba(150, 100, 30, 0.35) 0px 0px 0px 2.7px inset")   # (11-26) mảnh lại   # dải vàng đều 4 cạnh
@@ -282,7 +299,7 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false)
 		n.css[key] = _ON.get(key, n.css.get(key))
 	# (11-26) bộ sen: nút xanh / đỏ gờ vàng như nút Bán hết, chip lọc đang chọn
 	n.css["background-image"] = Snap.SEN_DO if red else Snap.SEN_XANH
-	n.css["box-shadow"] = Snap.SEN_VIEN
+	n.css["box-shadow"] = Snap.SEN_VIEN if cb is Callable else NHAN_VIEN   # nút bấm: gờ vàng; nhãn (không bấm): viền mảnh
 	n.kids = [_dt(x, y, w, h, t, 12.5, 800, "rgb(255, 255, 255)")]
 	if cb is Callable:
 		n.act = cb
@@ -295,8 +312,10 @@ const MUA_C := ["linear-gradient(rgb(242, 138, 168) 0%, rgb(230, 108, 146) 50%, 
 	"linear-gradient(rgb(242, 198, 75) 0%, rgb(228, 176, 50) 50%, rgb(212, 154, 30) 100%)"]
 func _mua_chip(b: Dictionary) -> Dictionary:   # nút _onbtn -> chip màu mùa hiện tại, gờ vàng
 	b.css["background-image"] = MUA_C[G.season()]
-	b.css["box-shadow"] = Snap.SEN_VIEN
+	b.css["box-shadow"] = NHAN_VIEN   # nhãn mùa: không gờ vàng
 	return b
+
+const NHAN_VIEN := "rgba(90, 40, 10, 0.28) 0px 0px 0px 1px inset, rgba(255, 255, 255, 0.35) 0px 1px 0px 0px inset"   # nhãn màu (không bấm): viền mảnh sậm
 
 # hình quà vẽ trong khung 64 mà độ đầy khác nhau (đồng xu nhỏ, hộp quà to): phóng theo loại cho cùng cỡ nhìn
 const ICK := {"coin": 1.35, "pearl": 1.08, "crate": 1.0, "bua": 1.0, "che": 0.9, "gift": 0.8}
@@ -481,7 +500,7 @@ func _tchip(x: float, y: float, t: String, kind: String, col := BROWN, cb = null
 
 func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, off: xám, plain: kem bấm được (bản 552)
 	if kind == "plain":
-		var p := _chip(x, y, w, h, "fut")
+		var p := _chip(x, y, w, h, "fut", true)
 		p.kids = [_dt(x, y, w, h, t, 11.0, 800, BROWN)]
 		p.act = cb
 		return p

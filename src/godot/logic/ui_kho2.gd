@@ -136,7 +136,7 @@ func _head() -> Array:   # thanh sức chứa, Đáng giá, chip n/cap ★
 	return out
 
 func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: String, cnt_hi: bool, low: Array, dim := false) -> Array:   # thẻ món chung 3 tab: hình 44, tên (dài thì 2 dòng), dòng giá (Hàng hóa) sát đáy
-	var c := _chip(x, y, CW, CH, "got" if sel else "fut")
+	var c := _chip(x, y, CW, CH, "sel" if sel else "fut")
 	var col := BROWN if not dim else SUB
 	var ny := y + 50.0 if low.size() else y + 58.0   # không dòng giá: hình + tên dời xuống giữa thẻ
 	if not low.is_empty():
@@ -214,7 +214,7 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 		var y := (i / 4) * (24.0 + CG)
 		var t := String(F[i][1])
 		if k == "*sort":
-			var c := _chip(x, y, fw, 24.0, "tre")
+			var c := _chip(x, y, fw, 24.0, "tre", true)
 			c.kids = [_dt(x, y, fw, 24.0, _fitw(t, 10.5, 800, fw - 6.0), 10.5, 800, BROWN)]
 			c.act = _sort_next
 			chips.append(c)
@@ -223,7 +223,7 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 			b.kids[0].css["font-size"] = _cpx(11.0)
 			chips.append(b)
 		else:
-			var c2 := _chip(x, y, fw, 24.0, "fut")
+			var c2 := _chip(x, y, fw, 24.0, "fut", true)
 			c2.kids = [_dt(x, y, fw, 24.0, t, 11.0, 800, BROWN)]
 			var kk := k
 			c2.act = func():
