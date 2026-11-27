@@ -1,28 +1,32 @@
 extends "res://logic/ui_kbang.gd"
 # (11-27) ĐƠN HÀNG = GIỎ HÀNG (khung chung ui_kbang: khung sen, đáy chung), không thẻ lồng trong bảng.
 #   Đầu (cố định): "Giao được N/M đơn" + thanh + "đã giao D"; bảng quán: hàng chip (sao, danh tiếng, giá...) dưới đầu.
-#   Thân (cuộn): mỗi đơn một đồ đựng nhìn nghiêng 2.5D (giỏ / thúng / rổ / mẹt theo quán), 3 cột, đặt thẳng trên nền bảng:
+#   Thân (cuộn): mỗi đơn một giỏ tre nhìn nghiêng 2.5D, 3 cột, đặt thẳng trên nền bảng; giỏ 4 cấp theo hạng thưởng trong bảng
+#     (cấp 4 sơn son đai đồng = đơn thưởng cao nhất, cấp 3 ~22% kế, cấp 2 ~30% kế, còn lại cấp 1 tre tươi):
 #     bong bóng món nằm trong lòng giỏ (chỉ hình món; vòng tiến độ có/cần quanh bóng; món thiếu bóng trong, hình mờ),
 #     tên khách dưới giỏ; đủ hàng quầng xanh nhấp nháy + dấu tích; đơn gấp tem GẤP; giỏ đang chọn nhô lên + quầng vàng.
 #   Đáy (cố định): chi tiết giỏ đang chọn: mặt khách, tên, quán, thưởng xu + sao xanh, từng món có/cần, nút Giao hàng /
 #     Đi lấy + bù sen + Đổi; khách đang tới: giờ chờ, thanh, Gọi. Giao: xu + sao bay về ô xu / ô cấp.
-#   Hình giỏ: 2 lớp (sau: quai + lòng giỏ, dưới bóng; trước: thân + vành trước, đè chân bóng), khung 100x80, miệng giỏ elip
-#     tâm (50, GIO[k][0]) rx 44: ảnh res://ui/img/gio/<k>_sau.webp / _truoc.webp nếu có, không thì svg ui/svg/gio/.
+#   Hình giỏ (hinh/giotre, vẽ bằng src/giotre/giotre.py): ui/img/gio/gioN_sau.webp (cả giỏ, dưới bóng) + gioN_truoc.webp
+#     (thành + vành trước, đè chân bóng), khung 616x336; vành trước giữa giỏ ở 0,51 chiều cao.
 #   Bảng quán: khung "món giờ này" dưới giỏ.
 # Logic dùng lại của ui.gd: U.od_src, U._od_order, U._od_deliver / _od_get / _od_lack_btn / _od_swap, U.od_ud.
 
 const HEAD := 26.0
 const FOOT := 116.0   # dải chi tiết đáy
-const GIO := {"gio": [32.0], "thung": [30.0], "ro": [36.0], "met": [50.0]}   # vành miệng (khung 100x80)
-const BW := 90.0      # giỏ rộng (cao = 0,8 rộng)
+const GA := 336.0 / 616.0   # giỏ: cao / rộng
+const GV := 0.512     # vành trước giữa giỏ (phần chiều cao)
+const GT := 12.0      # chừa trên giỏ cho bong bóng ló khỏi miệng
+const BW := 94.0      # giỏ rộng
 const SZ := {1: 40.0, 2: 34.0, 3: 28.0}   # bong bóng theo số món
-const XS := {1: [0.5], 2: [0.34, 0.66], 3: [0.22, 0.5, 0.78]}
+const XS := {1: [0.5], 2: [0.35, 0.65], 3: [0.25, 0.5, 0.75]}
 const GOLD_L := "rgb(214, 176, 104)"
 const XP_C := "rgb(47, 127, 214)"   # chữ EXP xanh (sao xanh)
 const DOWN_C := "rgb(214, 69, 65)"
 
 var src := ""
 var sel := -1   # đơn đang chọn (chỉ số trong U._od_list)
+var _cap := {}   # đơn f -> cấp giỏ 1..4
 
 func _init(ui) -> void:
 	super(ui)
@@ -59,6 +63,7 @@ func _build() -> void:
 	if sel < 0 or sel >= U._od_list().size():
 		sel = int(L[0][1]) if L.size() else -1
 	sig = _sig()
+	_rank(plan)
 	var sh := _kshell([], "", func(_k): pass)
 	var n: Dictionary = sh[0]
 	var vt: Dictionary = sh[1]
@@ -78,8 +83,8 @@ func _build() -> void:
 		_kfix(n, vt, _foot(sel, U._od_list()[sel], plan[sel]), FOOT, true)
 	var out := []
 	var cw := XW / 3.0
-	var bw := minf(BW, cw - 4.0)
-	var ch := 4.0 + bw * 0.8 + 18.0
+	var bw := minf(BW, cw - 2.0)
+	var ch := GT + bw * GA + 18.0
 	var rows := ceili(L.size() / 3.0)
 	if src == "" and rows > 0:   # giỏ giãn đều theo chiều cao thân (không dồn hết khoảng trống xuống dưới)
 		ch = clampf(float(vt.r[3]) / rows, ch, ch + 18.0)
@@ -145,20 +150,23 @@ func _qchips() -> Array:   # bảng quán: sao, danh tiếng, giá / trễ / kh�
 		x += w + 6.0
 	return out
 
-func _kind(o: Dictionary) -> String:   # đồ đựng theo quán: vựa / nhà hàng thúng, rau / phở / chè rổ, cơm / bánh mẹt, còn lại giỏ
-	var t := String(o.get("shop", "")).to_lower()
-	for k in [["vựa", "thung"], ["nhà hàng", "thung"], ["rau", "ro"], ["phở", "ro"], ["chè", "ro"], ["cơm", "met"], ["bánh", "met"]]:
-		if t.find(k[0]) >= 0:
-			return k[1]
-	return "gio"
+func _rank(plan: Array) -> void:   # cấp giỏ theo hạng thưởng các đơn đang chờ giao (cấp nào cũng có thứ bậc)
+	_cap = {}
+	var fs := []
+	for f in plan.size():
+		if plan[f] != null:
+			fs.append(f)
+	var OL: Array = U._od_list()
+	fs.sort_custom(func(a, b): return int(OL[a].reward) > int(OL[b].reward) or (int(OL[a].reward) == int(OL[b].reward) and a < b))
+	var n := fs.size()
+	var n4 := 1 if n >= 3 else 0
+	var n3 := clampi(roundi(n * 0.22), 0, 2)
+	var n2 := clampi(roundi(n * 0.3), 0, 3)
+	for r in n:
+		_cap[fs[r]] = 4 if r < n4 else (3 if r < n4 + n3 else (2 if r < n4 + n3 + n2 else 1))
 
-func _art(k: String, lop: String, x: float, y: float, w: float, h: float) -> Dictionary:   # một lớp hình giỏ: ảnh vẽ tay nếu có, không thì svg
-	var pic := "res://ui/img/gio/" + k + "_" + lop + ".webp"
-	if ResourceLoader.exists(pic) or FileAccess.file_exists(pic):
-		return _pic(x, y, w, h, pic)
-	var d := _dic(x, y, w, FileAccess.get_file_as_string("res://ui/svg/gio/" + k + "_" + lop + ".svg"))
-	d.r = [x, y, w, h]
-	return d
+func _art(c: int, lop: String, x: float, y: float, w: float, h: float) -> Dictionary:   # một lớp hình giỏ cấp c
+	return _pic(x, y, w, h, "res://ui/img/gio/gio" + str(c) + "_" + lop + ".webp")
 
 func _vong(cx: float, cy: float, r: float, p: float, col: String) -> Dictionary:   # vòng tiến độ quanh bong bóng (p 0..1, chạy từ đỉnh theo chiều kim đồng hồ)
 	var a := TAU * clampf(p, 0.0, 1.0)
@@ -175,20 +183,19 @@ const SANG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 80\">
 
 func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) -> Array:   # một đơn: đồ đựng + bong bóng món + tên
 	var out := []
-	var h := w * 0.8
-	var k := _kind(o)
+	var h := w * GA
+	var c: int = _cap.get(f, 1)
 	var ok: bool = pl != null and pl.ok
 	var is_sel := f == sel
-	var by := y + 4.0 - (4.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
+	var by := y + GT - (4.0 if is_sel else 0.0)   # giỏ đang chọn nhô lên
 	if ok or is_sel:   # quầng: xanh = đủ hàng (nhấp nháy), vàng = đang chọn
-		var c := "rgb(255,200,60)" if is_sel else "rgb(110,220,90)"
-		var gl := _dic(x - 8.0, y, w + 16.0, SANG % [c, c])
-		gl.r = [x - 8.0, y, w + 16.0, h + 12.0]
+		var gc := "rgb(255,200,60)" if is_sel else "rgb(110,220,90)"
+		var gl := _dic(x - 8.0, by - 10.0, w + 16.0, SANG % [gc, gc])
+		gl.r = [x - 8.0, by - 10.0, w + 16.0, h + 20.0]
 		if ok and not is_sel:
 			gl.fx = "nhay"
 		out.append(gl)
-	out.append(_art(k, "sau", x, by, w, h))
-	var T: float = GIO[k][0] * h / 80.0
+	out.append(_art(c, "sau", x, by, w, h))
 	if pl != null:
 		var ni: int = mini(3, o.items.size())
 		var s: float = SZ[ni]
@@ -198,7 +205,7 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 			var have: int = int(pl.have[q])
 			var good := have >= need
 			var cx: float = x + w * float(XS[ni][q])
-			var cy: float = by + T - 9.0 * h / 80.0 - (3.0 if ni == 3 and q == 1 else 0.0)
+			var cy: float = by + GV * h - s * 0.32 - (3.0 if ni == 3 and q == 1 else 0.0)   # chân bóng lọt dưới vành trước
 			out.append(_vong(cx, cy, s * 0.5 + 3.0, float(have) / maxf(1.0, need), GREEN if good else "rgb(240,160,32)"))
 			var op := "1" if good else "0.7"
 			out.append(_dic(cx - s * 0.5, cy - s * 0.5, s, BONG % [op, op, op]))
@@ -206,18 +213,18 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 			if not good:
 				ic.css["opacity"] = "0.5"   # món thiếu: hình mờ trong bóng trong
 			out.append(ic)
-	out.append(_art(k, "truoc", x, by, w, h))
+	out.append(_art(c, "truoc", x, by, w, h))
 	if ok:
-		out.append(_dtick(x + w - 20.0, by + h - 24.0, 18.0))
+		out.append(_dtick(x + w - 18.0, by + h - 18.0, 18.0))
 	if pl != null and o.get("hot", -1) == G.day():
-		out.append(_tem(x - 2.0, by + h * 0.55))
+		out.append(_tem(x - 2.0, by + h * 0.45))
 	var nm: String = String(o.who) if pl != null else "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
 	var nx := x + (w - cw) * 0.5
-	out.append(_dt(nx, y + 4.0 + h + 1.0, cw, 14.0, _fitw(nm, 10.5, 800, cw - 4.0), 10.5, 800, BROWN if pl != null else SUB))
+	out.append(_dt(nx, y + GT + h + 2.0, cw, 14.0, _fitw(nm, 10.5, 800, cw - 4.0), 10.5, 800, BROWN if pl != null else SUB))
 	if pl == null:   # khách đang tới: giỏ mờ
 		for q in [-2, -3]:
 			out[out.size() + q].css["opacity"] = "0.45"
-	var hit := _dbx(nx, y, cw, h + 18.0, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
+	var hit := _dbx(nx, y, cw, GT + h + 18.0, "rgba(0, 0, 0, 0)", 0.0)   # chạm cả ô giỏ: chọn đơn
 	var ff := f
 	hit.act = func():
 		sel = ff
