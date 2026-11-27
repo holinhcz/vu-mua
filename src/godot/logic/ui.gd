@@ -1998,7 +1998,7 @@ func _build_kho() -> void:
 					kh_chip_on = sn
 				elif kh_chip_off.is_empty():
 					kh_chip_off = sn
-				var cat: String = KH_CAT[q][0] if q < KH_CAT.size() else "khac"
+				var cat: String = _kh_cat_of(sn, q)   # (11-27) mục theo chữ trên chip (thứ tự con có lúc lệch: chạm Cá ra Vật nuôi)
 				kh_chips.append([L[q], cat, sn])
 				var cc := cat
 				_click(L[q], func():
@@ -2009,6 +2009,16 @@ func _build_kho() -> void:
 	for b in _qall(kho_roots[1], "u2vt", []):
 		var bb: Control = b
 		_click(bb, func(): _kho_vl_pick(bb), "scale94")
+
+func _kh_cat_of(sn: Dictionary, q: int) -> String:
+	var tx := ""
+	for k in sn.get("kids", []):
+		if k is Dictionary and String(k.get("text", "")) != "":
+			tx = String(k.text).strip_edges()
+	for c in KH_CAT:
+		if String(c[1]) == tx:
+			return String(c[0])
+	return String(KH_CAT[q][0]) if q < KH_CAT.size() else "khac"
 
 var kh_hs := []   # (bản 538) cuộn ngang hàng chip lọc (Hàng hóa + khi đang chọn món)
 
