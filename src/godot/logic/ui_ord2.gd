@@ -186,11 +186,16 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 	# thưởng
 	var s1: String = "+" + G.fmt_n(int(o.reward))
 	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
-	var rw: Array = _rowi(0.0, 0.0, 20.0, [s1, "c", "   ", s2, "s"], 12.0, 800, "rgb(214, 128, 20)")
-	var rx := x + (w - float(rw[1])) * 0.5
+	var rw: Array = _rowi(0.0, 0.0, 20.0, [s1, "c"], 12.0, 800, "rgb(214, 128, 20)")
+	var re: Array = _rowi(0.0, 0.0, 20.0, [s2, "i:pic:res://ui/img/bong/sao_xanh.png"], 12.0, 800, "rgb(47, 127, 214)")   # EXP: chữ xanh + sao xanh như bản cũ
+	var rgap := 12.0
+	var rx := x + (w - float(rw[1]) - rgap - float(re[1])) * 0.5
 	var ry := y + h - 32.0 - 24.0
 	for k in rw[0]:
 		Snap._move(k, Vector2(rx, ry))
+		out.append(k)
+	for k in re[0]:
+		Snap._move(k, Vector2(rx + float(rw[1]) + rgap, ry))
 		out.append(k)
 	# nút
 	var by := y + h - 32.0
