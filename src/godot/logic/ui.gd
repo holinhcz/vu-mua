@@ -1882,7 +1882,7 @@ func _build_kho() -> void:
 	for nm in ["kho", "kho2", "kho3", "kho_sel"]:
 		var d: Dictionary = Snap.load_snap(nm)
 		var n: Dictionary = d["#pov"][0].duplicate(true)   # mẫu chụp dùng chung (load_snap giữ trong bộ nhớ): sửa bản sao, dựng lại giao diện lúc đổi cỡ màn vẫn còn thẻ mẫu
-		if Sen.ON:   # (11-27) khung sen: phần đáy (nút Bán hết, chi tiết món, khung chi tiết vật liệu) dời lên khỏi chóp đáy + hoa sen góc phải (đáy chung như các bảng)
+		if Sen.ON and nm != "kho":   # (11-27) khung sen: dải chi tiết món, khung chi tiết vật liệu dời lên khỏi chóp đáy + hoa sen góc phải (nút Bán hết giữ chỗ: lưới không hụt)
 			_kho_day(n, KHO_DAY)
 		var bp := Snap.find(n, "primary")   # (11-26) bộ sen: nút Bán hết to như ảnh mẫu, chừa chóp đỏ giữa đáy khung
 		if not bp.is_empty() and nm != "kho_sel":   # kho_sel: "primary" là nút Bán 1 trong chi tiết món, không phải Bán hết

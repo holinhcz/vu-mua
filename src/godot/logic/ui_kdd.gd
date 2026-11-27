@@ -136,7 +136,7 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 	var vr: Array = vw.get_meta("snap", {}).get("r", [vw.r.position.x, vw.r.position.y])
 	var o := Vector2(float(vr[0]), float(vr[1]))
 	var x0 := float(K.li0.r[0])
-	var y := float(K.li0.r[1])
+	var y := float(K.li0.r[1]) - (float(K.vw.r[1]) - float(vr[1]))   # (11-27) mẫu thẻ chụp theo khung cũ: theo đỉnh lưới thật (khung sen cao hơn)
 	var rows := []
 	for i in L.size():
 		if i % 4 == 0:
@@ -183,6 +183,8 @@ func sync(ids: Dictionary) -> void:   # f() với data-v = dd
 	ds.kids[0].text = String(E.d)
 	if run and ds.kids.size() > 1:
 		ds.kids[1].text = "⏱ Còn " + MA(float(E.run))
+	if U.Sen.ON:   # (11-27) khung sen: khung chi tiết dời lên khỏi chóp đáy + hoa sen góc phải (như Vật liệu)
+		Snap._move(d, Vector2(0, -U.KHO_DAY))
 	var db: Control = U._build(d, {}, o)
 	vw.add(db)
 	built.append(db)

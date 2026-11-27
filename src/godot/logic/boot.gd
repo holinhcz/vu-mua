@@ -221,6 +221,7 @@ func _test_hook() -> void:
 			"pc": ui.pc_open(a[1], Vector2(farm.en(farm.PC.G0[a[1]].sign[0] + 0.5, farm.PC.G0[a[1]].sign[1] + 0.5), farm.nn(farm.PC.G0[a[1]].sign[0] + 0.5, farm.PC.G0[a[1]].sign[1] + 0.5) - 48.0))
 			"pcbuy": ui.pc_try(a[1])
 			"coins": G.g.coins = int(a[1]); G.mark()
+			"bua": G.nv.EF(int(a[1]), int(a[2])); G.mark()   # bua:giờ:số lá (thử Kho › Đồ dùng)
 			"lv": G.g.pc.lv = int(a[1]); G.mark()
 			"nosign": farm.sign_off = true; farm.refresh()
 			"ud": ui.od_ud = {"i": int(a[1]), "t": G._now_ms() + 600000.0}
