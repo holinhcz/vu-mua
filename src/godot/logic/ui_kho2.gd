@@ -28,6 +28,7 @@ var KDD := {}
 
 func _init(ui) -> void:
 	super(ui)
+	snapcut = false   # lưới dài: cuộn tới sát dải đáy, không cắt bỏ hàng lố
 	KDD = Snap.load_snap("kdd")
 	var n2: Dictionary = Snap.load_snap("kho2")["#pov"][0]
 	for t in Snap.find(n2, "u2vg").get("kids", []):
@@ -195,7 +196,7 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 	else:
 		_kfix(n, vt, _sellall(e), FOOT_B, true)
 	var out := []
-	# chip lọc: 7 mục + nút xếp, 2 hàng x 4
+	var chips := []   # chip lọc: 7 mục + nút xếp, 2 hàng x 4, đứng yên dưới dải đầu (không cuộn theo lưới)
 	var F: Array = U.KH_CAT.duplicate()
 	F.append(["*sort", "Xếp: " + _sort_name()])
 	var fw := (XW - 3.0 * CG) / 4.0
@@ -208,11 +209,11 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 			var c := _chip(x, y, fw, 24.0, "tre")
 			c.kids = [_dt(x, y, fw, 24.0, _fitw(t, 10.5, 800, fw - 6.0), 10.5, 800, BROWN)]
 			c.act = _sort_next
-			out.append(c)
+			chips.append(c)
 		elif k == U.kh_f:
 			var b := _onbtn(x, y, fw, 24.0, t, null)
 			b.kids[0].css["font-size"] = _cpx(11.0)
-			out.append(b)
+			chips.append(b)
 		else:
 			var c2 := _chip(x, y, fw, 24.0, "fut")
 			c2.kids = [_dt(x, y, fw, 24.0, t, 11.0, 800, BROWN)]
@@ -221,8 +222,9 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 				U.kh_f = kk
 				U.kh_sel = ""
 				scroll = 0.0
-			out.append(c2)
-	var gy := 2.0 * 24.0 + CG + GG
+			chips.append(c2)
+	_kfix(n, vt, chips, 2.0 * 24.0 + CG, false)
+	var gy := 0.0
 	if e.is_empty():
 		out.append(_dt(X0, gy + 10.0, XW, 16.0, "Mục này trống." if G.kho_n() > 0 else "Kho đang trống.", 11.0, 600, SUB))
 		return [out, gy + 30.0]

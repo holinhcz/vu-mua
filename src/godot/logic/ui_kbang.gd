@@ -48,6 +48,7 @@ func _kshell(L: Array, cur: String, go: Callable, th := 0.0) -> Array:   # th > 
 	_hb = float(vt.r[3])
 	return [n, vt, vy, th0]
 
+var snapcut := true   # (11-27) cuộn: cắt bỏ hàng lố ở đáy (dòng dư ẩn hẳn); Kho tắt (lưới dài cuộn sát đáy)
 var fit := false   # (bản 492) bảng ngắn (Thư nhà): khung co lại vừa nội dung, đứng giữa màn
 
 func _kfit(n: Dictionary, cut: float, d: float) -> void:   # co khung: khối nằm dưới vạch cut dời lên d, khối vắt qua vạch thì thấp bớt d
@@ -92,7 +93,7 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 		_kshift(n, d * 0.5)
 		vy += d * 0.5
 		_hb = ch
-	if ch > _hb + 8.0:   # (11-26) cuộn: đáy vùng cuộn không cắt ngang khối nào (không ló vệt dòng kế); dòng lố thì ẩn, kéo lên mới thấy
+	if snapcut and ch > _hb + 8.0:   # (11-26) cuộn: đáy vùng cuộn không cắt ngang khối nào (không ló vệt dòng kế); dòng lố thì ẩn, kéo lên mới thấy
 		var cut := _hb
 		var moved := true
 		while moved:
