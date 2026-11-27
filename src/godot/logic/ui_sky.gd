@@ -169,7 +169,7 @@ func _row(y: float, h: float, kind: String, lt, title: String, sub: String, full
 		x = X0 + lw + 14.0
 	var bw := 0.0
 	if btn != null:
-		bw = 48.0 - 14.0 if String(btn[0]) == "Mở radio" else Box.text_w(String(btn[0]), 11.0, 800) + 22.0
+		bw = 48.0 if String(btn[0]) == "Mở radio" else Box.text_w(String(btn[0]), 11.0, 800) + 22.0
 	var tw := X0 + XW - x - (bw + 14.0 if bw > 0.0 else 8.0)
 	var L2 := _wrap2(sub, 10.0, 600, tw) if h >= 54.0 else [_fitw(sub, 10.0, 600, tw)]
 	var ty := y + (h - (16.0 + L2.size() * 13.0)) * 0.5
@@ -224,7 +224,8 @@ func _tabt() -> Array:
 	mb.kids.append(_dic(X0 + 7.0, y + 2.0, 22.0, _wsv_get(mi) if mi == "han" else (IC_SONG_T if mi == "nuoc" else _sic(mi))))
 	out.append(mb)
 	var st := ("Ngày " + str(dd) + "/7 · " + ("còn " + str(7 - dd) + " ngày sang " + String(T8[(sea + 1) % 4]).to_lower() if dd < 7 else "mai sang " + String(T8[(sea + 1) % 4]).to_lower())) if auto else "Mùa chỉnh tay trong Cài đặt"
-	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, XW - mw - 10.0, 20.0 if auto else 26.0, st, 11.5, 700, BROWN, "left"))
+	var sw0 := XW - mw - 14.0   # (11-27) vừa đúng bề ngang thanh 7 ngày bên dưới (không chạm mép)
+	out.append(_dt(X0 + mw + 10.0, y - 3.0 if auto else y, sw0, 20.0 if auto else 26.0, _fitw(st, 11.5, 700, sw0), 11.5, 700, BROWN, "left"))
 	if auto:   # thanh 7 ngày
 		var bx := X0 + mw + 10.0
 		var bw := XW - mw - 14.0
