@@ -1,15 +1,16 @@
 extends "res://logic/ui_kbang.gd"
 # (11-27) ĐƠN HÀNG trên KHUNG CHUNG (ui_kbang: khung sen, chip, thẻ, đáy chung), thay bản chụp web (ord / ord_ok / ord_wait...).
 #   Đầu (cố định): "Giao được N/M đơn" + thanh + "đã giao D"; bảng quán: hàng chip (sao, danh tiếng, giá...) dưới đầu.
-#   Thân (cuộn): thẻ đơn 2 cột (cao theo số món, thẻ cùng hàng cao bằng): đầu thẻ chữ cái + tên + nghề + đổi đơn,
-#   dòng món (hình, tên, có/cần), thưởng xu + sao, nút Giao hàng / Đi lấy + bù sen; khách đang tới: giờ chờ, thanh, Gọi.
+#   Thân (cuộn): thẻ đơn 2 cột (cao theo số món, thẻ cùng hàng cao bằng): chân dung khách + tên + quán, nhãn Đổi trên mép,
+#   tem GẤP góc; dòng món (ô hình to, tên, có/cần); dải thưởng xu + sao xanh; nút Giao hàng / Đi lấy + bù sen;
+#   thẻ đủ hàng viền cam lửa nhấp nháy; khách đang tới: giờ chờ, thanh, Gọi.
 #   Bảng quán: khung "món giờ này" dưới thẻ.
 # Logic dùng lại của ui.gd: U.od_src, U._od_order, U._od_colors, U._od_deliver / _od_get / _od_lack_btn / _od_swap, U.od_ud.
 
 const CG2 := 8.0
-const IH := 24.0      # dòng món
+const TOP := 9.0      # trên hàng thẻ đầu (tem / nhãn ngồi trên mép thẻ)
+const RG := 14.0      # cách giữa hai hàng thẻ (nhãn Đổi hàng dưới không chạm thẻ trên)
 const HEAD := 26.0
-const STAR := "res://ui/img/bong/sao.png"
 
 var src := ""
 
@@ -63,7 +64,7 @@ func _build() -> void:
 	var out := []
 	var cw := (XW - CG2) / 2.0
 	var cols: Dictionary = U._od_colors()
-	var y := 0.0
+	var y := TOP   # chừa chỗ tem GẤP / nhãn Đổi ngồi trên mép thẻ hàng đầu
 	var q := 0
 	while q < L.size():
 		var row := [L[q]]
@@ -75,16 +76,16 @@ func _build() -> void:
 		for j in row.size():
 			var f: int = row[j][1]
 			out.append_array(_ocard(X0 + j * (cw + CG2), y, cw, h, f, U._od_list()[f], plan[f], String(cols.get(f, U.OD_HD[0]))))
-		y += h + CG2
+		y += h + RG
 		q += 2
 	if src != "":
 		var mn := _menu(y)
 		out.append_array(mn[0])
-		y = float(mn[1]) + CG2
+		y = float(mn[1]) + RG
 	if L.is_empty():
 		out.append(_dt(X0, 10.0, XW, 16.0, "Chưa có đơn nào.", 12.0, 600, SUB))
 		y = 40.0
-	_kmount(n, vt, float(vt.r[1]), out, y - CG2 + 2.0)
+	_kmount(n, vt, float(vt.r[1]), out, y - RG + 4.0)
 
 func _head(okn: int, m: int) -> Array:
 	var out := []
@@ -138,89 +139,118 @@ func _qchips() -> Array:   # bảng quán: sao, danh tiếng, giá / trễ / kh�
 func _card_h(o: Dictionary, pl) -> float:
 	if pl == null:
 		return 104.0
-	return 40.0 + o.items.size() * (IH + 4.0) + 26.0 + 32.0
+	return P + FACE + G2 + o.items.size() * (IT + G2) + RW_H + G2 + BT_H + P
+
+const P := 8.0        # lề trong thẻ
+const G2 := 6.0       # cách giữa các dòng trong thẻ
+const FACE := 38.0    # chân dung khách
+const IT := 34.0      # ô hình món
+const RW_H := 26.0    # dải thưởng
+const BT_H := 26.0    # nút
+const FIRE := "rgb(238, 104, 28)"   # cam lửa (như ô mốc Nhiệm vụ)
+const GOLD_L := "rgb(214, 176, 104)"   # viền ô hình món (như khung chi tiết Kho)
+const XP_C := "rgb(47, 127, 214)"   # chữ EXP xanh (sao xanh)
+
+func _face(who: String) -> String:   # chân dung tròn chung của xóm (vlface/m*), cố định theo tên khách
+	return "res://ui/img/vlface/m" + str(absi(who.hash()) % 8) + ".webp"
 
 func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, col: String) -> Array:
 	if pl == null:
 		return _wait(x, y, w, h, f, o)
 	var ok: bool = pl.ok
 	var out := []
-	var c := _chip(x, y, w, h, "sel" if ok else "fut")
-	out.append(c)
-	# đầu thẻ: chữ cái, tên, nghề, đổi đơn
-	var nm: String = String(o.who).split(" ")[-1]
-	var av := _dbx(x + 8.0, y + 8.0, 26.0, 26.0, col, 13.0)
-	av.kids = [_dt(x + 8.0, y + 8.0, 26.0, 26.0, nm.substr(0, 1), 12.0, 800, "rgb(255, 255, 255)")]
-	out.append(av)
-	var hot: bool = o.get("hot", -1) == G.day()
-	var sw := src == ""
-	if hot:   # đơn gấp: lửa nhỏ góc chữ cái (không lấn chỗ tên)
-		out.append(_dt(x + 24.0, y + 2.0, 16.0, 14.0, "🔥", 10.5, 600, BROWN))
-	var tw := w - 42.0 - (44.0 if sw else 6.0)
+	if ok:   # đủ hàng: viền cam lửa sáng nhấp nháy quanh thẻ
+		var gl := _dbx(x - 2.0, y - 2.0, w + 4.0, h + 4.0, "rgba(0, 0, 0, 0)", 10.0, _cpx(2.0) + " solid " + FIRE, "0px 0px 8px rgba(238, 104, 28, 0.85)")
+		gl.fx = "nhay"
+		out.append(gl)
+	out.append(_chip(x, y, w, h, "sel" if ok else "fut"))
+	# đầu thẻ: chân dung, tên, quán
 	var who := String(o.who)
-	out.append(_dt(x + 40.0, y + 6.0, tw, 16.0, _fitw(who, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
-	out.append(_dt(x + 40.0, y + 22.0, tw, 13.0, _fitw(String(o.shop), 10.5, 600, tw), 10.5, 600, SUB, "left"))
-	if sw:
+	var fr := _dbx(x + P, y + P, FACE, FACE, col, FACE * 0.5, _cpx(2.0) + " solid rgb(255, 255, 255)", "0px 1px 2px rgba(90, 60, 20, 0.35)")
+	fr.kids = [_pic(x + P + 2.0, y + P + 2.0, FACE - 4.0, FACE - 4.0, _face(who))]
+	out.append(fr)
+	var tx := x + P + FACE + 6.0
+	var tw := x + w - P - tx
+	out.append(_dt(tx, y + P + 2.0, tw, 16.0, _fitw(who, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+	out.append(_dt(tx, y + P + 20.0, tw, 14.0, _fitw(String(o.shop), 10.5, 600, tw), 10.5, 600, SUB, "left"))
+	if o.get("hot", -1) == G.day():   # đơn gấp: tem đỏ "GẤP" dán chéo góc trên trái
+		out.append(_tem(x - 4.0, y - 6.0))
+	if src == "":   # đổi đơn: nhãn nhỏ ngồi trên mép trên phải thẻ (không lấn chỗ tên)
 		var conf: bool = U.od_ud.i == f
-		var bw := 44.0 if conf else 38.0
-		var b := _btn(x + w - bw - 6.0, y + 8.0, bw, 24.0, "Đổi?" if conf else "Đổi", func(): U._od_swap(f), "red" if conf else "plain")
-		out.append(b)
-	# món
-	var iy := y + 40.0
-	for it in o.items:
-		var id: String = String(it[0])
-		var need := int(it[1])
-		var have := int(G.g.barn.get(id, 0))
+		var bw := 44.0 if conf else 36.0
+		out.append(_btn(x + w - P - bw, y - 8.0, bw, 18.0, "Đổi?" if conf else "Đổi", func(): U._od_swap(f), "red" if conf else "plain"))
+	# món: ô hình to (như thẻ Kho), tên, còn thiếu / đủ
+	var iy := y + P + FACE + G2
+	for q in o.items.size():
+		var id: String = String(o.items[q][0])
+		var need := int(o.items[q][1])
+		var have: int = int(pl.have[q])   # phần hàng chia cho đơn này (không phải cả kho)
 		var good := have >= need
-		var r := _dbx(x + 6.0, iy, w - 12.0, IH, "rgb(226, 242, 212)" if good else "rgb(248, 238, 218)", 6.0)   # trong thẻ: nền phẳng, không viền
+		var tile := _dbx(x + P, iy, IT, IT, "rgb(255, 252, 244)", 7.0, "1px solid " + (GREEN if good else GOLD_L))
+		tile.kids = [_icn(x + P + IT * 0.5, iy + IT * 0.5, 28.0, id)]
+		if good:
+			tile.kids.append(_dtick(x + P + IT - 10.0, iy - 3.0, 13.0))
+		out.append(tile)
+		var nx := x + P + IT + 6.0
+		var nw := x + w - P - nx
+		var nm: String = G.item_name(id)
+		var hot: bool = G.hot_x(id) > 1.0
+		var nmw := minf(Box.text_w(nm, 12.0, 700) + 1.0, nw - (16.0 if hot else 0.0))
+		out.append(_dt(nx, iy + 1.0, nmw, 16.0, _fitw(nm, 12.0, 700, nmw), 12.0, 700, BROWN, "left"))
+		if hot:   # món được giá: 🔥 sát sau tên
+			out.append(_dt(nx + nmw + 1.0, iy + 1.0, 14.0, 16.0, "🔥", 10.5, 600, DOWN_C, "left"))
 		var qs: String = G.fmt_n(have) + "/" + str(need)
-		var qw: float = Box.text_w(qs, 10.5, 800) + 2.0
-		var nw := w - 12.0 - 30.0 - qw - 10.0
-		r.kids = [_icn(x + 20.0, iy + IH * 0.5, 18.0, id),
-			_dt(x + 34.0, iy, nw, IH, _fitw(G.item_name(id), 10.5, 600, nw), 10.5, 600, BROWN, "left"),
-			_dt(x + w - 10.0 - qw, iy, qw, IH, qs, 10.5, 800, GREEN if good else DOWN_C, "right")]
-		if G.hot_x(id) > 1.0:
-			r.kids.append(_dt(x + w - 14.0 - qw - 14.0, iy, 14.0, IH, "🔥", 9.0, 600, DOWN_C))
-		out.append(r)
-		iy += IH + 4.0
-	# thưởng
+		out.append(_dt(nx, iy + 18.0, nw, 14.0, qs, 12.0, 800, GREEN if good else DOWN_C, "left"))
+		iy += IT + G2
+	# thưởng: dải nền nhạt, xu vàng + sao xanh to
 	var s1: String = "+" + G.fmt_n(int(o.reward))
 	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
-	var rw: Array = _rowi(0.0, 0.0, 20.0, [s1, "c"], 12.0, 800, "rgb(214, 128, 20)")
-	var re: Array = _rowi(0.0, 0.0, 20.0, [s2, "i:pic:res://ui/img/bong/sao_xanh.png"], 12.0, 800, "rgb(47, 127, 214)")   # EXP: chữ xanh + sao xanh như bản cũ
+	out.append(_dbx(x + P, iy, w - 2.0 * P, RW_H, "rgb(253, 240, 208)", 7.0))
+	var rw: Array = _rowi(0.0, 0.0, RW_H, [s1, "c"], 14.0, 800, "rgb(214, 128, 20)")
+	var re: Array = _rowi(0.0, 0.0, RW_H, [s2, "i:pic:res://ui/img/bong/sao_xanh.png"], 14.0, 800, XP_C)
 	var rgap := 12.0
 	var rx := x + (w - float(rw[1]) - rgap - float(re[1])) * 0.5
-	var ry := y + h - 32.0 - 24.0
 	for k in rw[0]:
-		Snap._move(k, Vector2(rx, ry))
+		Snap._move(k, Vector2(rx, iy))
 		out.append(k)
 	for k in re[0]:
-		Snap._move(k, Vector2(rx + float(rw[1]) + rgap, ry))
+		Snap._move(k, Vector2(rx + float(rw[1]) + rgap, iy))
 		out.append(k)
 	# nút
-	var by := y + h - 32.0
+	var by := iy + RW_H + G2
 	if ok:
-		out.append(_btn(x + 6.0, by, w - 12.0, 26.0, "Giao hàng", func(): U._od_deliver(f)))
+		out.append(_btn(x + P, by, w - 2.0 * P, BT_H, "Giao hàng", func(): U._od_deliver(f)))
 	else:
 		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() and src == "" else 0
-		var gw := w - 12.0
+		var gw := w - 2.0 * P
 		if cost > 0:
 			var cs := str(cost)
 			var cwid: float = Box.text_w(cs, 12.0, 800) + 34.0
 			gw -= cwid + 6.0
 			var enough: bool = int(G.g.ngoc) >= cost
-			var sb := _btn(x + w - 6.0 - cwid, by, cwid, 26.0, "", func(): U._od_lack_btn(f), "plain")
+			var sb := _btn(x + w - P - cwid, by, cwid, BT_H, "", func(): U._od_lack_btn(f), "plain")
 			sb.kids = []
-			var ri: Array = _rowi(0.0, 0.0, 26.0, ["i:pearl", cs], 12.0, 800, BROWN if enough else SUB)
-			var sx := x + w - 6.0 - cwid + (cwid - float(ri[1])) * 0.5
+			var ri: Array = _rowi(0.0, 0.0, BT_H, ["i:pearl", cs], 12.0, 800, BROWN if enough else SUB)
+			var sx := x + w - P - cwid + (cwid - float(ri[1])) * 0.5
 			for k in ri[0]:
 				Snap._move(k, Vector2(sx, by))
 				sb.kids.append(k)
 			if not enough:
 				sb.css["opacity"] = "0.6"
 			out.append(sb)
-		out.append(_btn(x + 6.0, by, gw, 26.0, "Đi lấy ›", func(): U._od_get(f), "plain"))
+		out.append(_btn(x + P, by, gw, BT_H, "Đi lấy ›", func(): U._od_get(f), "plain"))
 	return out
+
+func _tem(x: float, y: float) -> Dictionary:   # tem "GẤP": nền đỏ viền trắng, nghiêng
+	var tw := 34.0
+	var th := 16.0
+	var a := -0.26
+	var bw := absf(tw * cos(a)) + absf(th * sin(a))   # khung bao của tem đã nghiêng (Snap tự tính lại hộp thật)
+	var bh := absf(tw * sin(a)) + absf(th * cos(a))
+	var t := _dbx(x, y, bw, bh, DOWN_C, 4.0, _cpx(1.5) + " solid rgb(255, 255, 255)", "0px 1px 2px rgba(90, 20, 10, 0.45)")
+	t.css["transform"] = "matrix(%f, %f, %f, %f, 0, 0)" % [cos(a), sin(a), -sin(a), cos(a)]
+	t.kids = [_dt(x, y, bw, bh, "GẤP", 10.5, 900, "rgb(255, 255, 255)")]
+	return t
 
 const DOWN_C := "rgb(214, 69, 65)"
 

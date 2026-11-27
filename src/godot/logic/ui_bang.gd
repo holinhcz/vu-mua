@@ -458,6 +458,8 @@ func _fx_step(dt: float) -> void:
 		c.pivot_offset = c.size * 0.5
 		if e[1] == "lac":
 			c.rotation = sin(p * 34.0) * 0.16 * (1.0 - p / 0.55) if p < 0.55 else 0.0
+		elif e[1] == "nhay":   # (11-27) viền sáng nhấp nháy (thẻ đơn đủ hàng)
+			c.modulate.a = 0.35 + 0.65 * (0.5 + 0.5 * sin(_fxt * 4.0))
 		else:
 			c.rotation = fmod(_fxt * 0.7, TAU)
 			c.modulate.a = 0.75 + 0.25 * sin(_fxt * 3.0)
