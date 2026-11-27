@@ -3,7 +3,8 @@ extends "res://logic/ui_kbang.gd"
 #   Đầu (cố định): "Giao được N/M đơn" + thanh + "đã giao D"; bảng quán: hàng chip (sao, danh tiếng, giá...) dưới đầu.
 #   Thân (cuộn): thẻ đơn 2 cột (cao theo số món, thẻ cùng hàng cao bằng): chân dung khách + tên + quán, nhãn Đổi trên mép,
 #   tem GẤP góc; dòng món (ô hình to, tên, có/cần); dải thưởng xu + sao xanh; nút Giao hàng / Đi lấy + bù sen;
-#   thẻ đủ hàng viền cam lửa nhấp nháy; khách đang tới: giờ chờ, thanh, Gọi.
+#   thẻ đủ hàng quầng sáng nhấp nháy; độ hiếm theo thưởng (thường nâu / hiếm xanh / quý tím / huyền thoại vàng ánh kim):
+#   viền, viên đá mép trên, dải đầu thẻ mang màu; giao: lá bài lật mặt sen rồi tan thành xu + sao bay lên; khách đang tới: giờ chờ, thanh, Gọi.
 #   Bảng quán: khung "món giờ này" dưới thẻ.
 # Logic dùng lại của ui.gd: U.od_src, U._od_order, U._od_colors, U._od_deliver / _od_get / _od_lack_btn / _od_swap, U.od_ud.
 
@@ -148,8 +149,24 @@ const IT := 34.0      # ô hình món
 const RW_H := 26.0    # dải thưởng
 const BT_H := 26.0    # nút
 const FIRE := "rgb(238, 104, 28)"   # cam lửa (như ô mốc Nhiệm vụ)
+# (11-27) độ hiếm lá bài theo thưởng so với mức thưởng thường của cấp: thường / hiếm / quý / huyền thoại
+const T_COL := ["rgb(176, 128, 72)", "rgb(52, 132, 220)", "rgb(146, 84, 214)", "rgb(232, 172, 24)"]
+const T_TINT := ["", "rgb(220, 235, 252)", "rgb(238, 226, 252)", "rgb(255, 238, 190)"]
+const T_CUT := [0.95, 1.15, 1.5]
+const QUET := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 30 100\" preserveAspectRatio=\"none\"><defs><linearGradient id=\"g\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"rgb(255,255,255)\" stop-opacity=\"0\"/><stop offset=\"0.5\" stop-color=\"rgb(255,250,220)\" stop-opacity=\"0.75\"/><stop offset=\"1\" stop-color=\"rgb(255,255,255)\" stop-opacity=\"0\"/></linearGradient></defs><path d=\"M12 0H30L18 100H0Z\" fill=\"url(#g)\"/></svg>"
+const LAP := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><path d=\"M10 0L12.2 7.8L20 10L12.2 12.2L10 20L7.8 12.2L0 10L7.8 7.8Z\" fill=\"rgb(255,248,200)\" stroke=\"rgb(232,172,24)\" stroke-width=\"0.8\"/></svg>"
 const GOLD_L := "rgb(214, 176, 104)"   # viền ô hình món (như khung chi tiết Kho)
 const XP_C := "rgb(47, 127, 214)"   # chữ EXP xanh (sao xanh)
+
+func _tier(o: Dictionary) -> int:   # thưởng / thưởng thường của cấp (như G._fh0: 20 + 10 x cấp + 6 x số giao, nhân 1,65)
+	var a := mini(4, int(floor(int(G.g.delivered) / 2.0)))
+	var base := (20.0 + 10.0 * mini(100, G.lv()) + 6.0 * a) * 1.65
+	var r := float(o.reward) / maxf(1.0, base)
+	var t := 0
+	for c in T_CUT:
+		if r >= c:
+			t += 1
+	return t
 
 func _face(who: String) -> String:   # chân dung tròn chung của xóm (vlface/m*), cố định theo tên khách
 	return "res://ui/img/vlface/m" + str(absi(who.hash()) % 8) + ".webp"
@@ -159,11 +176,22 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 		return _wait(x, y, w, h, f, o)
 	var ok: bool = pl.ok
 	var out := []
-	if ok:   # đủ hàng: viền cam lửa sáng nhấp nháy quanh thẻ
-		var gl := _dbx(x - 2.0, y - 2.0, w + 4.0, h + 4.0, "rgba(0, 0, 0, 0)", 10.0, _cpx(2.0) + " solid " + FIRE, "0px 0px 8px rgba(238, 104, 28, 0.85)")
+	var ti := _tier(o)
+	var tc: String = T_COL[ti]
+	if ok or ti >= 2:   # đủ hàng / bài quý trở lên: quầng sáng nhấp nháy quanh thẻ (đủ hàng mà bài thường: cam lửa)
+		var gc: String = tc if ti > 0 else FIRE
+		var gl := _dbx(x - 3.0, y - 3.0, w + 6.0, h + 6.0, "rgba(0, 0, 0, 0)", 14.0, _cpx(2.0) + " solid " + gc, "0px 0px 9px " + gc.replace("rgb(", "rgba(").replace(")", ", 0.9)"))
 		gl.fx = "nhay"
 		out.append(gl)
 	out.append(_chip(x, y, w, h, "sel" if ok else "fut"))
+	if ti > 0:   # dải đầu thẻ mang màu độ hiếm
+		out.append(_dbx(x + 3.0, y + 3.0, w - 6.0, P + FACE + 1.0, T_TINT[ti], 10.0))
+	out.append(_dbx(x, y, w, h, "rgba(0, 0, 0, 0)", 12.0, _cpx(2.5 if ti > 0 else 1.5) + " solid " + tc))   # viền độ hiếm
+	if ti == 3:   # huyền thoại: vệt ánh kim quét ngang + đốm lấp lánh
+		var sw0 := _dic(x + 4.0, y + 4.0, 28.0, QUET)
+		sw0.r = [x + 4.0, y + 4.0, 28.0, h - 8.0]
+		sw0.fx = "quet:" + str(w - 36.0)
+		out.append(sw0)
 	# đầu thẻ: chân dung, tên, quán
 	var who := String(o.who)
 	var fr := _dbx(x + P, y + P, FACE, FACE, col, FACE * 0.5, _cpx(2.0) + " solid rgb(255, 255, 255)", "0px 1px 2px rgba(90, 60, 20, 0.35)")
@@ -205,6 +233,7 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 	# thưởng: dải nền nhạt, xu vàng + sao xanh to
 	var s1: String = "+" + G.fmt_n(int(o.reward))
 	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
+	iy = y + h - P - BT_H - G2 - RW_H   # thưởng + nút bám đáy thẻ (thẻ cùng hàng: nút thẳng hàng nhau)
 	out.append(_dbx(x + P, iy, w - 2.0 * P, RW_H, "rgb(253, 240, 208)", 7.0))
 	var rw: Array = _rowi(0.0, 0.0, RW_H, [s1, "c"], 14.0, 800, "rgb(214, 128, 20)")
 	var re: Array = _rowi(0.0, 0.0, RW_H, [s2, "i:pic:res://ui/img/bong/sao_xanh.png"], 14.0, 800, XP_C)
@@ -219,7 +248,9 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 	# nút
 	var by := iy + RW_H + G2
 	if ok:
-		out.append(_btn(x + P, by, w - 2.0 * P, BT_H, "Giao hàng", func(): U._od_deliver(f)))
+		out.append(_btn(x + P, by, w - 2.0 * P, BT_H, "Giao hàng", func():
+			_giao_fx(Vector2(P, by - y), w, h, ti)
+			U._od_deliver(f)))
 	else:
 		var cost: int = G.lack_cost(pl.miss) if not pl.miss.is_empty() and src == "" else 0
 		var gw := w - 2.0 * P
@@ -239,7 +270,95 @@ func _ocard(x: float, y: float, w: float, h: float, f: int, o: Dictionary, pl, c
 				sb.css["opacity"] = "0.6"
 			out.append(sb)
 		out.append(_btn(x + P, by, gw, BT_H, "Đi lấy ›", func(): U._od_get(f), "plain"))
+	if ti > 0:   # viên đá giữa mép trên
+		out.append(_gem(x + w * 0.5, y, tc))
+	if ti == 3:
+		for q in 3:
+			var sp := _dic(0.0, 0.0, 12.0, LAP)
+			var pt: Vector2 = [Vector2(w * 0.3, 10.0), Vector2(w - 14.0, P + FACE - 4.0), Vector2(14.0, h * 0.62)][q]
+			sp.r = [x + pt.x - 6.0, y + pt.y - 6.0, 12.0, 12.0]
+			sp.fx = "lap:" + str(q * 0.67)
+			out.append(sp)
 	return out
+
+func _gem(cx: float, cy: float, col: String) -> Dictionary:   # viên đá độ hiếm: hình thoi màu, viền trắng
+	var s := 11.0
+	var a := PI * 0.25
+	var bb := s * 1.4142
+	var g := _dbx(cx - bb * 0.5, cy - bb * 0.5, bb, bb, col, 2.0, _cpx(1.5) + " solid rgb(255, 255, 255)", "0px 1px 2px rgba(60, 30, 10, 0.45)")
+	g.css["transform"] = "matrix(%f, %f, %f, %f, 0, 0)" % [cos(a), sin(a), -sin(a), cos(a)]
+	return g
+
+func _giao_fx(off: Vector2, w: float, h: float, ti: int) -> void:   # giao: lá bài lật mặt sau (hoa sen) rồi tan thành xu + sao bay về ô xu / ô cấp
+	var b: Control = U.last_btn
+	if b == null or not is_instance_valid(b) or b.get_parent() == null:
+		return
+	var k := b.size.x / maxf(1.0, w - 2.0 * P)
+	var xf: Transform2D = b.get_parent().get_global_transform_with_canvas()
+	var sc := xf.get_scale().x
+	var p0: Vector2 = xf * (b.position - off * k)
+	var sz := Vector2(w, h) * k * sc
+	var L: CanvasLayer = U.fx_layer()
+	var card := Panel.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color8(176, 40, 34)
+	st.border_color = Color.html("#" + _hex(T_COL[ti]))
+	st.set_border_width_all(int(round(3.0 * k * sc)))
+	st.set_corner_radius_all(int(round(12.0 * k * sc)))
+	card.add_theme_stylebox_override("panel", st)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.position = p0
+	card.size = sz
+	card.pivot_offset = sz * 0.5
+	var lt := TextureRect.new()
+	var ls := minf(sz.x, sz.y) * 0.62
+	lt.texture = Css.svg_tex(Css.img_svg("res://ui/img/sen/hoa_tt.webp"), ls, ls)
+	lt.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lt.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lt.size = Vector2(ls, ls)
+	lt.position = (sz - lt.size) * 0.5
+	lt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(lt)
+	L.add_child(card)
+	card.scale = Vector2(0.0, 1.0)
+	var tw := card.create_tween()
+	tw.tween_property(card, "scale", Vector2(1.0, 1.0), 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.25)
+	tw.tween_callback(func(): _burst(card.position + sz * 0.5, ti))
+	tw.tween_property(card, "scale", Vector2(0.2, 0.2), 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(card, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(card.queue_free)
+
+func _hex(rgb: String) -> String:
+	var v := rgb.replace("rgb(", "").replace(")", "").split(",")
+	return "%02x%02x%02x" % [int(v[0]), int(v[1]), int(v[2])]
+
+func _burst(c: Vector2, ti: int) -> void:   # xu bay về ô xu, sao xanh bay về ô cấp
+	var L: CanvasLayer = U.fx_layer()
+	var tg := {"coin": U.hid.get("#coinsPill"), "sao": U.hid.get("#pcAv")}
+	var n := 8 + ti * 3
+	for q in n + 4:
+		var is_c := q < n
+		var key := "coin" if is_c else "sao"
+		var t: Control = tg[key]
+		var dst := (t.get_global_rect().get_center() if t != null and is_instance_valid(t) else Vector2(c.x, 0.0))
+		var s := 20.0 * Css.K
+		var tr := TextureRect.new()
+		tr.texture = Css.svg_tex(Css.img_svg("res://ui/img/coin.webp" if is_c else "res://ui/img/bong/sao_xanh.png"), s, s)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.size = Vector2(s, s)
+		tr.pivot_offset = tr.size * 0.5
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ang := TAU * q / float(n + 4)
+		var mid := c + Vector2(cos(ang), sin(ang)) * randf_range(30.0, 60.0) * Css.K - tr.size * 0.5
+		tr.position = c - tr.size * 0.5
+		L.add_child(tr)
+		var tw := tr.create_tween()
+		tw.tween_property(tr, "position", mid, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(0.05 + 0.03 * q)
+		tw.tween_property(tr, "position", dst - tr.size * 0.5, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.parallel().tween_property(tr, "scale", Vector2(0.6, 0.6), 0.5)
+		tw.tween_callback(tr.queue_free)
 
 func _tem(x: float, y: float) -> Dictionary:   # tem "GẤP": nền đỏ viền trắng, nghiêng
 	var tw := 34.0
