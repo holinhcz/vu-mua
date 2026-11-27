@@ -120,18 +120,30 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	var w2: float = Box.text_w(t2, 13.0, 800)
 	out.append(_dt(tx + w1, hy - 3.0, w2, 24.0, t2, 13.0, 800, GREEN, "left"))
 	out.append(_dt(tx + w1 + w2 + 5.0, hy - 3.0, 50.0, 24.0, "ngày", 12.0, 700, BROWN, "left"))
-	var bx0 := X0 + 14.0
-	var bw := XW - 28.0
 	var iy := hy + 31.0
 	var ms := 44.0        # chip mốc cỡ ô ngày
 	var by := iy + ms * 0.5 - 3.5   # thanh chạy qua giữa các chip mốc
-	out.append(_dbx(bx0, by, bw, 7.0, "rgb(230, 214, 174)", 4.0))
-	out.append(_dbx(bx0, by, bw * clampf(float(v) / o, 0.0, 1.0), 7.0, "rgb(35, 160, 74)", 4.0))
+	# (11-27) thanh sát hai mép như bảng lịch; 4 mốc cách đều, mốc cuối mép phải thẳng mép bảng; tô theo từng đoạn giữa 2 mốc
+	var step := (XW - ms * 0.5) / float(E.R8.size())
+	var PX := [X0]
+	var PN := [0]
+	for j in E.R8.size():
+		PX.append(X0 + step * (j + 1))
+		PN.append(int(E.R8[j].n))
+	var fx := X0 + XW
+	for j in range(1, PX.size()):
+		if v < int(PN[j]):
+			fx = float(PX[j - 1]) + (float(PX[j]) - float(PX[j - 1])) * float(v - int(PN[j - 1])) / maxf(1.0, float(int(PN[j]) - int(PN[j - 1])))
+			break
+	out.append(_dbx(X0, by, XW, 7.0, "rgb(230, 214, 174)", 4.0))
+	if fx > X0:
+		out.append(_dbx(X0, by, fx - X0, 7.0, "rgb(35, 160, 74)", 4.0))
 	var ly := iy + ms + 5.0
 	for j in E.R8.size():
 		var R: Dictionary = E.R8[j]
 		var n := int(R.n)
-		var cx := bx0 + bw * float(n) / o
+		var cx: float = PX[j + 1]
+		var lc := clampf(cx, X0 + 38.0, X0 + XW - 38.0)   # nhãn dưới mốc không lòi ra mép bảng
 		var got: bool = E.ms_got(n)
 		var ok := v >= n
 		var nxt: bool = not ok and (j == 0 or v >= int(E.R8[j - 1].n))   # mốc kế tiếp
@@ -147,15 +159,15 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		else:
 			ring.act = _dtip.bind(String(R.t), "gift:" + String(R.ic), "Mốc " + str(n) + " ngày" + ("" if ok else " · còn " + str(n - v) + " ngày"))   # (bản 504) bong bóng: hình quà, tên, số lượng
 		out.append(ring)
-		out.append(_fx_nhan(cx, ly - 1.0) if ok and not got else _dt(cx - 30.0, ly, 60.0, 14.0, str(n) + " ngày", 10.0, 800, GREEN if got else (BROWN if nxt else SUB)))
+		out.append(_fx_nhan(cx, ly - 1.0) if ok and not got else _dt(lc - 30.0, ly, 60.0, 14.0, str(n) + " ngày", 10.0, 800, GREEN if got else (BROWN if nxt else SUB)))
 		if nxt:   # (11-26) mốc kế tiếp: "còn N ngày" trên nhãn đỏ chữ trắng, nổi rõ
 			var ct := "còn " + str(n - v) + " ngày"
 			var cw2: float = Box.text_w(ct, 10.0, 800) + 14.0
-			var pl := _onbtn(cx - cw2 * 0.5, ly + 15.0, cw2, 17.0, ct, null, true)
+			var pl := _onbtn(lc - cw2 * 0.5, ly + 15.0, cw2, 17.0, ct, null, true)
 			pl.kids[0].css["font-size"] = _cpx(10.0)
 			out.append(pl)
 		else:
-			out.append(_dt(cx - 38.0, ly + 16.0, 76.0, 13.0, R8S[j], 9.5, 600, SUB))
+			out.append(_dt(lc - 38.0, ly + 16.0, 76.0, 13.0, R8S[j], 9.5, 600, SUB))
 	# 2. lịch
 	var cy := ly + 42.0
 	var misses := 0
