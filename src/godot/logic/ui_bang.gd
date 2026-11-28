@@ -274,23 +274,8 @@ func _mount(n: Dictionary, vt: Dictionary, kids: Array, y0: float, ch: float, to
 	if _vis:   # khung mới / vừa hiện lại: canh giữa, thu nhỏ theo màn
 		_vis = false
 		U._layout()
-		_pop_in()
 
 var _vis := false
-
-func _pop_in() -> void:   # (11-28) mở bảng: khung phóng từ 94% lên 100% + hiện dần (chỉ lúc mở, không lúc dựng lại)
-	if box == null or not is_instance_valid(box):
-		return
-	box.modulate.a = 0.0
-	box.scale = Vector2(0.94, 0.94)
-	await box.get_tree().process_frame
-	if box == null or not is_instance_valid(box):
-		return
-	box.pivot_offset = box.size * 0.5
-	var tw := box.create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(box, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(box, "modulate:a", 1.0, 0.16)
 
 # GIỮ KHUNG THEO TAB (như Kho, bản 183): mỗi khung (tab đang chọn, chữ trên khung...) dựng một lần, đổi tab thì cất khung cũ
 # (ẩn, giữ cả khối của nó) rồi lấy lại khung đã có; tối đa SH_N khung, quá thì bỏ khung lâu nhất.
@@ -656,7 +641,7 @@ func _fx_step(dt: float) -> void:
 func _wire(b: Control) -> void:   # nút bấm + hình món theo cờ trong bản dựng
 	var n: Dictionary = b.get_meta("snap", {})
 	if n.has("act"):
-		U._click(b, _on_b.bind(b), "scale94")   # (11-28) bấm: co nhẹ như các nút khác của game
+		U._click(b, _on_b.bind(b), "down")
 	if n.has("ic"):
 		var t: Texture2D = U.item_ic(String(n.ic), float(b.r.size.x) * Css.K)
 		if t != null:
@@ -669,16 +654,7 @@ func _on_b(b: Control) -> void:   # việc của nút đọc lúc bấm (khối 
 	U.last_btn_ms = Time.get_ticks_msec()
 	var n: Dictionary = b.get_meta("snap", {})
 	if n.get("act") is Callable:
-		if _is_claim(n):   # (11-28) nhận thưởng: tia sao nổ từ nút
-			U.sparks(b.get_global_rect().get_center())
 		_on(n.act)
-
-func _is_claim(n: Dictionary) -> bool:   # nút nhận / mở quà (chữ đầu nút hoặc chữ con)
-	var t := String(n.get("text", ""))
-	for k in n.get("kids", []):
-		if k is Dictionary:
-			t += String(k.get("text", ""))
-	return t.begins_with("Nhận") or t.begins_with("Mở quà") or t.begins_with("Lấy")
 
 func _on(cb: Callable) -> void:
 	if sc.moved():
