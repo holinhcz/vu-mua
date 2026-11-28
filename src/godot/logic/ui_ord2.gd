@@ -213,6 +213,7 @@ func _vong(cx: float, cy: float, r: float, p: float, col: String) -> Dictionary:
 	return _dic(cx - r, cy - r, r * 2.0, sv)
 
 const BONG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><defs><radialGradient id=\"g\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"rgb(255,255,255)\" stop-opacity=\"%s\"/><stop offset=\"0.6\" stop-color=\"rgb(236,244,252)\" stop-opacity=\"%s\"/><stop offset=\"1\" stop-color=\"rgb(200,220,240)\" stop-opacity=\"%s\"/></radialGradient></defs><circle cx=\"20\" cy=\"20\" r=\"19\" fill=\"url(#g)\" stroke=\"rgb(255,255,255)\" stroke-opacity=\"0.95\" stroke-width=\"1.4\"/><ellipse cx=\"13\" cy=\"10\" rx=\"5\" ry=\"3.2\" transform=\"rotate(-25 13 10)\" fill=\"rgb(255,255,255)\" fill-opacity=\"0.95\"/></svg>"
+const CAP_C := ["", "rgb(64, 156, 72)", "rgb(48, 124, 210)", "rgb(140, 84, 200)", "rgb(232, 142, 20)"]   # màu cấp sao: 1 xanh lá, 2 xanh dương, 3 tím, 4 vàng cam
 const SAO := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><path d=\"M10 1.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z\" fill=\"rgb(250,186,30)\" stroke=\"rgb(140,80,10)\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/><path d=\"M10 4.5l1.6 3.3\" stroke=\"rgb(255,236,150)\" stroke-width=\"1.4\" stroke-linecap=\"round\"/></svg>"
 const MUI := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 12 7\" preserveAspectRatio=\"none\"><path d=\"M1 1H11L6 6.5Z\" fill=\"rgb(240,170,30)\" stroke=\"rgb(160,96,10)\" stroke-width=\"0.9\" stroke-linejoin=\"round\"/></svg>"
 const SANG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 80\"><defs><radialGradient id=\"g\"><stop offset=\"0\" stop-color=\"%s\" stop-opacity=\"0.85\"/><stop offset=\"1\" stop-color=\"%s\" stop-opacity=\"0\"/></radialGradient></defs><ellipse cx=\"50\" cy=\"42\" rx=\"50\" ry=\"40\" fill=\"url(#g)\"/></svg>"
@@ -302,13 +303,17 @@ func _gio(x: float, y: float, w: float, cw: float, f: int, o: Dictionary, pl) ->
 		var wt: String = "Khách mới · " + U.rf((float(o.w) - G._now_ms()) / 1000.0)
 		out.append(_dt(nx, ny, cw, 14.0, _fitw(wt, 10.5, 800, cw - 4.0), 10.5, 800, SUB))
 	else:
-		var sw := c * 11.0 + 2.0
-		var nm: String = _fitw(String(o.who), 10.5, 800, cw - 4.0 - sw)
+		# (11-28) nhãn tên mang màu cấp sao: nền màu cấp, chữ trắng, sao bên trong
+		var sw := c * 10.0 + 2.0
+		var nm: String = _fitw(String(o.who), 10.5, 800, cw - 12.0 - sw)
 		var nw: float = Box.text_w(nm, 10.5, 800) + 1.0
-		var sx := nx + (cw - nw - sw) * 0.5
-		out.append(_dt(sx, ny, nw, 14.0, nm, 10.5, 800, BROWN, "left"))
-		for q in c:   # sao cấp giỏ: vàng đậm viền nâu
-			out.append(_dic(sx + nw + 2.0 + q * 11.0, ny + 1.5, 11.0, SAO))
+		var pw := nw + sw + 10.0
+		var px := nx + (cw - pw) * 0.5
+		var pill := _dbx(px, ny - 1.0, pw, 16.0, CAP_C[c], 8.0, _cpx(1.0) + " solid rgb(255, 255, 255)", "0px 1px 2px rgba(60, 30, 10, 0.3)")
+		pill.kids = [_dt(px + 5.0, ny - 1.0, nw, 16.0, nm, 10.5, 800, "rgb(255, 255, 255)", "left")]
+		for q in c:
+			pill.kids.append(_dic(px + 5.0 + nw + 2.0 + q * 10.0, ny + 2.0, 10.0, SAO))
+		out.append(pill)
 	if is_sel:   # mũi tên vàng dưới tên: dải đáy đang là của giỏ này
 		var ar := _dic(x + w * 0.5 - 6.0, ny + 15.0, 12.0, MUI)
 		ar.r = [x + w * 0.5 - 6.0, ny + 15.0, 12.0, 7.0]
@@ -331,7 +336,8 @@ func _foot_h(o: Dictionary, pl) -> float:   # cao dải đáy: đầu 46 + dòng
 	return 46.0 + o.items.size() * (IR + 2.0) + 4.0 + 30.0
 
 func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của đơn đang chọn (y từ 0, cao _foot_h)
-	var out := [_dbx(X0, 0.0, XW, 1.5, GOLD_L, 0.0)]
+	var cc: String = CAP_C[_cap.get(f, 1)] if pl != null else GOLD_L
+	var out := [_dbx(X0, 0.0, XW, 2.0, cc, 1.0)]   # vạch đầu dải đáy mang màu cấp sao của đơn
 	var who := String(o.get("who", ""))
 	var fr := _dbx(X0, 6.0, 34.0, 34.0, "rgb(243, 230, 200)", 17.0, _cpx(2.0) + " solid rgb(255, 255, 255)", "0px 0px 0px 2px rgb(232, 160, 32)")
 	fr.kids = [_pic(X0 + 2.0, 8.0, 30.0, 30.0, _face(who))]
@@ -353,6 +359,13 @@ func _foot(f: int, o: Dictionary, pl) -> Array:   # dải chi tiết đáy của
 			out.append(b)
 		return out
 	out.append(_dt(X0 + 42.0, 23.0, tw, 16.0, _fitw(String(o.shop), 12.0, 700, tw), 12.0, 700, SUB, "left"))
+	var c0: int = _cap.get(f, 1)
+	var wnm: float = minf(tw, Box.text_w(_fitw(who, 14.0, 800, tw), 14.0, 800) + 1.0)
+	var tp := _dbx(X0 + 42.0 + wnm + 6.0, 6.0, c0 * 10.0 + 10.0, 16.0, cc, 8.0, _cpx(1.0) + " solid rgb(255, 255, 255)")   # huy hiệu sao cấp cạnh tên
+	tp.kids = []
+	for q in c0:
+		tp.kids.append(_dic(X0 + 42.0 + wnm + 11.0 + q * 10.0, 9.0, 10.0, SAO))
+	out.append(tp)
 	# thưởng: xu + sao xanh, hai dòng bên phải
 	var s1: String = "+" + G.fmt_n(int(o.reward))
 	var s2 := "+" + str(maxi(3, int(round(float(o.reward) / 12.0))))
