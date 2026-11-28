@@ -35,7 +35,7 @@ const FIRE := "rgb(232, 112, 40)"
 func _ck(kind: String) -> Array:
 	if kind.begins_with("l_") and NVC.has(kind.substr(2)):   # nền dòng ngả màu nhóm thật nhạt
 		var g := Color.html(_hex(String(NVC[kind.substr(2)][4])))
-		return [_rgb(g.lerp(Color.WHITE, 0.82)), _rgb(g.lerp(Color.WHITE, 0.87)), _rgb(g.lerp(Color.WHITE, 0.92)), _rgb(g.lerp(Color.WHITE, 0.45))]
+		return [_rgb(g.lerp(Color.WHITE, 0.72)), _rgb(g.lerp(Color.WHITE, 0.76)), _rgb(g.lerp(Color.WHITE, 0.8)), _rgb(g.lerp(Color.WHITE, 0.35))]   # (11-28) ngả màu nhóm ~25%
 	return NVC[kind] if NVC.has(kind) else super(kind)
 
 static func _hex(rgb: String) -> String:   # "rgb(a, b, c)" -> "#rrggbb"
@@ -48,7 +48,7 @@ static func _rgb(c: Color) -> String:
 func _trk(lk: String) -> String:   # rãnh thanh theo nhóm: đậm hơn nền dòng một chút
 	if not NVC.has(lk):
 		return TRACK
-	return _rgb(Color.html(_hex(String(NVC[lk][4]))).lerp(Color.WHITE, 0.72))
+	return _rgb(Color.html(_hex(String(NVC[lk][4]))).lerp(Color.WHITE, 0.55))   # rãnh cùng màu nhóm (thanh 0 vẫn thấy màu)
 
 # hình của việc (hình món Kho)
 const TIC := {"harvest": "lua", "plant": "pc_cuoc", "water": "pc_binh", "kl": "bido", "tharvest": "qua_xoai",
@@ -139,9 +139,14 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		c.act = _dsay.bind(tip)
 	var out := [c]
 	var gc: String = String(NVC[lk][4]) if NVC.has(lk) else "rgb(176, 128, 52)"
-	out.append(_dbx(X0 + 1.5, y + 8.0, 3.0, RH - 16.0, gc, 1.5))   # vạch màu nhóm
+	out.append(_dbx(X0 + 1.5, y + 7.0, 4.0, RH - 14.0, gc, 2.0))   # vạch màu nhóm
 	if String(lt[0]) != "":
-		out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, String(lt[0])))
+		if lk.begins_with("g_"):   # (11-28) hình việc trên nền tròn màu nhóm: nhận diện nhóm chính
+			var gq := Color.html(_hex(gc))
+			out.append(_dbx(X0 + 9.0, y + RH * 0.5 - 16.0, 32.0, 32.0, _rgb(gq.lerp(Color.WHITE, 0.45)), 16.0, _cpx(1.5) + " solid " + gc))
+			out.append(_icn(X0 + 25.0, y + RH * 0.5, 24.0, String(lt[0])))
+		else:
+			out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, String(lt[0])))
 	var x := X0 + 46.0
 	var bx := X0 + XW - BW - 6.0
 	var tag := String(lt[1])
@@ -153,6 +158,15 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 	var fs := 12.0
 	while fs > 10.0 and Box.text_w(title, fs, 800) > tt:   # (11-26) tên dài: thu chữ (tới 10) rồi mới cắt
 		fs -= 0.5
+	if lt.size() > 3:   # (11-28) huy hiệu bậc cạnh tên (thành tựu): màu bậc, màu dòng là màu nhóm
+		var bn: String = String(lt[3][0])
+		var bcol: String = String(NVC[String(lt[3][1])][4])
+		var bw2: float = Box.text_w(bn, 10.5, 800) + 10.0
+		tt -= bw2 + 4.0
+		var tnw: float = minf(tt, Box.text_w(title, fs, 800) + 1.0)
+		var bb := _dbx(x + tnw + 4.0, y + 6.0, bw2, 16.0, bcol, 8.0)
+		bb.kids = [_dt(x + tnw + 4.0, y + 6.0, bw2, 16.0, bn, 10.5, 800, "rgb(255, 255, 255)")]
+		out.append(bb)
 	out.append(_dt(x, y + 6.0 + (12.0 - fs) * 0.5, tt, 16.0, _fitw(title, fs, 800, tt), fs, 800, BROWN, "left"))
 	if sw != null:   # nút đổi việc: hình nhỏ cuối dòng tên
 		var s := _chip(x + tw - 22.0, y + 4.0, 22.0, 18.0, "fut")
@@ -161,7 +175,7 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 		out.append(s)
 	if f >= 0.0:
 		var cw := _cw   # chỗ số "0/3" cố định trong một tab: thanh mọi dòng dài bằng nhau
-		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk)))
+		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk), gc if lk.begins_with("g_") else ""))
 		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
 	else:
 		out.append(_dt(x, y + 23.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
@@ -176,6 +190,19 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 			out.append(_sbtn(_onbtn(bx, by, BW, bh, btxt if btxt != "" else "Đi làm", act)))
 		"off":
 			out.append(_offbtn(bx, by, BW, bh, btxt))
+	return out
+
+const NHOM := [["g_ruong", "Ruộng"], ["g_nuoi", "Nuôi"], ["g_xuong", "Xưởng"], ["g_song", "Sông"], ["g_lang", "Làng"], ["g_cho", "Chợ"]]
+func _chu(y: float) -> Array:   # (11-28) chú thích màu nhóm việc: chấm màu + tên, chia đều bề ngang
+	var out := []
+	var cw := XW / NHOM.size()
+	for i in NHOM.size():
+		var col: String = String(NVC[NHOM[i][0]][4])
+		var t: String = NHOM[i][1]
+		var tw: float = Box.text_w(t, 10.5, 700)
+		var x := X0 + i * cw + (cw - tw - 13.0) * 0.5
+		out.append(_dbx(x, y + 2.5, 9.0, 9.0, col, 4.5))
+		out.append(_dt(x + 13.0, y, tw + 1.0, 14.0, t, 10.5, 700, col, "left"))
 	return out
 
 func _sbtn(b: Dictionary) -> Dictionary:   # nút chip Kho cỡ nhỏ: chữ 11
@@ -278,7 +305,9 @@ func _day() -> Array:
 	y = dy + 34.0 + 2.0 * g
 	# việc hôm nay
 	out.append_array(_shd(y, "Việc hôm nay", "làm mới sau " + N.ao((1.0 - fposmod(N._nowd(), 1.0)) * 86400.0)))
-	y += 26.0 + g
+	y += 26.0
+	out.append_array(_chu(y))
+	y += 14.0 + g
 	var TL: Array = N.MI()
 	TL = TL.filter(func(t): return not N.done(t)) + TL.filter(func(t): return N.done(t))   # việc xong xuống cuối, giữ thứ tự
 	for t in TL:
@@ -417,19 +446,19 @@ func _ach() -> Array:
 	for A in N.L8:
 		var t: int = N.A8(A)
 		var v: int = N.ach_f(A)
-		var lt: Array = [_ti(String(A.k)), str(t) + "/5", "b" + str(mini(t, 4))]
+		var lt: Array = [_ti(String(A.k)), str(t) + "/5", _gk(String(A.k)), [N.T9[mini(t, 4)], "b" + str(mini(t, 4))]]
 		if t >= 5:
-			out.append_array(_row(y, lt, String(A.n) + " · " + N.T9[4], "Danh hiệu Huyền thoại " + String(A.n).to_lower() + " · " + G.fmt_n(v) + " " + String(A.d), -1.0, "", "done", null))
+			out.append_array(_row(y, lt, String(A.n), "Danh hiệu Huyền thoại " + String(A.n).to_lower() + " · " + G.fmt_n(v) + " " + String(A.d), -1.0, "", "done", null))
 		else:
 			var need: int = N.S9(A, t)
 			var R: Dictionary = N.ach_rw(t)
 			var ok: bool = N.ach_ok(A)
 			var rw: String = str(R.ng) + " sen đỏ, " + G.fmt_n(R.xu) + " xu"
 			var tn: String = N.T9[t]
-			if ok:   # đủ mốc: dòng đổi luôn sang bậc mới (tên, số, màu), không màu chờ nhận riêng
-				lt = [lt[0], str(t + 1) + "/5", "b" + str(mini(t + 1, 4))]
+			if ok:   # đủ mốc: dòng đổi luôn sang bậc mới (tên, số, huy hiệu)
+				lt = [lt[0], str(t + 1) + "/5", lt[2], [N.T9[mini(t + 1, 4)], "b" + str(mini(t + 1, 4))]]
 				tn = N.T9[mini(t + 1, 4)]
-			out.append_array(_row(y, lt, String(A.n) + " · " + tn, "", float(v) / need, G.fmt_n(mini(v, need)) + "/" + G.fmt_n(need),
+			out.append_array(_row(y, lt, String(A.n), "", float(v) / need, G.fmt_n(mini(v, need)) + "/" + G.fmt_n(need),
 				"claim" if ok else "go", N.BI.bind(String(A.k)) if ok else _go.bind(String(A.k)), "", null, "Bậc " + N.T9[t].to_lower() + ": " + rw + "."))
 		y += RH + GAPR
 	y += 8.0

@@ -771,9 +771,9 @@ func _fillh(y: float, n: int, cols := 2) -> float:   # (bản 454) cao chip đ�
 const CHD := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M2 3.5 L5 6.5 L8 3.5\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # (bản 464) mũi tên mở (khung chung)
 const CHU := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 10 10\"><path d=\"M2 6.5 L5 3.5 L8 6.5\" fill=\"none\" stroke=\"rgb(128,98,58)\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"   # mũi tên đóng
 const TRACK := "rgb(242, 222, 172)"   # rãnh thanh: vàng kem ấm
-func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK) -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ)
+func _bar(x: float, y: float, w: float, f: float, h := 5.0, trk := TRACK, fc := "") -> Array:   # thanh tiến độ: màu chạy từ đỏ (mới bắt đầu) qua vàng tới xanh (đủ); fc: màu chạy cố định (vd màu nhóm việc)
 	var out := [_dbx(x, y, w, h, trk, h * 0.5)]
-	out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, _fcol(f), h * 0.5))   # (bản 481) lúc 0 vẫn có chấm đỏ đầu thanh
+	out.append(_dbx(x, y, maxf(h, w * clampf(f, 0.0, 1.0)), h, fc if fc != "" else _fcol(f), h * 0.5))   # (bản 481) lúc 0 vẫn có chấm đỏ đầu thanh
 	return out
 
 static func _fcol(f: float) -> String:
