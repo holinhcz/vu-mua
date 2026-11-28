@@ -119,10 +119,6 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	dgp = load("res://logic/ui_dg.gd").new(self)
 	carop = load("res://logic/ui_caro.gd").new(self)
 	G.kho_full.connect(_kho_full)
-	var bdi := Node.new()
-	bdi.set_script(load("res://logic/ui_bd_in.gd"))
-	bdi.bd = bdp
-	add_child(bdi)
 	G.changed.connect(func(): _sync_hud())
 	G.toast.connect(say)
 	G.level_up.connect(func(_n, _g): if lvp != null: lvp.lvT = 2.5)
@@ -2465,7 +2461,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp, dkp]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp, dkp, bdp.shop if bdp != null else null]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:

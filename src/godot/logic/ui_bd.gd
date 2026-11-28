@@ -2,7 +2,7 @@ extends RefCounted
 # Bảng XÂY DỰNG chép từ bản web (module "build": Mt, Ps/k(), Qy, mM, bM, mj, bj, Iz, Fz, xj, jz, Wz, xb, _y, MM, Zy,
 # TM, Jz/CM, rq/EM, lq/PM, wj, Mj, kj). 4 nhóm, 10 mục: Cây cối (Cây, Ăn trái, Hoa cỏ), Công trình (Nhà, Xưởng,
 # Chuồng), Trang trí (Đồ vật, Mặt nước), Mặt đất (Đường, Nền đất). Luật ô đất + món đặt: lang.gd. Vẽ: lang_ve.gd.
-# Số đo + css: ui/snap/bc_<mục> (bảng từng mục), bc_qua1 (dòng khoá), bdx (thẻ xưởng), bpl / bpl_bad / bpl_mv (đặt,
+# Bảng cửa hàng: ui_bdshop.gd (khung chung, 11-28). Số đo + css thanh dưới: bpl / bpl_bad / bpl_mv (đặt,
 # sai chỗ, dời), bsel / bsel_f (món đã chọn, vật có sẵn), broad / bnen / bmini (lát đường, tô nền, trồng hoa cỏ),
 # bdf / bdm / bds / bdp / bpen (xưởng, chuồng, Sửa làng), bdhelp (Cách xây), btier (Hạng làng).
 
@@ -58,23 +58,11 @@ var tier_i := -1         # Mt.tier
 var bd_focus := false
 var gdrag = null         # kéo xưởng / chuồng / món bằng ngón tay
 var T := {}
-var pov: Control = null
-var pids := {}
+var shop = null          # (11-28) bảng cửa hàng khung chung (ui_bdshop.gd)
+var pids := {}           # (cũ, boot thử đọc chip): bảng cửa hàng không còn bản chụp, luôn rỗng
 var sheet: Control = null
 var sids := {}
 var help_b: Control = null
-var grid: Control = null
-var lis := []
-const VScroll = preload("res://logic/vscroll.gd")
-var vs = VScroll.new()      # (bản 287) cuộn lưới thẻ: dùng chung vscroll.gd như Kho
-var sc: float:
-	get: return vs.s
-	set(v): vs.s = v
-var sc_max: float:
-	get: return vs.hmax
-	set(v): vs.hmax = v
-var drag:
-	get: return vs.drag
 var ov_lo: Node2D = null
 var t := 0.0
 var _gray: ShaderMaterial = null
@@ -85,23 +73,6 @@ func _init(ui) -> void:
 	G = ui.G
 	for gp in GROUPS:
 		grp_cat[gp.k] = gp.c[0][0]
-	var bx = Snap.load_snap("bdx")["#pov"][0]
-	var gx0: Dictionary = Snap.find(bx, "khgrid")
-	for li in gx0.kids:
-		if String(li.kids[0].cls).split(" ").has("locked") and not T.has("li_lock_x"):
-			T.li_lock_x = li
-	T.li_open_x = gx0.kids[0]
-	T.pov_xuong = bx
-	for c in ["cay", "qua", "hoaco", "nha", "chuong", "vat", "nuoc", "duong", "nen"]:
-		T["pov_" + c] = Snap.load_snap("bc_" + c)["#pov"][0]
-	var q1 = Snap.load_snap("bc_qua1")["#pov"][0]
-	T.hint = Snap.find(q1, "bhint")
-	var g1 := Snap.find(q1, "khgrid")
-	T.grid1 = g1
-	T.li_lock = g1.kids[0]
-	var gn := Snap.find(T.pov_nen, "khgrid")
-	T.li_unit = gn.kids[0]          # thẻ giá "/ô"
-	T.li_open = Snap.find(T.pov_cay, "khgrid").kids[0]
 	for nm in ["bdf", "bdm", "bds", "bdp", "bpl", "bpl_bad", "bpl_mv", "bsel", "bsel_f", "broad", "bnen", "bmini", "bpen"]:
 		T[nm] = Snap.load_snap(nm)["#buildSheet"][0]
 	T.tier = Snap.load_snap("btier")[".u2pop"][0]
@@ -195,11 +166,6 @@ func _free(b: Control) -> void:
 		U.anchors.erase(U._anchor_of(b))
 		b.queue_free()
 
-# Bảng cửa hàng dựng xong thì cất theo mục: đổi tab mà mục đó không đổi gì (thẻ, giá, khoá, xu, độ đẹp) thì hiện lại
-# bảng cũ ngay, khỏi dựng lại cả bảng từ bản chụp mỗi lần bấm tab (bấm tab bị khựng).
-var shop_c := {}   # mục -> {sig, pov, pids, grid, lis, sc_max}
-var card_pool := {}   # thẻ món đã dựng: khoá (mục, thẻ, thiếu xu, chỗ) -> Control; dựng lại bảng thì gắn lại thẻ cũ
-
 func _shop_sig() -> String:   # xu chỉ đổi thẻ "thiếu xu": lấy cờ đủ / thiếu từng thẻ, xu lên xuống lặt vặt không dựng lại cả mục
 	var C := _cards()
 	var poor := []
@@ -207,59 +173,13 @@ func _shop_sig() -> String:   # xu chỉ đổi thẻ "thiếu xu": lấy cờ �
 		poor.append(c.pr[0] == "c" and int(G.g.coins) < int(c.pr[1]) and c.r == 0)
 	return JSON.stringify([cat, C, poor, lg().beauty(), G.lv(), U.vsize()])
 
-# Như Kho (dựng sẵn mọi thẻ): cửa hàng đang mở thì dựng ngầm các mục chưa có / đã cũ, mỗi lần một mục, cách nhau chút,
-# để bấm sang mục nào cũng chỉ việc hiện bảng có sẵn.
-var warm_t := 0.0
-var in_t := -9.0   # lúc chạm cuối vào cửa hàng (t)
-
-func _warm(dt: float) -> void:
-	if mode != "shop" or pov == null or not is_instance_valid(pov):
-		warm_t = 0.0
-		return
-	warm_t += dt
-	if warm_t < 0.35 or drag != null or t - in_t < 0.8:   # đang chạm / vừa chạm: không dựng ngầm (dựng một mục ~15 ms, đt gấp mấy lần: khựng)
-		return
-	warm_t = 0.2
-	var keep := [cat, pov, pids, grid, lis, sc_max, sc]
-	for gp in GROUPS:
-		for it in gp.c:
-			var c: String = it[0]
-			if c == keep[0]:
-				continue
-			cat = c
-			var e = shop_c.get(c)
-			var sg := _shop_sig()
-			if e != null and e.sig == sg and is_instance_valid(e.pov):
-				continue
-			if e != null:
-				_free(e.pov)
-			sc = 0.0
-			lis = []
-			_build_shop()
-			pov.visible = false
-			U.anchors.erase(U._anchor_of(pov))
-			shop_c[c] = {"sig": sg, "pov": pov, "pids": pids, "grid": grid, "lis": lis, "sc_max": sc_max}
-			cat = keep[0]
-			pov = keep[1]
-			pids = keep[2]
-			grid = keep[3]
-			lis = keep[4]
-			sc_max = keep[5]
-			sc = keep[6]
-			U.root.move_child(pov, -1)
-			return
-	cat = keep[0]
-
-func _shop_hide() -> void:   # cất bảng đang hiện (không bỏ)
-	if pov != null and is_instance_valid(pov):
-		pov.visible = false
-		U.anchors.erase(U._anchor_of(pov))
-	pov = null
+func _shop_hide() -> void:   # cất bảng cửa hàng
+	if shop != null:
+		shop.hide_()
 
 func _ps() -> void:
-	_shop_hide()   # bảng các mục giữ lại (ẩn) cả khi đóng cửa hàng, mở lại không phải dựng
-	grid = null
-	lis = []
+	if mode != "shop":
+		_shop_hide()
 	_free(sheet)
 	sheet = null
 	var b: int = lg().beauty()
@@ -277,24 +197,10 @@ func _ps() -> void:
 	if fo != bd_focus:
 		bd_focus = fo
 		U._set_focus(fo)
-	if mode == "shop":
-		var sg := _shop_sig()
-		var c = shop_c.get(cat)
-		if c != null and c.sig == sg and is_instance_valid(c.pov):
-			pov = c.pov
-			pids = c.pids
-			grid = c.grid
-			lis = c.lis
-			sc_max = c.sc_max
-			pov.visible = true
-			U.root.move_child(pov, -1)
-			U.anchors.append([pov, 0.5, 0.5])
-			_scroll(sc)
-		else:
-			if c != null:
-				_free(c.pov)
-			_build_shop()
-			shop_c[cat] = {"sig": sg, "pov": pov, "pids": pids, "grid": grid, "lis": lis, "sc_max": sc_max}
+	if mode == "shop":   # (11-28) cửa hàng = bảng khung chung ui_bdshop.gd
+		if shop == null:
+			shop = load("res://logic/ui_bdshop.gd").new(U, self)
+		shop.open()
 	elif mode != "off":
 		_build_sheet()
 	U.F.lang_ve.sync()
@@ -390,221 +296,6 @@ func _cards() -> Array:   # [{name, pr, r (0 mở / 1 khoá / 2 đủ), lv, i, a
 		add.call({"name": "Đàn vịt", "pr": ["t", "Cấp " + str(vq), "lk"] if vq > 0 else (["t", "Cần ao", "lk"] if vl else (["t", "✓ Đã đủ", "ok"] if vn >= W.t6 else ["c", int(W.Nh.vit), ""])), "act": ["song", "vit"], "ic": ["song", "vit"], "cnt": str(vn) + "/" + str(W.t6), "full": vn >= W.t6}, 1 if vl else (2 if vn >= W.t6 else 0), (vq if vq > 0 else 10000) if vl else 0)
 	out.sort_custom(func(p, q): return p.r < q.r if p.r != q.r else ((p.lv < q.lv) if (p.r == 1 and p.lv != q.lv) else p.i < q.i))
 	return out
-
-func _build_shop() -> void:
-	var src: Dictionary = T.pov_xuong if cat == "xuong" else T["pov_" + cat]
-	var n: Dictionary = src.duplicate(true)
-	var C := _cards()
-	var hint := ""
-	var any_open := false
-	for c in C:
-		any_open = any_open or c.r == 0
-	if not any_open and C.size() > 0:
-		var full := false
-		for q in C:
-			full = full or q.r == 2
-		for c in C:
-			if c.r == 1 and c.lv < 10000:
-				hint = "Cấp " + str(c.lv) + " mở " + ("món tiếp theo" if full else "món đầu tiên")
-				break
-	# Độ đẹp N/mốc kế + thanh tiến độ + Giá bán +x%
-	var L = lg()
-	var j: int = L.beauty()
-	var st: int = L.tier(j)
-	var nx = L.C.Q5[st + 1] if st + 1 < L.C.Q5.size() else null
-	var D: Dictionary = L.C.Q5[st]
-	var ra := 100.0 if nx == null else clampf(float(j - int(D.b)) / maxf(1.0, float(int(nx.b) - int(D.b))) * 100.0, 0.0, 100.0)
-	var bar := Snap.find(n, "kcbar")
-	if not bar.is_empty() and bar.kids.size() > 0:
-		var fi: Dictionary = bar.kids[0]
-		fi.r = [fi.r[0], fi.r[1], float(bar.r[2]) * ra / 100.0, fi.r[3]]
-	var cap := Snap.find(n, "khcap")
-	if not cap.is_empty():
-		_tx(cap, "Giá bán +" + str(int(round(L.sell_bonus() * 100))) + "%", null, float(cap.r[0]) + float(cap.r[2]) / 2.0)
-	var wo := Snap.find(n, "khworth2")
-	if not wo.is_empty() and wo.kids.size() > 0:
-		var bb: Dictionary = wo.kids[0]
-		_tx(bb, str(j), float(bb.r[0]))
-		var tail := ("/" + str(int(nx.b))) if nx != null else ""
-		var t2: Dictionary = wo.duplicate(true)
-		t2.kids = []
-		t2.text = tail
-		t2.erase("tr")
-		var w2: float = Box.text_w(tail, Css.px(wo.css.get("font-size", "14px")), int(wo.css.get("font-weight", "400")))
-		t2.r = [float(bb.r[0]) + float(bb.r[2]), wo.r[1], w2 + 2.0, wo.r[3]]
-		t2.css = t2.css.duplicate()
-		t2.css["text-align"] = "left"
-		wo.text = String(wo.text).substr(0, String(wo.text).find("/")).strip_edges()
-		wo.erase("tr")
-		wo.css = wo.css.duplicate()
-		wo.css["text-align"] = "left"
-		Snap.find(n, "kcbox").kids.append(t2)
-	var card := Snap.find(n, "khcard")
-	var gi := -1
-	for q in card.kids.size():
-		if String(card.kids[q].cls).split(" ").has("khgrid"):
-			gi = q
-	if gi >= 0 and gi > 0 and String(card.kids[gi - 1].get("cls", "")).split(" ").has("bhint"):
-		card.kids.remove_at(gi - 1)
-		gi -= 1
-	var g0: Dictionary = card.kids[gi]
-	var g: Dictionary
-	var pos0 := []          # chỗ từng thẻ (lấy từ bản chụp mục này)
-	if hint != "":
-		var hn: Dictionary = T.hint.duplicate(true)
-		_tx(hn, "🔒 " + hint)
-		var dy0: float = float(g0.r[1]) - float(T.grid1.r[1])
-		Snap._move(hn, Vector2(0, float(Snap.find(T.pov_qua, "khgrid").r[1]) - float(T.grid1.r[1]) + 0.0) * 0.0)
-		card.kids.insert(gi, hn)
-		g = T.grid1.duplicate(true)
-		gi += 1
-		dy0 = 0.0
-	else:
-		g = g0.duplicate(true)
-	for li in g.kids:
-		pos0.append(Vector2(float(li.r[0]), float(li.r[1])))
-	var li0: Vector2 = pos0[0] if pos0.size() > 0 else Vector2(16, 242)
-	var dx: float = (pos0[1].x - pos0[0].x) if pos0.size() > 1 else 104.0
-	var dy: float = (pos0[3].y - pos0[0].y) if pos0.size() > 3 else 89.0
-	var cells := []
-	var ckeys := []
-	var cbot := 0.0
-	for q in C.size():
-		var c: Dictionary = C[q]
-		var p: Vector2 = pos0[q] if q < pos0.size() else li0 + Vector2(dx * (q % 3), dy * (q / 3))
-		var tp: Dictionary
-		if c.act[0] == "wt":
-			tp = T.li_open_x if c.r != 1 else T.li_lock_x
-		elif c.r == 1:
-			tp = T.li_lock
-		elif c.pr[0] == "c" and c.pr[2] != "":
-			tp = T.li_unit
-		else:
-			tp = T.li_open
-		var poor0: bool = c.pr[0] == "c" and int(G.g.coins) < int(c.pr[1]) and c.r == 0
-		var key := JSON.stringify([cat, c, poor0, p])   # thẻ đã dựng y hệt thì dùng lại (card_pool)
-		ckeys.append(key)
-		cbot = maxf(cbot, p.y + float(tp.r[3]))
-		var cn = card_pool.get(key)
-		if cn != null and is_instance_valid(cn):
-			cells.append(null)
-			continue
-		var li: Dictionary = Snap.moved(tp, p - Vector2(float(tp.r[0]), float(tp.r[1])))
-		var b: Dictionary = li.kids[0]
-		b.cls = "khb bcard" + (" full" if c.get("full", false) else "") + (" locked" if c.r == 1 else "")
-		if c.get("full", false):
-			b.css = b.css.duplicate()
-			b.css["opacity"] = "0.55"
-		var poor: bool = c.pr[0] == "c" and int(G.g.coins) < int(c.pr[1]) and c.r == 0
-		var cx: float = float(b.r[0]) + float(b.r[2]) / 2.0
-		for qn in b.kids:
-			var qc := String(qn.get("cls", ""))
-			if qc == "khnm":
-				_tx(qn, c.name, null, cx)
-			elif qc.begins_with("khpr"):
-				if c.pr[0] == "c":
-					qn.cls = "khpr"
-					_price(qn, G.fmt_n(int(c.pr[1])), cx, ("/" + String(c.pr[2])) if c.pr[2] != "" else "")
-				else:
-					qn.cls = "khpr " + String(c.pr[2])
-					qn.kids = []
-					qn.css = qn.css.duplicate()
-					if c.pr[2] == "ok":
-						qn.css["color"] = "rgb(46, 139, 87)"
-					_tx(qn, String(c.pr[1]), null, cx)
-			elif qc == "cnt":
-				qn.text = String(c.get("cnt", ""))
-		if not c.has("cnt"):
-			var keep := []
-			for qn in b.kids:
-				if String(qn.get("cls", "")) != "cnt":
-					keep.append(qn)
-			b.kids = keep
-		if poor:
-			b.cls += " poor"
-		cells.append(li)
-	g.kids = []   # thẻ gắn sau (card_pool)
-	card.kids[gi] = g
-	var gtop := float(g.r[1])
-	var last: float = cbot if cells.size() > 0 else gtop
-	sc_max = maxf(0.0, last + 4.0 - (gtop + float(g.r[3])))
-	sc = clampf(sc, 0.0, sc_max)
-	pids = {}
-	pov = U._build(n, pids)
-	U.root.add_child(pov)
-	U.anchors.append([pov, 0.5, 0.5])
-	U._click(pids.get("#pClose"), close, "scale")
-	var bk = pids.get(".pbk")
-	if bk != null:
-		U._stop(bk)
-		U.tap_close(bk, close)
-	var win = pids.get(".pwin")
-	if win != null:
-		U._stop(win)
-	var bgs = pids.get(".bgs")
-	if bgs != null:
-		var Lb: Array = U._buttons(bgs, [])
-		var GN := {"Cây cối": 0, "Công trình": 1, "Trang trí": 2, "Mặt đất": 3}
-		for bq in Lb:
-			var lb: String = U._label_of(bq)
-			var gx := -1
-			for nm in GN:
-				if lb.contains(nm):
-					gx = GN[nm]
-			if gx < 0:
-				continue
-			var gp: Dictionary = GROUPS[gx]
-			U._click(bq, func():
-				grp_cat[_grp(cat).k] = cat
-				cat = grp_cat[gp.k]
-				sc = 0.0
-				_ps())
-	var chips = pids.get(".khchips")
-	if chips != null:
-		var Lc: Array = U._buttons(chips, [])
-		var gp: Dictionary = _grp(cat)
-		# thứ tự nút trong bản chụp không theo thứ tự trên màn: khớp theo chữ trên chip
-		for bq in Lc:
-			var lb: String = U._label_of(bq)
-			var cc := ""
-			for it in gp.c:
-				if lb.contains(String(it[1])):
-					cc = it[0]
-			if cc == "":
-				continue
-			U._click(bq, func():
-				if cc != cat:
-					grp_cat[gp.k] = cc
-					cat = cc
-					sc = 0.0
-					_ps(), "scale94")
-	U._click(pids.get(".u2q"), _help, "scale")
-	U._click(pids.get(".khst"), _tier_pop, "scale")
-	grid = pids.get(".khgrid")
-	if grid != null:
-		grid._kids.clip_contents = true
-		var go := Vector2(float(g.r[0]), float(g.r[1]))
-		for q in C.size():
-			var c: Dictionary = C[q]
-			var key: String = ckeys[q]
-			var li = card_pool.get(key)
-			if li == null or not is_instance_valid(li):
-				li = U._build(cells[q], {}, go)
-				var bt = U._q(li, "bcard")
-				if bt != null and not c.get("full", false):
-					U._click(bt, func(): if not _dragged(): _card(c), "scale94")
-				var cv = U._q(li, "", "canvas")
-				if cv != null:
-					_icon(cv, c.ic, c.r == 1)
-				li.set_meta("p0", li.r.position)
-				card_pool[key] = li
-			elif li.get_parent() != null:
-				li.get_parent().remove_child(li)
-			grid.add(li)
-			var p0: Vector2 = li.get_meta("p0")
-			U._move(li, p0)
-			lis.append([li, p0])
-		_scroll(sc)
 
 func _card(c: Dictionary) -> void:
 	var a: String = c.act[1]
@@ -831,42 +522,6 @@ class TileIcon extends Control:   # Mb / Cb / Pb: 2x2 ô đường hoặc nền 
 			TL._nen_at(k, s, hh, e, r, false)
 		TL.cv = null
 
-func _price(n: Dictionary, s: String, cx: float, unit := "") -> void:   # h(): "800 [xu]" (+ "/ô") giữa thẻ
-	var img := {}
-	var it := {}
-	for q in n.kids:
-		if q.tag == "img":
-			img = q
-		elif q.tag == "i":
-			it = q
-	if unit == "" and not it.is_empty():
-		n.kids.erase(it)
-		it = {}
-	var c: Dictionary = n.css
-	var fs := Css.px(c.get("font-size", "12px"))
-	var fw := int(c.get("font-weight", "400"))
-	var w0: float = Box.text_w(String(n.text), fs, fw)
-	var gap: float = float(img.r[0]) - float(n.r[0]) - w0 if not img.is_empty() else 0.0
-	var w: float = Box.text_w(s, fs, fw)
-	var iw: float = float(img.r[2]) if not img.is_empty() else 0.0
-	var uw := 0.0
-	var ug := 0.0
-	if not it.is_empty():
-		it.text = unit
-		uw = Box.text_w(unit, Css.px(it.css.get("font-size", "12px")), int(it.css.get("font-weight", "400")))
-		ug = float(it.r[0]) - (float(img.r[0]) + float(img.r[2]))
-	var tot := w + gap + iw + ug + uw
-	var x := cx - tot / 2.0
-	n.text = s
-	n.r = [x, n.r[1], tot, n.r[3]]
-	if n.has("tr"):
-		n.tr = [x, n.tr[1], w, n.tr[3]]
-	if not img.is_empty():
-		img.r = [x + w + gap, img.r[1], img.r[2], img.r[3]]
-	if not it.is_empty():
-		it.r = [x + w + gap + iw + ug, it.r[1], uw, it.r[3]]
-		it.erase("tr")
-
 static func _tx(n: Dictionary, s: String, x = null, cx = null) -> void:   # đổi chữ, giữ cỡ; cx: giữa theo cx
 	var c: Dictionary = n.css
 	var w: float = Box.text_w(s, Css.px(c.get("font-size", "14px")), int(c.get("font-weight", "400")))
@@ -882,15 +537,6 @@ static func _tx(n: Dictionary, s: String, x = null, cx = null) -> void:   # đ�
 		n.erase("tr")
 	elif n.has("tr"):
 		n.erase("tr")
-
-func _scroll(v: float) -> void:
-	sc = clampf(v, 0.0, sc_max)
-	for e in lis:
-		if is_instance_valid(e[0]):
-			U._move(e[0], e[1] - Vector2(0, sc))
-
-func _dragged() -> bool:
-	return vs.moved()
 
 func _cat_name(c: String) -> String:
 	for q in _grp(c).c:
@@ -2090,7 +1736,6 @@ func step(dt: float) -> void:
 	if ov_lo != null and ov_lo.visible:
 		ov_lo.queue_redraw()
 	_lift()
-	_warm(dt)
 	var t0 := Time.get_ticks_usec()
 	for tr in _ic.keys():
 		if is_instance_valid(tr):
@@ -2098,12 +1743,3 @@ func step(dt: float) -> void:
 				_icon_fill(tr)
 		else:
 			_ic.erase(tr)
-
-func input(e: InputEvent) -> void:   # cuộn lưới thẻ trong bảng
-	if mode != "shop" or grid == null or not is_instance_valid(grid):
-		return
-	in_t = t
-	if vs.area != grid:
-		vs.area = grid
-		vs.mover = _scroll
-	vs.input(e)
