@@ -143,7 +143,13 @@ func _tu() -> Array:
 		var g := _tiles(y, L1, k)
 		out.append_array(g[0])
 		y += float(g[1]) + GG
-	if L2.size() and flt != "co":   # (bản 479) loại chưa có: thu 1 chip, chạm mở lưới mờ
+	if L2.size() and flt != "co" and L1.is_empty():   # (11-28) chưa có loại nào: hiện luôn lưới bóng mờ (bộ sưu tập chờ sáng), không thu chip
+		out.append_array(_sq(y, "Chờ gặt · " + str(L2.size()) + " loại", "Gặt được trái nặng hơn hẳn trái thường là có trái khủng: ô loại đó sáng lên, ghi số ký nặng nhất."))
+		y += 16.0 + GG
+		var g0 := _tiles(y, L2, k)
+		out.append_array(g0[0])
+		y += float(g0[1]) + GG
+	elif L2.size() and flt != "co":   # (bản 479) loại chưa có: thu 1 chip, chạm mở lưới mờ
 		var nc := _chip(X0, y, XW, 30.0, "info")   # (bản 480) xanh dương nhạt
 		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 11.0, 700, "rgb(50, 96, 150)", "left"),
 			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if nox else CHD)]
@@ -215,7 +221,7 @@ func _tiles(y: float, L: Array, k: Dictionary) -> Array:   # lưới 3 cột ô 
 			ks[0].css["opacity"] = "0.35"
 		var nm: String = WC2.kl_name(id)
 		ks.append(_dt(x + 3.0, yy + 27.0, bw - 6.0, 14.0, _fitw(nm, 10.5, 800, bw - 6.0), 10.5, 800, BROWN if f != null else "rgb(150, 140, 120)"))
-		ks.append(_dt(x + 3.0, yy + 41.0, bw - 6.0, 13.0, WC2.kl_kg(float(f.g), id) if f != null else "Chưa có", 10.5 if f != null else 9.5, 800 if f != null else 600, "rgb(46, 120, 50)" if f != null else "rgb(170, 160, 140)"))
+		ks.append(_dt(x + 3.0, yy + 41.0, bw - 6.0, 13.0, WC2.kl_kg(float(f.g), id) if f != null else "Chưa có", 10.5, 800 if f != null else 600, "rgb(46, 120, 50)" if f != null else "rgb(170, 160, 140)"))
 		if f != null and int(f.h) == 3:   # hạng kỷ lục: chip vàng nhỏ góc trên
 			var kc := _chip(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "now")
 			kc.kids = [_dt(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "Kỷ lục", 7.5, 800, "rgb(150, 100, 20)")]

@@ -144,7 +144,7 @@ func _head(okn: int, m: int) -> Array:
 	var nw: float = Box.text_w(ns, 14.0, 800) + 2.0
 	out.append(_dt(X0 + tw, -1.0, nw, 18.0, ns, 14.0, 800, GREEN if okn > 0 else BROWN, "left"))
 	out.append(_dt(X0 + tw + nw + 4.0, 0.0, 40.0, 16.0, unit, 12.0, 700, BROWN, "left"))
-	var ds: String = "đã giao " + G.fmt_n(int(G.g.delivered))
+	var ds: String = "Tổng đã giao " + G.fmt_n(int(G.g.delivered))   # (11-28) ghi rõ "Tổng": khác "Giao được" (đơn đủ món lúc này)
 	var dw: float = Box.text_w(ds, 10.5, 700) + 22.0
 	var dx := X0 + XW - dw - 10.0   # chừa dây tua góc phải
 	var dc := _chip(dx, -2.0, dw, 20.0, "got")

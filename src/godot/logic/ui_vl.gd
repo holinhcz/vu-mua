@@ -1,7 +1,7 @@
 extends "res://logic/ui_kbang.gd"
 # BẢNG NHÀ DÂN (a4 bản web, $r.mode === "nha"): chạm vô nhà dân trên làng. (bản 433) làm lại trên khung Kho + chip chung (ui_kbang.gd).
 # Đầu bảng (không thẻ): mặt người, tên + chip tính nết, 5 tim (hình) + thanh thân, chip nhà / họ / đang làm, bong bóng câu nói,
-# 2 nút chip Trò chuyện (xanh) / Tặng quà (đỏ). 4 tab: Việc nhà · Thuê làm · Mua giống · Sở trường, khối nào cũng là chip nổi.
+# 2 nút chip Trò chuyện (xanh) / Tặng quà (vàng) ở dải đáy (11-28). 4 tab: Việc nhà · Thuê làm · Mua giống · Sở trường, khối nào cũng là chip nổi.
 # Trò chuyện, tặng quà: hộp nổi đè lên bảng (lớp tối + hộp chip), không thay thân bảng.
 # Luật (trò chuyện, tặng quà, đưa đồ, thuê làm, học nghề...) ở w_lang.gd.
 
@@ -101,6 +101,8 @@ func _build() -> void:
 	vt.r = [vt.r[0], float(vt.r[1]) + hh, vt.r[2], float(vt.r[3]) - hh]
 	_hb -= hh
 	card.kids.append_array(hd[0])
+	var ab := _vacts(f)
+	_kfix(n, vt, ab[0], float(ab[1]), true)   # (11-28) nút đưa xuống đáy: đầu bảng -> tab -> thân liền nhau
 	n["_nt"] = G.night   # mặt người đổi ngày / đêm: dựng lại khung
 	var r: Array = _body(f)
 	if sub != "":   # hộp nổi trò chuyện / tặng quà: lớp tối + hộp đè lên thân bảng (thân đứng yên, không cuộn)
@@ -147,7 +149,7 @@ func _yd() -> Dictionary:   # yD: tên loại nhà
 
 func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var out := []
-	var fs := 52.0
+	var fs := 64.0   # (11-28) mặt cao bằng 4 hàng đầu bảng
 	var fc := _chip(X0, y0, fs, fs, "fut")
 	var lk := clampi(W._i(f.get("lk")), 0, 7)
 	fc.kids = [_pic(X0 + 3.0, y0 + 3.0, fs - 6.0, fs - 6.0, "res://ui/img/vlface/" + str(lk) + ("n" if G.night else "") + ".webp")]
@@ -160,18 +162,17 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var nm := String(f.n)
 	# (bản 438) hàng tên: tên + chip tính nết + chip họ (chạm mở Gia phả)
 	var ho := ("Họ " + String(f.ho) + " ›") if W._tr(f.get("ho")) else ""
-	var tcw: float = Box.text_w(String(TT.n), 10.0, 700) + 14.0
-	var hcw: float = (Box.text_w(ho, 10.0, 700) + 14.0) if ho != "" else 0.0
-	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 2.0, xr - x - tcw - hcw - 16.0)
+	# (11-28) tên đủ một hàng; chip tính nết + họ xuống hàng 2 (trước đè làm cắt tên "Ông Chín…")
+	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 2.0, xr - x)
 	out.append(_dt(x, y0, nw, 20.0, _fitw(nm, 14.0, 800, nw), 14.0, 800, BROWN, "left"))
-	var tc := _tchip(x + nw + 8.0, y0 + 1.0, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)))
+	var tc := _tchip(x, y0 + 22.0, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)))
 	out.append(tc[0])
 	if ho != "":
-		out.append(_tchip(x + nw + 8.0 + float(tc[1]) + 5.0, y0 + 1.0, ho, "info", "rgb(52, 92, 140)", U.gp_open.bind(u))[0])
+		out.append(_tchip(x + float(tc[1]) + 5.0, y0 + 22.0, ho, "info", "rgb(52, 92, 140)", U.gp_open.bind(u))[0])
 	# tim + thân
 	var tim: int = W._i(f.get("tim"))
 	# (bản 444) bỏ thanh thân: tim đang lên đầy dần từ trái sang theo thân (như thanh cũ), giữ chữ "Thân N/5"
-	var hy := y0 + 21.0   # (bản 449) tim to 20 cho thấy rõ tim đang đầy dở
+	var hy := y0 + 43.0   # (bản 449) tim to 20 cho thấy rõ tim đang đầy dở
 	var p := 1.0 if tim >= 5 else fmod(W._n(f.get("dp")), 100.0) / 100.0
 	for i in 5:
 		out.append(_dic(x + i * 22.0, hy, 20.0, HEART if i < tim else (_heartp(p) if i == tim and p > 0.0 else HEART0)))
@@ -179,7 +180,7 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	# nhà · đang làm: chữ trơn (không chip)
 	var r = W.r1(u)
 	var rid := String(r.r.id)
-	var cy := y0 + 44.0
+	var cy := y0 + 65.0
 	var hs := String(_yd().get(rid.trim_suffix("2"), "Nhà")) + " · " + str(int(W.CX.get(rid, 0))) + " người"
 	var jb := _vs(f)
 	var hsw: float = minf(Box.text_w(hs, 10.0, 700) + 2.0, xr - x)
@@ -195,19 +196,21 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 		var qt := _dt(X0 + 4.0, y + i * 15.0, XW - 8.0, 15.0, qL[i], 11.0, 600, "rgb(120, 88, 50)", "left")
 		qt.css["font-style"] = "italic"
 		out.append(qt)
-	y += qL.size() * 15.0 + 8.0
-	# 2 nút
+	y += qL.size() * 15.0 + 2.0
+	return [out, y - y0]
+
+func _vacts(f: Dictionary) -> Array:   # (11-28) 2 nút Trò chuyện / Tặng quà: dải cố định đáy bảng (y từ 0); [khối, cao]
+	var out := []
 	var nl: int = W.chat_left(f)
 	var gq: bool = W._i(f.get("gq", -1)) == W._vr()
 	var hw := (XW - 8.0) * 0.5
 	if sub == "chat":
-		out.append(_btn(X0, y, hw, 28.0, "Đóng trò chuyện", _chat_go, "go"))
+		out.append(_btn(X0, 0.0, hw, 30.0, "Đóng trò chuyện", _chat_go, "go"))
 	else:
-		out.append(_btn(X0, y, hw, 28.0, "Trò chuyện · còn " + str(nl) if nl else "Mai trò chuyện tiếp", _chat_go, "go" if nl else "off"))
+		out.append(_btn(X0, 0.0, hw, 30.0, "Trò chuyện · còn " + str(nl) if nl else "Mai trò chuyện tiếp", _chat_go, "go" if nl else "off"))
 	var x2 := "Tặng quà · ngày riêng x2" if W.is_ngay_rieng(u) and f.get("bk") is Dictionary and W._tr(f.bk.get("d")) else "Tặng quà · 1 món/ngày"
-	out.append(_btn(X0 + hw + 8.0, y, hw, 28.0, "Đóng tặng quà" if sub == "gift" else ("Hôm nay tặng rồi" if gq else x2), _gift_go, "red" if sub == "gift" else ("off" if gq else "red")))
-	y += 28.0 + 10.0
-	return [out, y - y0]
+	out.append(_btn(X0 + hw + 8.0, 0.0, hw, 30.0, "Đóng tặng quà" if sub == "gift" else ("Hôm nay tặng rồi" if gq else x2), _gift_go, "gold" if sub == "gift" else ("off" if gq else "gold")))
+	return [out, 30.0]
 
 func _chat_go() -> void:   # data-chat; bấm lại lúc đang mở: đóng hộp
 	if sub == "chat":

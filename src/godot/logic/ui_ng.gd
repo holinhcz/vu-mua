@@ -127,8 +127,6 @@ func _nghe() -> Array:
 		out.append_array(c[0])
 		y += float(c[1]) + GG
 	if rest.size():
-		out.append_array(_sq(y, "Nghề chưa học", ""))
-		y += 16.0 + GG
 		var bt := []
 		for gx in rest:
 			var p = H.p.get(gx.id)
@@ -144,7 +142,7 @@ func _nghe() -> Array:
 				k = "got"
 			else:   # (bản 457) chưa ai giữ: nói rõ chờ gì (cấp để có nguyên liệu, hay chờ dòng họ mới về làng)
 				var lv := _lvn(gx)
-				s = ("Mở ở cấp " + str(lv)) if lv > 0 else "Chờ dòng họ mới"
+				s = ("Mở ở cấp " + str(lv)) if lv > 0 else ""   # (11-28) chờ dòng họ mới: ghi 1 lần ở tiêu đề nhóm
 			var pid := _pid(gx)
 			var tip := String(gx.n) + ": " + String(gx.d) + (" Học ở nhà " + ", ".join(PackedStringArray(who)) + "." if who.size() > 1 else "") + (" Làm thử hư " + str(hu) + " lần." if hu else "")
 			if not (p is Dictionary) and who.is_empty():
@@ -152,9 +150,16 @@ func _nghe() -> Array:
 			var od := 0 if k == "now" else (1 if k == "got" else (2 if _lvn(gx) == 0 else 3))
 			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip), "od": od})
 		bt.sort_custom(func(a, b2): return int(a.od) < int(b2.od))   # đang học -> có nhà dạy -> chờ họ mới -> chờ cấp
-		var g := _grid(y, bt, 2, "got", _fillh(y, bt.size()) if own.is_empty() else 0.0)   # (bản 454) chưa học nghề nào: lưới giãn kín thân
-		out.append_array(g[0])
-		y += float(g[1]) + GG
+		# (11-28) chia nhóm: Học được ngay (đang học / có nhà dạy) · Chờ dòng họ mới về làng · Chờ lên cấp; chip cao đều 62 (có mô tả)
+		for gp in [["Nghề chưa học", [0, 1]], ["Chờ dòng họ mới về làng", [2]], ["Chờ lên cấp", [3]]]:
+			var sub := bt.filter(func(o): return (gp[1] as Array).has(int(o.od)))
+			if sub.is_empty():
+				continue
+			out.append_array(_sq(y, String(gp[0]), ""))
+			y += 16.0 + GG
+			var g := _grid(y, sub, 2, "got", 62.0)
+			out.append_array(g[0])
+			y += float(g[1]) + GG
 	return [out, y]
 
 func _rank(gx: Dictionary) -> int:   # thứ tự khối nghề đã học

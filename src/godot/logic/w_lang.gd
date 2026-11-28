@@ -2094,7 +2094,7 @@ func ut_red() -> int:   # utRed
 
 func tn_bk_sub() -> String:   # tnBkSub
 	if not tn_ok():
-		return "Lên cấp " + str(TNLV) + " mới gặp"
+		return "Từ cấp " + str(TNLV)
 	var ev = tn_on(_vr() + 1)
 	var nn: int = tn_s().nan.size()
 	if ev != null:

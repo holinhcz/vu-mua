@@ -1,6 +1,7 @@
 extends "res://logic/ui_kbang.gd"
 # (bản 547) BẢNG LỜ LỌP (Menu › Làm ăn › Lờ lọp, hoặc nút viên "N lờ có cá") trên khung Kho chung, như tab Đồ nghề của Câu cá:
 #  - dòng đầu: đang đặt bao nhiêu cái, mấy cái có cá + nút "Thăm hết" (nhân vật đi gỡ một lượt);
+#  - (11-28) lưới 3 ô chọn loại ngay dưới dòng đầu: Lờ tre, Lọp lươn, Giăng câu (bậc, đặt n/tối đa, dấu ✓ khi có cá);
 #  - thẻ món đang chọn: hình, "Lờ tre · bậc 2", đang đặt n/tối đa, luật bậc này (chờ, mỗi mẻ, xài được, mồi), bậc kế cần gì
 #    (chip xu + vật liệu nâng cấp có/cần), nút Đặt (đóng bảng, chạm ô nước tô xanh) và Nâng bậc;
 #  - lưới 3 ô: Lờ tre, Lọp lươn, Giăng câu (bậc, đặt n/tối đa, dấu ✓ khi có cái có cá).
@@ -71,6 +72,9 @@ func _body() -> Array:
 	if rd > 0:
 		out.append(_dbtn(X0 + XW - bw - 4.0, y + 4.0, bw, 26.0, "Thăm hết", _visit_all))
 	y += 34.0 + GG
+	var P3 := _pick3(y)
+	out.append_array(P3[0])
+	y += float(P3[1]) + GG
 	# thẻ món đang chọn: bảng so sánh bậc này -> bậc kế
 	var t := sel
 	var e: Dictionary = W.ns[t]
@@ -133,13 +137,17 @@ func _body() -> Array:
 	var C := _scard(y, _lo_pic(t), String(e.n) + " · bậc " + str(v) + ("" if not nx.is_empty() else " (cao nhất)"), sub, lk, btns, [blk, yy])
 	out.append_array(C[0])
 	y += float(C[1]) + GG
-	# lưới 3 ô
+	return [out, y]
+
+func _pick3(y: float) -> Array:   # (11-28) lưới 3 ô chọn loại lờ: đầu thân (chọn trước, chi tiết dưới); [khối, cao]
+	var W = _W()
+	var out := []
 	var cw := (XW - 12.0) / 3.0
 	var R: Array = W.ready_keys()
 	for i in W.FS.size():
 		var k: String = W.FS[i]
 		var x: float = X0 + i * (cw + 6.0)
-		var c := _chip(x, y, cw, 84.0, "got" if k == sel else "fut")
+		var c := _chip(x, y, cw, 84.0, "sel" if k == sel else "fut", k != sel)   # đang chọn: viền xanh; còn lại: chip bấm được gờ vàng
 		c.act = func(): sel = k; _redo()
 		out.append(c)
 		out.append(_icx(x + cw * 0.5, y + 24.0, 44.0, "pic:" + _lo_pic(k)))
@@ -154,10 +162,10 @@ func _body() -> Array:
 				nf += 1
 		var low := _lock(k)
 		low = (str(nf) + " cái có cá" if nf > 0 else "Bậc " + str(W.lo_lv(k)) + " · " + str(W.qk(k)) + "/" + str(int(W.nst(k).max))) if low == "" else "Chưa mở"
-		out.append(_dt(x + 3.0, y + 64.0, cw - 6.0, 14.0, _fitw(low, 9.5, 700, cw - 6.0), 9.5, 700, GRN if has else SUB))
+		out.append(_dt(x + 3.0, y + 64.0, cw - 6.0, 14.0, _fitw(low, 10.5, 700, cw - 6.0), 10.5, 700, GRN if has else SUB))
 		if has:
 			out.append(_dtick(x + cw - 17.0, y + 5.0, 13.0))
-	return [out, y + 84.0 + 6.0]
+	return [out, 84.0]
 
 func _rows(s: Dictionary, n: Dictionary) -> Array:   # [nhãn, bậc này, (bậc kế, tốt hơn?)]
 	var f := func(d: Dictionary, k: String) -> String:

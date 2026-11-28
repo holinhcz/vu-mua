@@ -483,7 +483,7 @@ func _tchip(x: float, y: float, t: String, kind: String, col := BROWN, cb = null
 		c.act = cb
 	return [c, w]
 
-func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, off: xám, plain: kem bấm được (bản 552)
+func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, gold: vàng, off: xám, plain: kem bấm được (bản 552)
 	if kind == "plain":
 		var p := _chip(x, y, w, h, "fut", true)
 		p.kids = [_dt(x, y, w, h, t, 11.0, 800, BROWN)]
@@ -495,6 +495,9 @@ func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -
 		return c
 	var b := _onbtn(x, y, w, h, t, cb, kind == "red")
 	b.kids[0].css["font-size"] = _cpx(11.0)
+	if kind == "gold":   # (11-28) nút vàng: tặng, nhận quà (đỏ chỉ để huỷ / cảnh báo)
+		b.css["background-image"] = "linear-gradient(rgb(255, 222, 120) 0%, rgb(244, 178, 52) 100%)"
+		b.kids[0].css["color"] = "rgb(106, 58, 8)"
 	return b
 
 func _rowi(x: float, y: float, h: float, parts: Array, fs: float, fw: int, col: String) -> Array:   # (bản 452) dòng chữ xen hình: "h" tim, "s" sao, "c" xu, "i:<mã>" hình bất kỳ; trả [khối, rộng]
@@ -722,7 +725,12 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String, bh0 := 0.0) -> Array
 		var L2: Array = _wrap(String(o.get("s2", "")), 10.0, 600, tw) if big and String(o.get("s2", "")) != "" else []
 		if L2.size() > 2:
 			L2 = [L2[0], _fitw(String(L2[1]) + " " + " ".join(PackedStringArray(L2.slice(2))), 10.0, 600, tw)]
-		var th0 := 15.0 + (16.0 if String(o.get("s", "")) != "" else 0.0)
+		var TL: Array = [String(o.b)]   # (11-28) chip to: tên dài xuống 2 dòng (không cắt "…"), bớt dòng mô tả
+		if big and Box.text_w(String(o.b), 11.5, 800) > tw:
+			TL = _wrap(String(o.b), 11.5, 800, tw)
+			if TL.size() > 2:
+				TL = [TL[0], _fitw(" ".join(PackedStringArray(TL.slice(1))), 11.5, 800, tw)]
+		var th0 := 15.0 * TL.size() + (16.0 if String(o.get("s", "")) != "" else 0.0)
 		while L2.size() and th0 + L2.size() * 13.0 + 3.0 > bh - 10.0:   # chip thấp: bớt dòng 3, dòng cuối cắt "…"
 			var last: String = String(L2[L2.size() - 1])
 			L2.pop_back()
@@ -730,8 +738,10 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String, bh0 := 0.0) -> Array
 				L2[L2.size() - 1] = _fitw(String(L2[L2.size() - 1]) + " " + last, 10.0, 600, tw)
 		var th := th0 + L2.size() * 13.0 + (3.0 if L2.size() else 0.0)
 		var ty := yy + 6.0 if not big else yy + (bh - th) * 0.5
-		ks.append(_dt(tx, ty, tw, 15.0, _fitw(String(o.b), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
-		ty += 16.0
+		for tl in TL:
+			ks.append(_dt(tx, ty, tw, 15.0, _fitw(String(tl), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
+			ty += 15.0
+		ty += 1.0
 		if String(o.get("s", "")) != "":
 			ks.append(_dt(tx, ty, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
 			ty += 16.0

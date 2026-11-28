@@ -2,7 +2,7 @@ extends "res://logic/ui_kbang.gd"
 # CHUYỆN LÀNG (clgOpen / clgRender bản web, Sổ làng › Tin tức trong làng). (bản 476) làm lại trên khung Kho + chip chung (ui_kbang.gd):
 # tab Tất cả / Nhà mình / Xóm làng / Thiên tai / Buôn bán (chấm đỏ khi có chuyện chưa đọc); chuyện gom theo ngày (ghi mùa),
 # việc có nút lên đầu mỗi ngày thành khối vàng; chuyện thường là dòng nhẹ có hình + vạch màu theo loại; chuyện lặp trong ngày gộp 1 dòng
-# (chạm mở ra); chuyện chưa đọc có chip "Mới" tới lần mở bảng sau. Mở xem 1,5 giây thì tính là đã đọc (g.clg.sn).
+# (chạm mở ra); chuyện chưa đọc có chấm đỏ góc (11-28; trước chip "Mới") tới lần mở bảng sau. Mở xem 1,5 giây thì tính là đã đọc (g.clg.sn).
 # Luật ở w_lang.gd (clg_s, clg_act, clg_act_lb, clg_tick).
 
 var W          # w_lang.gd
@@ -135,7 +135,7 @@ func _body() -> Array:   # clgTab
 			out.append(_kic(X0 + 20.0, y + 22.0, 24.0, k))
 			out.append_array(P[0])
 			if int(r.q) > sn0:
-				out.append(_new(X0 + 8.0, y + h - 22.0))
+				out.append(_new(X0 + XW - 12.0, y + 5.0))
 			var bw: float = minf(Box.text_w(lb, 10.5, 700) + 24.0, XW - 52.0)
 			out.append(_btn(X0 + XW - 10.0 - bw, y + h - 36.0, bw, 26.0, lb, W.clg_act.bind(int(r.q)), "go"))
 			y += h + 6.0
@@ -181,11 +181,11 @@ func _body() -> Array:   # clgTab
 		y += GG - 4.0
 	return [out, y]
 
-func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: String, ind := 0.0) -> Array:   # dòng chuyện nhẹ: vạch màu loại, hình, chữ (+ dòng phụ), chip Mới, mũi tên (nhóm gộp)
+func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: String, ind := 0.0) -> Array:   # dòng chuyện nhẹ: vạch màu loại, hình, chữ (+ dòng phụ), chấm mới, mũi tên (nhóm gộp)
 	var out := []
 	var x := X0 + ind
 	var w := XW - ind
-	var rw := (36.0 if nw else 0.0) + (16.0 if chev != "" else 0.0)
+	var rw := (16.0 if chev != "" else 0.0)
 	var L := _wrap(t, 11.0, 600, w - 40.0 - rw)
 	var h := 8.0 + L.size() * 15.0 + (13.0 if sub != "" else 0.0) + 8.0
 	h = maxf(h, 32.0)
@@ -203,15 +203,13 @@ func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: Str
 		out.append(_dic(rx - 10.0, y + h * 0.5 - 5.0, 10.0, chev))
 		rx -= 16.0
 	if nw:
-		out.append(_new(rx - 32.0, y + h * 0.5 - 8.0))
+		out.append(_new(x + w - 12.0, y + 5.0))
 	if act != null:
 		c.act = act
 	return [out, h]
 
-func _new(x: float, y: float) -> Dictionary:   # chip đỏ "Mới"
-	var c := _chip(x, y, 32.0, 16.0, "sen")
-	c.kids = [_dt(x, y, 32.0, 16.0, "Mới", 9.0, 800, "rgb(190, 50, 60)")]
-	return c
+func _new(x: float, y: float) -> Dictionary:   # (11-28) chuyện mới: chấm đỏ góc trên phải (trước chip "Mới" dòng nào cũng có: rối, chiếm chỗ chữ)
+	return _dbx(x, y, 8.0, 8.0, "rgb(214, 69, 65)", 4.0, _cpx(1.0) + " solid rgb(255, 255, 255)")
 
 func _tg(gid: String) -> void:   # chạm nhóm gộp: mở / đóng
 	if ex.has(gid):

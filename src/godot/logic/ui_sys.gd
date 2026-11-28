@@ -40,9 +40,15 @@ func _build() -> void:
 	var sh := _kshell([["nv", "Nhiệm vụ", red], ["pt", "Nhánh", false], ["shop", "Cửa hàng", false]], W.HTV.tab, _tab_go)
 	var out := []
 	var y := 4.0
-	var sm := _parab(X0, y, XW, _sum_txt(), 12.0, 700, BROWN)
-	out.append_array(sm[0])
-	y += float(sm[1]) + 6.0
+	var T := _sum_txt()   # (11-28) hàng chip số liệu (trước: 1 dòng chữ dài gãy, rớt "0/5" xuống dòng)
+	var CW: Array = _flex_w(T.map(func(t): return Box.text_w(t, 10.5, 700) + 16.0), XW, 6.0)
+	var cx := X0
+	for i in T.size():
+		var c := _chip(cx, y, CW[i], 26.0, "now" if i == 0 else "fut")
+		c.kids = [_dt(cx, y, CW[i], 26.0, _fitw(String(T[i]), 10.5, 700, float(CW[i]) - 6.0), 10.5, 700, BROWN)]
+		out.append(c)
+		cx += float(CW[i]) + 6.0
+	y += 26.0 + GG
 	match W.HTV.tab:
 		"pt":
 			y = _pt(out, y)
@@ -62,7 +68,7 @@ func _go(cb: Callable) -> void:   # bấm nút: làm việc rồi dựng lại
 	cb.call()
 	_build()
 
-func _sum_txt() -> String:   # Điểm · Nhánh · Hôm nay (htSum)
+func _sum_txt() -> Array:   # chip đầu: Điểm · Nhánh · Hôm nay · tuần / khẩn (htSum)
 	var o: Dictionary = W.htNv()
 	var k = o.kh.get("q") if o.get("kh") is Dictionary else null
 	var d := 0
@@ -71,12 +77,15 @@ func _sum_txt() -> String:   # Điểm · Nhánh · Hôm nay (htSum)
 			d += 1
 	var tu: Dictionary = o.tu.q
 	var c0 = o.get("c0")
-	var t: String = "Điểm " + G.fmt_n(float(W.sys().pts)) + " · Nhánh " + (String(W.HTB[c0]) if W._tr(c0) else "chưa chọn") + " · Hôm nay " + str(d) + "/" + str(o.nv.l.size())
+	var T := ["Điểm " + G.fmt_n(float(W.sys().pts))]
+	if W._tr(c0):   # chưa chọn nhánh: không chip (tab Nhánh đã nói), 4 chip vừa một hàng
+		T.append("Nhánh " + String(W.HTB[c0]))
+	T.append("Hôm nay " + str(d) + "/" + str(o.nv.l.size()))
 	if k is Dictionary and not W._tr(k.get("ok")):
-		t += " · khẩn còn " + G.ao(maxf(0.0, (float(k.t1) - G._now_ms()) / 1000.0))
+		T.append("Khẩn còn " + G.ao(maxf(0.0, (float(k.t1) - G._now_ms()) / 1000.0)))
 	else:
-		t += " · tuần " + str(W.htQCur(tu)) + "/" + _s(tu.m)
-	return t
+		T.append("Tuần " + str(W.htQCur(tu)) + "/" + _s(tu.m))
+	return T
 
 # ------------------------------------------------------------------ khối chung trong bảng
 func _intro(out: Array, y: float, t: String) -> float:   # đoạn giải thích (chữ phụ)

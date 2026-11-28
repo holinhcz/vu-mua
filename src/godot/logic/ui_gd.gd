@@ -206,13 +206,11 @@ func _body() -> Array:
 	if q != "" and nf == 0:   # (bản 489) tìm không ra
 		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không thấy mục nào có chữ này.", 11.0, 700, SUB, "left"))
 		y += 16.0 + GG
-	# cuối: Chuyện làng, nhắc lần đầu (đường kẻ ngăn với lưới)
+	# cuối: nhắc lần đầu (đường kẻ ngăn với lưới); (11-28) bỏ nút Chuyện làng (lạc chỗ: đã có ở Sổ làng)
 	y += 4.0
 	out.append(_dbx(X0 + 20.0, y, XW - 40.0, 1.0, "rgb(222, 204, 164)", 0.0))
 	y += 1.0 + GG + 2.0
-	var bw2 := (XW - 6.0) * 0.5
-	out.append(_btn(X0, y, bw2, 30.0, "Chuyện làng ›", _clg, "go"))
-	out.append(_btn(X0 + bw2 + 6.0, y, bw2, 30.0, "Bật lại nhắc lần đầu" if W_off() else "Tắt nhắc lần đầu", _tip, "go" if W_off() else "red"))   # (bản 489) tắt: nút đỏ, bật lại: xanh
+	out.append(_btn(X0, y, XW, 30.0, "Bật lại nhắc lần đầu" if W_off() else "Tắt nhắc lần đầu", _tip, "go" if W_off() else "plain"))   # (11-28) tắt: nút kem thường (đỏ là huỷ / cảnh báo), bật lại: xanh
 	y += 30.0 + GG
 	return [out, y]
 
@@ -252,7 +250,4 @@ func _tip() -> void:   # data-gd="tip"
 	var t := kh(G)
 	t.off = not bool(t.get("off", false))
 	G.mark()
-
-func _clg() -> void:   # data-gd="st": Chuyện làng
-	U.clg_open()
 

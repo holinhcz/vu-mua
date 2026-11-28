@@ -4,9 +4,9 @@ extends "res://logic/ui_kbang.gd"
 #   Hình ô lấy từ ui/snap/dock.json (svg của từng ô), việc của ô: U (giống bảng cũ).
 
 const MUC := [
-	["Làm ăn", "kh:pc_xe", ["Kho", "Đơn hàng", "Xây dựng", "Nghề", "Lờ lọp"]],
+	["Làm ăn", "kh:gio_lb", ["Kho", "Đơn hàng", "Xây dựng", "Nghề", "Lờ lọp"]],
 	["Làng xóm", "kh:tra_tac", ["Hợp tác xã", "Sổ làng", "Bản đồ", "Hệ Thống"]],
-	["Giải trí", "kh:ca_loc", ["Câu cá", "Cờ gánh", "Ô ăn quan", "Xếp trái", "Đua gà", "Cờ caro", "Tìm số"]]]
+	["Giải trí", "img:den_long", ["Câu cá", "Cờ gánh", "Ô ăn quan", "Xếp trái", "Đua gà", "Cờ caro", "Tìm số"]]]
 const TH := 62.0      # cao ô
 const IC := 28.0      # hình ô
 const ORB := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 40\"><defs><radialGradient id=\"o\" cx=\"0.36\" cy=\"0.32\" r=\"0.7\"><stop offset=\"0\" stop-color=\"rgb(235,248,255)\"/><stop offset=\"0.45\" stop-color=\"rgb(90,170,250)\"/><stop offset=\"1\" stop-color=\"rgb(20,80,200)\"/></radialGradient></defs><circle cx=\"20\" cy=\"20\" r=\"17\" fill=\"url(#o)\"/><ellipse cx=\"14\" cy=\"12\" rx=\"5\" ry=\"3\" fill=\"rgb(255,255,255)\" fill-opacity=\"0.9\"/></svg>"

@@ -9,7 +9,7 @@ const Qty = preload("res://logic/qty.gd")
 const Box = preload("res://ui/box.gd")
 const Css = preload("res://ui/css.gd")
 const Sen = preload("res://ui/sen.gd")
-const TUA_W := 9.0   # dây tua khung sen lòng vào hàng tab
+const TUA_W := 14.0   # dây tua khung sen lòng vào hàng tab
 var tua_cut := true   # hàng tab sát đỉnh khung (dưới dây tua); bảng dời hàng tab xuống (Nhà dân) thì tắt
 
 var U          # ui.gd
@@ -436,7 +436,7 @@ func _seg_tabs(seg: Dictionary, L: Array, cur: String, go: Callable, bd: Diction
 		if L[i][2] and not bd.is_empty():
 			c.css["z-index"] = "3"   # chấm nằm đè lên tab bên cạnh
 			var b := _cl(bd)
-			_mv(b, x + w - 10.0, float(c.r[1]) - 4.0)   # (11-26) chấm đỏ ngồi trên góc trên phải tab, không đè chữ
+			_mv(b, x + w - 8.0, float(c.r[1]) - 7.0)   # (11-28) chấm đỏ ngồi hẳn trên góc trên phải tab (lòi ra ngoài), không đè chữ
 			c.kids.append(b)
 		out.append(c)
 		x += w + 4.5

@@ -91,7 +91,7 @@ func _links() -> Array:
 	var tn_sub: String = W.tn_bk_sub()
 	return [["Bà con lối xóm", "g_ng", [["gp", "Gia phả", (str(nf) + " nhà") if nf else "Dòng họ, bà con", 0, false],   # (bản 500) bỏ Hụi làng: 3 nhóm, mỗi nhóm 4 thẻ
 			["kh", "Khách thăm", "Thăm làng bạn bè", 0, false],
-			["hr", "Làm thuê", "Thuê người phụ việc", 0, false],
+			["hr", "Làm thuê", "Thuê phụ việc", 0, false],
 			["st", "Chuyện làng", W.clg_bk_sub(), W.clg_red(), false]]],
 		["Việc làng", "g_vl", [["ut", "Uy tín làng", W._sv(ut.p) + " điểm", W.ut_red(), false],
 			["tn", "Thiên tai", tn_sub, maxi(int(W.tn_red()), nn), not W.tn_ok()],

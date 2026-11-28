@@ -379,15 +379,9 @@ func _dock(y: float, F: Dictionary) -> Array:
 	var n := 2 if tab == "qh" else 3
 	var bw := floorf((XW - g * (n - 1)) / n)
 	out.append(_btn(X0, by, bw, 32.0, "Ghé chơi", _ghe, "go"))
-	var b2 := _chip(X0 + bw + g, by, bw, 32.0, "fut")
-	b2.kids = [_dt(X0 + bw + g, by, bw, 32.0, "Đi tới nhà", 11.0, 700, BROWN)]
-	b2.act = _toi
-	out.append(b2)
+	out.append(_btn(X0 + bw + g, by, bw, 32.0, "Đi tới nhà", _toi, "plain"))   # (11-28) nút bấm được: gờ vàng như mọi nút (trước chip nội dung viền mảnh)
 	if n == 3:
-		var b3 := _chip(X0 + (bw + g) * 2.0, by, XW - (bw + g) * 2.0, 32.0, "fut")
-		b3.kids = [_dt(X0 + (bw + g) * 2.0, by, XW - (bw + g) * 2.0, 32.0, "Quan hệ", 11.0, 700, BROWN)]
-		b3.act = _tab_go.bind("qh")
-		out.append(b3)
+		out.append(_btn(X0 + (bw + g) * 2.0, by, XW - (bw + g) * 2.0, 32.0, "Quan hệ", _tab_go.bind("qh"), "plain"))
 	return out
 
 func _ghe() -> void:   # data-ga="ghe"

@@ -7,7 +7,7 @@ extends "res://logic/ui_kbang.gd"
 
 var E          # w_ev.gd
 var P9 := -1   # ngày đang xem
-const DH := 42.0   # ô ngày
+const DH := 36.0   # ô ngày
 const RH := 48.0   # dòng việc
 
 func _init(ui, wev) -> void:
@@ -75,9 +75,9 @@ func _build() -> void:
 
 func _days(n: int, e: int) -> Array:   # hàng 7 ô ngày
 	var out := []
-	var cw := (XW - 6.0 * 5.0) / 7.0
+	var cw := (XW - 6.0 * 6.0) / 7.0
 	for d in 7:
-		var x := X0 + d * (cw + 5.0)
+		var x := X0 + d * (cw + 6.0)
 		var lk: bool = d >= n
 		var Q: Array = E.RV[d].q
 		var all := true
@@ -90,10 +90,9 @@ func _days(n: int, e: int) -> Array:   # hàng 7 ô ngày
 		var done: bool = E.ci(d) and all
 		var red: bool = not lk and (not E.ci(d) or any)
 		var c := _chip(x, 0.0, cw, DH, "miss" if lk else ("sel" if done else "fut"), d == e)
-		c.kids = [_dt(x, 5.0, cw, 14.0, "Ngày", 10.5, 700, SUB if lk else BROWN),
-			_dt(x, 19.0, cw, 18.0, str(d + 1), 14.0, 800, SUB if lk else (GREEN if done else BROWN))]
+		c.kids = [_dt(x, 0.0, cw, DH, str(d + 1), 17.0, 800, SUB if lk else (GREEN if done else BROWN))]   # (11-28) chỉ số ngày (chữ "Ngày" đã có ở tiêu đề thân): ô thoáng
 		if done:
-			c.kids.append(_dtick(x + cw - 14.0, DH - 15.0, 12.0))
+			c.kids.append(_dtick(x + cw - 13.0, DH - 14.0, 11.0))
 		c.act = _day.bind(d)
 		out.append(c)
 		if red:
