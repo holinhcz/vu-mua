@@ -1149,7 +1149,7 @@ const KHO_LV := [0, 1, 3, 7, 12, 18, 25, 35, 48, 62, 80]              # p8: cấ
 const KHO_XU := [0, 0, 100, 300, 700, 1500, 3000, 5500, 9000, 14000, 22000]   # CJ
 const MAT_GOP := {"then": "dinh", "bao": "van", "ton": "gach", "bat": "la", "bang": "van", "can": "tre"}   # vật liệu cũ -> vật liệu chung
 const KHO_MAT := ["van", "dinh", "gach"]   # (11-25) nâng kho xài ván, đinh, gạch (bỏ then cài, bao bố, tấm tôn)
-const KHO_M := [null, null, [1, 1, 0], [2, 2, 1], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 6], [8, 8, 8], [10, 10, 10], [12, 12, 12]]   # EJ theo KHO_MAT
+const KHO_M := [null, null, [1, 1, 1], [2, 2, 1], [3, 3, 3], [4, 4, 4], [5, 5, 5], [6, 6, 6], [8, 8, 8], [10, 10, 10], [12, 12, 12]]   # EJ theo KHO_MAT
 const KHO_CA := [0, 0, 2, 3, 5, 6, 7, 8, 10, 12, 15]   # CA: sen đỏ mỗi cấp nâng sớm
 const KHO_SA := 8   # SA: nâng sớm tối đa 8 cấp
 signal kho_full(n: int, cap: int)   # lL: bảng "Kho đầy rồi!"

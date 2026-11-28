@@ -96,7 +96,7 @@ func _one() -> String:   # tên một thứ (tab, thông báo): chuồng / xư�
 	return String(G.lang.CO.get(pt, "Chuồng"))
 
 func close() -> void:
-	if K.ns != null and K.ns_hid == pop:
+	if K.ns_on() and U.kupp.sp.get("hide") == pop:
 		K.ns_close()
 	if pop != null:
 		U.anchors.erase(U._anchor_of(pop))
@@ -111,7 +111,7 @@ func _sig() -> String:
 	return "|".join([kind, pt, all, o, G.k4(o).size() if kind == "plot" else 1, int(G.g.coins / 50), ",".join(mm), G.lv(), int(G.g.get("ngoc", 0))])
 
 func step() -> void:
-	if pop != null and K.ns == null and _sig() != sig:
+	if pop != null and not K.ns_on() and _sig() != sig:
 		_draw()
 
 # hàng tab: có từ 2 ô cùng sao thì 2 nút (bản sp_ok / sp_all), không thì 1 nút rộng (sp_ns)

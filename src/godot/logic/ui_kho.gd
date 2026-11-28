@@ -15,10 +15,8 @@ const UB = preload("res://logic/ui_bang.gd")
 var U
 var G
 var T := {}
-var pop: Control = null      # hộp Nâng sao kho
-var pop_sig := ""
+var pop: Control = null      # (cũ) hộp Nâng sao kho: nay là bảng U.kupp, luôn null
 var kf: Control = null       # hộp Kho đầy
-var ns: Control = null       # hộp Nâng sớm
 var mat_svg := {}            # vật liệu -> svg
 var star_on := ""
 var star_off := ""
@@ -28,15 +26,12 @@ var bar_col := {"": "rgb(222, 64, 76)", "warn": "rgb(246, 111, 39)", "full": "rg
 func _init(ui) -> void:
 	U = ui
 	G = ui.G
-	for k in ["kup_lock", "kup_ok", "kup_no", "kup_max", "k3_ok", "k3_no", "k2_no", "k_hard"]:
+	for k in ["kup_lock", "kup_max", "k3_no"]:   # (11-28) chỉ lấy hình sao + kiểu ô (ui_sao dùng _chip)
 		T[k] = Snap.load_snap(k)[".u2pop"][0]
 	for k in ["kfov", "kfov2", "kfov3"]:
 		var n: Dictionary = Snap.load_snap(k)[".kfov"][0].duplicate(true)
 		_unscale(n, "kfbox")
 		T[k] = n
-	T.kns_ok = Snap.load_snap("kns_ok")[".nglkov"][0]
-	# kns_poor chụp lúc hộp đang hiện dần (mờ, thu 0,4): lấy chỗ đứng của kns_ok, chỉ lấy kiểu nút "poor"
-	T.poor_btn = Snap.find(Snap.load_snap("kns_poor")[".nglkov"][0], "ngbuy")
 	# hình vật liệu nâng kho (ván, đinh, gạch): hình món ui/svg/mat
 	for m in G.KHO_MAT:
 		mat_svg[m] = FileAccess.get_file_as_string("res://ui/svg/mat/" + String(m) + ".svg")
@@ -241,96 +236,21 @@ func _show(n: Dictionary, box_cls: String, ids: Dictionary, on_close: Callable) 
 	return b
 
 # ------------------------------------------------------------------ hộp Nâng sao kho (m$)
+func kup():   # (11-28) bảng nâng sao kho / nâng sớm trên khung chung (ui_kup.gd)
+	if U.kupp == null:
+		U.kupp = load("res://logic/ui_kup.gd").new(U, self)
+	return U.kupp
+
 func open() -> void:
 	G.g.kbOpen = false
-	pop_sig = ""
-	_draw()
+	kup().open_up()
 
 func close() -> void:
-	if pop != null:
-		U.anchors.erase(U._anchor_of(pop))
-		pop.queue_free()
-		pop = null
+	if U.kupp != null and U.kupp.on and U.kupp.kind == "up":
+		U.kupp.close()
 
 func _sig() -> String:
 	return "|".join([G.kho_star(), int(G.g.coins / 50), G.mat_n("van"), G.mat_n("dinh"), G.mat_n("gach"), G.lv(), int(G.g.get("ngoc", 0)), int(G.g.get("khoB", 0))])
-
-func step() -> void:
-	if pop != null and ns == null and _sig() != pop_sig:
-		_draw()
-
-func _draw() -> void:
-	pop_sig = _sig()
-	var a: int = G.kho_star()
-	var n: Dictionary
-	var nd := {}
-	var lock := false
-	var can := false
-	var early := false
-	if a >= 10:
-		n = T.kup_max.duplicate(true)
-	else:
-		nd = G.kho_need(a + 1)
-		lock = G.lv() < int(nd.lv)
-		can = G.can_pay(nd)
-		early = lock and G.early_ok(int(nd.lv))
-		var big := a + 1 >= 3
-		var key := ""
-		if lock:
-			key = ("kup_no" if big else "kup_lock") if early else "k_hard"
-		else:
-			key = ("k3_ok" if big else "kup_ok") if can else ("k3_no" if big else "k2_no")
-		n = T[key].duplicate(true)
-	var sv := Snap.find(n, "u2sv")
-	var cx: float = float(sv.r[0]) + float(sv.r[2]) * 0.5
-	var stars: Array = Snap.find(sv, "stars").kids
-	for j in stars.size():
-		stars[j].svg = star_on if j < a else star_off
-	var sm: Array = []
-	for k in sv.kids:
-		if k.tag == "small":
-			sm.append(k)
-	_ctext(sm[0], "Đang chứa tối đa " + str(G.kho_cap()) + " món")
-	if a < 10:
-		var sn: Dictionary = sm[1]
-		var tl := String(sn.text)
-		var old_l := tl.substr(0, tl.find(":"))
-		_mix(sn, old_l, "Lên " + str(a + 1), ": chứa " + str(G.KHO_VP[a + 1] + int(G.g.get("khoB", 0))) + " món", cx)
-		var need := Snap.find(sv, "need")
-		var ch: Array = need.kids
-		var out := [_chip(ch[0], "xu", int(G.g.coins) >= int(nd.xu), int(G.g.coins), int(nd.xu), "")]
-		for j in nd.m.size():
-			var m: Array = nd.m[j]
-			var hv: int = G.mat_n(m[0])
-			out.append(_chip(ch[j + 1], m[0], hv >= int(m[1]), hv, int(m[1]), mat_svg.get(m[0], "")))
-		Qty.row(need, out)   # (bản 291) đúng số ô, canh giữa
-		if lock:
-			var lk := Snap.find(sv, "u2lk")
-			var s: String = "Cần cấp " + str(nd.lv) + " · Bạn cấp " + str(G.lv())
-			if early:
-				_mix(lk, String(lk.text), s + " · nâng sớm bằng", "", cx)
-			else:
-				_ctext(lk, s)
-		var bt := Snap.find(sv, "", "button")
-		if early:
-			var bt_l := String(bt.text)
-			var dot := bt_l.find("·")
-			_mix(bt, bt_l.substr(0, dot + 1), "Nâng sớm ·", str(G.kho_early_cost(nd)), cx)
-		elif lock:
-			_ctext(bt, "🔒 Cấp " + str(nd.lv))
-		else:
-			_ctext(bt, "Nâng kho lên " + str(a + 1) + "★")
-	var keep_open := pop != null
-	close()
-	var ids := {}
-	pop = _show(n, "u2pc", ids, close)
-	if a < 10:
-		var bb: Control = U._q(pop, "btn")
-		if bb != null and (lock == false or early):
-			U._click(bb, up, "scale")
-	U._layout()
-	if not keep_open:
-		G.vib(0)
 
 func up() -> void:   # mp (bản web có lớp bọc: thiếu cấp thì mở hộp nâng sớm)
 	var a: int = G.kho_star()
@@ -351,168 +271,27 @@ func up() -> void:   # mp (bản web có lớp bọc: thiếu cấp thì mở h�
 				mats.append([m[0], d])
 		U._lack_open([], "Nâng sao còn thiếu:", func():
 			G.kho_up()
-			pop_sig = ""
-			if pop != null:
-				_draw(), maxi(0, int(nd.xu) - int(G.g.coins)), mats)
+			open(), maxi(0, int(nd.xu) - int(G.g.coins)), mats)
 		return
 	G.kho_up()
-	pop_sig = ""
-	if pop != null:
-		_draw()
 
-# ------------------------------------------------------------------ hộp Nâng sớm (zF)
-var ns_hid: Control = null    # hộp đang ẩn sau hộp Nâng sớm (web: vẽ lại khi xong)
+# ------------------------------------------------------------------ hộp Nâng sớm (zF): bảng khung chung ui_kup.gd kiểu "ns"
+func ns_on() -> bool:   # hộp nâng sớm đang mở
+	return U.kupp != null and U.kupp.on and U.kupp.kind == "ns"
 
 func ns_close() -> void:
-	if ns != null:
-		U.anchors.erase(U._anchor_of(ns))
-		ns.queue_free()
-		ns = null
-	if ns_hid != null and is_instance_valid(ns_hid):
-		ns_hid.visible = true
-	ns_hid = null
+	if ns_on():
+		U.kupp.close()
 
 func ns_open() -> void:   # mp bọc: zF({t: "kho lên N★", nd, fee: V9(CA[N], lv), extra, go: mp})
 	var a: int = G.kho_star()
 	var nd: Dictionary = G.kho_need(a + 1)
 	ns_show({"t": "kho lên " + str(a + 1) + "★", "nd": nd, "fee": G.KHO_CA[a + 1] * G.early_lv(int(nd.lv)),
 		"extra": " Kho chứa được " + str(G.KHO_VP[a + 1] + int(G.g.get("khoB", 0))) + " món.",
-		"go": G.kho_up, "hide": pop, "done": func():
-			pop_sig = ""
-			if pop != null:
-				_draw()})
+		"go": G.kho_up, "done": open})
 
-func ns_show(sp: Dictionary) -> void:   # zF
-	ns_close()
-	var nd: Dictionary = sp.nd
-	var fee: int = int(sp.fee)
-	var r: int = G.early_cost(nd, fee)
-	var lack := []
-	for m in nd.m:
-		var d: int = int(m[1]) - G.mat_n(m[0])
-		if d > 0:
-			lack.append([m[0], d])
-	var xe := maxi(0, int(nd.xu) - int(G.g.coins))
-	var have := int(G.g.get("ngoc", 0))
-	var rich := have >= r
-	var n: Dictionary = T.kns_ok.duplicate(true)
-	var bx := Snap.find(n, "nglk")
-	if not rich:
-		var nb := Snap.find(bx, "ngbuy")
-		nb.cls = T.poor_btn.cls
-		nb.css = T.poor_btn.css
-		var pc: Dictionary = Snap.find(T.poor_btn, "ngcost")
-		var oc := Snap.find(nb, "ngcost")
-		oc.css = pc.css
-		# chữ nút dài hơn: "Nạp thêm sen đỏ"
-		var lbl := "Nạp thêm sen đỏ"
-		var d: float = U._tw(nb, lbl) - U._tw(nb, String(nb.text))
-		nb.text = lbl
-		nb.r = [float(nb.r[0]) - d * 0.5, nb.r[1], float(nb.r[2]) + d, nb.r[3]]
-		if nb.has("tr"):
-			nb.tr = [float(nb.tr[0]) - d * 0.5, nb.tr[1], float(nb.tr[2]) + d, nb.tr[3]]
-		Snap._move(oc, Vector2(d * 0.5, 0))
-	var cx: float = float(bx.r[0]) + float(bx.r[2]) * 0.5
-	var tb: Dictionary = {}
-	var p: Dictionary = {}
-	for k in bx.kids:
-		if k.tag == "b" and tb.is_empty():
-			tb = k
-		if k.tag == "p":
-			p = k
-	_ctext(tb, "Nâng sớm: " + String(sp.t))
-	var ps := "Bạn đang cấp " + str(G.lv()) + ", mức này cần cấp " + str(nd.lv) + "." + String(sp.get("extra", "")) + " Dùng sen đỏ để mở khóa ngay" + (", bù luôn phần còn thiếu" if not lack.is_empty() or xe > 0 else "") + ":"
-	# đoạn chữ xuống dòng: dời phần dưới theo số dòng mới
-	var lh := Css.px(p.css.get("line-height", "19px"))
-	var fs: float = U._fsz(p)
-	var fw := int(p.css.get("font-weight", "400"))
-	var l0 := int(round(float(p.r[3]) / lh))
-	var l1: int = U._nlines(ps, fs, fw, float(p.r[2]))
-	p.text = ps
-	p.erase("tr")
-	var dy := (l1 - l0) * lh
-	p.r = [p.r[0], p.r[1], p.r[2], float(p.r[3]) + dy]
-	var below := false
-	for k in bx.kids:
-		if k == p:
-			below = true
-			continue
-		if below:
-			Snap._move(k, Vector2(0, dy))
-	bx.r = [bx.r[0], float(bx.r[1]) - dy * 0.5, bx.r[2], float(bx.r[3]) + dy]
-	for k in bx.kids:
-		Snap._move(k, Vector2(0, -dy * 0.5))
-	# ô: [cấp + "Mở khóa sớm E cấp · F sen đỏ"] [vật liệu thiếu ×n] [xu ×n], rộng 78 cách 8, giữa hộp
-	var cs := Snap.find(bx, "nglcs")
-	var c0: Dictionary = cs.kids[0]
-	var cm: Dictionary = cs.kids[1]
-	var cxu: Dictionary = cs.kids[2]
-	var lv_b := Snap.find(c0, "nslv")
-	_ctext(lv_b, str(nd.lv))
-	var lsm := Snap.find(c0, "", "small")
-	lsm.text = "Mở khóa sớm " + str(G.early_lv(int(nd.lv))) + " cấp · " + str(fee) + " sen đỏ"
-	lsm.erase("tr")
-	var L := [c0]
-	for q in lack:
-		var o: Dictionary = cm.duplicate(true)
-		Snap.find(o, "", "svg").svg = mat_svg.get(q[0], "")
-		_xn(Snap.find(o, "", "b"), "×" + str(q[1]))
-		_ctext(Snap.find(o, "", "small"), G.item_name(q[0]))
-		L.append(o)
-	if xe > 0:
-		var o2: Dictionary = cxu.duplicate(true)
-		_xn(Snap.find(o2, "", "b"), "×" + G.fmt_n(xe))
-		L.append(o2)
-	# rộng 78 cách 8; không đủ chỗ trong hộp thì thu hẹp đều (flex)
-	var inner: float = float(bx.r[2]) - 32.0
-	var cw := minf(78.0, (inner - 8.0 * (L.size() - 1)) / L.size())
-	var W := cw * L.size() + 8.0 * (L.size() - 1)
-	var x := cx - W * 0.5
-	var out := []
-	for o in L:
-		var q: Dictionary = Snap.moved(o, Vector2(x - float(o.r[0]) - (78.0 - cw) * 0.5, 0))
-		var qc: float = x + cw * 0.5
-		q.r = [x, q.r[1], cw, q.r[3]]
-		for kk in q.kids:
-			if kk.tag == "small":
-				kk.r = [x + 2.0, kk.r[1], cw - 4.0, kk.r[3]]
-				if kk.has("tr"):
-					_ctext(kk, String(kk.text))
-			elif kk.tag == "b" and kk.has("tr"):
-				Snap._move(kk, Vector2(-(78.0 - cw) * 0.5, 0))
-		out.append(q)
-		x += cw + 8.0
-	cs.kids = out
-	# nút "Nâng ngay [sen r]" / "Nạp thêm sen đỏ [sen r]"
-	var bt := Snap.find(bx, "ngbuy")
-	var cost := Snap.find(bt, "ngcost")
-	var cb: Dictionary = Snap.find(cost, "", "b")
-	var dcw: float = U._tw(cb, str(r)) - float(cb.r[2])
-	cb.text = str(r)
-	cb.r = [cb.r[0], cb.r[1], float(cb.r[2]) + dcw, cb.r[3]]
-	cb.tr = cb.r.duplicate()
-	cost.r = [cost.r[0], cost.r[1], float(cost.r[2]) + dcw, cost.r[3]]
-	var bw: float = float(bt.r[2]) + dcw
-	var sh: float = cx - bw * 0.5 - float(bt.r[0])
-	bt.r = [cx - bw * 0.5, bt.r[1], bw, bt.r[3]]
-	if bt.has("tr"):
-		bt.tr = [float(bt.tr[0]) + sh, bt.tr[1], bt.tr[2], bt.tr[3]]
-	Snap._move(cost, Vector2(sh, 0))
-	var hv := Snap.find(bx, "nghave")
-	_ctext(hv, "Đang có " + G.fmt_n(have) + " sen đỏ" + ("" if rich else " · còn thiếu " + str(r - have)))
-	ns_hid = sp.get("hide")
-	if ns_hid != null:
-		ns_hid.visible = false   # web: hộp nâng sao ẩn khi hộp nâng sớm mở, vẽ lại khi xong
-	var ids := {}
-	ns = _show(n, "nglk", ids, ns_close)
-	U._click(ids.get(".ngx"), ns_close, "scale")
-	var go: Callable = sp.go
-	var done: Callable = sp.get("done", func(): pass)
-	U._click(ids.get(".ngbuy"), func():
-		ns_close()
-		G.early_go(nd, fee, go)
-		done.call(), "down")
-	U._layout()
+func ns_show(sp: Dictionary) -> void:   # zF (cả nâng sao ô ruộng / chuồng ui_sao.gd dùng)
+	kup().open_ns(sp)
 
 func _xn(b: Dictionary, s: String) -> void:
 	# "×n" đỏ ở góc phải trên ô

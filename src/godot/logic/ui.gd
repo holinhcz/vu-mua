@@ -73,6 +73,7 @@ var carop = null             # CỜ CARO (ui_caro.gd, #caroBtn trong Giải trí
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var ordp = null              # (11-27) Đơn hàng trên khung chung (ui_ord2.gd)
 var dkp = null               # (11-28) Menu trên khung chung (ui_dock2.gd), thay bảng chụp web dock
+var kupp = null              # (11-28) Nâng sao kho / nâng sớm trên khung chung (ui_kup.gd, tạo ở ui_kho.kup())
 var khop = null              # (11-27) Kho trên khung chung (ui_kho2.gd), thay 4 bản chụp web khi Sen.ON
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -2461,7 +2462,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp, dkp, bdp.shop if bdp != null else null]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp, dkp, kupp, bdp.shop if bdp != null else null]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
