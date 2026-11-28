@@ -15,7 +15,6 @@ var _svg := {}   # tên ô -> svg
 
 func _init(ui) -> void:
 	super(ui)
-	snapcut = false
 	var d: Dictionary = Snap.load_snap("dock")
 	for n in d.get("nav.dock", []):
 		_grab(n)

@@ -13,7 +13,6 @@ const RH := 48.0   # dòng việc
 func _init(ui, wev) -> void:
 	super(ui)
 	E = wev
-	snapcut = false
 
 func open() -> void:   # XI
 	if P9 < 0:

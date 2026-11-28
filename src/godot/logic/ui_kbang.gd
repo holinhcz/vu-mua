@@ -48,7 +48,6 @@ func _kshell(L: Array, cur: String, go: Callable, th := 0.0) -> Array:   # th > 
 	_hb = float(vt.r[3])
 	return [n, vt, vy, th0]
 
-var snapcut := true   # (11-27) cuộn: cắt bỏ hàng lố ở đáy (dòng dư ẩn hẳn); Kho tắt (lưới dài cuộn sát đáy)
 var fit := false   # (bản 492) bảng ngắn (Thư nhà): khung co lại vừa nội dung, đứng giữa màn
 
 func _kfit(n: Dictionary, cut: float, d: float) -> void:   # co khung: khối nằm dưới vạch cut dời lên d, khối vắt qua vạch thì thấp bớt d
@@ -93,20 +92,6 @@ func _kmount(n: Dictionary, vt: Dictionary, vy: float, kids: Array, ch: float) -
 		_kshift(n, d * 0.5)
 		vy += d * 0.5
 		_hb = ch
-	if snapcut and ch > _hb + 8.0:   # (11-26) cuộn: đáy vùng cuộn không cắt ngang khối nào (không ló vệt dòng kế); dòng lố thì ẩn, kéo lên mới thấy
-		var cut := _hb
-		var moved := true
-		while moved:
-			moved = false
-			for k in kids:
-				if k is Dictionary and k.has("r"):
-					var t0 := float(k.r[1])
-					var b0 := t0 + float(k.r[3])
-					if t0 < cut and b0 > cut + 0.5:
-						cut = b0 if b0 <= _hb + 3.0 else t0 - 2.0
-						moved = true
-		vt.r = [vt.r[0], vt.r[1], vt.r[2], float(vt.r[3]) - (_hb - cut)]
-		_hb = cut
 	for k in kids:
 		Snap._move(k, Vector2(0, vy))
 	_mount(n, vt, kids, vy, ch if ch > _hb + 8.0 else minf(ch, _hb), 0.0)   # lố vài đơn vị thì không cho cuộn; dài hẳn thì cuộn

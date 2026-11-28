@@ -18,7 +18,6 @@ const TABS := [["caycoi", "Cây cối"], ["congtrinh", "Công trình"], ["trangt
 func _init(ui, bd) -> void:
 	super(ui)
 	BD = bd
-	snapcut = false
 
 func open() -> void:
 	on = true

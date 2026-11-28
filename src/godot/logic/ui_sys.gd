@@ -13,7 +13,6 @@ const LEAF := "rgb(95, 178, 74)"
 func _init(ui, ws) -> void:
 	super(ui)
 	W = ws
-	snapcut = false
 
 func open(t := "") -> void:   # gu("sys")
 	if t != "":

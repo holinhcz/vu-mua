@@ -31,7 +31,6 @@ var KDD := {}
 
 func _init(ui) -> void:
 	super(ui)
-	snapcut = false   # lưới dài: cuộn tới sát dải đáy, không cắt bỏ hàng lố
 	KDD = Snap.load_snap("kdd")
 	var n2: Dictionary = Snap.load_snap("kho2")["#pov"][0]
 	for t in Snap.find(n2, "u2vg").get("kids", []):

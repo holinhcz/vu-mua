@@ -42,7 +42,6 @@ var _pop := {}      # "f:q" -> lúc vừa có thêm hàng
 
 func _init(ui) -> void:
 	super(ui)
-	snapcut = false
 
 func open(s := "") -> void:
 	src = s
