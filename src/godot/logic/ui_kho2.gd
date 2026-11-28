@@ -366,8 +366,8 @@ func _vl(n: Dictionary, vt: Dictionary) -> Array:
 func _dd(n: Dictionary, vt: Dictionary) -> Array:
 	var L: Array = U.kdp.items()
 	if L.is_empty():
-		return [[_dt(X0, 10.0, XW, 16.0, "Chưa có đồ dùng.", 11.0, 700, BROWN),
-			_dt(X0, 30.0, XW, 14.0, "Bùa +50% EXP và phần cơm hồi sức có từ điểm danh, nhiệm vụ, sự kiện.", 10.0, 600, SUB)], 50.0]
+		var P := _para(X0 + 10.0, 32.0, XW - 20.0, "Bùa +50% EXP và phần cơm hồi sức có từ điểm danh, nhiệm vụ, sự kiện.", 10.5, 600, SUB)   # (11-28) xuống dòng (trước 1 dòng tràn mép phải)
+		return [[_dt(X0 + 10.0, 10.0, XW - 20.0, 16.0, "Chưa có đồ dùng.", 12.0, 700, BROWN, "left")] + P[0], 32.0 + float(P[1]) + GG]
 	if not L.any(func(x): return x.k == dsel):
 		dsel = String(L[0].k)
 	var E: Dictionary = L.filter(func(x): return x.k == dsel)[0]

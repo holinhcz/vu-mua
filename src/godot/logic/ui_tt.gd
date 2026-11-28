@@ -131,8 +131,11 @@ func _task(y: float, e: int, l: int, q: Dictionary, s: bool) -> Array:   # một
 	var tw := XW - 46.0 - bw - 10.0
 	c.kids = [_dt(X0 + 4.0, y, 38.0, RH, "+10", 14.0, 800, GREEN if not s else SUB),
 		_dt(tx, y + 6.0, tw, 16.0, _fitw(E.CY(q), 12.0, 700, tw), 12.0, 700, BROWN, "left")]
-	c.kids.append_array(_bar(tx, y + 27.0, tw - 44.0, 0.0 if s else float(xq) / maxf(1.0, v), 6.0))
-	c.kids.append(_dt(tx + tw - 40.0, y + 22.0, 40.0, 16.0, "Chưa mở" if s else G.fmt_n(xq) + "/" + G.fmt_n(v), 10.5, 700, SUB, "right"))
+	if not s:   # (11-28) ngày chưa mở: không thanh, không số (nút "Chưa mở" đã nói), trước chữ "Chưa mở" đè đuôi thanh
+		c.kids.append_array(_bar(tx, y + 27.0, tw - 44.0, float(xq) / maxf(1.0, v), 6.0))
+		c.kids.append(_dt(tx + tw - 40.0, y + 22.0, 40.0, 16.0, G.fmt_n(xq) + "/" + G.fmt_n(v), 10.5, 700, SUB, "right"))
+	else:
+		c.kids[1].r[1] = y + (RH - 16.0) * 0.5
 	var out := [c]
 	var bx := X0 + XW - bw - 8.0
 	var by := y + (RH - 28.0) * 0.5
@@ -143,5 +146,5 @@ func _task(y: float, e: int, l: int, q: Dictionary, s: bool) -> Array:   # một
 			E.KI(e, l)
 			_build()))
 	else:
-		out.append(_btn(bx, by, bw, 28.0, "Nhận", null, "off"))
+		out.append(_btn(bx, by, bw, 28.0, "Chưa mở" if s else "Nhận", null, "off"))
 	return out

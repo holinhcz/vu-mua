@@ -17,10 +17,12 @@ const MUC := [
 		["a", "Âm thanh và rung", "", [[1, "Bật"], [0, "Tắt"]]],
 		["mu", "Nhạc nền đờn ca tài tử", "", [[1, "Bật"], [0, "Tắt"]]]]],
 	["Giờ và thời tiết", [
-		["d", "Ngày và đêm", "d", [["real", "Giờ thật"], ["fast", "Nhanh"]]],
-		["dx", "Xem giờ", "d", [["sang", "Sáng sớm"], ["trua", "Trưa"], ["chieu", "Hoàng hôn"], ["dem", "Đêm"]]],
+		["d", "Ngày và đêm", "d", [["real", "Giờ thật"], ["fast", "Nhanh"], ["hold", "Đứng giờ"]]],
+		["dx", "Đứng ở", "", [["sang", "Sáng sớm"], ["trua", "Trưa"], ["chieu", "Hoàng hôn"], ["dem", "Đêm"]]],   # chỉ hiện khi chọn Đứng giờ
 		["s", "Mùa", "s", [["auto", "Theo lịch"], ["0", "Xuân"], ["1", "Hạ"], ["2", "Thu"], ["3", "Khô"]]],
-		["w", "Thời tiết", "", [["auto", "Tự động"], ["nang", "Nắng đẹp"], ["mua", "Mưa dầm"], ["rao", "Mưa rào"], ["han", "Nắng hạn"]]]]]]
+		["w", "Thời tiết", "", [["auto", "Tự động"], ["nang", "Nắng đẹp"], ["mua", "Mưa dầm"], ["han", "Nắng hạn"]]],
+		["*rao", "Mưa rào thử 5 giây", "", []]]]]   # nút việc (không phải lựa chọn giữ)
+const HOLD := ["sang", "trua", "chieu", "dem"]
 const RH := 24.0   # cao nút chọn
 
 var armed := 0.0
@@ -32,6 +34,8 @@ func _val(k: String):
 		return 1 if _tm else 0
 	if k == "dx":
 		return G.cfg.d
+	if k == "d" and HOLD.has(String(G.cfg.d)):   # (11-28) 4 giờ đứng gộp vào nút Đứng giờ
+		return "hold"
 	if k == "w" and G.cfg[k] == "giong":   # cài đặt cũ: giông gộp vô mưa dầm
 		return "mua"
 	return G.cfg[k]
@@ -71,6 +75,14 @@ func _build() -> void:
 		out.append_array(_hdq(y, String(m[0]), ""))
 		y += 26.0 + 6.0
 		for r in m[1]:
+			if String(r[0]) == "dx" and not HOLD.has(String(G.cfg.d)):
+				continue
+			if String(r[0]) == "*rao":   # (11-28) mưa rào: nút làm ngay, tách khỏi hàng chọn Thời tiết
+				out.append(_chip(X0, y, XW, 40.0, "fut"))
+				out.append(_dt(X0 + 12.0, y, 180.0, 40.0, String(r[1]), 12.0, 800, BROWN, "left"))
+				out.append(_btn(X0 + XW - 12.0 - 84.0, y + 8.0, 84.0, RH, "Cho mưa", pick.bind("w", "rao"), "plain"))
+				y += 40.0 + 6.0
+				continue
 			var R := _row(y, r)
 			out.append_array(R[0])
 			y += float(R[1]) + 6.0
@@ -200,6 +212,10 @@ func pick(k: String, v) -> void:
 		G.troi.rao_start()
 		_build()
 		return
+	if k == "d" and str(v) == "hold":   # Đứng giờ: đứng ở sáng sớm (chọn giờ khác ở hàng dưới)
+		if HOLD.has(String(G.cfg.d)):
+			return
+		v = "sang"
 	if str(G.cfg[k]) == str(v):
 		return
 	G.cfg_set(k, v)
@@ -229,7 +245,7 @@ func _help_text(k: String) -> Array:
 		"q":
 			return ["Chất lượng hình", "Nếu máy nóng hoặc nhanh hết pin thì chọn Tiết kiệm. Máy mạnh thì chọn Nét."]
 		"d":
-			return ["Ngày và đêm", "Giờ thật: tối từ 19:30 đến 5:30 theo đồng hồ máy. Nhanh: 1 phút ngoài đời bằng 1 giờ trong làng. Xem giờ: làng đứng ở sáng sớm, trưa, hoàng hôn hoặc đêm."]
+			return ["Ngày và đêm", "Giờ thật: tối từ 19:30 đến 5:30 theo đồng hồ máy. Nhanh: 1 phút ngoài đời bằng 1 giờ trong làng. Đứng giờ: làng đứng yên ở sáng sớm, trưa, hoàng hôn hoặc đêm."]
 		"s":
 			return ["Mùa", "Mỗi mùa 7 ngày, 4 mùa là một tháng 28 ngày. Cây hợp mùa lớn nhanh hơn 4%. " + _sea_now()]
 	return ["Cách chơi nhanh", HINT]

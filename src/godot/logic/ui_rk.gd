@@ -59,12 +59,12 @@ func _build() -> void:
 	y += bh2 + GG
 	_kmount(sh[0], sh[1], sh[2], out, y)
 
-const TIP := {
-	"dep": ["Xây nhà, đặt đồ trang trí quanh làng.", "Trồng cây, làm vườn hoa cho làng xanh."],
-	"xu": ["Giao đơn hàng, bán hàng ở Chợ nổi.", "Mở quán, cho khách ghé đều."],
-	"lv": ["Thu hoạch, giao đơn, làm nhiệm vụ để lên cấp."],
-	"sao": ["Giao món đúng hẹn cho khách quán cơm.", "Nâng sao căn quán để khách chờ lâu hơn."],
-	"sk": ["Vào làng mỗi ngày, làm việc hôm nay để giữ chuỗi ngày."],
+const TIP := {   # (11-28) theo đúng luật: lang.beauty, nv.iY/keep, w_quan, add_xp
+	"dep": ["Xây nhà, đặt đồ trang trí: mỗi món cộng điểm riêng.", "Khai hoang thêm đất: mỗi khu +3 điểm.", "Trồng hoa cỏ nhỏ (4 bụi +1 điểm), lát nền (6 ô +1 điểm)."],
+	"xu": ["Giao đơn hàng, giao hàng cho ghe thương hồ.", "Bán hàng trong Kho, mở quán cho khách ghé."],
+	"lv": ["Thu hoạch ruộng, hái trái, câu cá: lần nào cũng có kinh nghiệm.", "Giao đơn hàng, giao ghe, bán cho khách quán: đơn càng lớn càng nhiều."],
+	"sao": ["Giao món kịp hẹn cho khách quán cơm: sao lên dần theo từng khách.", "Khách chờ quá hẹn lúc đang chơi thì quán mất 0,1 sao.", "Nâng sao căn quán: khách chờ được lâu hơn."],
+	"sk": ["Mỗi ngày đủ 100 điểm năng động (Sổ nhiệm vụ) thì chuỗi thêm 1 ngày.", "Mỗi tuần được lỡ 1 ngày không mất chuỗi; lỡ nhiều hơn thì chuỗi lùi về mốc 7 ngày gần nhất."],
 }
 
 func _val() -> Array:   # [số hiện bên phải, dòng phụ] theo tab

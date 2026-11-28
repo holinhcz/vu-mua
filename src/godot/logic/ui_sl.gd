@@ -89,7 +89,7 @@ func _links() -> Array:
 	var hlk: bool = hs == "Chưa mở được"
 	var hshort := "Cần có chức" if hw.begins_with("Có chức") else ("Cần có đình" if hw.contains("đình") else hs)
 	var tn_sub: String = W.tn_bk_sub()
-	return [["Bà con lối xóm", "g_ng", [["gp", "Gia phả", (str(nf) + " nhà") if nf else "Dòng họ, bà con", 0, false],   # (bản 500) bỏ Hụi làng: 3 nhóm, mỗi nhóm 4 thẻ
+	var R := [["Bà con lối xóm", "g_ng", [["gp", "Gia phả", (str(nf) + " nhà") if nf else "Dòng họ, bà con", 0, false],   # (bản 500) bỏ Hụi làng: 3 nhóm, mỗi nhóm 4 thẻ
 			["kh", "Khách thăm", "Thăm làng bạn bè", 0, false],
 			["hr", "Làm thuê", "Thuê phụ việc", 0, false],
 			["st", "Chuyện làng", W.clg_bk_sub(), W.clg_red(), false]]],
@@ -101,6 +101,16 @@ func _links() -> Array:
 			["cp", "Sạp quê", ("Đang bày " + str(cp) + " món") if cp else "Mua bán với bạn bè", 0, false],
 			["dl", "Du lịch", G.w_all.WDL.bk_sub(), 0, false],
 			["gd", "Sổ tay", "Cách chơi, mẹo hay", 0, false]]]]
+	for g in R:   # (11-28) thẻ chức năng chưa tới cấp: khóa + "Từ cấp N" (trước bấm chỉ hiện toast, thẻ không báo gì)
+		for r in g[2]:
+			var a: int = W._qf(String(FEAT.get(r[0], "")))
+			if a > 0:
+				r[2] = "Từ cấp " + str(a)
+				r[3] = 0
+				r[4] = true
+	return R
+
+const FEAT := {"kh": "khach", "hr": "thue", "rk": "xephang", "dl": "dulich"}   # thẻ -> khóa chức năng mở theo cấp (chuc_nang_mo_cap.json)
 
 func _cols() -> Array:   # c(): [khóa, tên, danh sách, là công trình, hình chip]
 	return [["ns", "Nông sản", WCA.book_ns(), false, "lua"], ["tc", "Trái cây", WCA.book_tc(), false, "qua_xoai"],
@@ -180,7 +190,7 @@ func _lang() -> Array:
 				ks.append(_dt(x + 42.0, y + 6.0, tw, 16.0, _fitw(String(r[1]), 11.5, 800, tw), 11.5, 800, "rgb(110, 104, 92)" if lk else BROWN, "left"))
 				var red: bool = int(r[3]) > 0
 				var sc := "rgb(190, 50, 60)" if red else SUB
-				ks.append(_dt(x + 42.0, y + 23.0, tw, 14.0, _fitw(String(r[2]), 9.5, 700 if red else 600, tw), 9.5, 700 if red else 600, sc, "left"))
+				ks.append(_dt(x + 42.0, y + 23.0, tw, 14.0, _fitw(String(r[2]), 10.5, 700 if red else 600, tw), 10.5, 700 if red else 600, sc, "left"))
 				if red:
 					ks.append(_dbx(x + w - 13.0, y + 5.0, 8.0, 8.0, "rgb(226, 70, 60)", 4.0))
 				if lk:   # chưa mở: hình mờ + ổ khóa

@@ -104,7 +104,7 @@ func _nghe() -> Array:
 	var y := 6.0
 	if Lk:   # (bản 459) chip khóa 2 dòng, không cắt chữ
 		var lc := _chip(X0, y, XW, 40.0, "sen")
-		lc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Nghề thủ công mở ở cấp " + str(Lk) + ".", 11.0, 800, "rgb(170, 50, 60)", "left"),
+		lc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Nghề thủ công mở ở cấp " + str(Lk) + ".", 12.0, 800, "rgb(170, 50, 60)", "left"),
 			_dt(X0 + 10.0, y + 20.0, XW - 20.0, 15.0, "Giờ xem trước, tới cấp mới học, mới làm.", 10.5, 600, "rgb(170, 60, 60)", "left")]
 		out.append(lc)
 		y += 40.0 + GG
@@ -142,16 +142,16 @@ func _nghe() -> Array:
 				k = "got"
 			else:   # (bản 457) chưa ai giữ: nói rõ chờ gì (cấp để có nguyên liệu, hay chờ dòng họ mới về làng)
 				var lv := _lvn(gx)
-				s = ("Mở ở cấp " + str(lv)) if lv > 0 else ""   # (11-28) chờ dòng họ mới: ghi 1 lần ở tiêu đề nhóm
+				s = ("Cấp " + str(lv)) if lv > 0 else ""   # (11-28) cấp mở nguyên liệu (tiêu đề nhóm nói rõ); chờ dòng họ mới: ghi 1 lần ở tiêu đề nhóm
 			var pid := _pid(gx)
 			var tip := String(gx.n) + ": " + String(gx.d) + (" Học ở nhà " + ", ".join(PackedStringArray(who)) + "." if who.size() > 1 else "") + (" Làm thử hư " + str(hu) + " lần." if hu else "")
 			if not (p is Dictionary) and who.is_empty():
 				tip += (" Lên cấp " + str(_lvn(gx)) + " mới có nhà giữ nghề này." if _lvn(gx) > 0 else " Làng có dòng họ mới về thì sẽ có nhà giữ nghề này.")
 			var od := 0 if k == "now" else (1 if k == "got" else (2 if _lvn(gx) == 0 else 3))
-			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip), "od": od})
-		bt.sort_custom(func(a, b2): return int(a.od) < int(b2.od))   # đang học -> có nhà dạy -> chờ họ mới -> chờ cấp
-		# (11-28) chia nhóm: Học được ngay (đang học / có nhà dạy) · Chờ dòng họ mới về làng · Chờ lên cấp; chip cao đều 62 (có mô tả)
-		for gp in [["Nghề chưa học", [0, 1]], ["Chờ dòng họ mới về làng", [2]], ["Chờ lên cấp", [3]]]:
+			bt.append({"b": String(gx.n), "s": s, "s2": String(gx.d), "ic": pid, "st": "", "k": k, "act": _dsay.bind(tip), "od": od, "lv": _lvn(gx)})
+		bt.sort_custom(func(a, b2): return int(a.od) < int(b2.od) or (int(a.od) == int(b2.od) and int(a.lv) < int(b2.lv)))   # cùng nhóm: cấp thấp trước   # đang học -> có nhà dạy -> chờ họ mới -> chờ cấp
+		# (11-28) chia nhóm: Học được ngay (đang học / có nhà dạy) · Chờ dòng họ mới về làng · Chờ nguyên liệu mở theo cấp (cấp thấp trước); chip cao đều 62 (có mô tả)
+		for gp in [["Nghề chưa học", [0, 1]], ["Chờ dòng họ mới về làng", [2]], ["Chờ nguyên liệu mở theo cấp", [3]]]:
 			var sub := bt.filter(func(o): return (gp[1] as Array).has(int(o.od)))
 			if sub.is_empty():
 				continue

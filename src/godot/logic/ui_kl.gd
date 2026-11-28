@@ -85,8 +85,9 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 	return out
 
 func _grp(id: String) -> String:   # nhóm cây: lua | rau | trai | quy (giống lai)
-	if WC2.lai_la(id):
-		return "quy"
+	return "quy" if WC2.lai_la(id) else _base(id)
+
+func _base(id: String) -> String:   # nhóm gốc cho hàng lọc (bỏ qua giống lai): lua | rau | trai
 	if id.begins_with("qua_"):
 		return "trai"
 	if id in ["lua", "lua_thom", "lua_man", "nep"]:
@@ -136,7 +137,7 @@ func _tu() -> Array:
 	out.append_array(_fchips(y, FLT, flt, _flt)[0])   # (11-28) hàng chip lọc chung
 	y += 24.0 + GG
 	# lưới: ô đã có trước (màu theo nhóm), ô chưa có sau (mờ)
-	var L := ids.filter(func(id): return flt == "" or (flt == "co" and k.b.has(id)) or (flt != "co" and (_grp(id) == flt or (flt == "rau" and _grp(id) == "quy" and not String(id).begins_with("qua_")) or (flt == "trai" and _grp(id) == "quy" and String(id).begins_with("qua_")))))
+	var L := ids.filter(func(id): return flt == "" or (flt == "co" and k.b.has(id)) or (flt != "co" and _base(String(id)) == flt))   # (11-28) giống lai lọc theo loại gốc (lúa thơm ST25 vào Lúa, trước lọt vào Rau)
 	var L1 := L.filter(func(id): return k.b.has(id))
 	var L2 := L.filter(func(id): return not k.b.has(id))
 	if L1.size():
