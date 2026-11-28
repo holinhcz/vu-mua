@@ -357,6 +357,30 @@ func _news_log(s: String) -> void:
 			return
 	G.w_all.WL.clg_add("nha", t)
 
+const STAR_SVG := "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 20 20\"><path d=\"M10 1l2.6 6 6.4.6-4.9 4.2 1.5 6.3L10 14.8 4.4 18.1l1.5-6.3L1 7.6 7.4 7z\" fill=\"rgb(255,208,64)\" stroke=\"rgb(190,120,20)\" stroke-width=\"1\"/></svg>"
+
+func sparks(c: Vector2, n := 9) -> void:   # (11-28) tia sao nổ từ điểm nhận thưởng: bung ra, rơi nhẹ rồi mờ
+	var L: CanvasLayer = fx_layer()
+	for q in n:
+		var s := randf_range(9.0, 14.0) * Css.K
+		var tr := TextureRect.new()
+		tr.texture = Css.svg_tex(STAR_SVG, s, s)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.size = Vector2(s, s)
+		tr.pivot_offset = tr.size * 0.5
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var ang := TAU * (float(q) + randf() * 0.5) / float(n)
+		var a := c - tr.size * 0.5
+		var far := Vector2(cos(ang), sin(ang)) * randf_range(36.0, 64.0) * Css.K
+		tr.position = a
+		L.add_child(tr)
+		var tw := tr.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(tr, "position", a + far + Vector2(0, 14.0 * Css.K), 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(tr, "scale", Vector2(0.3, 0.3), 0.5)
+		tw.tween_property(tr, "modulate:a", 0.0, 0.3).set_delay(0.25)
+		tw.chain().tween_callback(tr.queue_free)
+
 func fly(s: String) -> void:   # (bản 505) chữ bay: kết quả bấm (+1.000 xu...) nổi lên từ chỗ chạm rồi mờ
 	var lb := Label.new()
 	lb.text = s
