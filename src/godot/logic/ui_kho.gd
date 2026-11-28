@@ -39,6 +39,20 @@ func _init(ui) -> void:
 	chip_css.xok = lk[0]
 	chip_css.xno = Snap.find(T.k3_no, "need").kids[0]
 
+static func _plain_css(c: Dictionary) -> Dictionary:
+	var o := c.duplicate()
+	o["background-color"] = "rgba(0, 0, 0, 0)"
+	o["background-image"] = "none"
+	o["box-shadow"] = "none"
+	o["border-radius"] = "0px"
+	for s in ["top", "right", "bottom", "left"]:
+		o["border-" + s] = "0px none rgb(0, 0, 0)"
+		o["padding-" + s] = "0px"
+	o["filter"] = "none"
+	o["position"] = "static"
+	o["display"] = "inline"
+	return o
+
 func _mix(n: Dictionary, old_l: String, new_l: String, new_r: String, cx: float) -> void:
 	# n: chữ = trái + phải, kid[0] = hình ở giữa. Đo khoảng hở hai bên hình từ bản chụp, xếp lại giữa cx.
 	var ic: Dictionary = n.kids[0]

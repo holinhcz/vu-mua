@@ -80,18 +80,34 @@ func _build() -> void:
 		out.append_array(_hd(y, "Hôm nay được giá"))
 		y += 16.0 + 6.0
 		var hg := 6.0
-		var hw := (XW - hg * (hl.size() - 1)) / hl.size()
+		var need := []   # (11-28) chip rộng theo chữ (hình + tên + ×), phần dư chia đều, không cắt chữ
+		for e in hl:
+			need.append(30.0 + Box.text_w(G.item_name(String(e[0])), 10.5, 700) + 4.0 + Box.text_w(W.h5(float(e[1])), 10.5, 800) + 8.0)
+		var per := hl.size()   # không vừa một hàng thì 2 chip một hàng
+		var sum := 0.0
+		for e in need:
+			sum += float(e)
+		if sum + hg * (per - 1) > XW:
+			per = 2
+		var x := X0
+		var HW: Array = []
+		for r0 in range(0, hl.size(), per):
+			HW.append_array(_flex_w(need.slice(r0, mini(r0 + per, hl.size())), XW, hg))
 		for i in hl.size():
+			if i > 0 and i % per == 0:
+				x = X0
+				y += 26.0 + 6.0
 			var id := String(hl[i][0])
 			var s: String = W.h5(float(hl[i][1]))
-			var x := X0 + i * (hw + hg)
+			var hw: float = HW[i]
 			var sw: float = Box.text_w(s, 10.5, 800) + 4.0
 			var c := _chip(x, y, hw, 26.0, "fire_l")
 			c.kids = [_icx(x + 14.0, y + 13.0, 18.0, id),
-				_dt(x + 26.0, y, hw - 30.0 - sw, 26.0, _fitw(G.item_name(id), 9.5, 700, hw - 30.0 - sw), 9.5, 700, BROWN, "left"),
+				_dt(x + 26.0, y, hw - 30.0 - sw, 26.0, _fitw(G.item_name(id), 10.5, 700, hw - 30.0 - sw), 10.5, 700, BROWN, "left"),
 				_dt(x + hw - 4.0 - sw, y, sw, 26.0, s, 10.5, 800, "rgb(190, 80, 20)", "left")]
 			c.act = _dsay.bind(G.item_name(id) + " hôm nay được giá " + s + ". Bán trong Kho hoặc giao đơn có món này được thêm 30%.")
 			out.append(c)
+			x += hw + hg
 		y += 26.0 + GG
 	# lưới kèo: chưa xong lên đầu
 	var T: Array = W.jd()[a]
