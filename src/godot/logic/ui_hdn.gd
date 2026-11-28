@@ -91,7 +91,7 @@ func _facen(nm: String, used := {}) -> String:   # mặt tròn của nhà tên n
 
 func _ichip(x: float, y: float, w: float, ic: String, t: String, kd := "fut", col := BROWN) -> Dictionary:   # chip nhỏ: hình + chữ
 	var c := _chip(x, y, w, 26.0, kd)
-	c.kids = [_hic(x + 14.0, y + 13.0, 16.0, ic), _dt(x + 25.0, y, w - 28.0, 26.0, _fitw(t, 10.0, 700, w - 28.0), 10.0, 700, col, "left")]
+	c.kids = [_hic(x + 14.0, y + 13.0, 16.0, ic), _dt(x + 25.0, y, w - 28.0, 26.0, _fitw(t, 10.5, 700, w - 28.0), 10.5, 700, col, "left")]
 	return c
 
 # chip đầu: hình đình, loại hội, trạng thái; dưới: 3 chip số liệu
@@ -104,21 +104,24 @@ func _top(y: float, ttl: String, st: String, stc: String) -> Array:
 	out.append(c)
 	y += 52.0 + 6.0
 	var mon := str(WH.hdn_mon(WH.hdn_day_pick()))
-	var w := (XW - 12.0) / 3.0
-	out.append(_ichip(X0, y, w, "svg:res://ui/svg/mat/huychuong.svg", "+20–50 uy tín"))
-	out.append(_ichip(X0 + w + 6.0, y, w, FLAG, "Lo 3 ngày"))
-	out.append(_ichip(X0 + (w + 6.0) * 2.0, y, w, CAL, "Tháng này " + str(WH._i(o.m.get(mon))) + "/" + str(WH.hdn_max())))
+	var T := ["+20–50 uy tín", "Lo 3 ngày", "Tháng này " + str(WH._i(o.m.get(mon))) + "/" + str(WH.hdn_max())]
+	var W: Array = _flex_w(T.map(func(t): return Box.text_w(t, 10.5, 700) + 32.0), XW, 6.0)   # (11-28) chip rộng theo chữ, không cắt
+	var IC := ["svg:res://ui/svg/mat/huychuong.svg", FLAG, CAL]
+	var cx := X0
+	for i in 3:
+		out.append(_ichip(cx, y, W[i], IC[i], T[i]))
+		cx += float(W[i]) + 6.0
 	return [out, y + 26.0]
 
 func _steps(y: float, cur: int) -> Array:   # 3 bước: Định ngày → Chuẩn bị → Ngày hội (cur 0..2: bước đang ở)
 	var out := []
-	var N := ["Định ngày", "Chuẩn bị 3 ngày", "Ngày hội"]
+	var N := ["Định ngày", "Chuẩn bị", "Ngày hội"]   # (11-28) "3 ngày" đã có ở chip "Lo 3 ngày": bước gọn, không cắt
 	var w := (XW - 2.0 * 14.0) / 3.0
 	for i in 3:
 		var x := X0 + i * (w + 14.0)
 		var kd := "now" if i == cur else ("got" if i < cur else "fut")
 		var c := _chip(x, y, w, 24.0, kd)
-		c.kids = [_dt(x, y, w, 24.0, str(i + 1) + ". " + String(N[i]), 9.5, 800 if i == cur else 700, BROWN if i >= cur else "rgb(40, 110, 50)")]
+		c.kids = [_dt(x, y, w, 24.0, str(i + 1) + ". " + String(N[i]), 10.5, 800 if i == cur else 700, BROWN if i >= cur else "rgb(40, 110, 50)")]
 		out.append(c)
 		if i < 2:
 			out.append(_dic(x + w + 2.0, y + 7.0, 10.0, ARR))

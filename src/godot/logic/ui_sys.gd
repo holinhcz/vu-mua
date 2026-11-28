@@ -1,11 +1,10 @@
 extends "res://logic/ui_ls.gd"
-# HỆ THỐNG (gu("sys") / htRender bản web, Menu › Hệ Thống): khung bảng chung (ui_bang.gd) như Kho; trên đầu 3 ô tóm tắt làm tab
-# (#htSum .htc: Điểm, Nhánh, Hôm nay), thanh tre ngang (.htrod), thân cuộn (.lsbody) dùng khối chung của ui_ls.gd.
+# HỆ THỐNG (gu("sys") / htRender bản web, Menu › Hệ Thống): khung bảng có tab chung (ui_ls.gd, như Uy tín): tab Nhiệm vụ /
+# Nhánh / Cửa hàng; dòng đầu thân tóm tắt Điểm · Nhánh · Hôm nay (thay 3 ô tóm tắt cũ bị chữ đè).
 # Tab Nhiệm vụ (htTabNv), Nhánh (htTabPt), Cửa hàng (htTabShop + Túi đặc sản DH + Xe hàng BX).
 # Mẫu: ui/snap/sys.json (khung), sys_tab.json (ô tóm tắt, hàng nút .vl-jobs, túi đặc sản, Xe hàng). Luật ở w_sys.gd.
 
 var W          # w_sys.gd
-var SB := {}                # khung
 var ST := {}                # khối mẫu
 var shop_open := false      # details#sysShop đang mở
 const SPICO := {"an": "🍜", "qua": "🎁", "giong": "🌱", "vat": "🧰"}
@@ -14,7 +13,6 @@ const LEAF := "rgb(95, 178, 74)"   # .pips i.on: var(--leaf)
 func _init(ui, ws) -> void:
 	super(ui)
 	W = ws
-	SB = Snap.load_snap("sys")["#pov"][0]
 	ST = Snap.load_snap("sys_tab")
 
 func open(t := "") -> void:   # gu("sys")
@@ -45,13 +43,10 @@ func _sig() -> String:
 	return JSON.stringify([W.HTV.tab, W.HTV.br, W.HTV.get("pick"), W.sys(), W.htS(), o, t, W.jr(), shop_open, G.g.get("sen"),
 		G.ao((float(n.get("boost", 0)) - G._now_ms()) / 1000.0) if float(n.get("boost", 0)) > G._now_ms() else ""])
 
-func _build() -> void:
+func _build() -> void:   # (11-28) tab chung (hàng tab khung sen như Uy tín) thay 3 ô tóm tắt cũ bị chữ đè; tóm tắt thành dòng đầu thân
 	sig = _sig()
 	if W.HTV.tab != "pt" and W.HTV.tab != "shop":
 		W.HTV.tab = "nv"
-	var n := _cl(SB)
-	var hs := _find(n, "htsum")
-	hs.kids = _sum_cells()
 	var blocks: Array
 	match W.HTV.tab:
 		"pt":
@@ -60,16 +55,21 @@ func _build() -> void:
 			blocks = _shop()
 		_:
 			blocks = _nv()
-	_show(n, _find(n, "lsbody"), blocks, 3.0)
-	U._layout()
+	var C := _sum_txt()
+	var red: bool = W.htRed() > 0
+	_ls_build([["nv", "Nhiệm vụ", red], ["pt", "Nhánh", false], ["shop", "Cửa hàng", false]], W.HTV.tab, _tab_go2, [_sum2(C)] + blocks)
+
+func _tab_go2(k: String) -> void:
+	_tab_go(k)
+	_build()
 
 func _tab_go(k: String) -> void:   # data-ht="tab"
 	if W.HTV.tab != k:
 		W.HTV.tab = k
 		scroll = 0.0
 
-# ------------------------------------------------------------------ 3 ô tóm tắt (htSum)
-func _sum_cells() -> Array:
+# ------------------------------------------------------------------ tóm tắt (htSum): Điểm · Nhánh · Hôm nay, một dòng đầu thân
+func _sum_txt() -> Array:
 	var o: Dictionary = W.htNv()
 	var k = o.kh.get("q") if o.get("kh") is Dictionary else null
 	var d := 0
@@ -78,43 +78,12 @@ func _sum_cells() -> Array:
 			d += 1
 	var tu: Dictionary = o.tu.q
 	var c0 = o.get("c0")
-	var lv: int = W.jr()
-	var C := [["shop", "Điểm", G.fmt_n(float(W.sys().pts)), "+5 mỗi cấp"],
-		["pt", "Nhánh", String(W.HTB[c0]) if W._tr(c0) else "Chưa chọn",
-			("Phụ: " + String(W.HTB[o.p0])) if W._tr(c0) else ("Chọn ngay" if lv >= int(W.HTLV[1]) else "Cấp " + _s(W.HTLV[1]) + " mở")],
-		["nv", "Hôm nay", str(d) + "/" + str(o.nv.l.size()),
-			("Khẩn còn " + G.ao(maxf(0.0, (float(k.t1) - G._now_ms()) / 1000.0))) if k is Dictionary and not W._tr(k.get("ok")) else ("Tuần " + str(W.htQCur(tu)) + "/" + _s(tu.m))]]
-	var X := [[16.5, 91.06], [112.06, 113.86], [230.42, 91.06]]
-	var red: bool = W.htRed() > 0
-	var out := []
-	for i in 3:
-		var a: bool = W.HTV.tab == C[i][0]
-		var c := _cl(ST.htc_on if i == 0 else ST.htc2)
-		var sty: Dictionary = ST.htc_on if a else ST.htc
-		c.cls = sty.cls
-		c.css = sty.css.duplicate(true)
-		for pe in ["::before", "::after"]:
-			c.erase(pe)
-			if sty.has(pe):
-				c[pe] = sty[pe].duplicate(true)
-		var dx := float(X[i][0]) - float(c.r[0])
-		Snap._move(c, Vector2(dx, 0.0))
-		c.r[2] = X[i][1]
-		var sm: Dictionary = c.kids[0]
-		var sp: Dictionary = c.kids[1]
-		var em: Dictionary = c.kids[2]
-		_txt(sm, String(C[i][1]))
-		_txt(em, String(C[i][3]))
-		var b: Dictionary = sp.kids[sp.kids.size() - 1]
-		_txt(b, String(C[i][2]))
-		sp.r[2] = float(b.r[0]) + float(b.r[2]) - float(sp.r[0])
-		if C[i][0] == "nv" and red:
-			var dt := _cl(ST.htdot)
-			_mv(dt, float(X[i][0]) + float(X[i][1]) - 11.25, float(c.r[1]) + 5.25)
-			c.kids = [dt] + c.kids
-		c.act = _tab_go.bind(String(C[i][0]))
-		out.append(c)
-	return out
+	var t: String = "Điểm " + G.fmt_n(float(W.sys().pts)) + " · Nhánh " + (String(W.HTB[c0]) if W._tr(c0) else "chưa chọn") + " · Hôm nay " + str(d) + "/" + str(o.nv.l.size())
+	if k is Dictionary and not W._tr(k.get("ok")):
+		t += " · khẩn còn " + G.ao(maxf(0.0, (float(k.t1) - G._now_ms()) / 1000.0))
+	else:
+		t += " · tuần " + str(W.htQCur(tu)) + "/" + _s(tu.m)
+	return [[t, true]]
 
 func _txt(n: Dictionary, s: String) -> void:   # chữ một dòng, hộp co theo chữ
 	var tw := _tw(n, s)

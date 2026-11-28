@@ -133,20 +133,7 @@ func _tu() -> Array:
 	out.append_array(_bar(X0 + 10.0, y + 31.0, XW - 20.0, float(got) / maxf(1.0, ids.size()), 6.0))
 	y += 50.0 + GG
 	# hàng lọc
-	var cx := X0
-	var cw := (XW - 4.0 * (FLT.size() - 1)) / FLT.size()
-	for f in FLT:
-		var on: bool = flt == String(f[0])
-		var fc := _chip(cx, y, cw, 24.0, "thue" if on else "fut")
-		var kk := []
-		var hi := String(f[2]) != ""
-		if hi:
-			kk.append(_icn(cx + 11.0, y + 12.0, 15.0, String(f[2])))
-		kk.append(_dt(cx + (19.0 if hi else 0.0), y, cw - (21.0 if hi else 0.0), 24.0, _fitw(String(f[1]), 10.0, 700, cw - 21.0), 10.0, 700, BROWN, "center"))
-		fc.kids = kk
-		fc.act = _flt.bind(String(f[0]))
-		out.append(fc)
-		cx += cw + 4.0
+	out.append_array(_fchips(y, FLT, flt, _flt)[0])   # (11-28) hàng chip lọc chung
 	y += 24.0 + GG
 	# lưới: ô đã có trước (màu theo nhóm), ô chưa có sau (mờ)
 	var L := ids.filter(func(id): return flt == "" or (flt == "co" and k.b.has(id)) or (flt != "co" and (_grp(id) == flt or (flt == "rau" and _grp(id) == "quy" and not String(id).begins_with("qua_")) or (flt == "trai" and _grp(id) == "quy" and String(id).begins_with("qua_")))))

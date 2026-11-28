@@ -18,6 +18,9 @@ func _ls_build(L: Array, cur: String, go: Callable, blocks: Array) -> void:   # 
 	var n := _cl(UB)
 	_seg_tabs(_find(n, "lstabs"), L, cur, go, {})
 	var top := 6.0 if blocks.size() and String(blocks[0].cls).begins_with("vl-sec") else 3.0
+	if Sen.ON:   # (11-28) khung sen: thân dừng trên chóp đáy + hoa sen (đáy chung Sen.DAY, như các bảng khung chung)
+		var bd := _find(n, "lsbody")
+		bd.r = [bd.r[0], bd.r[1], bd.r[2], float(bd.r[3]) - Sen.DAY]
 	_show(n, _find(n, "lsbody"), blocks, top)
 	U._layout()
 
@@ -52,7 +55,10 @@ func _sum2(runs: Array) -> Dictionary:   # p.lssum: [[chữ, đậm?]]
 	var sp := _cl(p)
 	sp.erase("kids")
 	var sb: Dictionary = p.kids[0]
+	var w0 := float(p.r[2])
+	p.r[2] = w0 - 40.0   # (11-28) chừa mép phải: chữ cỡ thật (bộ 4 cỡ) rộng hơn lúc đo theo mẫu web, dòng dài lố khung
 	var h := _put(p, runs.map(func(z): return _r(String(z[0]), sb if z[1] else sp)))
+	p.r[2] = w0
 	p.r[3] = h
 	return p
 

@@ -928,3 +928,76 @@ func _mat_ic(id: String) -> String:   # (bản 549) mã hình vật liệu nâng
 	if FileAccess.file_exists("res://ui/svg/mat/" + id + ".svg"):
 		return "svg:res://ui/svg/mat/" + id + ".svg"
 	return id
+
+# (11-28) THANH MỐC QUÀ CHUNG (Nhiệm vụ năng động, 7 ngày về làng): tiêu đề + số / tổng, hàng ô quà theo mốc, thanh, số mốc
+# L: [[mốc, hình quà, đã nhận?, nhận(), tên?, mô tả?]]; trả [khối, cao]
+func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0, ic := "") -> Array:   # g: tiêu đề -> hàng hình
+	var out := []
+	var vs := str(cur)
+	var tw: float = Box.text_w("/" + str(top), 11.0, 700)
+	var vw: float = Box.text_w(vs, 14.0, 800)
+	out.append_array(_hd(y + 5.0, name, ic, tw + vw + 10.0))   # (11-26) tiêu đề mục chung, số điểm bên phải
+	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
+	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
+	var cs := 34.0
+	var iy := y + 26.0 + g + 4.0   # chip tên -> hàng quà: rộng hơn g một chút (quà nổi, dễ dính chip tên)
+	var bxl := X0 + cs * 0.5
+	var bxw := XW - cs
+	var by := iy + cs + 6.0
+	out.append_array(_bar(X0 + 2.0, by, XW - 4.0, float(cur) / float(maxi(1, top)), 7.0))
+	for m in L:
+		var p := int(m[0])
+		var cx := bxl + bxw * float(p) / float(maxi(1, top))
+		var got: bool = m[2]
+		var ok := cur >= p
+		if ok and not got:   # (11-26) đủ mốc chờ nhận: tia sáng sau ô
+			out.append(_fx_tia(cx, iy + cs * 0.5, cs * 1.9))
+		var c := _chip(cx - cs * 0.5, iy, cs, cs, "got" if got else ("now" if ok else "fut"))
+		var ks := [_dick(cx, iy + cs * 0.5, 24.0, String(m[1]), 0.5 if got else 1.0)]
+		c.kids = ks
+		if ok and not got:
+			c.act = m[3]
+			c.fx = "lac"
+		elif m.size() > 4:   # (bản 504) chạm quà chưa nhận / đã nhận: bong bóng hình, tên, quà bên trong
+			c.act = _dtip.bind(String(m[5]), "gift:" + String(m[1]), String(m[4]) + " · mốc " + str(p) + (" · đã nhận" if got else ""))
+		out.append(c)
+		out.append(_dbx(cx - 1.0, by - 1.0, 2.0, 9.0, "rgb(190, 160, 100)" if not ok else "rgb(32, 112, 58)", 1.0))
+		out.append(_fx_nhan(cx, by + 9.0) if ok and not got else _dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 9.5, 700, SUB))
+	return [out, by + 11.0 + 12.0 - y]
+
+# (11-28) HÀNG CHIP LỌC CHUNG (Kỷ lục, Làm thuê...): F = [[khóa, chữ, món hình | ""]], chip rộng theo chữ (+ hình), phần dư chia đều;
+#   không đủ chỗ mới thu đều và cắt "…". Trả [khối, cao].
+func _flex_w(cs: Array, total: float, gap: float) -> Array:   # cs: bề ngang cần của từng chip
+	var sum := 0.0
+	for c in cs:
+		sum += float(c)
+	var room := total - gap * (cs.size() - 1)
+	var ex := (room - sum) / maxf(1.0, cs.size())
+	var k := 1.0 if ex >= 0.0 else room / maxf(1.0, sum)
+	return cs.map(func(c): return float(c) + ex if ex >= 0.0 else float(c) * k)
+
+func _fchips(y: float, F: Array, cur: String, cb: Callable, on_kind := "thue") -> Array:
+	var out := []
+	var need := []
+	for f in F:
+		need.append(Box.text_w(String(f[1]), 10.5, 700) + 14.0 + (19.0 if String(f[2]) != "" else 0.0))
+	var W: Array = _flex_w(need, XW, 4.0)
+	var cx := X0
+	for i in F.size():
+		var f: Array = F[i]
+		var cw: float = W[i]
+		var fc := _chip(cx, y, cw, 24.0, on_kind if cur == String(f[0]) else "fut")
+		var hi := String(f[2]) != ""
+		var kk := []
+		var tw: float = Box.text_w(String(f[1]), 10.5, 700) + 1.0
+		var gx := cx + (cw - tw - (19.0 if hi else 0.0)) * 0.5   # hình + chữ canh giữa chip
+		if hi:
+			kk.append(_icn(maxf(cx + 11.0, gx + 8.0), y + 12.0, 15.0, String(f[2])))
+			gx = maxf(cx + 19.0, gx + 19.0)
+		var aw := cx + cw - 3.0 - gx
+		kk.append(_dt(gx, y, aw, 24.0, _fitw(String(f[1]), 10.5, 700, aw), 10.5, 700, BROWN, "left"))
+		fc.kids = kk
+		fc.act = cb.bind(String(f[0]))
+		out.append(fc)
+		cx += cw + 4.0
+	return [out, 24.0]

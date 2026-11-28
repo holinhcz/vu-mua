@@ -81,19 +81,7 @@ func _body() -> Array:   # sm
 		out.append(_dt(X0 + 12.0, y + 23.0, XW - 24.0, 15.0, "Chạm nhà nào để giao việc. Càng thân càng rẻ.", 10.5, 600, SUB, "left"))
 	y += 44.0 + GG
 	# (bản 473) hàng lọc theo sở trường
-	var cx := X0
-	var cw := (XW - 4.0 * (FLT.size() - 1)) / FLT.size()   # 5 chip rộng bằng nhau, vừa 1 hàng
-	for f in FLT:
-		var on: bool = flt == String(f[0])
-		var fc := _chip(cx, y, cw, 24.0, "thue" if on else "fut")
-		var kk := []
-		if String(f[2]) != "":
-			kk.append(_icn(cx + 11.0, y + 12.0, 15.0, String(f[2])))
-		kk.append(_dt(cx + (19.0 if String(f[2]) != "" else 0.0), y, cw - (21.0 if String(f[2]) != "" else 0.0), 24.0, _fitw(String(f[1]), 10.0, 700, cw - 21.0), 10.0, 700, BROWN, "center"))
-		fc.kids = kk
-		fc.act = _flt.bind(String(f[0]))
-		out.append(fc)
-		cx += cw + 4.0
+	out.append_array(_fchips(y, FLT, flt, _flt)[0])   # (11-28) hàng chip lọc chung
 	y += 24.0 + GG
 	if flt != "":   # lọc: chỉ nhà giỏi nghề đó, sao cao trước, rẻ trước
 		ks = ks.filter(func(u): return String(W.x9(u, F[u])) == flt)

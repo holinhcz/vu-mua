@@ -125,12 +125,12 @@ func _q_changed(t: String) -> void:   # ô tìm: lọc mục có chữ
 	q = _low(t)
 	_redo()
 
-var _fx := {}   # mã mục -> chữ đã bỏ dấu (tìm nhanh)
+var _ftx := {}   # mã mục -> chữ đã bỏ dấu (tìm nhanh)
 func _fold(it: Dictionary) -> String:
 	var k := String(it.id)
-	if not _fx.has(k):
-		_fx[k] = _low(String(it.n) + " " + String(it.get("s", "")) + " " + " ".join(PackedStringArray(it.b)))
-	return _fx[k]
+	if not _ftx.has(k):
+		_ftx[k] = _low(String(it.n) + " " + String(it.get("s", "")) + " " + " ".join(PackedStringArray(it.b)))
+	return _ftx[k]
 
 func _ico(it: Dictionary) -> String:
 	return String(ICO.get(String(it.id), String(it.ic)))
