@@ -961,28 +961,43 @@ func _flex_w(cs: Array, total: float, gap: float) -> Array:   # cs: bề ngang c
 	var k := 1.0 if ex >= 0.0 else room / maxf(1.0, sum)
 	return cs.map(func(c): return float(c) + ex if ex >= 0.0 else float(c) * k)
 
-func _fchips(y: float, F: Array, cur: String, cb: Callable, on_kind := "thue") -> Array:
+func _fchips(y: float, F: Array, cur: String, cb: Callable, _on_kind := "") -> Array:   # (11-28) cùng kiểu chip lọc Kho: đang chọn = nút xanh gờ vàng, còn lại chip kem gờ vàng, chữ 11 đậm; "?" = chip tre
 	var out := []
 	var need := []
 	for f in F:
-		need.append(Box.text_w(String(f[1]), 10.5, 700) + 14.0 + (19.0 if String(f[2]) != "" else 0.0))
-	var W: Array = _flex_w(need, XW, 4.0)
+		need.append(Box.text_w(String(f[1]), 11.0, 800) + 14.0 + (19.0 if String(f[2]) != "" else 0.0))
+	var eq := (XW - 6.0 * (F.size() - 1)) / F.size()   # rộng đều như Kho nếu chữ nào cũng vừa
+	var fitall := true
+	for c in need:
+		fitall = fitall and float(c) <= eq
+	var W: Array = []
+	for i in F.size():
+		W.append(eq)
+	if not fitall:
+		W = _flex_w(need, XW, 6.0)
 	var cx := X0
 	for i in F.size():
 		var f: Array = F[i]
 		var cw: float = W[i]
-		var fc := _chip(cx, y, cw, 24.0, on_kind if cur == String(f[0]) else "fut")
+		var k := String(f[0])
+		var on := cur == k
 		var hi := String(f[2]) != ""
+		var tw: float = Box.text_w(String(f[1]), 11.0, 800) + 1.0
+		var gx := cx + (cw - tw - (19.0 if hi else 0.0)) * 0.5
 		var kk := []
-		var tw: float = Box.text_w(String(f[1]), 10.5, 700) + 1.0
-		var gx := cx + (cw - tw - (19.0 if hi else 0.0)) * 0.5   # hình + chữ canh giữa chip
 		if hi:
 			kk.append(_icn(maxf(cx + 11.0, gx + 8.0), y + 12.0, 15.0, String(f[2])))
 			gx = maxf(cx + 19.0, gx + 19.0)
 		var aw := cx + cw - 3.0 - gx
-		kk.append(_dt(gx, y, aw, 24.0, _fitw(String(f[1]), 10.5, 700, aw), 10.5, 700, BROWN, "left"))
+		var col := "rgb(255, 255, 255)" if on else BROWN
+		kk.append(_dt(gx, y, aw, 24.0, _fitw(String(f[1]), 11.0, 800, aw), 11.0, 800, col, "left"))
+		var fc: Dictionary
+		if on:
+			fc = _onbtn(cx, y, cw, 24.0, "", null)
+		else:
+			fc = _chip(cx, y, cw, 24.0, "tre" if k == "?" else "fut", true)
+			fc.act = cb.bind(k)
 		fc.kids = kk
-		fc.act = cb.bind(String(f[0]))
 		out.append(fc)
-		cx += cw + 4.0
+		cx += cw + 6.0
 	return [out, 24.0]

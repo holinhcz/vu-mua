@@ -128,13 +128,13 @@ func _bcard(x: float, y: float, w: float, c: Dictionary) -> Array:   # thẻ mó
 	var ic := _dbx(x + (w - IH * 1.23) * 0.5, y + 6.0, IH * 1.23, IH, "rgba(0, 0, 0, 0)", 0.0)
 	ic.bdic = c.ic
 	ic.bdlk = lk
-	k.kids = [ic, _dt(x + 4.0, y + 56.0, w - 8.0, 16.0, _fitw(String(c.name), 12.0, 700, w - 8.0), 12.0, 700, SUB if lk else BROWN)]
+	k.kids = [ic, _dt(x + 4.0, y + 56.0, w - 8.0, 16.0, _fitw(String(c.name), 11.0, 500, w - 8.0), 11.0, 500, SUB if lk else BROWN)]
 	var py := y + 74.0
 	if c.pr[0] == "c":
 		var parts := [G.fmt_n(int(c.pr[1])), "c"]
 		if String(c.pr[2]) != "":
 			parts.append("/" + String(c.pr[2]))
-		var rw: Array = _rowi(0.0, 0.0, 16.0, parts, 12.0, 800, DOWN if poor else "rgb(214, 128, 20)")
+		var rw: Array = _rowi(0.0, 0.0, 16.0, parts, 11.0, 800, DOWN if poor else "rgb(214, 128, 20)")   # giá như thẻ Kho
 		for q in rw[0]:
 			Snap._move(q, Vector2(x + (w - float(rw[1])) * 0.5, py))
 			k.kids.append(q)
@@ -156,6 +156,14 @@ func _bcard(x: float, y: float, w: float, c: Dictionary) -> Array:   # thẻ mó
 		k.act = func(): BD._card(c)
 	return [k]
 
+var _ict := 0.0
+func step(dt: float) -> void:   # ô hình bị dọn khi dựng lại: soi lại 4 lần / giây
+	super(dt)
+	_ict -= dt
+	if on and _ict <= 0.0:
+		_ict = 0.25
+		_icons()
+
 func _icons() -> void:   # vẽ hình thẻ (BD._icon) vào ô hình chưa có hình (thẻ dùng lại giữ hình cũ)
 	if box == null or not is_instance_valid(box):
 		return
@@ -165,9 +173,15 @@ func _icons() -> void:   # vẽ hình thẻ (BD._icon) vào ô hình chưa có h
 		if nd is Control and nd.has_meta("snap"):
 			var sn = nd.get_meta("snap")
 			if sn is Dictionary and sn.has("bdic"):
-				if not nd.has_meta("bdok") and nd.size.x > 0.0:
-					nd.set_meta("bdok", true)
+				var ok := false   # hình còn gắn trong ô? (ô dùng lại có thể bị dọn con) -> không thì vẽ lại
+				for ch in nd.get_children():
+					if ch.has_meta("bdic"):
+						ok = true
+				if not ok and nd.size.x > 0.0:
+					var n0 := nd.get_child_count()
 					BD._icon(nd, sn.bdic, bool(sn.bdlk))
+					for q in range(n0, nd.get_child_count()):
+						nd.get_child(q).set_meta("bdic", true)
 				continue
 		for ch in nd.get_children():
 			st.append(ch)
