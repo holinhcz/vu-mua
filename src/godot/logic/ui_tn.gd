@@ -85,7 +85,7 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 		var rl: Dictionary = out[2]
 		rl.r[2] = maxf(0.0, float(rl.r[2]) - 26.0)
 		var q := _chip(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "info")
-		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 11.0, 800, "rgb(60, 110, 170)")]
+		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 10.5, 800, "rgb(60, 110, 170)")]
 		q.act = func(): U.tre_help(t, help)
 		out.append(q)
 	return out
@@ -118,8 +118,8 @@ func _xcost(rx: float, y: float, q: Dictionary) -> Array:   # (bản 465) tiền
 		return [[], 0.0]
 	var n := int(q.xu)
 	var P := [W._sa(n), "c"]
-	var pw := float(_rowi(0.0, 0.0, 26.0, P, 11.5, 800, "")[1])
-	return [_rowi(rx - pw, y, 26.0, P, 11.5, 800, BROWN if WD._tn_hv("xu") >= n else "rgb(190, 60, 50)")[0], pw]
+	var pw := float(_rowi(0.0, 0.0, 26.0, P, 12.0, 800, "")[1])
+	return [_rowi(rx - pw, y, 26.0, P, 12.0, 800, BROWN if WD._tn_hv("xu") >= n else "rgb(190, 60, 50)")[0], pw]
 
 func _vl(uu) -> void:   # chạm mặt nhà gặp nạn: mở nhà đó
 	U.vl_open(int(uu))
@@ -152,7 +152,7 @@ func _phong() -> Array:
 	var y := 6.0
 	if not W.tn_ok():
 		var lc := _chip(X0, y, XW, 40.0, "info")
-		lc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Lên cấp " + str(W.TNLV) + " mới gặp thiên tai.", 11.0, 800, "rgb(50, 96, 150)", "left"),
+		lc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Lên cấp " + str(W.TNLV) + " mới gặp thiên tai.", 10.5, 800, "rgb(50, 96, 150)", "left"),
 			_dt(X0 + 10.0, y + 20.0, XW - 20.0, 15.0, "Tới lúc đó, trước mỗi trận 2 ngày sẽ có tin báo.", 10.5, 600, "rgb(70, 110, 160)", "left")]
 		out.append(lc)
 		y += 40.0 + GG
@@ -173,7 +173,7 @@ func _phong() -> Array:
 			Snap._move(dn[0], Vector2(XW - 10.0 - float(dn[1]), 0))
 			out.append(dn[0])
 			var tw := XW - 66.0 - float(dn[1]) - 6.0
-			out.append(_dt(X0 + 56.0, y + 10.0, tw, 17.0, _fitw(String(K.n), 12.5, 800, tw), 12.5, 800, BROWN, "left"))
+			out.append(_dt(X0 + 56.0, y + 10.0, tw, 17.0, _fitw(String(K.n), 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 			out.append_array(pp[0])
 			y += h + GG
 			# phòng trước: 2 khối việc
@@ -213,9 +213,9 @@ func _phong() -> Array:
 			for wk in W0:
 				var kk := String(wk[0])
 				var nm := String(WD.TNK[kk].n)
-				var cw: float = Box.text_w(nm, 10.0, 700) + 30.0
+				var cw: float = Box.text_w(nm, 10.5, 700) + 30.0
 				var tc := _chip(cx, y + 42.0, cw, 18.0, _kk(kk))
-				tc.kids = [_kic(cx + 10.0, y + 51.0, 13.0, kk), _dt(cx + 19.0, y + 42.0, cw - 22.0, 18.0, nm, 10.0, 700, BROWN, "left")]
+				tc.kids = [_kic(cx + 10.0, y + 51.0, 13.0, kk), _dt(cx + 19.0, y + 42.0, cw - 22.0, 18.0, nm, 10.5, 700, BROWN, "left")]
 				tc.act = _dsay.bind(nm + ": " + String(WD.TNK[kk].d))
 				out.append(tc)
 				cx += cw + 5.0
@@ -230,7 +230,7 @@ func _phong() -> Array:
 		for c5 in CT:
 			nh += 1 if c5[2] else 0
 		var cc := _chip(X0, y, XW, 30.0, "fut")
-		cc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, "Đã có " + str(nh) + "/" + str(CT.size()) + " công trình", 11.5, 800, BROWN, "left"),
+		cc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, "Đã có " + str(nh) + "/" + str(CT.size()) + " công trình", 12.0, 800, BROWN, "left"),
 			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if ctx else CHD)]
 		cc.act = func(): ctx = not ctx
 		out.append(cc)
@@ -311,7 +311,7 @@ func _nan() -> Array:
 		out.append(c)
 		out.append(_kic(X0 + 22.0, y + 29.0, 26.0, String(lo.k)))
 		out.append(_dt(X0 + 42.0, y + 8.0, XW - 110.0, 16.0, _fitw("Lo cho bà con sau " + String(WD.TNK[lo.k].n).to_lower(), 12.0, 800, XW - 110.0), 12.0, 800, BROWN, "left"))
-		out.append(_dt(X0 + XW - 70.0, y + 8.0, 60.0, 16.0, str(hp) + "/" + str(lo.u.size()) + " nhà", 11.0, 800, "rgb(46, 120, 50)" if hp * 2 >= lo.u.size() else BROWN, "right"))
+		out.append(_dt(X0 + XW - 70.0, y + 8.0, 60.0, 16.0, str(hp) + "/" + str(lo.u.size()) + " nhà", 10.5, 800, "rgb(46, 120, 50)" if hp * 2 >= lo.u.size() else BROWN, "right"))
 		out.append_array(_bar(X0 + 42.0, y + 28.0, XW - 52.0, float(hp) / n, 5.0))
 		out.append(_dt(X0 + 42.0, y + 37.0, XW - 52.0, 14.0, _fitw("Còn " + str(int(lo.d) + 3 - day) + " ngày · giúp nửa số nhà +15 uy tín", 10.5, 600, XW - 52.0), 10.5, 600, SUB, "left"))
 		y += 58.0 + GG
@@ -322,7 +322,7 @@ func _nan() -> Array:
 	out.append_array(_sq(y, "Nhà gặp nạn", "Giúp trong 3 ngày: +60 thân, +8 uy tín. Quá hạn thì nhà đó buồn (−20 thân) rồi tự gượng dậy. Người có chức lo cho bà con: giúp được nửa số nhà thì +15 uy tín, bỏ mặc hết thì −15."))
 	y += 16.0 + GG
 	if live.is_empty():
-		out.append(_dt(X0, y, XW, 16.0, "Xóm bình yên, không nhà nào gặp nạn.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0, y, XW, 16.0, "Xóm bình yên, không nhà nào gặp nạn.", 10.5, 700, SUB, "left"))
 		return [out, y + 16.0 + GG]
 	for uu in live:
 		var r := _nblock(y, uu, o.nan[uu], F[uu], day)
@@ -354,11 +354,11 @@ func _nblock(y: float, uu, nn: Dictionary, ff: Dictionary, day: int) -> Array:  
 	var cx := x + 38.0
 	var nk := String(W.TNNAN.get(nn.k, ""))
 	if nk != "":
-		var kc := _tchip(cx, yy + 14.0, nk, "sen", "rgb(170, 50, 60)", null, 16.0, 9.5)
+		var kc := _tchip(cx, yy + 14.0, nk, "sen", "rgb(170, 50, 60)", null, 16.0, 10.5)
 		out.append(kc[0])
 		cx += float(kc[1]) + 4.0
 	if not x0 and WD.tn_busy(String(uu)):
-		var bc := _tchip(cx, yy + 14.0, "Nghỉ làm thuê", "miss", "rgb(100, 94, 84)", null, 16.0, 9.5)
+		var bc := _tchip(cx, yy + 14.0, "Nghỉ làm thuê", "miss", "rgb(100, 94, 84)", null, 16.0, 10.5)
 		out.append(bc[0])
 	yy += 30.0 + GG
 	if x0:
@@ -370,7 +370,7 @@ func _nblock(y: float, uu, nn: Dictionary, ff: Dictionary, day: int) -> Array:  
 		if float(nd[1]) > 0.0:
 			yy += float(nd[1]) + GG
 		var Rw := ["+60", "h", " · +8 uy tín"]
-		out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 11.5, 800, "rgb(40, 130, 50)")[0])
+		out.append_array(_rowi(x, yy + 5.0, 16.0, Rw, 12.0, 800, "rgb(40, 130, 50)")[0])
 		out.append_array(_xcost(x + w - 72.0, yy, nn.need)[0])   # (bản 465) tiền cần nằm cạnh nút Giúp
 		out.append(_btn(x + w - 66.0, yy, 66.0, 26.0, "Giúp", WD.tn_help.bind(uu), "go" if WD.tn_have(nn.need) else "off"))
 		yy += 26.0 + 10.0
@@ -384,7 +384,7 @@ func _so() -> Array:
 	var out := []
 	var y := 6.0
 	if o.log.is_empty():
-		out.append(_dt(X0, y, XW, 16.0, "Làng chưa gặp trận thiên tai nào.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0, y, XW, 16.0, "Làng chưa gặp trận thiên tai nào.", 10.5, 700, SUB, "left"))
 		return [out, y + 16.0 + GG]
 	for r in o.log:
 		var k := String(r.k)
@@ -415,9 +415,9 @@ func _so() -> Array:
 			yy += 14.0
 		var cx := X0 + 42.0
 		for e in dm:
-			var dw: float = Box.text_w(String(e[1]), 10.0, 700) + 30.0
+			var dw: float = Box.text_w(String(e[1]), 10.5, 700) + 30.0
 			var dc2 := _chip(cx, yy + 3.0, dw, 18.0, "sen")
-			dc2.kids = [_icx(cx + 10.0, yy + 12.0, 14.0, String(e[0])), _dt(cx + 19.0, yy + 3.0, dw - 22.0, 18.0, String(e[1]), 10.0, 700, "rgb(170, 50, 60)", "left")]
+			dc2.kids = [_icx(cx + 10.0, yy + 12.0, 14.0, String(e[0])), _dt(cx + 19.0, yy + 3.0, dw - 22.0, 18.0, String(e[1]), 10.5, 700, "rgb(170, 50, 60)", "left")]
 			out.append(dc2)
 			cx += dw + 5.0
 		if dm.size():

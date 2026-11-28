@@ -101,7 +101,7 @@ func _draw(e: float) -> void:
 	var bw := (XW - g) * 0.5
 	out.append(_dbtn(X0, y, bw, 32.0, "Cất vô tủ", _ok))
 	var tb := _chip(X0 + bw + g, y, bw, 32.0, "fut")
-	tb.kids = [_dt(X0 + bw + g, y, bw, 32.0, "Xem tủ kỷ lục", 11.0, 800, BROWN)]
+	tb.kids = [_dt(X0 + bw + g, y, bw, 32.0, "Xem tủ kỷ lục", 10.5, 800, BROWN)]
 	tb.act = _tu
 	out.append(tb)
 	y += 32.0 + 8.0
@@ -137,7 +137,7 @@ func _stat(x: float, y: float, w: float, h: float, lb: String, v: String) -> Arr
 		out.append(_pic(x + 8.0, y + (h - 22.0) * 0.5, 22.0, 22.0, pic))
 		tx = x + 36.0
 	var tw := x + w - 6.0 - tx
-	out.append(_dt(tx, y + 6.0, tw, 14.0, lb, 9.5, 600, SUB, "left"))
+	out.append(_dt(tx, y + 6.0, tw, 14.0, lb, 10.5, 600, SUB, "left"))
 	out.append(_dt(tx, y + 20.0, tw, 18.0, _fitw(v, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 	if lb == "Mức chăm":   # thanh dưới số
 		var p := clampf(float(v.replace("%", "")) / 100.0, 0.0, 1.0)

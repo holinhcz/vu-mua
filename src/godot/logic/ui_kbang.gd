@@ -108,8 +108,8 @@ func _hdx(x: float, y: float, w: float, t: String, ic := "", mid := "", mc := ""
 		L.append(_hic(x, y - 5.0, 25.0, ic))
 		tx = x + 29.0
 	var x1 := x + w
-	var tw: float = minf(Box.text_w(t, 13.0, 800) + 6.0, x1 - tx - 14.0)
-	L.append(_dt(tx, y - 1.0, tw + 4.0, 18.0, _fitw(t, 13.0, 800, tw), 13.0, 800, BROWN, "left"))
+	var tw: float = minf(Box.text_w(t, 12.0, 800) + 6.0, x1 - tx - 14.0)
+	L.append(_dt(tx, y - 1.0, tw + 4.0, 18.0, _fitw(t, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 	var lx := tx + tw
 	if mid != "":
 		var mw: float = minf(Box.text_w(mid, 10.5, 600) + 4.0, x1 - lx - 2.0)
@@ -285,7 +285,7 @@ func _onbtn(x: float, y: float, w: float, h: float, t: String, cb, red := false)
 	# (11-26) bộ sen: nút xanh / đỏ gờ vàng như nút Bán hết, chip lọc đang chọn
 	n.css["background-image"] = Snap.SEN_DO if red else Snap.SEN_XANH
 	n.css["box-shadow"] = Snap.SEN_VIEN if cb is Callable else NHAN_VIEN   # nút bấm: gờ vàng; nhãn (không bấm): viền mảnh
-	n.kids = [_dt(x, y, w, h, t, 12.5, 800, "rgb(255, 255, 255)")]
+	n.kids = [_dt(x, y, w, h, t, 12.0, 800, "rgb(255, 255, 255)")]
 	if cb is Callable:
 		n.act = cb
 	return n
@@ -332,7 +332,7 @@ func _fx_tia(cx: float, cy: float, s: float) -> Dictionary:   # tia sáng sau ô
 
 func _fx_nhan(cx: float, y: float) -> Dictionary:   # nhãn đỏ chữ trắng "Nhận" dưới ô mốc
 	var p := _onbtn(cx - 20.0, y, 40.0, 16.0, "Nhận", null, true)
-	p.kids[0].css["font-size"] = _cpx(10.0)
+	p.kids[0].css["font-size"] = _cpx(10.5)
 	return p
 
 func _dtick(x: float, y: float, s := 11.0) -> Dictionary:   # dấu ✓ = ảnh tick chung (Snap)
@@ -348,7 +348,7 @@ func _dbtn(x: float, y: float, w: float, h: float, s: String, cb: Callable) -> D
 	n.text = s
 	n.css = n.css.duplicate()
 	n.css["line-height"] = _cpx(h)
-	n.css["font-size"] = _cpx(11.5)
+	n.css["font-size"] = _cpx(12.0)
 	n.css["padding-left"] = "0px"
 	n.css["padding-right"] = "0px"
 	n.act = cb
@@ -389,7 +389,7 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 	for ln in L:
 		lw = maxf(lw, Box.text_w(String(ln), 10.5, 600))
 	if ttl != "":
-		lw = maxf(lw, Box.text_w(ttl, 11.5, 800))
+		lw = maxf(lw, Box.text_w(ttl, 12.0, 800))
 	var tw := minf(tw0, lw + 4.0)
 	var W0 := clampf(tw + 20.0 + iw, 120.0, TW)
 	var h := 10.0 + (17.0 if ttl != "" else 0.0) + L.size() * 15.0 + 10.0
@@ -428,7 +428,7 @@ func _dtip(body: String, ic := "", ttl := "") -> void:   # bong bóng: [hình] t
 		tx += iw
 	var ty := y + 10.0
 	if ttl != "":
-		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 11.5, 900, "rgb(58, 42, 16)", "left"))
+		ks.append(_dt(tx, ty, tw + 2.0, 17.0, ttl, 12.0, 900, "rgb(58, 42, 16)", "left"))
 		ty += 17.0
 	for i in L.size():
 		ks.append(_dt(tx, ty + i * 15.0, tw + 2.0, 15.0, String(L[i]), 10.5, 600, "rgb(63, 138, 52)" if ic != "" else "rgb(90, 66, 34)", "left"))   # dòng quà (có hình) xanh lá như "Hợp mùa"; chữ giải thích nâu
@@ -486,7 +486,7 @@ func _tchip(x: float, y: float, t: String, kind: String, col := BROWN, cb = null
 func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -> Dictionary:   # go: chip xanh Kho, red: đỏ, gold: vàng, off: xám, plain: kem bấm được (bản 552)
 	if kind == "plain":
 		var p := _chip(x, y, w, h, "fut", true)
-		p.kids = [_dt(x, y, w, h, t, 11.0, 800, BROWN)]
+		p.kids = [_dt(x, y, w, h, t, 10.5, 800, BROWN)]
 		p.act = cb
 		return p
 	if kind == "off":
@@ -494,7 +494,7 @@ func _btn(x: float, y: float, w: float, h: float, t: String, cb, kind := "go") -
 		c.kids = [_dt(x, y, w, h, t, 10.5, 700, "rgb(110, 104, 92)")]
 		return c
 	var b := _onbtn(x, y, w, h, t, cb, kind == "red")
-	b.kids[0].css["font-size"] = _cpx(11.0)
+	b.kids[0].css["font-size"] = _cpx(10.5)
 	if kind == "gold":   # (11-28) nút vàng: tặng, nhận quà (đỏ chỉ để huỷ / cảnh báo)
 		b.css["background-image"] = "linear-gradient(rgb(255, 222, 120) 0%, rgb(244, 178, 52) 100%)"
 		b.kids[0].css["color"] = "rgb(106, 58, 8)"
@@ -658,7 +658,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 	var sm := 0.0
 	for it in list:
 		var s0: String = G.fmt_n(int(it[3])) if String(it[0]) == "xu" else G.fmt_n(mini(int(it[2]), 99999)) + "/" + G.fmt_n(int(it[3]))   # (bản 551) xu: chỉ ghi số cần, đủ xanh thiếu đỏ
-		var cw0: float = minf(38.0 + maxf(Box.text_w(String(it[1]), 10.0, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w)
+		var cw0: float = minf(38.0 + maxf(Box.text_w(String(it[1]), 10.5, 700), Box.text_w(s0, 10.5, 800)) + 8.0, w)
 		cws.append(cw0)
 		sm += cw0
 	var gs := 5.0 * maxf(0.0, list.size() - 1.0)
@@ -688,7 +688,7 @@ func _nchips(x: float, y: float, w: float, list: Array) -> Array:
 		var s: String = G.fmt_n(q) if id == "xu" else G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q)
 		var cw: float = cws[i]
 		var tw := cw - 40.0
-		var fs := clampf(10.0 * tw / maxf(1.0, Box.text_w(nm, 10.0, 700)), 8.5, 10.0)
+		var fs := clampf(10.0 * tw / maxf(1.0, Box.text_w(nm, 10.5, 700)), 8.5, 10.0)
 		if cx > x and cx + cw > x + w:
 			cx = x
 			cy += 40.0
@@ -722,31 +722,31 @@ func _grid(y: float, bt: Array, cols: int, kind_on: String, bh0 := 0.0) -> Array
 			tx = x + (48.0 if big else 42.0)
 		var tw := x + bw - (22.0 if st == "on" else 6.0) - tx   # (bản 462) chừa chỗ dấu tick
 		var dim := st == "dis" or st == "hint"
-		var L2: Array = _wrap(String(o.get("s2", "")), 10.0, 600, tw) if big and String(o.get("s2", "")) != "" else []
+		var L2: Array = _wrap(String(o.get("s2", "")), 10.5, 600, tw) if big and String(o.get("s2", "")) != "" else []
 		if L2.size() > 2:
-			L2 = [L2[0], _fitw(String(L2[1]) + " " + " ".join(PackedStringArray(L2.slice(2))), 10.0, 600, tw)]
+			L2 = [L2[0], _fitw(String(L2[1]) + " " + " ".join(PackedStringArray(L2.slice(2))), 10.5, 600, tw)]
 		var TL: Array = [String(o.b)]   # (11-28) chip to: tên dài xuống 2 dòng (không cắt "…"), bớt dòng mô tả
-		if big and Box.text_w(String(o.b), 11.5, 800) > tw:
-			TL = _wrap(String(o.b), 11.5, 800, tw)
+		if big and Box.text_w(String(o.b), 12.0, 800) > tw:
+			TL = _wrap(String(o.b), 12.0, 800, tw)
 			if TL.size() > 2:
-				TL = [TL[0], _fitw(" ".join(PackedStringArray(TL.slice(1))), 11.5, 800, tw)]
+				TL = [TL[0], _fitw(" ".join(PackedStringArray(TL.slice(1))), 12.0, 800, tw)]
 		var th0 := 15.0 * TL.size() + (16.0 if String(o.get("s", "")) != "" else 0.0)
 		while L2.size() and th0 + L2.size() * 13.0 + 3.0 > bh - 10.0:   # chip thấp: bớt dòng 3, dòng cuối cắt "…"
 			var last: String = String(L2[L2.size() - 1])
 			L2.pop_back()
 			if L2.size():
-				L2[L2.size() - 1] = _fitw(String(L2[L2.size() - 1]) + " " + last, 10.0, 600, tw)
+				L2[L2.size() - 1] = _fitw(String(L2[L2.size() - 1]) + " " + last, 10.5, 600, tw)
 		var th := th0 + L2.size() * 13.0 + (3.0 if L2.size() else 0.0)
 		var ty := yy + 6.0 if not big else yy + (bh - th) * 0.5
 		for tl in TL:
-			ks.append(_dt(tx, ty, tw, 15.0, _fitw(String(tl), 11.5, 800, tw), 11.5, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
+			ks.append(_dt(tx, ty, tw, 15.0, _fitw(String(tl), 12.0, 800, tw), 12.0, 800, "rgb(120, 112, 98)" if dim else BROWN, "left"))
 			ty += 15.0
 		ty += 1.0
 		if String(o.get("s", "")) != "":
 			ks.append(_dt(tx, ty, tw, 13.0, _fitw(String(o.s), 10.5, 600, tw), 10.5, 600, "rgb(130, 124, 112)" if dim else SUB, "left"))
 			ty += 16.0
 		for ln in L2:
-			ks.append(_dt(tx, ty, tw, 13.0, String(ln), 10.0, 600, "rgb(150, 128, 96)", "left"))
+			ks.append(_dt(tx, ty, tw, 13.0, String(ln), 10.5, 600, "rgb(150, 128, 96)", "left"))
 			ty += 13.0
 		if st == "on":   # đang chọn: dấu tick góc phải
 			ks.append(_dtick(x + bw - 17.0, yy + 5.0, 12.0))
@@ -895,7 +895,7 @@ func _scard(y: float, pic: String, ttl: String, sub: String, desc: String, btns:
 	out.append(c)
 	if pic != "":
 		out.append(_icx(X0 + 26.0, y + 23.0, 34.0, "pic:" + pic))
-	out.append(_dt(X0 + 48.0, y + 7.0, XW - 56.0, 17.0, _fitw(ttl, 12.5, 800, XW - 56.0), 12.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 48.0, y + 7.0, XW - 56.0, 17.0, _fitw(ttl, 12.0, 800, XW - 56.0), 12.0, 800, BROWN, "left"))
 	if sub != "":
 		out.append(_dt(X0 + 48.0, y + 25.0, XW - 56.0, 15.0, _fitw(sub, 10.5, 700, XW - 56.0), 10.5, 700, SUB, "left"))
 	out.append_array(P[0])
@@ -908,7 +908,7 @@ func _scard(y: float, pic: String, ttl: String, sub: String, desc: String, btns:
 	var bx := X0 + XW - 8.0
 	for i in range(btns.size() - 1, -1, -1):
 		var b: Array = btns[i]
-		var bw: float = Box.text_w(String(b[0]), 11.0, 800) + 26.0
+		var bw: float = Box.text_w(String(b[0]), 10.5, 800) + 26.0
 		bx -= bw
 		if String(b[2]) == "gold":
 			out.append(_dbtn(bx, yy, bw, 26.0, String(b[0]), b[1]))
@@ -929,11 +929,11 @@ func _mat_ic(id: String) -> String:   # (bản 549) mã hình vật liệu nâng
 func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0, ic := "") -> Array:   # g: tiêu đề -> hàng hình
 	var out := []
 	var vs := str(cur)
-	var tw: float = Box.text_w("/" + str(top), 11.0, 700)
+	var tw: float = Box.text_w("/" + str(top), 10.5, 700)
 	var vw: float = Box.text_w(vs, 14.0, 800)
 	out.append_array(_hd(y + 5.0, name, ic, tw + vw + 10.0))   # (11-26) tiêu đề mục chung, số điểm bên phải
 	out.append(_dt(X0 + XW - 2.0 - tw - vw, y + 4.0, vw, 18.0, vs, 14.0, 800, GREEN, "left"))
-	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 11.0, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
+	out.append(_dt(X0 + XW - 2.0 - tw, y + 5.25, tw, 16.0, "/" + str(top), 10.5, 700, SUB, "left"))   # chân chữ "/100" ngang chân số lớn
 	var cs := 34.0
 	var iy := y + 26.0 + g + 4.0   # chip tên -> hàng quà: rộng hơn g một chút (quà nổi, dễ dính chip tên)
 	var bxl := X0 + cs * 0.5
@@ -957,7 +957,7 @@ func _ms(y: float, name: String, cur: int, top: int, L: Array, g := 8.0, ic := "
 			c.act = _dtip.bind(String(m[5]), "gift:" + String(m[1]), String(m[4]) + " · mốc " + str(p) + (" · đã nhận" if got else ""))
 		out.append(c)
 		out.append(_dbx(cx - 1.0, by - 1.0, 2.0, 9.0, "rgb(190, 160, 100)" if not ok else "rgb(32, 112, 58)", 1.0))
-		out.append(_fx_nhan(cx, by + 9.0) if ok and not got else _dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 9.5, 700, SUB))
+		out.append(_fx_nhan(cx, by + 9.0) if ok and not got else _dt(cx - 20.0, by + 11.0, 40.0, 12.0, str(p), 10.5, 700, SUB))
 	return [out, by + 11.0 + 12.0 - y]
 
 # (11-28) HÀNG CHIP LỌC CHUNG (Kỷ lục, Làm thuê...): F = [[khóa, chữ, món hình | ""]], chip rộng theo chữ (+ hình), phần dư chia đều;
@@ -975,7 +975,7 @@ func _fchips(y: float, F: Array, cur: String, cb: Callable, _on_kind := "") -> A
 	var out := []
 	var need := []
 	for f in F:
-		need.append(Box.text_w(String(f[1]), 11.0, 800) + 14.0 + (19.0 if String(f[2]) != "" else 0.0))
+		need.append(Box.text_w(String(f[1]), 10.5, 800) + 14.0 + (19.0 if String(f[2]) != "" else 0.0))
 	var eq := (XW - 6.0 * (F.size() - 1)) / F.size()   # rộng đều như Kho nếu chữ nào cũng vừa
 	var fitall := true
 	for c in need:
@@ -992,7 +992,7 @@ func _fchips(y: float, F: Array, cur: String, cb: Callable, _on_kind := "") -> A
 		var k := String(f[0])
 		var on := cur == k
 		var hi := String(f[2]) != ""
-		var tw: float = Box.text_w(String(f[1]), 11.0, 800) + 1.0
+		var tw: float = Box.text_w(String(f[1]), 10.5, 800) + 1.0
 		var gx := cx + (cw - tw - (19.0 if hi else 0.0)) * 0.5
 		var kk := []
 		if hi:
@@ -1000,7 +1000,7 @@ func _fchips(y: float, F: Array, cur: String, cb: Callable, _on_kind := "") -> A
 			gx = maxf(cx + 19.0, gx + 19.0)
 		var aw := cx + cw - 3.0 - gx
 		var col := "rgb(255, 255, 255)" if on else BROWN
-		kk.append(_dt(gx, y, aw, 24.0, _fitw(String(f[1]), 11.0, 800, aw), 11.0, 800, col, "left"))
+		kk.append(_dt(gx, y, aw, 24.0, _fitw(String(f[1]), 10.5, 800, aw), 10.5, 800, col, "left"))
 		var fc: Dictionary
 		if on:
 			fc = _onbtn(cx, y, cw, 24.0, "", null)

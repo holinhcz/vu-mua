@@ -67,7 +67,7 @@ func _tab7() -> Array:
 		var foot := 30.0   # chỗ nút Nhận / dấu tích dưới đáy ô
 		var bh := 16.0 + 8.0 + s + 8.0 + L.size() * 15.0
 		var top := y + maxf(6.0, (rh - foot - bh) * 0.5)
-		var kids := [_dt(x, top, w, 14.0, "Ngày " + str(i + 1), 11.0, 800, GOLD if now else SUB)]
+		var kids := [_dt(x, top, w, 14.0, "Ngày " + str(i + 1), 10.5, 800, GOLD if now else SUB)]
 		var iy := top + 22.0
 		kids.append(_dic(x + (w - s) * 0.5, iy, s, String(D.dd7.kids[i].kids[1].svg), op))
 		var ty := iy + s + 8.0
@@ -110,15 +110,15 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	# 1. mốc tháng: thanh tiến độ + 4 mốc đúng vị trí ngày
 	var hy := 12.0
 	var mt := "Tháng " + str(E.q8() % 100)
-	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
+	var mw: float = Box.text_w(mt, 12.0, 800) + 24.0
 	out.append(_mua_chip(_onbtn(X0, hy - 3.0, mw, 24.0, mt, null, true)))
 	var tx := X0 + mw + 8.0
 	var t1 := "Đã điểm danh "
 	var w1: float = Box.text_w(t1, 12.0, 700)
 	out.append(_dt(tx, hy - 3.0, w1, 24.0, t1, 12.0, 700, BROWN, "left"))
 	var t2 := str(v) + "/" + str(o)
-	var w2: float = Box.text_w(t2, 13.0, 800)
-	out.append(_dt(tx + w1, hy - 3.0, w2, 24.0, t2, 13.0, 800, GREEN, "left"))
+	var w2: float = Box.text_w(t2, 12.0, 800)
+	out.append(_dt(tx + w1, hy - 3.0, w2, 24.0, t2, 12.0, 800, GREEN, "left"))
 	out.append(_dt(tx + w1 + w2 + 5.0, hy - 3.0, 50.0, 24.0, "ngày", 12.0, 700, BROWN, "left"))
 	var iy := hy + 31.0
 	var ms := 44.0        # chip mốc cỡ ô ngày
@@ -159,15 +159,15 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 		else:
 			ring.act = _dtip.bind(String(R.t), "gift:" + String(R.ic), "Mốc " + str(n) + " ngày" + ("" if ok else " · còn " + str(n - v) + " ngày"))   # (bản 504) bong bóng: hình quà, tên, số lượng
 		out.append(ring)
-		out.append(_fx_nhan(cx, ly - 1.0) if ok and not got else _dt(lc - 30.0, ly, 60.0, 14.0, str(n) + " ngày", 10.0, 800, GREEN if got else (BROWN if nxt else SUB)))
+		out.append(_fx_nhan(cx, ly - 1.0) if ok and not got else _dt(lc - 30.0, ly, 60.0, 14.0, str(n) + " ngày", 10.5, 800, GREEN if got else (BROWN if nxt else SUB)))
 		if nxt:   # (11-26) mốc kế tiếp: "còn N ngày" trên nhãn đỏ chữ trắng, nổi rõ
 			var ct := "còn " + str(n - v) + " ngày"
-			var cw2: float = Box.text_w(ct, 10.0, 800) + 14.0
+			var cw2: float = Box.text_w(ct, 10.5, 800) + 14.0
 			var pl := _onbtn(lc - cw2 * 0.5, ly + 15.0, cw2, 17.0, ct, null, true)
-			pl.kids[0].css["font-size"] = _cpx(10.0)
+			pl.kids[0].css["font-size"] = _cpx(10.5)
 			out.append(pl)
 		else:
-			out.append(_dt(lc - 38.0, ly + 16.0, 76.0, 13.0, R8S[j], 9.5, 600, SUB))
+			out.append(_dt(lc - 38.0, ly + 16.0, 76.0, 13.0, R8S[j], 10.5, 600, SUB))
 	# 2. lịch
 	var cy := ly + 42.0
 	var misses := 0
@@ -200,16 +200,16 @@ func _tabm() -> Array:   # (bản 388) không thẻ kem chồng: tiêu đề ph�
 	if E.q9():
 		out.append(_onbtn(bx2, ty, bw2, 30.0, "Điểm danh hôm nay", E.tA.bind(r, false)))
 	else:
-		out.append(_dt(bx2, ty, bw2, 15.0, "✓ Đã nhận hôm nay", 11.0, 800, GREEN))
+		out.append(_dt(bx2, ty, bw2, 15.0, "✓ Đã nhận hôm nay", 10.5, 800, GREEN))
 		if r < o:
-			out.append(_dt(bx2, ty + 15.0, bw2, 14.0, _fitw("Mai: " + String(E.aF(r + 1).t), 10.0, 700, bw2), 10.0, 700, SUB))
+			out.append(_dt(bx2, ty + 15.0, bw2, 14.0, _fitw("Mai: " + String(E.aF(r + 1).t), 10.5, 700, bw2), 10.5, 700, SUB))
 	if misses > 0:
 		var lw2 := XW - bw2 - 8.0
 		if M < 5:
 			out.append(_dt(X0 + 2.0, ty, lw2, 15.0, "Bù ngày lỡ", 12.0, 800, "rgb(150, 40, 40)", "left"))
 			out.append(_dt(X0 + 2.0, ty + 15.0, lw2, 14.0, "còn " + str(5 - M) + " lần · " + str(3 + M) + " sen/lần", 10.5, 700, BROWN, "left"))
 		else:
-			out.append(_dt(X0 + 2.0, ty + 7.0, lw2, 15.0, "Hết lượt bù tháng này", 11.0, 700, SUB, "left"))
+			out.append(_dt(X0 + 2.0, ty + 7.0, lw2, 15.0, "Hết lượt bù tháng này", 10.5, 700, SUB, "left"))
 	return [out, ty + 32.0]
 
 func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Dictionary:   # một ô lịch
@@ -225,7 +225,7 @@ func _dday(w: int, x: float, y: float, cw: float, rh: float, bu: int) -> Diction
 	c.css = c.css.duplicate()
 	c.css["border-radius"] = _cpx(6.0)   # (11-26) ô ngày bo ít: góc không lẹm số ngày
 	var s := minf(cw - 6.0, rh - 13.0)
-	var kids := [_dt(x + 4.0, y + 2.5, 18.0, 10.0, str(w), 8.25, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
+	var kids := [_dt(x + 4.0, y + 1.5, 22.0, 14.0, str(w), 10.5, 500, GREEN if got else ("rgb(150, 100, 10)" if now else ("rgb(190, 80, 90)" if kind == "sen" else (SUB if not miss else "rgb(130, 122, 108)"))), "left"),
 		_dick(x + cw * 0.5, y + rh - s * 0.5 - 3.0, s, String(gd.ic), op)]
 	if got:
 		kids.append(_dtick(x + cw - 12.5, y + 2.5, 10.0))

@@ -104,7 +104,7 @@ func _body() -> Array:   # clgTab
 	var out := []
 	var y := 6.0
 	if L.is_empty():
-		out.append(_dt(X0, y, XW, 16.0, "Chưa có chuyện gì" + ("" if tab == "all" else " trong mục này") + ". Ghé lại sau nha.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0, y, XW, 16.0, "Chưa có chuyện gì" + ("" if tab == "all" else " trong mục này") + ". Ghé lại sau nha.", 10.5, 700, SUB, "left"))
 		return [out, y + 16.0 + GG]
 	# gom theo ngày
 	var days := []
@@ -128,7 +128,7 @@ func _body() -> Array:   # clgTab
 			if lb == "":
 				continue
 			var k := String(r.k)
-			var P := _para(X0 + 42.0, y + 10.0, XW - 52.0, String(r.t), 11.0, 700, BROWN, 15.0)
+			var P := _para(X0 + 42.0, y + 10.0, XW - 52.0, String(r.t), 10.5, 700, BROWN, 15.0)
 			var h := maxf(10.0 + float(P[1]) + 6.0 + 26.0 + 10.0, 60.0)
 			var c := _chip(X0, y, XW, h, "now")
 			out.append(c)
@@ -186,7 +186,7 @@ func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: Str
 	var x := X0 + ind
 	var w := XW - ind
 	var rw := (16.0 if chev != "" else 0.0)
-	var L := _wrap(t, 11.0, 600, w - 40.0 - rw)
+	var L := _wrap(t, 10.5, 600, w - 40.0 - rw)
 	var h := 8.0 + L.size() * 15.0 + (13.0 if sub != "" else 0.0) + 8.0
 	h = maxf(h, 32.0)
 	var c := _chip(x, y, w, h, "k_" + k if CLC.has("k_" + k) else "fut")   # (bản 477) nền theo loại
@@ -195,9 +195,9 @@ func _line(y: float, k: String, t: String, sub: String, nw: bool, act, chev: Str
 	out.append(_kic(x + 20.0, y + h * 0.5, 20.0, k))
 	var ty := y + (h - L.size() * 15.0 - (13.0 if sub != "" else 0.0)) * 0.5
 	for i in L.size():
-		out.append(_dt(x + 36.0, ty + i * 15.0, w - 40.0 - rw, 15.0, String(L[i]), 11.0, 600, BROWN, "left"))
+		out.append(_dt(x + 36.0, ty + i * 15.0, w - 40.0 - rw, 15.0, String(L[i]), 10.5, 600, BROWN, "left"))
 	if sub != "":
-		out.append(_dt(x + 36.0, ty + L.size() * 15.0, w - 40.0 - rw, 13.0, _fitw(sub, 10.0, 600, w - 40.0 - rw), 10.0, 600, SUB, "left"))
+		out.append(_dt(x + 36.0, ty + L.size() * 15.0, w - 40.0 - rw, 13.0, _fitw(sub, 10.5, 600, w - 40.0 - rw), 10.5, 600, SUB, "left"))
 	var rx := x + w - 8.0
 	if chev != "":
 		out.append(_dic(rx - 10.0, y + h * 0.5 - 5.0, 10.0, chev))

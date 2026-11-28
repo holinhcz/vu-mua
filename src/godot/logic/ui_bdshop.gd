@@ -111,8 +111,8 @@ func _head() -> Array:   # Độ đẹp N/mốc + thanh, chip Giá bán +x%
 	var ww: float = Box.text_w(wt, 10.5, 600)
 	out.append(_dt(X0, 13.0, ww, 15.0, wt, 10.5, 600, SUB, "left"))
 	var vs := str(j)
-	var vw: float = Box.text_w(vs, 13.0, 800) + 1.0
-	out.append(_dt(X0 + ww, 12.0, vw, 16.0, vs, 13.0, 800, "rgb(214, 128, 20)", "left"))
+	var vw: float = Box.text_w(vs, 12.0, 800) + 1.0
+	out.append(_dt(X0 + ww, 12.0, vw, 16.0, vs, 12.0, 800, "rgb(214, 128, 20)", "left"))
 	if nx != null:
 		var tl := "/" + str(int(nx.b))
 		out.append(_dt(X0 + ww + vw, 13.0, Box.text_w(tl, 10.5, 600) + 2.0, 15.0, tl, 10.5, 600, SUB, "left"))
@@ -128,13 +128,13 @@ func _bcard(x: float, y: float, w: float, c: Dictionary) -> Array:   # thẻ mó
 	var ic := _dbx(x + (w - IH * 1.23) * 0.5, y + 6.0, IH * 1.23, IH, "rgba(0, 0, 0, 0)", 0.0)
 	ic.bdic = c.ic
 	ic.bdlk = lk
-	k.kids = [ic, _dt(x + 4.0, y + 56.0, w - 8.0, 16.0, _fitw(String(c.name), 11.0, 500, w - 8.0), 11.0, 500, SUB if lk else BROWN)]
+	k.kids = [ic, _dt(x + 4.0, y + 56.0, w - 8.0, 16.0, _fitw(String(c.name), 10.5, 500, w - 8.0), 10.5, 500, SUB if lk else BROWN)]
 	var py := y + 74.0
 	if c.pr[0] == "c":
 		var parts := [G.fmt_n(int(c.pr[1])), "c"]
 		if String(c.pr[2]) != "":
 			parts.append("/" + String(c.pr[2]))
-		var rw: Array = _rowi(0.0, 0.0, 16.0, parts, 11.0, 800, DOWN if poor else "rgb(214, 128, 20)")   # giá như thẻ Kho
+		var rw: Array = _rowi(0.0, 0.0, 16.0, parts, 10.5, 800, DOWN if poor else "rgb(214, 128, 20)")   # giá như thẻ Kho
 		for q in rw[0]:
 			Snap._move(q, Vector2(x + (w - float(rw[1])) * 0.5, py))
 			k.kids.append(q)

@@ -126,8 +126,8 @@ func _head() -> Array:   # thanh sức chứa, Đáng giá, chip n/cap ★
 	var ww: float = Box.text_w(wt, 10.5, 600)
 	out.append(_dt(X0, 13.0, ww, 15.0, wt, 10.5, 600, SUB, "left"))
 	var vs: String = G.fmt_n(worth)
-	var vw: float = Box.text_w(vs, 13.0, 800) + 2.0
-	out.append(_dt(X0 + ww, 12.0, vw, 16.0, vs, 13.0, 800, "rgb(214, 128, 20)", "left"))
+	var vw: float = Box.text_w(vs, 12.0, 800) + 2.0
+	out.append(_dt(X0 + ww, 12.0, vw, 16.0, vs, 12.0, 800, "rgb(214, 128, 20)", "left"))
 	out.append(_dick(X0 + ww + vw + 8.0, 20.0, 13.0, "coin"))
 	var c := _onbtn(X0 + XW - cw, 0.0, cw, 26.0, ct, func(): if U.khp != null: U.khp.open(), true)
 	c.kids[0].css["font-size"] = _cpx(12.0)
@@ -141,23 +141,23 @@ func _kcard(x: float, y: float, sel: bool, ic: Dictionary, nm: String, cnt: Stri
 	if not low.is_empty():
 		Snap._move(ic, Vector2(0, -6.0))
 	var tw := CW - 2.0 * NPAD   # tên chừa lề hai bên
-	var L2 := [nm] if Box.text_w(nm, 11.0, NW) <= tw else _wrap(nm, 11.0, NW, tw)   # dài thì xuống dòng, giữ cỡ chữ
+	var L2 := [nm] if Box.text_w(nm, 10.5, NW) <= tw else _wrap(nm, 10.5, NW, tw)   # dài thì xuống dòng, giữ cỡ chữ
 	c.kids = [ic]
 	if L2.size() == 1:
-		c.kids.append(_dt(x + NPAD, ny, tw, 16.0, nm, 11.0, NW, col))
+		c.kids.append(_dt(x + NPAD, ny, tw, 16.0, nm, 10.5, NW, col))
 	else:
-		c.kids.append(_dt(x + NPAD, ny - 3.0, tw, 14.0, String(L2[0]), 11.0, NW, col))
-		c.kids.append(_dt(x + NPAD, ny + 11.0, tw, 14.0, _fitw(" ".join(L2.slice(1)), 11.0, NW, tw), 11.0, NW, col))
+		c.kids.append(_dt(x + NPAD, ny - 3.0, tw, 14.0, String(L2[0]), 10.5, NW, col))
+		c.kids.append(_dt(x + NPAD, ny + 11.0, tw, 14.0, _fitw(" ".join(L2.slice(1)), 10.5, NW, tw), 10.5, NW, col))
 	c.kids.append_array(low)
 	if cnt != "":
 		c.kids.append(_badge(x + CW - 4.0, y + 4.0, cnt, GREEN if cnt_hi else "rgb(236, 224, 196)", "rgb(255, 255, 255)" if cnt_hi else SUB, true, NW))
 	return [c]
 
 func _badge(x: float, y: float, t: String, bg: String, col: String, right := false, fw := 800) -> Dictionary:   # nhãn số nhỏ (góc thẻ): chữ nằm trong hộp (không bị nền đè)
-	var bw: float = Box.text_w(t, 9.0, fw) + 8.0
+	var bw: float = Box.text_w(t, 10.5, fw) + 8.0
 	var bx := x - bw if right else x
 	var b := _dbx(bx, y, bw, 14.0, bg, 4.0)
-	b.kids = [_dt(bx, y, bw, 14.0, t, 9.0, fw, col)]
+	b.kids = [_dt(bx, y, bw, 14.0, t, 10.5, fw, col)]
 	return b
 
 func _kgrid(y: float, items: Array) -> Array:   # items: [card fn(x, y) -> Array]; trả [khối, đáy]
@@ -180,10 +180,10 @@ func _detail(svg: String, ic_id: String, nm: String, sub: String, sub_col: Strin
 	out.append(fr)
 	var bw := 0.0
 	if btn != "":
-		bw = maxf(64.0, Box.text_w(btn, 11.0, 800) + 24.0)
+		bw = maxf(64.0, Box.text_w(btn, 10.5, 800) + 24.0)
 		out.append(_btn(X0 + XW - bw, 10.0, bw, 28.0, btn, act if ok else null, "go" if ok else "off"))
 	var tw := XW - 42.0 - (bw + 8.0 if bw > 0.0 else 0.0)
-	out.append(_dt(X0 + 42.0, 6.0, tw, 16.0, _fitw(nm, 13.0, 800, tw), 13.0, 800, BROWN, "left"))   # tên 6..22, cách 6, dòng phụ 28..42, cách 6, hàng dưới 48
+	out.append(_dt(X0 + 42.0, 6.0, tw, 16.0, _fitw(nm, 12.0, 800, tw), 12.0, 800, BROWN, "left"))   # tên 6..22, cách 6, dòng phụ 28..42, cách 6, hàng dưới 48
 	out.append(_dt(X0 + 42.0, 28.0, tw, 14.0, _fitw(sub, 10.5, 700, tw), 10.5, 700, sub_col, "left"))
 	var y := 48.0
 	for r in rows:
@@ -219,11 +219,11 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 			chips.append(c)
 		elif k == U.kh_f:
 			var b := _onbtn(x, y, fw, 24.0, t, null)
-			b.kids[0].css["font-size"] = _cpx(11.0)
+			b.kids[0].css["font-size"] = _cpx(10.5)
 			chips.append(b)
 		else:
 			var c2 := _chip(x, y, fw, 24.0, "fut", true)
-			c2.kids = [_dt(x, y, fw, 24.0, t, 11.0, 800, BROWN)]
+			c2.kids = [_dt(x, y, fw, 24.0, t, 10.5, 800, BROWN)]
 			var kk := k
 			c2.act = func():
 				U.kh_f = kk
@@ -233,7 +233,7 @@ func _hang(n: Dictionary, vt: Dictionary) -> Array:
 	_kfix(n, vt, chips, 2.0 * 24.0 + CG, false)
 	var gy := 0.0
 	if e.is_empty():
-		out.append(_dt(X0, gy + 10.0, XW, 16.0, "Mục này trống." if G.kho_n() > 0 else "Kho đang trống.", 11.0, 600, SUB))
+		out.append(_dt(X0, gy + 10.0, XW, 16.0, "Mục này trống." if G.kho_n() > 0 else "Kho đang trống.", 10.5, 600, SUB))
 		return [out, gy + 30.0]
 	var items := []
 	for t in e:
@@ -248,13 +248,13 @@ func _hcard(t: String, x: float, y: float) -> Array:
 	var r: float = G.rel(t)
 	var hx: float = G.hot_x(t)
 	var ps: String = G.fmt_n(p)
-	var pw: float = Box.text_w(ps, 11.0, 800)
+	var pw: float = Box.text_w(ps, 10.5, 800)
 	var ar := "▲" if r > 1.08 else ("▼" if r < 0.92 else "")
 	var tw := pw + 15.0 + (12.0 if ar != "" else 0.0)
 	var px := x + (CW - tw) * 0.5
-	var low := [_dt(px, y + CH - 19.0, pw + 1.0, 15.0, ps, 11.0, 800, "rgb(214, 128, 20)", "left"), _dick(px + pw + 8.0, y + CH - 11.5, 12.0, "coin")]
+	var low := [_dt(px, y + CH - 19.0, pw + 1.0, 15.0, ps, 10.5, 800, "rgb(214, 128, 20)", "left"), _dick(px + pw + 8.0, y + CH - 11.5, 12.0, "coin")]
 	if ar != "":
-		low.append(_dt(px + pw + 15.0, y + CH - 19.0, 12.0, 15.0, ar, 9.0, 800, UP if ar == "▲" else DOWN, "left"))
+		low.append(_dt(px + pw + 15.0, y + CH - 19.0, 12.0, 15.0, ar, 10.5, 800, UP if ar == "▲" else DOWN, "left"))
 	var cs := _kcard(x, y, t == U.kh_sel, _icn(x + CW * 0.5, y + 30.0, 44.0, t), String(G.item(t).get("name", t)), G.fmt_n(int(G.g.barn[t])), t == U.kh_sel, low)
 	if hx > 1.0:
 		var hs: String = "×" + U._xn(hx)

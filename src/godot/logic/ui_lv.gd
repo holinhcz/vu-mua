@@ -81,13 +81,13 @@ func _gift(x: float, y: float, w: float, it: Dictionary, t: int) -> Dictionary: 
 		c.kids.append(_dt(x, ty, w, 16.0, b, 14.0, 800, "rgb(214, 128, 20)" if k == "xu" else "rgb(196, 44, 60)"))
 		ty += 16.0
 	var nm := String(it.n)
-	var L2 := [nm] if Box.text_w(nm, 11.0, 600) <= w - 8.0 else _wrap(nm, 11.0, 600, w - 8.0)
+	var L2 := [nm] if Box.text_w(nm, 10.5, 600) <= w - 8.0 else _wrap(nm, 10.5, 600, w - 8.0)
 	for j in mini(2, L2.size()):
-		c.kids.append(_dt(x + 4.0, ty + j * 13.0, w - 8.0, 14.0, _fitw(String(L2[j]), 11.0, 600, w - 8.0), 11.0, 600, SUB))
+		c.kids.append(_dt(x + 4.0, ty + j * 13.0, w - 8.0, 14.0, _fitw(String(L2[j]), 10.5, 600, w - 8.0), 10.5, 600, SUB))
 	if it.get("em", false):
-		var bw: float = Box.text_w("MỚI", 9.0, 800) + 8.0
+		var bw: float = Box.text_w("MỚI", 10.5, 800) + 8.0
 		var bd := _dbx(x + w - bw - 3.0, y + 3.0, bw, 14.0, "rgb(214, 69, 65)", 7.0)
-		bd.kids = [_dt(x + w - bw - 3.0, y + 3.0, bw, 14.0, "MỚI", 9.0, 800, "rgb(255, 255, 255)")]
+		bd.kids = [_dt(x + w - bw - 3.0, y + 3.0, bw, 14.0, "MỚI", 10.5, 800, "rgb(255, 255, 255)")]
 		c.kids.append(bd)
 	return c
 

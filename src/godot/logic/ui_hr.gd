@@ -73,7 +73,7 @@ func _body() -> Array:   # sm
 	# chip tổng
 	var tc := _chip(X0, y, XW, 44.0, "got" if n else "sen")   # (bản 471) chưa thuê ai: đỏ nhạt
 	out.append(tc)
-	out.append(_dt(X0 + 12.0, y + 6.0, XW - 120.0, 17.0, ("Đang thuê " + str(n) + "/" + str(ks.size()) + " người") if n else "Chưa thuê ai", 12.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 12.0, y + 6.0, XW - 120.0, 17.0, ("Đang thuê " + str(n) + "/" + str(ks.size()) + " người") if n else "Chưa thuê ai", 12.0, 800, BROWN, "left"))
 	if n:
 		out.append_array(_rowi(X0 + 12.0, y + 23.0, 15.0, ["Tốn " + str(xu), "c", " mỗi phút · hết tiền thì nghỉ"], 10.5, 600, SUB)[0])
 		out.append(_btn(X0 + XW - 104.0, y + 9.0, 94.0, 26.0, "Cho nghỉ hết", func(): W.hr_off(), "red"))
@@ -87,7 +87,7 @@ func _body() -> Array:   # sm
 		ks = ks.filter(func(u): return String(W.x9(u, F[u])) == flt)
 		ks.sort_custom(func(a, b): return W._i(F[a].get("ts")) > W._i(F[b].get("ts")) if W._i(F[a].get("ts")) != W._i(F[b].get("ts")) else _from(F[a]) < _from(F[b]))
 		if ks.is_empty():
-			out.append(_dt(X0, y, XW, 16.0, "Chưa nhà nào giỏi nghề này.", 11.0, 700, SUB, "left"))
+			out.append(_dt(X0, y, XW, 16.0, "Chưa nhà nào giỏi nghề này.", 10.5, 700, SUB, "left"))
 			return [out, y + 16.0 + GG]
 	# (bản 470) 2 nhóm: Đang làm / Rảnh ở nhà; nhà rảnh thuê rẻ nhất: chip tiền công xanh
 	var bz := []
@@ -148,7 +148,7 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 	var tx := x + 48.0
 	var tw := w - 48.0
 	# (bản 473) hàng 1: tên, tim tô dần, chip Ghé nhà (viền xanh, nhỏ)
-	var gc := _tchip(x, yy - 1.0, "Ghé nhà ›", "got", "rgb(46, 120, 50)", _go.bind(u), 20.0, 10.0)
+	var gc := _tchip(x, yy - 1.0, "Ghé nhà ›", "got", "rgb(46, 120, 50)", _go.bind(u), 20.0, 10.5)
 	Snap._move(gc[0], Vector2(w - float(gc[1]), 0))
 	out.append(gc[0])
 	var tim: int = W._i(s.get("tim"))
@@ -166,10 +166,10 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 	if W.W3.has(r):
 		var tn := String(W.W3[r].n).replace("Tay ", "")   # (bản 473) gọn: "Chăn nuôi", "Vườn"...
 		tn = tn.substr(0, 1).to_upper() + tn.substr(1)
-		var sw: float = Box.text_w(tn, 10.0, 700) + 30.0 + 5 * 12.0 + 2.0
+		var sw: float = Box.text_w(tn, 10.5, 700) + 30.0 + 5 * 12.0 + 2.0
 		var sc := _chip(cx, cy, sw, 20.0, "s_" + r if CHIPK.has("s_" + r) else "fut")
-		var ks := [_icn(cx + 10.0, cy + 10.0, 15.0, String(TALIC.get(r, "lua"))), _dt(cx + 19.0, cy, sw - 22.0, 20.0, tn, 10.0, 700, BROWN, "left")]
-		var sx: float = cx + 21.0 + Box.text_w(tn, 10.0, 700) + 2.0
+		var ks := [_icn(cx + 10.0, cy + 10.0, 15.0, String(TALIC.get(r, "lua"))), _dt(cx + 19.0, cy, sw - 22.0, 20.0, tn, 10.5, 700, BROWN, "left")]
+		var sx: float = cx + 21.0 + Box.text_w(tn, 10.5, 700) + 2.0
 		var sv := _dic(sx, cy + 4.0, 12.0, _srow(o))   # 5 sao gộp 1 hình
 		sv.r = [sx, cy + 4.0, 60.0, 12.0]
 		ks.append(sv)
@@ -179,15 +179,15 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 		cx += sw + 5.0
 	var TT: Dictionary = W.tinh_of(s)
 	var tk := String(s.get("tp", ""))
-	var tt := _tchip(cx, cy, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)), 20.0, 10.0)
+	var tt := _tchip(cx, cy, String(TT.n), "t_" + tk if CHIPK.has("t_" + tk) else "t_khac", BROWN, _dsay.bind(String(TT.n) + ": " + String(TT.d)), 20.0, 10.5)
 	out.append(tt[0])
 	# hàng 3: tiền công dưới mặt người, thông số sở trường, nhờ việc
 	cy = yy + 46.0
 	var P := ([_co(job) + " · " + str(W.wage(s)), "c", "/phút"]) if job != "" else (["Từ " + str(_from(s)), "c", "/phút"])
-	var pw := float(_rowi(0.0, 0.0, 20.0, P, 10.0, 700, "")[1]) + 12.0
+	var pw := float(_rowi(0.0, 0.0, 20.0, P, 10.5, 700, "")[1]) + 12.0
 	var gr: bool = cheap and job == ""
 	var wc := _chip(x, cy, pw, 20.0, String(JK.get(job, "j_xuong")) if job != "" else ("got" if gr else "fut"))
-	wc.kids = _rowi(x + 6.0, cy, 20.0, P, 10.0, 700, "rgb(46, 120, 50)" if gr else BROWN)[0]
+	wc.kids = _rowi(x + 6.0, cy, 20.0, P, 10.5, 700, "rgb(46, 120, 50)" if gr else BROWN)[0]
 	wc.act = _dsay.bind(nm + (" thuê rẻ nhất trong số nhà đang rảnh." if gr else (": công trả mỗi phút, càng thân càng rẻ.")))
 	out.append(wc)
 	var sx2 := x + pw + 6.0
@@ -206,7 +206,7 @@ func _house(y: float, u, s: Dictionary, cheap: bool) -> Array:   # khối 1 nhà
 		var st := "−" + str(W.q_l(o)) + "% công · " + (("xưởng nhanh " + str(4 * o) + "%") if r == "xuong" else ("+" + str(W.b_l(o)) + "% " + String(B[0])))
 		var full := "Công rẻ hơn " + str(W.q_l(o)) + "%, " + (("xưởng chạy nhanh hơn " + str(4 * o) + "%.") if r == "xuong" else ("mỗi lần " + String(B[1]) + " có " + str(W.b_l(o)) + "% được thêm 1 " + String(B[2]) + "."))
 		var sc2 := _dbx(sx2, cy, rx - sx2, 20.0, "rgba(0, 0, 0, 0)", 0.0)
-		sc2.kids = [_dt(sx2, cy, rx - sx2, 20.0, _fitw(st, 10.0, 700, rx - sx2), 10.0, 700, "rgb(46, 120, 50)", "left")]
+		sc2.kids = [_dt(sx2, cy, rx - sx2, 20.0, _fitw(st, 10.5, 700, rx - sx2), 10.5, 700, "rgb(46, 120, 50)", "left")]
 		sc2.act = _dsay.bind(nm + ": " + full)
 		out.append(sc2)
 	cy += 20.0

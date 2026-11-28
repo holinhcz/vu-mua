@@ -47,7 +47,7 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 		var rl: Dictionary = out[2]
 		rl.r[2] = maxf(0.0, float(rl.r[2]) - 26.0)
 		var q := _chip(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "info")
-		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 11.0, 800, "rgb(60, 110, 170)")]
+		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 10.5, 800, "rgb(60, 110, 170)")]
 		q.act = func(): U.tre_help(t, help)
 		out.append(q)
 	return out
@@ -68,30 +68,30 @@ func _body() -> Array:   # e7
 	var hc := _chip(X0, y, lw, 62.0, "now")
 	out.append(hc)
 	out.append_array(_stars(X0 + 10.0, y + 8.0, a, 16.0))
-	out.append(_dt(X0 + 10.0 + 5 * 18.0 + 4.0, y + 8.0, lw - 110.0, 16.0, String.num(a, 1), 12.5, 800, "rgb(150, 100, 20)", "left"))
-	out.append(_dt(X0 + 10.0, y + 27.0, lw - 20.0, 15.0, "Danh tiếng làng", 11.0, 800, BROWN, "left"))
-	out.append_array(_rowi(X0 + 10.0, y + 43.0, 14.0, ["Đón " + G.fmt_n(float(t.n)) + " khách · thu " + G.fmt_n(float(t.xu)), "c"], 10.0, 600, SUB)[0])
+	out.append(_dt(X0 + 10.0 + 5 * 18.0 + 4.0, y + 8.0, lw - 110.0, 16.0, String.num(a, 1), 12.0, 800, "rgb(150, 100, 20)", "left"))
+	out.append(_dt(X0 + 10.0, y + 27.0, lw - 20.0, 15.0, "Danh tiếng làng", 10.5, 800, BROWN, "left"))
+	out.append_array(_rowi(X0 + 10.0, y + 43.0, 14.0, ["Đón " + G.fmt_n(float(t.n)) + " khách · thu " + G.fmt_n(float(t.xu)), "c"], 10.5, 600, SUB)[0])
 	var rx := X0 + lw + 6.0
 	var rw := XW - lw - 6.0
 	var nk: int = WD.n_khach()
 	var oc := _chip(rx, y, rw, 62.0, "got" if nk else "fut")
 	out.append(oc)
-	out.append(_dt(rx + 8.0, y + 8.0, rw - 16.0, 14.0, "Đang ở", 10.0, 600, SUB, "left"))
+	out.append(_dt(rx + 8.0, y + 8.0, rw - 16.0, 14.0, "Đang ở", 10.5, 600, SUB, "left"))
 	out.append(_dt(rx + 8.0, y + 22.0, rw - 16.0, 20.0, str(nk) + " khách", 14.0, 800, "rgb(46, 120, 50)" if nk else BROWN, "left"))
 	var hs: Array = WD.Jc.map(func(e):
 		var f = WD.WL._r0().fam.get(str(e.host))
 		return String(f.n) if f != null else "?")
 	if hs.size():
-		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Nhà " + ", ".join(PackedStringArray(hs)), 9.5, 600, rw - 16.0), 9.5, 600, SUB, "left"))
+		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Nhà " + ", ".join(PackedStringArray(hs)), 10.5, 600, rw - 16.0), 10.5, 600, SUB, "left"))
 	else:   # (bản 483) chưa có khách: báo giờ khách tới
-		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Khách tới 7–16 giờ", 9.5, 600, rw - 16.0), 9.5, 600, SUB, "left"))
+		out.append(_dt(rx + 8.0, y + 43.0, rw - 16.0, 14.0, _fitw("Khách tới 7–16 giờ", 10.5, 600, rw - 16.0), 10.5, 600, SUB, "left"))
 	y += 62.0 + GG
 	# chưa đón được: khối đỏ điều kiện
 	if not WD.p_c():
 		var C := [[WD.WL.bl().size() > 0, "Có nhà dân trong làng (nhà tranh, nhà ngói…)"], [WD._quan() or WD._saps().size() > 0, "Có quán cơm hoặc sạp bán hàng"]]
 		var cc := _chip(X0, y, XW, 16.0 + 18.0 + C.size() * 18.0, "sen")
 		out.append(cc)
-		out.append(_dt(X0 + 10.0, y + 8.0, XW - 20.0, 16.0, "Cần để đón khách", 11.5, 800, "rgb(170, 50, 60)", "left"))
+		out.append(_dt(X0 + 10.0, y + 8.0, XW - 20.0, 16.0, "Cần để đón khách", 12.0, 800, "rgb(170, 50, 60)", "left"))
 		var yy := y + 28.0
 		for e in C:
 			out.append(_dtick(X0 + 10.0, yy + 2.0, 11.0) if e[0] else _dic(X0 + 10.0, yy + 2.0, 11.0, XM))
@@ -113,7 +113,7 @@ func _body() -> Array:   # e7
 	if V.size():
 		out.append(vc)
 	if V.size():
-		out.append(_dt(X0 + 10.0, y + 8.0, XW - 100.0, 16.0, "Đạt " + str(nv) + "/" + str(V.size()) + " điều", 11.5, 800, BROWN, "left"))
+		out.append(_dt(X0 + 10.0, y + 8.0, XW - 100.0, 16.0, "Đạt " + str(nv) + "/" + str(V.size()) + " điều", 12.0, 800, BROWN, "left"))
 		out.append_array(_bar(X0 + 110.0, y + 14.0, XW - 120.0, float(nv) / maxf(1.0, V.size()), 5.0))
 	var yy2 := y + 30.0
 	var cw := (XW - 20.0 - 6.0) * 0.5
@@ -123,7 +123,7 @@ func _body() -> Array:   # e7
 		var cy := yy2 + floorf(i / 2.0) * 18.0
 		out.append(_dtick(cx, cy + 2.0, 11.0) if e[0] else _dic(cx, cy + 2.0, 11.0, XM))
 		var hit := _dbx(cx - 2.0, cy - 1.0, cw + 2.0, 17.0, "rgba(0, 0, 0, 0)", 0.0)   # chạm: cách làm
-		hit.kids = [_dt(cx + 15.0, cy, cw - 15.0, 15.0, _fitw(String(e[1]).split(" (")[0], 10.0, 700, cw - 15.0), 10.0, 700, BROWN if e[0] else SUB, "left")]
+		hit.kids = [_dt(cx + 15.0, cy, cw - 15.0, 15.0, _fitw(String(e[1]).split(" (")[0], 10.5, 700, cw - 15.0), 10.5, 700, BROWN if e[0] else SUB, "left")]
 		hit.act = _dsay.bind(String(e[1]) + ": " + String(VH[i]) if i < VH.size() else String(e[1]))
 		out.append(hit)
 	if V.size():
@@ -146,11 +146,11 @@ func _body() -> Array:   # e7
 			out.append_array(_stars(X0 + 46.0, y + 9.0, float(s), 12.0))
 			var kn := (String(WD.A7[e.k].n) if WD.A7.has(e.k) else "").replace("Khách ", "")
 			var P := ["+" + G.fmt_n(float(e.xu)), "c"]
-			var pw := float(_rowi(0.0, 0.0, 18.0, P, 10.0, 800, "")[1]) + 12.0
+			var pw := float(_rowi(0.0, 0.0, 18.0, P, 10.5, 800, "")[1]) + 12.0
 			var mw := XW - 46.0 - 5 * 14.0 - 4.0 - pw - 14.0
-			out.append(_dt(X0 + 46.0 + 5 * 14.0 + 4.0, y + 8.0, mw, 14.0, _fitw(kn + " · " + _dp(float(e.at)).replace("hôm nay ", ""), 9.5, 600, mw), 9.5, 600, SUB, "left"))
+			out.append(_dt(X0 + 46.0 + 5 * 14.0 + 4.0, y + 8.0, mw, 14.0, _fitw(kn + " · " + _dp(float(e.at)).replace("hôm nay ", ""), 10.5, 600, mw), 10.5, 600, SUB, "left"))
 			var pc := _chip(X0 + XW - 8.0 - pw, y + 6.0, pw, 18.0, "now")
-			pc.kids = _rowi(X0 + XW - 8.0 - pw + 6.0, y + 6.0, 18.0, P, 10.0, 800, BROWN)[0]
+			pc.kids = _rowi(X0 + XW - 8.0 - pw + 6.0, y + 6.0, 18.0, P, 10.5, 800, BROWN)[0]
 			out.append(pc)
 			for j in L.size():
 				out.append(_dt(X0 + 46.0, y + 26.0 + j * 14.0, XW - 56.0, 14.0, String(L[j]), 10.5, 600, BROWN, "left"))

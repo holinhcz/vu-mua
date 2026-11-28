@@ -44,7 +44,7 @@ func _build() -> void:
 	var tt := String(WG.cm(At))
 	var tw: float = Box.text_w(tt, 10.5, 800) + 34.0
 	c.kids = [_pic(X0 + 6.0, y + 5.0, 54.0, 40.0, "res://ui/img/xt/g_ghe1.webp"),
-		_dt(X0 + 66.0, y + 7.0, XW - 74.0 - tw, 18.0, "Ghe thương hồ", 12.5, 800, BROWN, "left"),
+		_dt(X0 + 66.0, y + 7.0, XW - 74.0 - tw, 18.0, "Ghe thương hồ", 12.0, 800, BROWN, "left"),
 		_dt(X0 + 66.0, y + 26.0, XW - 74.0 - tw, 16.0, "từ " + String(A.get("from", "")) if int(A.st) == 2 else "Đang vào bến", 10.5, 600, SUB, "left")]
 	var tc := _chip(X0 + XW - 8.0 - tw, y + 14.0, tw, 22.0, "sen" if At < 1800.0 else "fire_l")
 	tc.kids = [_dic(X0 + XW - 8.0 - tw + 7.0, y + 17.0, 16.0, CLOCK),
@@ -58,7 +58,7 @@ func _build() -> void:
 		if int(o.done):
 			n += 1
 	var Y: Dictionary = WG.bonus(L)
-	out.append(_dt(X0 + 2.0, y, 150.0, 16.0, "Đã chất " + str(n) + "/" + str(L.size()) + " thùng", 11.0, 800, BROWN, "left"))
+	out.append(_dt(X0 + 2.0, y, 150.0, 16.0, "Đã chất " + str(n) + "/" + str(L.size()) + " thùng", 10.5, 800, BROWN, "left"))
 	out.append_array(_bar(X0 + 2.0, y + 20.0, 140.0, float(n) / maxf(1.0, L.size()), 6.0))
 	var bx := X0 + 150.0
 	var bw := XW - 150.0
@@ -66,8 +66,8 @@ func _build() -> void:
 	var parts := ["c", " " + G.fmt_n(int(Y.xu)) + "  ", "i:svg:res://ui/svg/mat/huychuong.svg", " " + str(int(Y.xp)) + "  "]
 	for m in WG.K:
 		parts += ["i:svg:res://ui/svg/mat/" + String(m) + ".svg"]   # vật liệu hiếm
-	var R: Array = _rowi(bx + 8.0, y + 1.0, 14.0, ["Chất đủ:"], 9.0, 700, "rgb(40, 110, 50)")
-	var R2: Array = _rowi(bx + 8.0, y + 15.0, 16.0, parts, 10.0, 800, "rgb(40, 110, 50)")
+	var R: Array = _rowi(bx + 8.0, y + 1.0, 14.0, ["Chất đủ:"], 10.5, 700, "rgb(40, 110, 50)")
+	var R2: Array = _rowi(bx + 8.0, y + 15.0, 16.0, parts, 10.5, 800, "rgb(40, 110, 50)")
 	bc.kids = R[0] + R2[0]
 	bc.act = _dsay.bind("Chất đủ hết thùng: +" + G.fmt_n(int(Y.xu)) + " xu, +" + str(int(Y.xp)) + " kinh nghiệm và 2 vật liệu hiếm (đinh sắt, dây mây hoặc gạch nung).")
 	out.append(bc)
@@ -113,21 +113,21 @@ func _box(x: float, y: float, w: float, h: float, i: int, o: Dictionary, dock: b
 	var nm: String = G.item_name(id)
 	# góc trên phải: xu (đã chất thì dấu ✓)
 	var xs: String = " " + G.fmt_n(int(o.xu))
-	var xw: float = 16.0 + Box.text_w(xs, 10.0, 800) + 6.0
+	var xw: float = 16.0 + Box.text_w(xs, 10.5, 800) + 6.0
 	if done:
 		xw = 22.0
 		out.append(_dtick(x + w - 22.0, y + 6.0, 16.0))
 	else:
-		out.append_array(_rowi(x + w - xw - 2.0, y + 6.0, 16.0, ["c", xs], 10.0, 800, "rgb(150, 90, 10)")[0])
+		out.append_array(_rowi(x + w - xw - 2.0, y + 6.0, 16.0, ["c", xs], 10.5, 800, "rgb(150, 90, 10)")[0])
 	var nw: float = w - 50.0 - xw
 	out.append(_dt(x + 46.0, y + 6.0, nw, 16.0, _fitw(nm, 10.5, 800, nw), 10.5, 800, BROWN, "left"))
-	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, (G.fmt_n(q) if done else G.fmt_n(mini(hv, 99999))) + "/" + G.fmt_n(q), 11.0, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
+	out.append(_dt(x + 46.0, y + 22.0, w - 50.0, 16.0, (G.fmt_n(q) if done else G.fmt_n(mini(hv, 99999))) + "/" + G.fmt_n(q), 10.5, 800, "rgb(40, 110, 50)" if ok or done else "rgb(190, 50, 60)", "left"))
 	if done:
-		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã chất lên ghe", 9.5, 700, "rgb(40, 110, 50)", "left"))
+		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã chất lên ghe", 10.5, 700, "rgb(40, 110, 50)", "left"))
 	elif ok:
 		out.append(_btn(x + 8.0, y + h - 28.0, w - 16.0, 22.0, "Chất", _chat.bind(i), "go" if dock else "off"))
 	else:
-		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, _fitw(G.where(id), 9.0, 600, w - 16.0), 9.0, 600, SUB, "left"))
+		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, _fitw(G.where(id), 10.5, 600, w - 16.0), 10.5, 600, SUB, "left"))
 		c.act = _dsay.bind(nm + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ". " + G.where(id) + ".")
 	return out
 

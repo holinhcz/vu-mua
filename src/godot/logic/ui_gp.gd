@@ -235,7 +235,7 @@ func _build() -> void:
 		y += float(b[1]) + 5.0
 		nr += 1
 	if nr == 0:
-		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không có nhà nào hợp." if tab == "db" else "Chưa có nhà nào.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không có nhà nào hợp." if tab == "db" else "Chưa có nhà nào.", 10.5, 700, SUB, "left"))
 		y += 16.0 + 5.0
 	y += GG - 5.0
 	var sh := _kshell([["ho", "Dòng họ", false], ["qh", "Quan hệ", false], ["db", "Danh bạ", false]], tab, _tab_go)
@@ -282,7 +282,7 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	if r.has("h"):
 		return [_sect(y + 4.0, String(r.h), String(r.c)), 20.0]
 	if r.has("note"):
-		return [[_dt(X0 + 2.0, y, XW, 14.0, String(r.note), 10.0, 600, SUB, "left")], 14.0]
+		return [[_dt(X0 + 2.0, y, XW, 14.0, String(r.note), 10.5, 600, SUB, "left")], 14.0]
 	var d := int(r.get("d", 0))
 	var ind := d * 16.0
 	if r.has("mo"):
@@ -306,7 +306,7 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	var ax := x + 6.0
 	if String(r.get("tg", "")) != "":   # nút bung / thu
 		var g := _chip(ax, y + 11.0, 20.0, 20.0, "fut")
-		g.kids = [_dt(ax, y + 11.0, 20.0, 20.0, "−" if r.tg == "-" else "+", 13.0, 800, BROWN)]
+		g.kids = [_dt(ax, y + 11.0, 20.0, 20.0, "−" if r.tg == "-" else "+", 12.0, 800, BROWN)]
 		g.act = _tog.bind(u, r.tg == "+")
 		out.append(g)
 		ax += 24.0
@@ -315,8 +315,8 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 	# phải: tim + số, dấu việc
 	var tim: int = W._i(f.get("tim"))
 	var rx := x + w - 8.0
-	var tw: float = Box.text_w(str(tim), 11.0, 800)
-	out.append(_dt(rx - tw, y, tw + 2.0, h, str(tim), 11.0, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
+	var tw: float = Box.text_w(str(tim), 10.5, 800)
+	out.append(_dt(rx - tw, y, tw + 2.0, h, str(tim), 10.5, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
 	out.append(_dic(rx - tw - 17.0, y + h * 0.5 - 7.0, 14.0, HEART if tim > 0 else HEART0))
 	rx -= tw + 22.0
 	for t in _tags(u, f):
@@ -327,7 +327,7 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 		hit.act = _dsay.bind(String(f.n) + ": " + String(TAGS[t]) + ".")
 		out.append(hit)
 	var nw := rx - 6.0 - nx
-	out.append(_dt(nx, y + 5.0, nw, 16.0, _fitw(String(f.n), 11.5, 800, nw), 11.5, 800, BROWN, "left"))
+	out.append(_dt(nx, y + 5.0, nw, 16.0, _fitw(String(f.n), 12.0, 800, nw), 12.0, 800, BROWN, "left"))
 	var sub := ""
 	if tab == "ho":
 		sub = "Đời " + str(_doi(f)) + " · " + String(W.tinh_of(f).n)
@@ -339,10 +339,10 @@ func _row(y: float, r: Dictionary, F: Dictionary) -> Array:
 		sub += " · sui gia của bạn"
 	var sx := nx
 	if r.has("vai"):   # chip vai (tab Quan hệ)
-		var V := _tchip(sx, y + 23.0, String(r.vai), "info", "rgb(50, 90, 140)", null, 15.0, 9.0)
+		var V := _tchip(sx, y + 23.0, String(r.vai), "info", "rgb(50, 90, 140)", null, 15.0, 10.5)
 		out.append(V[0])
 		sx += float(V[1]) + 5.0
-	out.append(_dt(sx, y + 23.0, nx + nw - sx, 15.0, _fitw(sub, 9.5, 600, nx + nw - sx), 9.5, 600, SUB, "left"))
+	out.append(_dt(sx, y + 23.0, nx + nw - sx, 15.0, _fitw(sub, 10.5, 600, nx + nw - sx), 10.5, 600, SUB, "left"))
 	return [out, h]
 
 func _elbow(y0: float, y: float, d: int, my: float) -> Array:   # đường nối cha con: vạch dọc từ đáy hàng cha (y0) xuống giữa hàng con + gạch ngang vào hàng
@@ -362,7 +362,7 @@ func _dock(y: float, F: Dictionary) -> Array:
 	var f = F.get(str(sel))
 	out.append(_dbx(X0, y - 4.0, XW, 1.0, "rgb(222, 204, 164)", 0.0))
 	if not (f is Dictionary):
-		out.append(_dt(X0, y, XW, 40.0, "Chưa có nhà nào trong làng.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0, y, XW, 40.0, "Chưa có nhà nào trong làng.", 10.5, 700, SUB, "left"))
 		return out
 	out.append(_icx(X0 + 18.0, y + 20.0, 34.0, _face(f)))
 	var nm := String(f.n)
@@ -371,9 +371,9 @@ func _dock(y: float, F: Dictionary) -> Array:
 	var tim: int = W._i(f.get("tim"))
 	var hx := X0 + 42.0 + nw + 8.0
 	out.append(_dic(hx, y + 4.0, 14.0, HEART if tim > 0 else HEART0))
-	out.append(_dt(hx + 17.0, y + 2.0, 30.0, 18.0, str(tim), 11.0, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
+	out.append(_dt(hx + 17.0, y + 2.0, 30.0, 18.0, str(tim), 10.5, 800, "rgb(190, 50, 60)" if tim > 0 else SUB, "left"))
 	var sm := "Họ " + String(f.get("ho", "")) + " · đời " + str(_doi(f)) + " · " + String(W.tinh_of(f).n)
-	out.append(_dt(X0 + 42.0, y + 21.0, XW - 46.0, 14.0, _fitw(sm, 10.0, 600, XW - 46.0), 10.0, 600, SUB, "left"))
+	out.append(_dt(X0 + 42.0, y + 21.0, XW - 46.0, 14.0, _fitw(sm, 10.5, 600, XW - 46.0), 10.5, 600, SUB, "left"))
 	var by := y + 46.0
 	var g := 6.0
 	var n := 2 if tab == "qh" else 3

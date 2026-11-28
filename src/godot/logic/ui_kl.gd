@@ -79,7 +79,7 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 		var rl: Dictionary = out[2]
 		rl.r[2] = maxf(0.0, float(rl.r[2]) - 26.0)
 		var q := _chip(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "info")
-		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 11.0, 800, "rgb(60, 110, 170)")]
+		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 10.5, 800, "rgb(60, 110, 170)")]
 		q.act = func(): U.tre_help(t, help)
 		out.append(q)
 	return out
@@ -96,7 +96,7 @@ func _base(id: String) -> String:   # nhóm gốc cho hàng lọc (bỏ qua gi�
 
 func _medal(x: float, y: float, i: int) -> Dictionary:   # huy chương hạng i (0..2) hoặc số tròn kem
 	var c := _dbx(x, y, 22.0, 22.0, String(MEDAL[i]) if i < 3 else "rgb(236, 226, 204)", 11.0)
-	c.kids = [_dt(x, y, 22.0, 22.0, str(i + 1), 11.0, 800, "rgb(255, 255, 255)" if i < 3 else BROWN)]
+	c.kids = [_dt(x, y, 22.0, 22.0, str(i + 1), 10.5, 800, "rgb(255, 255, 255)" if i < 3 else BROWN)]
 	return c
 
 func _board(y: float, id: String, L: Array, empty: String) -> Array:   # bảng hạng: huy chương, tên (Bạn nền xanh), số ký; trả [khối, cao]
@@ -110,9 +110,9 @@ func _board(y: float, id: String, L: Array, empty: String) -> Array:   # bảng 
 		var me: bool = x.get("me", false)
 		var c := _chip(X0, yy, XW, 30.0, "got" if me else "fut")
 		var v: String = WC2.kl_kg(float(x.g), id)
-		var vw: float = Box.text_w(v, 11.5, 800) + 2.0
-		c.kids = [_medal(X0 + 8.0, yy + 4.0, i), _dt(X0 + 38.0, yy, XW - 56.0 - vw, 30.0, "Bạn" if me else String(x.n), 11.5, 800, BROWN, "left"),
-			_dt(X0 + XW - 10.0 - vw, yy, vw, 30.0, v, 11.5, 800, "rgb(46, 120, 50)", "right")]
+		var vw: float = Box.text_w(v, 12.0, 800) + 2.0
+		c.kids = [_medal(X0 + 8.0, yy + 4.0, i), _dt(X0 + 38.0, yy, XW - 56.0 - vw, 30.0, "Bạn" if me else String(x.n), 12.0, 800, BROWN, "left"),
+			_dt(X0 + XW - 10.0 - vw, yy, vw, 30.0, v, 12.0, 800, "rgb(46, 120, 50)", "right")]
 		out.append(c)
 		yy += 30.0 + 5.0
 	return [out, yy - 5.0 - y]
@@ -127,7 +127,7 @@ func _tu() -> Array:
 	# chip tổng + thanh
 	var hc := _chip(X0, y, XW, 50.0, "k_tot")   # (bản 480) vàng nhạt, khác ô đang chọn (vàng đậm)
 	out.append(hc)
-	out.append_array(_rowi(X0 + 10.0, y + 7.0, 17.0, ["Đã có " + str(got) + "/" + str(ids.size()) + " loại"], 12.5, 800, BROWN)[0])
+	out.append_array(_rowi(X0 + 10.0, y + 7.0, 17.0, ["Đã có " + str(got) + "/" + str(ids.size()) + " loại"], 12.0, 800, BROWN)[0])
 	var nt := str(int(k.get("n", 0))) + " trái khủng" + ((" · " + String(k.tt[0])) if k.tt.size() else "")
 	var nw: float = Box.text_w(nt, 10.5, 700) + 2.0
 	out.append(_dt(X0 + XW - 10.0 - nw, y + 8.0, nw, 16.0, nt, 10.5, 700, "rgb(150, 100, 20)", "right"))
@@ -152,7 +152,7 @@ func _tu() -> Array:
 		y += float(g0[1]) + GG
 	elif L2.size() and flt != "co":   # (bản 479) loại chưa có: thu 1 chip, chạm mở lưới mờ
 		var nc := _chip(X0, y, XW, 30.0, "info")   # (bản 480) xanh dương nhạt
-		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 11.0, 700, "rgb(50, 96, 150)", "left"),
+		nc.kids = [_dt(X0 + 10.0, y, XW - 40.0, 30.0, ("Còn " + str(L2.size()) + " loại chưa có") if L1.size() else ("Chưa có trái khủng nào · " + str(L2.size()) + " loại"), 10.5, 700, "rgb(50, 96, 150)", "left"),
 			_dic(X0 + XW - 20.0, y + 10.0, 10.0, CHU if nox else CHD)]
 		nc.act = func(): nox = not nox
 		out.append(nc)
@@ -172,9 +172,9 @@ func _tu() -> Array:
 		out.append(_icn(X0 + 26.0, y + float(ic.r[3]) * 0.5, 36.0, String(f.id)))
 		var yy := y + 7.0
 		for rr in I:
-			var vw: float = Box.text_w(String(rr[1]), 11.0, 800) + 2.0
+			var vw: float = Box.text_w(String(rr[1]), 10.5, 800) + 2.0
 			out.append(_dt(X0 + 54.0, yy, XW - 70.0 - vw, 17.0, String(rr[0]), 10.5, 600, SUB, "left"))
-			out.append(_dt(X0 + XW - 10.0 - vw, yy, vw, 17.0, String(rr[1]), 11.0, 800, BROWN, "right"))
+			out.append(_dt(X0 + XW - 10.0 - vw, yy, vw, 17.0, String(rr[1]), 10.5, 800, BROWN, "right"))
 			yy += 17.0
 		y += float(ic.r[3]) + GG
 	# trái khủng gần đây + Bán
@@ -199,8 +199,8 @@ func _tu() -> Array:
 			bt.kids = _rowi(X0 + XW - 8.0 - bw + 9.0, y + 7.0, 26.0, P, 10.5, 700, "rgb(255, 255, 255)")[0]
 			out.append(bt)
 			var tw := XW - 50.0 - bw - 6.0
-			out.append(_dt(X0 + 40.0, y + 5.0, tw, 16.0, _fitw(WC2.kl_name(id) + " · " + WC2.kl_kg(float(x.g), id), 11.5, 800, tw), 11.5, 800, BROWN, "left"))
-			out.append(_dt(X0 + 40.0, y + 21.0, tw, 14.0, _fitw(WC2.KLHANG[int(x.h)] + (" · " + String(x.who) + " gặt" if String(x.get("who", "")) != "" else ""), 10.0, 700, tw), 10.0, 700, "rgb(150, 100, 20)" if int(x.h) == 3 else SUB, "left"))
+			out.append(_dt(X0 + 40.0, y + 5.0, tw, 16.0, _fitw(WC2.kl_name(id) + " · " + WC2.kl_kg(float(x.g), id), 12.0, 800, tw), 12.0, 800, BROWN, "left"))
+			out.append(_dt(X0 + 40.0, y + 21.0, tw, 14.0, _fitw(WC2.KLHANG[int(x.h)] + (" · " + String(x.who) + " gặt" if String(x.get("who", "")) != "" else ""), 10.5, 700, tw), 10.5, 700, "rgb(150, 100, 20)" if int(x.h) == 3 else SUB, "left"))
 			y += 40.0 + 5.0
 		y += GG - 5.0
 	return [out, y]
@@ -224,8 +224,9 @@ func _tiles(y: float, L: Array, k: Dictionary) -> Array:   # lưới 3 cột ô 
 		ks.append(_dt(x + 3.0, yy + 27.0, bw - 6.0, 14.0, _fitw(nm, 10.5, 800, bw - 6.0), 10.5, 800, BROWN if f != null else "rgb(150, 140, 120)"))
 		ks.append(_dt(x + 3.0, yy + 41.0, bw - 6.0, 13.0, WC2.kl_kg(float(f.g), id) if f != null else "Chưa có", 10.5, 800 if f != null else 600, "rgb(46, 120, 50)" if f != null else "rgb(170, 160, 140)"))
 		if f != null and int(f.h) == 3:   # hạng kỷ lục: chip vàng nhỏ góc trên
-			var kc := _chip(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "now")
-			kc.kids = [_dt(x + bw - 34.0, yy + 3.0, 31.0, 13.0, "Kỷ lục", 7.5, 800, "rgb(150, 100, 20)")]
+			var kw: float = Box.text_w("Kỷ lục", 10.5, 800) + 8.0   # (11-28) nhãn rộng theo chữ cỡ 10.5
+			var kc := _chip(x + bw - kw - 3.0, yy + 3.0, kw, 15.0, "now")
+			kc.kids = [_dt(x + bw - kw - 3.0, yy + 3.0, kw, 15.0, "Kỷ lục", 10.5, 800, "rgb(150, 100, 20)")]
 			ks.append(kc)
 		c.kids = ks
 		c.act = _sel.bind(id)
@@ -255,7 +256,7 @@ func _rk() -> Array:
 			var ec := _chip(X0, y, XW, 30.0, "g_no")
 			var md := _medal(X0 + 8.0, y + 4.0, i)
 			md.css["opacity"] = "0.4"
-			ec.kids = [md, _dt(X0 + 38.0, y, XW - 48.0, 30.0, "Gặt trái khủng đầu tiên để lên bảng" if i == 0 else "—", 11.0, 700 if i == 0 else 600, SUB if i == 0 else "rgb(190, 180, 160)", "left")]
+			ec.kids = [md, _dt(X0 + 38.0, y, XW - 48.0, 30.0, "Gặt trái khủng đầu tiên để lên bảng" if i == 0 else "—", 10.5, 700 if i == 0 else 600, SUB if i == 0 else "rgb(190, 180, 160)", "left")]
 			out.append(ec)
 			y += 30.0 + 5.0
 		return [out, y + GG - 5.0]
@@ -306,12 +307,12 @@ func _thi() -> Array:
 		var px := X0 + i * (pw + 4.0)
 		var pc := _chip(px, y, pw, 56.0, "m" + str(i + 1))
 		var kk := [_dic(px + 4.0, y + 12.0, 32.0, _medsvg(i))]
-		kk.append(_dt(px + 38.0, y + 6.0, pw - 40.0, 16.0, "Hạng " + str(i + 1), 11.5, 800, ["rgb(170, 120, 10)", "rgb(100, 110, 126)", "rgb(160, 90, 40)"][i], "left"))
+		kk.append(_dt(px + 38.0, y + 6.0, pw - 40.0, 16.0, "Hạng " + str(i + 1), 12.0, 800, ["rgb(170, 120, 10)", "rgb(100, 110, 126)", "rgb(160, 90, 40)"][i], "left"))
 		kk.append_array(_rowi(px + 36.0, y + 22.0, 15.0, [WC2._sa(int(P[0])), "c"], 10.5, 800, BROWN)[0])   # dòng 2: xu, dòng 3: sen
 		kk.append_array(_rowi(px + 36.0, y + 37.0, 15.0, [str(P[1]), "i:pearl"], 10.5, 800, BROWN)[0])
 		if i == 0:
 			var vc := _chip(px + pw - 30.0, y - 6.0, 30.0, 14.0, "sen")
-			vc.kids = [_dt(px + pw - 30.0, y - 6.0, 30.0, 14.0, "Vua", 8.5, 800, "rgb(190, 50, 60)")]
+			vc.kids = [_dt(px + pw - 30.0, y - 6.0, 30.0, 14.0, "Vua", 10.5, 800, "rgb(190, 50, 60)")]
 			kk.append(vc)
 		pc.kids = kk
 		pc.act = _dsay.bind("Hạng " + str(i + 1) + " mỗi loại: " + WC2._sa(int(P[0])) + " xu, " + str(P[1]) + " sen đỏ" + (", danh hiệu Vua." if i == 0 else "."))
@@ -328,7 +329,7 @@ func _thi() -> Array:
 		var x := X0 + (i % 2) * (bw + g)
 		var yy := y + floorf(i / 2.0) * (bh + g)
 		var c := _chip(x, yy, bw, bh, "g_" + _grp(id))
-		var ks := [_icn(x + 20.0, yy + 22.0, 30.0, id), _dt(x + 40.0, yy + 7.0, bw - 46.0, 16.0, _fitw(WC2.kl_name(id), 11.5, 800, bw - 46.0), 11.5, 800, BROWN, "left"),
+		var ks := [_icn(x + 20.0, yy + 22.0, 30.0, id), _dt(x + 40.0, yy + 7.0, bw - 46.0, 16.0, _fitw(WC2.kl_name(id), 12.0, 800, bw - 46.0), 12.0, 800, BROWN, "left"),
 			_dt(x + 40.0, yy + 23.0, bw - 46.0, 14.0, WC2.kl_kg(float(my), id) if my != null else "Chưa dự thi", 11.0 if my != null else 10.0, 800 if my != null else 600, "rgb(46, 120, 50)" if my != null else SUB, "left")]
 		var hk := 0
 		for j in R.size():
@@ -336,11 +337,11 @@ func _thi() -> Array:
 				hk = j + 1
 		var hx := x + 8.0
 		if hk:   # (bản 479) chip hạng chỉ khi đã dự thi
-			var hc := _tchip(hx, yy + bh - 24.0, "Hạng " + str(hk), "now" if hk == 1 else "got", "rgb(150, 100, 20)" if hk == 1 else "rgb(46, 120, 50)", null, 18.0, 9.5)
+			var hc := _tchip(hx, yy + bh - 24.0, "Hạng " + str(hk), "now" if hk == 1 else "got", "rgb(150, 100, 20)" if hk == 1 else "rgb(46, 120, 50)", null, 18.0, 10.5)
 			ks.append(hc[0])
 			hx += float(hc[1]) + 4.0
 		if _grp(id) == "quy":
-			var qc := _tchip(hx, yy + bh - 24.0, "Giống quý", "g_quy", "rgb(110, 70, 170)", null, 18.0, 9.5)
+			var qc := _tchip(hx, yy + bh - 24.0, "Giống quý", "g_quy", "rgb(110, 70, 170)", null, 18.0, 10.5)
 			ks.append(qc[0])
 		c.kids = ks
 		c.act = _dsay.bind(WC2.kl_name(id) + ": " + (("của bạn " + WC2.kl_kg(float(my), id) + ", đang hạng " + str(hk) + ".") if my != null else "gặt trong tuần này để dự thi."))
@@ -360,7 +361,7 @@ func _thi() -> Array:
 		var p := []
 		for i in mini(3, L.size()):
 			p.append(("Bạn" if L[i].get("me", false) else String(L[i].n)) + " " + WC2.kl_kg(float(L[i].g), id))
-		c.kids = [_icn(X0 + 16.0, y + 15.0, 20.0, id), _medal(X0 + 32.0, y + 4.0, 0), _dt(X0 + 60.0, y, XW - 70.0, 30.0, _fitw(WC2.kl_name(id) + ": " + " · ".join(PackedStringArray(p)), 11.0, 700, XW - 70.0), 11.0, 700, BROWN, "left")]
+		c.kids = [_icn(X0 + 16.0, y + 15.0, 20.0, id), _medal(X0 + 32.0, y + 4.0, 0), _dt(X0 + 60.0, y, XW - 70.0, 30.0, _fitw(WC2.kl_name(id) + ": " + " · ".join(PackedStringArray(p)), 10.5, 700, XW - 70.0), 10.5, 700, BROWN, "left")]
 		out.append(c)
 		y += 30.0 + 5.0
 	if none.size():

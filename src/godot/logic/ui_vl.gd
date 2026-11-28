@@ -176,24 +176,24 @@ func _head(f: Dictionary, y0: float) -> Array:   # [khối, cao]
 	var p := 1.0 if tim >= 5 else fmod(W._n(f.get("dp")), 100.0) / 100.0
 	for i in 5:
 		out.append(_dic(x + i * 22.0, hy, 20.0, HEART if i < tim else (_heartp(p) if i == tim and p > 0.0 else HEART0)))
-	out.append(_dt(x + 5 * 22.0 + 6.0, hy + 1.0, 70.0, 18.0, "Thân " + str(tim) + "/5", 11.0, 700, "rgb(190, 60, 70)", "left"))
+	out.append(_dt(x + 5 * 22.0 + 6.0, hy + 1.0, 70.0, 18.0, "Thân " + str(tim) + "/5", 10.5, 700, "rgb(190, 60, 70)", "left"))
 	# nhà · đang làm: chữ trơn (không chip)
 	var r = W.r1(u)
 	var rid := String(r.r.id)
 	var cy := y0 + 65.0
 	var hs := String(_yd().get(rid.trim_suffix("2"), "Nhà")) + " · " + str(int(W.CX.get(rid, 0))) + " người"
 	var jb := _vs(f)
-	var hsw: float = minf(Box.text_w(hs, 10.0, 700) + 2.0, xr - x)
-	out.append(_dt(x, cy, hsw, 16.0, _fitw(hs, 10.0, 700, hsw), 10.0, 700, SUB, "left"))
+	var hsw: float = minf(Box.text_w(hs, 10.5, 700) + 2.0, xr - x)
+	out.append(_dt(x, cy, hsw, 16.0, _fitw(hs, 10.5, 700, hsw), 10.5, 700, SUB, "left"))
 	var jx := x + hsw + 4.0
 	if jx + 30.0 < xr:
-		out.append(_dt(jx, cy, xr - jx, 16.0, _fitw("· " + jb, 10.0, 700, xr - jx), 10.0, 700, "rgb(46, 120, 50)" if jb == "Đang ở nhà" else "rgb(176, 110, 20)", "left"))
+		out.append(_dt(jx, cy, xr - jx, 16.0, _fitw("· " + jb, 10.5, 700, xr - jx), 10.5, 700, "rgb(46, 120, 50)" if jb == "Đang ở nhà" else "rgb(176, 110, 20)", "left"))
 	var y := maxf(y0 + fs, cy + 16.0) + 8.0
 	# câu nói: chữ nghiêng, không khung
 	var q: String = "“" + W.talk_line(f) + "”"
-	var qL := _wrap(q, 11.0, 600, XW - 8.0)
+	var qL := _wrap(q, 10.5, 600, XW - 8.0)
 	for i in qL.size():
-		var qt := _dt(X0 + 4.0, y + i * 15.0, XW - 8.0, 15.0, qL[i], 11.0, 600, "rgb(120, 88, 50)", "left")
+		var qt := _dt(X0 + 4.0, y + i * 15.0, XW - 8.0, 15.0, qL[i], 10.5, 600, "rgb(120, 88, 50)", "left")
 		qt.css["font-style"] = "italic"
 		out.append(qt)
 	y += qL.size() * 15.0 + 2.0
@@ -269,14 +269,14 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	var rt := ""
 	if xu > 0:
 		rt = "+" + W._sa(xu)
-	var rw: float = (Box.text_w(rt, 11.5, 800) + 22.0) if rt != "" else 0.0
+	var rw: float = (Box.text_w(rt, 12.0, 800) + 22.0) if rt != "" else 0.0
 	var by0 := X0 + XW - 10.0 - 66.0   # mép trái nút
 	var tw0: float = (w - 76.0) if lb != "" and list.size() else (w - rw)
 	out.append(_dt(x, yy, tw0, 16.0, _fitw(t, 12.0, 800, tw0), 12.0, 800, BROWN, "left"))
 	var xu_row := rt != "" and not (lb != "" and list.size())   # có nút + chip món: số xu nằm ngay trên nút, canh giữa nút (vẽ ở dưới)
 	if xu_row:
 		out.append(_dick(x + w - 8.0, yy + 8.0, 17.0, "coin"))
-		out.append(_dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))   # (bản 446) số xu thưởng: xanh lá đậm
+		out.append(_dt(x + w - rw, yy - 1.0, rw - 19.0, 18.0, rt, 12.0, 800, "rgb(40, 130, 50)", "right"))   # (bản 446) số xu thưởng: xanh lá đậm
 	yy += 16.0 + (10.0 if list.size() and s == "" else 4.0)
 	if s != "":
 		var pp := _para(x, yy, w, s, 10.5, 600, SUB, 14.0)
@@ -292,9 +292,9 @@ func _job(y: float, kind: String, t: String, s: String, list: Array, xu: int, lb
 	if lb != "":
 		var by: float = ny + 4.0 if list.size() else yy
 		if rt != "" and not xu_row:   # (bản 448) số xu ngay trên nút, canh giữa nút
-			var xw0: float = Box.text_w(rt, 12.5, 800) + 4.0 + 16.0
+			var xw0: float = Box.text_w(rt, 12.0, 800) + 4.0 + 16.0
 			var xx := by0 + (66.0 - xw0) * 0.5
-			out.append(_dt(xx, by - 20.0, xw0 - 18.0, 18.0, rt, 12.5, 800, "rgb(40, 130, 50)", "right"))
+			out.append(_dt(xx, by - 20.0, xw0 - 18.0, 18.0, rt, 12.0, 800, "rgb(40, 130, 50)", "right"))
 			out.append(_dick(xx + xw0 - 8.0, by - 11.0, 15.0, "coin"))
 		out.append(_btn(X0 + XW - 10.0 - 66.0, by, 66.0, 26.0, lb, act, "go" if (ok or force) and act != null else "off"))
 		if not list.size():
@@ -347,17 +347,17 @@ func _idle(y: float, f: Dictionary) -> Array:   # nhà chưa cần gì: gợi ý
 	var pp := _para(X0 + 10.0, y + 8.0, XW - 20.0, String(f.n) + " chưa cần gì. Lát nữa thế nào cũng nhờ bạn chuyện này chuyện kia.", 10.5, 600, BROWN)
 	out.append_array(pp[0])
 	var yy := y + 8.0 + float(pp[1]) + 6.0
-	out.append(_dt(X0 + 10.0, yy, 110.0, 24.0, "Tặng quà họ thích:", 10.0, 700, SUB, "left"))
+	out.append(_dt(X0 + 10.0, yy, 110.0, 24.0, "Tặng quà họ thích:", 10.5, 700, SUB, "left"))
 	var ix := X0 + 118.0
 	for i in 2:
 		var kn: bool = W._tr(k.get("b" if i else "a"))
 		var id := String(Li.th[i])
 		if kn:
 			out.append(_icn(ix + 12.0, yy + 12.0, 22.0, id))
-			out.append(_dt(ix + 26.0, yy, 70.0, 24.0, _fitw(String(W._ae(id).get("name", id)), 10.0, 700, 70.0), 10.0, 700, BROWN, "left"))
+			out.append(_dt(ix + 26.0, yy, 70.0, 24.0, _fitw(String(W._ae(id).get("name", id)), 10.5, 700, 70.0), 10.5, 700, BROWN, "left"))
 		else:
 			out.append(_dic(ix + 2.0, yy + 2.0, 20.0, QMARK))
-			out.append(_dt(ix + 26.0, yy, 70.0, 24.0, "chưa biết", 10.0, 600, SUB, "left"))
+			out.append(_dt(ix + 26.0, yy, 70.0, 24.0, "chưa biết", 10.5, 600, SUB, "left"))
 		ix += 92.0
 	yy += 28.0
 	c.r[3] = yy - y
@@ -375,9 +375,9 @@ func _dam(y: float) -> Array:   # aU: đám tiệc nhà này
 		var j0 := _job(y, "fut", nm, "Bắt đầu lúc " + ("0" if e < 10 else "") + str(e) + ":00. Tới giờ ghé lại dự nha.", [], 0, "", null)
 		var lh := fposmod(fmod(float(a.t0), 24.0) - float(G.nv.hour()), 24.0)   # giờ làng còn tới đám
 		var lt: String = "còn " + (str(int(lh)) + " giờ " if int(lh) else "") + str(int(fmod(lh, 1.0) * 60.0)) + " phút"
-		var lw: float = Box.text_w(lt, 10.0, 700) + 14.0
+		var lw: float = Box.text_w(lt, 10.5, 700) + 14.0
 		var lc := _chip(X0 + XW - 10.0 - lw, y + 7.0, lw, 20.0, "info")   # đếm ngược: chip xanh dương như Sổ nhiệm vụ
-		lc.kids = [_dt(X0 + XW - 10.0 - lw, y + 7.0, lw, 20.0, lt, 10.0, 700, "rgb(52, 92, 140)")]
+		lc.kids = [_dt(X0 + XW - 10.0 - lw, y + 7.0, lw, 20.0, lt, 10.5, 700, "rgb(52, 92, 140)")]
 		j0[0].append(lc)
 		return j0
 	var r: int = W._v1()
@@ -433,7 +433,7 @@ func _thue(e: Dictionary) -> Array:   # _vT.thue
 	var col: String = TABC.thue
 	var y := 6.0
 	out.append_array(_sect(y, "Thuê làm phụ", col, "kh:pc_cuoc"))
-	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.0, 600, SUB, "left"))
+	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Trả công mỗi phút, càng thân càng rẻ, hết tiền thì nghỉ.", 10.5, 600, SUB, "left"))
 	y += 44.0
 	var hr := _hire(y, u, e, col, W)
 	out.append_array(hr[0])
@@ -445,7 +445,7 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 	var out := []
 	var y := 6.0
 	out.append_array(_sect(y, "Giống nhà " + String(a.n) + " để dư", TABC.giong, "kh:lua"))
-	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.0, 600, SUB, "left"))
+	out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, "Mỗi ngày mỗi thứ chỉ có chừng 6 hạt.", 10.5, 600, SUB, "left"))
 	y += 44.0
 	for e in WC.bZ(u):
 		var id := String(e)
@@ -472,7 +472,7 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 		var th: bool = W._i(a.get("tim")) >= XOM_TIM
 		y += GG - 6.0
 		out.append_array(_sect(y, "Giống quanh xóm", TABC.giong, "kh:pc_gui"))
-		out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, _fitw(String(a.n) + (" mua giùm, giá gốc vì đã thân." if th else " mua giùm, lời 25% · thân " + str(XOM_TIM) + " tim thì giá gốc."), 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left"))
+		out.append(_dt(X0 + 2.0, y + 24.0, XW - 4.0, 13.0, _fitw(String(a.n) + (" mua giùm, giá gốc vì đã thân." if th else " mua giùm, lời 25% · thân " + str(XOM_TIM) + " tim thì giá gốc."), 10.5, 600, XW - 4.0), 10.5, 600, SUB, "left"))
 		y += 44.0
 		for q in nb:
 			var id := String(q[1])
@@ -484,7 +484,7 @@ func _giong(a: Dictionary) -> Array:   # jR: giống nhà hàng xóm để dư
 			var tw := XW - 46.0 - 132.0
 			c.kids = [_icn(X0 + 24.0, y + 24.0, 30.0, id),
 				_dt(X0 + 46.0, y + 3.0, tw, 15.0, _fitw("Giống " + String(G.crop(id).name).to_lower(), 12.0, 800, tw), 12.0, 800, BROWN, "left"),
-				_dt(X0 + 46.0, y + 18.0, tw, 13.0, _fitw("của " + String(q[2]), 10.0, 700, tw), 10.0, 700, "rgb(90, 130, 50)", "left"),   # chủ giống: dòng riêng, không cắt tên
+				_dt(X0 + 46.0, y + 18.0, tw, 13.0, _fitw("của " + String(q[2]), 10.5, 700, tw), 10.5, 700, "rgb(90, 130, 50)", "left"),   # chủ giống: dòng riêng, không cắt tên
 				_dt(X0 + 46.0, y + 31.0, tw, 13.0, _fitw(W._sa(l) + " xu/hạt · còn " + str(o), 10.5, 600, tw), 10.5, 600, SUB, "left")]
 			out.append(c)
 			var ok1: bool = o > 0 and W._n(G.g.coins) >= l
@@ -548,8 +548,8 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 		any = any or W._tr(it[2])
 	var nd: bool = W._tr(k.get("d"))
 	if not any and not nd:
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết.", 10.0, 600, SUB, "left"))
-		out.append(_dt(X0 + 10.0, yy + 15.0, XW - 20.0, 15.0, _fitw("Trò chuyện, tặng quà để làm thân với " + String(f.n) + " nha.", 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, "Thích, ghét, ngày riêng: chưa biết.", 10.5, 600, SUB, "left"))
+		out.append(_dt(X0 + 10.0, yy + 15.0, XW - 20.0, 15.0, _fitw("Trò chuyện, tặng quà để làm thân với " + String(f.n) + " nha.", 10.5, 600, XW - 20.0), 10.5, 600, SUB, "left"))
 		yy += 36.0   # 2 dòng 15 + lề dưới 6 (bằng lề trên)
 	else:
 		if any:
@@ -559,18 +559,18 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 					continue
 				if String(it[0]) != "" or ix == X0 + 10.0:
 					var lb := (String(it[0]) if String(it[0]) != "" else "Thích") + ":"
-					var lw: float = Box.text_w(lb, 10.0, 700) + 4.0
-					out.append(_dt(ix, yy, lw, 15.0, lb, 10.0, 700, SUB, "left"))
+					var lw: float = Box.text_w(lb, 10.5, 700) + 4.0
+					out.append(_dt(ix, yy, lw, 15.0, lb, 10.5, 700, SUB, "left"))
 					ix += lw
 				var id := String(it[1])
 				out.append(_icn(ix + 8.0, yy + 7.5, 16.0, id))   # (11-26) hình món nhỏ cỡ dòng chữ: dòng thích / ghét cao bằng các dòng khác
 				var nm := String(W._ae(id).get("name", id))
-				var nw: float = minf(Box.text_w(nm, 10.0, 700) + 2.0, 62.0)
-				out.append(_dt(ix + 18.0, yy, nw, 15.0, _fitw(nm, 10.0, 700, nw), 10.0, 700, BROWN, "left"))
+				var nw: float = minf(Box.text_w(nm, 10.5, 700) + 2.0, 62.0)
+				out.append(_dt(ix + 18.0, yy, nw, 15.0, _fitw(nm, 10.5, 700, nw), 10.5, 700, BROWN, "left"))
 				ix += 18.0 + nw + 10.0
 			yy += 15.0
 		var nr := ("Ngày riêng: ngày " + str(Li.ngay) + " mỗi mùa (" + String(Li.ly) + ")") if nd else "Ngày riêng: chưa biết"
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, _fitw(nr, 10.0, 600, XW - 20.0), 10.0, 600, SUB, "left"))
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 15.0, _fitw(nr, 10.5, 600, XW - 20.0), 10.5, 600, SUB, "left"))
 		yy += 21.0   # 15 + lề dưới 6 (bằng lề trên), như khi chưa biết gì
 	c.r[3] = yy - y
 	y = yy + GG
@@ -586,7 +586,7 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	for i in 5:
 		out.append(_pic(X0 + 46.0 + i * 16.0, y + 8.0, 14.0, 14.0, "res://ui/img/bong/" + ("sao.png" if i < o else "sao_xam.png")))
 	if W.k9(f):
-		out.append(_dt(X0 + 46.0 + 5 * 16.0 + 6.0, y + 7.0, 110.0, 16.0, "· đang đúng nghề", 10.0, 700, "rgb(46, 120, 50)", "left"))
+		out.append(_dt(X0 + 46.0 + 5 * 16.0 + 6.0, y + 7.0, 110.0, 16.0, "· đang đúng nghề", 10.5, 700, "rgb(46, 120, 50)", "left"))
 	# (bản 442) bảng so sánh: hiện tại -> sao kế (xanh)
 	var rows := [["Công rẻ", str(W.q_l(o)) + "%", str(W.q_l(o + 1)) + "%"]]
 	if r == "xuong":
@@ -596,29 +596,29 @@ func _tal(f: Dictionary) -> Array:   # tinhHtml + TALH + SU
 	yy = y + 26.0
 	for rw in rows:
 		out.append(_dt(X0 + 46.0, yy, 90.0, 16.0, String(rw[0]), 10.5, 600, SUB, "left"))
-		out.append(_dt(X0 + 138.0, yy, 40.0, 16.0, String(rw[1]), 11.0, 800, BROWN, "left"))
+		out.append(_dt(X0 + 138.0, yy, 40.0, 16.0, String(rw[1]), 10.5, 800, BROWN, "left"))
 		if o < 5:
-			out.append(_dt(X0 + 172.0, yy, 20.0, 16.0, "→", 11.0, 700, SUB))
-			out.append(_dt(X0 + 194.0, yy, 44.0, 16.0, String(rw[2]), 11.0, 800, "rgb(46, 130, 50)", "left"))
+			out.append(_dt(X0 + 172.0, yy, 20.0, 16.0, "→", 10.5, 700, SUB))
+			out.append(_dt(X0 + 194.0, yy, 44.0, 16.0, String(rw[2]), 10.5, 800, "rgb(46, 130, 50)", "left"))
 		yy += 17.0
 	yy += 4.0
 	if W._tr(f.get("tt")):
 		var cs := maxf(0.0, (W._n(f.tt) - G._now_ms()) / 1000.0)
-		var p2 := _para(X0 + 10.0, yy + 3.0, XW - 100.0, "Đang đi học nghề lên " + str(o + 1) + " sao, còn " + G.ao(cs) + ".", 10.0, 700, BROWN, 13.0)
+		var p2 := _para(X0 + 10.0, yy + 3.0, XW - 100.0, "Đang đi học nghề lên " + str(o + 1) + " sao, còn " + G.ao(cs) + ".", 10.5, 700, BROWN, 13.0)
 		out.append_array(p2[0])
 		out.append(_btn(X0 + XW - 84.0, yy, 74.0, 26.0, "Về ngay", func(): W.e_y(u), "go"))
 		yy += maxf(26.0, float(p2[1])) + 10.0
 	elif o < 5:
 		var fz: int = W.m_i(o)
 		var lk: bool = W._i(f.get("tim")) < o
-		out.append_array(_rowi(X0 + 10.0, yy + 5.0, 15.0, ["Lên " + str(o + 1), "s", " · " + W._sa(fz), "c", " · học " + G.ao(W.n_l(o))], 10.0, 700, BROWN)[0])   # (bản 452) sao, xu bằng hình
+		out.append_array(_rowi(X0 + 10.0, yy + 5.0, 15.0, ["Lên " + str(o + 1), "s", " · " + W._sa(fz), "c", " · học " + G.ao(W.n_l(o))], 10.5, 700, BROWN)[0])   # (bản 452) sao, xu bằng hình
 		if lk:
 			out.append(_lockc(X0 + XW - 94.0, yy, o))
 		else:
 			out.append(_btn(X0 + XW - 94.0, yy, 84.0, 26.0, "Gửi đi học", func(): W.b_i(u), "go"))
 		yy += 26.0 + 8.0
 	else:
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đã thành thợ cả 5 sao", 11.0, 800, BROWN, "left"))
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đã thành thợ cả 5 sao", 10.5, 800, BROWN, "left"))
 		yy += 22.0
 	c2.r[3] = yy - y
 	y = yy + GG
@@ -650,7 +650,7 @@ func _su(y: float, f: Dictionary) -> Array:   # SU: nghề gia truyền nhà nà
 		var lc := _chip(X0, y, XW, 48.0, "nghe")   # (bản 442) chưa đủ thân: hình món làm ra + 1 câu + khóa tim
 		var pid: String = String(x.id) if not W._ae(x.id).is_empty() else String(x["in"][0][0])
 		var lw := XW - 150.0
-		r = [[lc, _icn(X0 + 24.0, y + 24.0, 30.0, pid), _dt(X0 + 46.0, y + 6.0, lw, 18.0, _fitw(String(W._ae(pid).get("name", x.n)), 11.5, 800, lw), 11.5, 800, BROWN, "left"),
+		r = [[lc, _icn(X0 + 24.0, y + 24.0, 30.0, pid), _dt(X0 + 46.0, y + 6.0, lw, 18.0, _fitw(String(W._ae(pid).get("name", x.n)), 12.0, 800, lw), 12.0, 800, BROWN, "left"),
 			_lockc(X0 + XW - 94.0, y + 11.0, 3)] + _rowi(X0 + 46.0, y + 25.0, 14.0, ["Thân 3", "h", " họ mới nhận dạy"], 10.5, 600, SUB)[0], 48.0]
 	elif not W._tr(p):
 		var nd: Array = W.hn_in1(u, f)
@@ -709,7 +709,7 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 	var opts: Array = cv.opts
 	var oh := []
 	for o in opts:
-		oh.append(_wrap(String(o.t), 11.0, 700, w0 - 40.0).size() * 14.0 + 14.0)
+		oh.append(_wrap(String(o.t), 10.5, 700, w0 - 40.0).size() * 14.0 + 14.0)
 	var oy := y1 - 10.0
 	for h in oh:
 		oy -= float(h) + 6.0
@@ -720,12 +720,12 @@ func _chat(f: Dictionary, y0: float, y1: float) -> Array:   # chatHtml (hộp n�
 		var h := float(oh[i])
 		var pr: bool = o.get("k") == "nhan"
 		var b := _chip(x0, yy, w0, h, "got" if pr else "fut")
-		var lines := _wrap(String(o.t), 11.0, 700, w0 - 40.0)
+		var lines := _wrap(String(o.t), 10.5, 700, w0 - 40.0)
 		var cc := _dbx(x0 + 8.0, yy + (h - 18.0) * 0.5, 18.0, 18.0, "rgb(196, 160, 100)", 9.0)
-		cc.kids = [_dt(x0 + 8.0, yy + (h - 18.0) * 0.5, 18.0, 18.0, str(i + 1), 10.0, 800, "rgb(255, 255, 255)")]   # số là con của tròn (pool dời nút cũ xuống cuối → số bị che)
+		cc.kids = [_dt(x0 + 8.0, yy + (h - 18.0) * 0.5, 18.0, 18.0, str(i + 1), 10.5, 800, "rgb(255, 255, 255)")]   # số là con của tròn (pool dời nút cũ xuống cuối → số bị che)
 		var ks := [cc]
 		for j in lines.size():
-			ks.append(_dt(x0 + 32.0, yy + 7.0 + j * 14.0, w0 - 40.0, 14.0, lines[j], 11.0, 700, BROWN, "left"))
+			ks.append(_dt(x0 + 32.0, yy + 7.0 + j * 14.0, w0 - 40.0, 14.0, lines[j], 10.5, 700, BROWN, "left"))
 		b.kids = ks
 		b.act = _pick.bind(i)
 		out.append(b)
@@ -803,7 +803,7 @@ func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp n�
 	var ids: Array = W.gift_ids(u)
 	var y := y0 + 56.0
 	if ids.is_empty():
-		out.append(_dt(x0, y, w0, 16.0, "Kho chưa có món gì để tặng.", 11.0, 700, BROWN, "left"))
+		out.append(_dt(x0, y, w0, 16.0, "Kho chưa có món gì để tặng.", 10.5, 700, BROWN, "left"))
 		return out
 	var g := 6.0
 	var bw := (w0 - g) * 0.5
@@ -818,7 +818,7 @@ func _gift(f: Dictionary, y0: float, y1: float) -> Array:   # giftHtml (hộp n�
 		var c := _chip(cx, cy, bw, bh, "got" if tg > 0 else ("sen" if tg < 0 else "fut"))
 		var tx := cx + 42.0
 		var tw := cx + bw - 6.0 - tx
-		var ks := [_icn(cx + 21.0, cy + bh * 0.5, 26.0, id), _dt(tx, cy + 6.0, tw, 15.0, _fitw(String(W._ae(id).name), 11.5, 800, tw), 11.5, 800, BROWN, "left")]
+		var ks := [_icn(cx + 21.0, cy + bh * 0.5, 26.0, id), _dt(tx, cy + 6.0, tw, 15.0, _fitw(String(W._ae(id).name), 12.0, 800, tw), 12.0, 800, BROWN, "left")]
 		var st: String = "Có " + str(W._barn(id))
 		if tg > 0:
 			ks.append(_dt(tx, cy + 23.0, 40.0, 14.0, st + " ·", 10.5, 600, SUB, "left"))

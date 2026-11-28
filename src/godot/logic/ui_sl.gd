@@ -155,9 +155,9 @@ func _top(y: float) -> Array:   # dải đầu: huy chương, danh hiệu đang 
 	c.act = _tab_go.bind("dh")
 	var ks := [_icx(X0 + 20.0, y + 20.0, 28.0, "svg:res://ui/svg/mat/huychuong.svg")]   # chữ, hình là con của chip (nằm trên nền chip)
 	var nm: String = String(R.n) if R != null else "Chưa có danh hiệu"
-	ks.append(_dt(X0 + 40.0, y + 4.0, 170.0, 17.0, _fitw(nm, 12.5, 800, 170.0), 12.5, 800, "rgb(196, 110, 20)", "left"))
+	ks.append(_dt(X0 + 40.0, y + 4.0, 170.0, 17.0, _fitw(nm, 12.0, 800, 170.0), 12.0, 800, "rgb(196, 110, 20)", "left"))
 	var st := "Đã đạt " + str(N) + "/" + str(Bs.size()) + " danh hiệu ›"
-	ks.append(_dt(X0 + XW - 128.0, y + 5.0, 120.0, 15.0, st, 10.0, 700, SUB, "right"))
+	ks.append(_dt(X0 + XW - 128.0, y + 5.0, 120.0, 15.0, st, 10.5, 700, SUB, "right"))
 	ks.append_array(_bar(X0 + 40.0, y + 26.0, XW - 52.0, float(N) / maxf(1.0, Bs.size()), 6.0))
 	c.kids = ks
 	var out := [c]
@@ -187,7 +187,7 @@ func _lang() -> Array:
 				var ch := _chip(x, y, w, bh, "miss" if lk else String(G0[1]))
 				var ks := [_ic2(x + 22.0, y + bh * 0.5, 28.0, String(LIC.get(r[0], "xu")))]
 				var tw := w - 48.0
-				ks.append(_dt(x + 42.0, y + 6.0, tw, 16.0, _fitw(String(r[1]), 11.5, 800, tw), 11.5, 800, "rgb(110, 104, 92)" if lk else BROWN, "left"))
+				ks.append(_dt(x + 42.0, y + 6.0, tw, 16.0, _fitw(String(r[1]), 12.0, 800, tw), 12.0, 800, "rgb(110, 104, 92)" if lk else BROWN, "left"))
 				var red: bool = int(r[3]) > 0
 				var sc := "rgb(190, 50, 60)" if red else SUB
 				ks.append(_dt(x + 42.0, y + 23.0, tw, 14.0, _fitw(String(r[2]), 10.5, 700 if red else 600, tw), 10.5, 700 if red else 600, sc, "left"))
@@ -270,11 +270,11 @@ func _dh() -> Array:
 			xc.kids = [_icx(rx - xw + 12.0, y + 14.0, 15.0, "xu"), _dt(rx - xw + 22.0, y + 4.0, xw - 24.0, 20.0, xs, 10.5, 800, "rgb(150, 90, 10)", "left")]
 			out.append(xc)
 			rx -= xw + 6.0
-		out.append(_dt(x, y + 6.0, rx - x, 16.0, _fitw(String(ra.n), 11.5, 800, rx - x), 11.5, 800, BROWN, "left"))
+		out.append(_dt(x, y + 6.0, rx - x, 16.0, _fitw(String(ra.n), 12.0, 800, rx - x), 12.0, 800, BROWN, "left"))
 		var ns := str(D.c) + "/" + str(ra.max)
-		var nw: float = Box.text_w(ns, 10.0, 800) + 2.0
-		out.append(_dt(x, y + 23.0, X0 + XW - 10.0 - nw - x, 14.0, _fitw(String(ra.d), 9.5, 600, X0 + XW - 14.0 - nw - x), 9.5, 600, SUB, "left"))
-		out.append(_dt(X0 + XW - 8.0 - nw, y + 24.0, nw, 14.0, ns, 10.0, 800, "rgb(40, 110, 50)" if D.rd else BROWN, "left"))
+		var nw: float = Box.text_w(ns, 10.5, 800) + 2.0
+		out.append(_dt(x, y + 23.0, X0 + XW - 10.0 - nw - x, 14.0, _fitw(String(ra.d), 10.5, 600, X0 + XW - 14.0 - nw - x), 10.5, 600, SUB, "left"))
+		out.append(_dt(X0 + XW - 8.0 - nw, y + 24.0, nw, 14.0, ns, 10.5, 800, "rgb(40, 110, 50)" if D.rd else BROWN, "left"))
 		out.append_array(_bar(x, y + 39.0, X0 + XW - 8.0 - x, float(D.c) / maxf(1.0, float(ra.max)), 6.0))
 		y += h + 5.0
 	if ng:   # đã nhận: gom cuối, mỗi danh hiệu 1 dòng mờ có ✓
@@ -286,7 +286,7 @@ func _dh() -> Array:
 				continue
 			var c2 := _chip(X0, y, XW, 28.0, "fut")
 			c2.kids = [_dtick(X0 + 10.0, y + 8.0, 12.0), _dt(X0 + 28.0, y, XW - 120.0, 28.0, String(D.t.n), 10.5, 700, SUB, "left"),
-				_dt(X0 + XW - 98.0, y, 90.0, 28.0, "Đã nhận " + W._sa(D.t.xu), 9.5, 600, SUB, "right")]
+				_dt(X0 + XW - 98.0, y, 90.0, 28.0, "Đã nhận " + W._sa(D.t.xu), 10.5, 600, SUB, "right")]
 			out.append(c2)
 			y += 28.0 + 4.0
 	return [out, y + GG]
@@ -316,8 +316,8 @@ func _bst() -> Array:
 		var x := X0 + i * (cw0 + 5.0)
 		var c := _chip(x, y, cw0, hh, "b_" + String(D[0]) if a else "fut")
 		c.kids = [_ic2(x + cw0 * 0.5, y + 14.0, 20.0, String(D[4])),
-			_dt(x, y + 26.0, cw0, 14.0, _fitw(String(D[1]), 9.5, 800, cw0 - 4.0), 9.5, 800 if a else 700, BROWN),
-			_dt(x, y + 39.0, cw0, 13.0, str(ra) + "/" + str(D[2].size()), 9.5, 800, "rgb(40, 110, 50)" if a else SUB)]
+			_dt(x, y + 26.0, cw0, 14.0, _fitw(String(D[1]), 10.5, 800, cw0 - 4.0), 10.5, 800 if a else 700, BROWN),
+			_dt(x, y + 39.0, cw0, 13.0, str(ra) + "/" + str(D[2].size()), 10.5, 800, "rgb(40, 110, 50)" if a else SUB)]
 		c.act = _bs_go.bind(String(D[0]))
 		out.append(c)
 	y += hh + GG
@@ -347,7 +347,7 @@ func _bst() -> Array:
 	else:
 		groups.append(["", K[2]])
 	var cw := (XW - 4.0 * 5.0) / 5.0
-	var ch := 62.0
+	var ch := 66.0   # (11-28) tên 2 dòng cỡ 10.5
 	var lo := scroll - 300.0   # chỉ dựng ô trong khoảng màn hình ± 300 (còn lại chỉ giữ chỗ)
 	var hi := scroll + _hb + 300.0
 	for gr in groups:
@@ -396,12 +396,12 @@ func _kb(x: float, y: float, w: float, h: float, id: String, ct: bool, M: Dictio
 	out.append(ic)
 	var nm: String = (String(G.lang.Pi[id].n) if ct and G.lang != null and G.lang.Pi.has(id) else G.item_name(id))
 	if seen:
-		var L := _wrap(nm, 8.5, 700, w - 4.0)
+		var L := _wrap(nm, 10.5, 700, w - 4.0)
 		for i in mini(2, L.size()):
-			out.append(_dt(x + 2.0, y + 38.0 + i * 11.0, w - 4.0, 11.0, String(L[i]) if i == 0 or L.size() <= 2 else _fitw(String(L[i]), 8.5, 700, w - 4.0), 8.5, 700, BROWN))
+			out.append(_dt(x + 2.0, y + 38.0 + i * 13.0, w - 4.0, 13.0, String(L[i]) if i == 0 or L.size() <= 2 else _fitw(String(L[i]), 10.5, 700, w - 4.0), 10.5, 700, BROWN))
 		c.act = _dsay.bind(nm + ("" if ct else " · giá " + G.fmt_n(int(G.item(id).get("sell", 0))) + " xu · " + G.where(id)))
 	else:
-		out.append(_dt(x, y + 40.0, w, 16.0, "?", 13.0, 800, "rgb(120, 114, 102)"))
+		out.append(_dt(x, y + 40.0, w, 16.0, "?", 12.0, 800, "rgb(120, 114, 102)"))
 		c.act = _dsay.bind("Chưa có. " + ("Xây hoặc đặt ở Xây dựng." if ct else G.where(id) + "."))
 	return out
 

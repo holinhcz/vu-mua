@@ -165,7 +165,7 @@ func _body() -> Array:
 			out.append_array(_sect(y, String(sec.sec), String(SECC.get(String(sec.sec), "rgb(150, 112, 60)"))))
 			y += 16.0 + GG
 		else:   # (bản 486) tab đã ghi tên nhóm: chỉ 1 dòng nhỏ đếm mục
-			out.append(_dt(X0 + 2.0, y - 2.0, XW, 14.0, str(its.size()) + " mục" + ((" · " + str(nw) + " chưa đọc") if nw else " · đã đọc hết"), 10.0, 600, SUB, "left"))
+			out.append(_dt(X0 + 2.0, y - 2.0, XW, 14.0, str(its.size()) + " mục" + ((" · " + str(nw) + " chưa đọc") if nw else " · đã đọc hết"), 10.5, 600, SUB, "left"))
 			y += 14.0 + 6.0
 		var g := 6.0
 		var bw := (XW - g) * 0.5
@@ -181,9 +181,9 @@ func _body() -> Array:
 				var ch := _chip(x, y, bw, bh, "now" if on else "g_" + String(sec.sec))
 				var ks := [_icg(x + 20.0, y + bh * 0.5, 26.0, _ico(it))]
 				var tw := bw - 44.0 - (14.0 if on else 0.0)   # (bản 486) tên một cỡ 11, dài thì cắt
-				ks.append(_dt(x + 40.0, y + 6.0, tw, 15.0, _fitw(String(it.n), 11.0, 800, tw), 11.0, 800, BROWN, "left"))
+				ks.append(_dt(x + 40.0, y + 6.0, tw, 15.0, _fitw(String(it.n), 10.5, 800, tw), 10.5, 800, BROWN, "left"))
 				var s0: String = String(it.get("s", it.b[0] if it.b.size() else ""))
-				ks.append(_dt(x + 40.0, y + 23.0, bw - 46.0, 14.0, _fitw(s0, 9.5, 600, bw - 46.0), 9.5, 600, SUB, "left"))
+				ks.append(_dt(x + 40.0, y + 23.0, bw - 46.0, 14.0, _fitw(s0, 10.5, 600, bw - 46.0), 10.5, 600, SUB, "left"))
 				if not rd.has(it.id):   # chưa đọc: chấm đỏ góc trên phải chip
 					ks.append(_dbx(x + bw - 13.0, y + 5.0, 8.0, 8.0, "rgb(226, 70, 60)", 4.0))
 				if on:
@@ -204,7 +204,7 @@ func _body() -> Array:
 			i += 2
 		y += GG - g
 	if q != "" and nf == 0:   # (bản 489) tìm không ra
-		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không thấy mục nào có chữ này.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Không thấy mục nào có chữ này.", 10.5, 700, SUB, "left"))
 		y += 16.0 + GG
 	# cuối: nhắc lần đầu (đường kẻ ngăn với lưới); (11-28) bỏ nút Chuyện làng (lạc chỗ: đã có ở Sổ làng)
 	y += 4.0

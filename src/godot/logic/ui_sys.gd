@@ -102,7 +102,7 @@ func _qrow(out: Array, y: float, b: String, sub: String, B: Array, me := false, 
 	var bw := []
 	var bsum := 0.0
 	for bb in B:
-		var w: float = maxf(54.0, Box.text_w(String(bb[0]), 11.0, 800) + 18.0)
+		var w: float = maxf(54.0, Box.text_w(String(bb[0]), 10.5, 800) + 18.0)
 		bw.append(w)
 		bsum += w + 6.0
 	var ix := 30.0 if ic != "" else 0.0

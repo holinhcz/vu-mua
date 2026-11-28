@@ -68,7 +68,7 @@ func _body() -> Array:
 	out.append(top)
 	out.append(_icx(X0 + 18.0, y + 17.0, 24.0, "pic:" + IMG + "lo.webp"))
 	var txt := ("Đang đặt " + str(on_n) + " cái · " + (str(rd) + " cái có cá" if rd > 0 else "chưa có cá")) if on_n > 0 else "Chưa đặt cái nào"
-	out.append(_dt(X0 + 34.0, y + 8.0, XW - bw - 44.0, 18.0, _fitw(txt, 11.5, 800, XW - bw - 44.0), 11.5, 800, "rgb(150, 80, 10)" if rd > 0 else BROWN, "left"))
+	out.append(_dt(X0 + 34.0, y + 8.0, XW - bw - 44.0, 18.0, _fitw(txt, 12.0, 800, XW - bw - 44.0), 12.0, 800, "rgb(150, 80, 10)" if rd > 0 else BROWN, "left"))
 	if rd > 0:
 		out.append(_dbtn(X0 + XW - bw - 4.0, y + 4.0, bw, 26.0, "Thăm hết", _visit_all))
 	y += 34.0 + GG
@@ -103,7 +103,7 @@ func _body() -> Array:
 	for c in cs:
 		rn.append(G.item_name(String(c[0])).to_lower() + (" (mùa nước nổi)" if String(c[0]) == "ca_linh" else ""))
 	var rt := "Ra được: " + ", ".join(rn) + (". Đặt ở sông Vàm có thêm cá kèo." if t == "lo" else ".")
-	var RP: Array = _para(X0 + 10.0, yy, XW - 20.0, rt, 10.0, 600, BROWN, 13.0)
+	var RP: Array = _para(X0 + 10.0, yy, XW - 20.0, rt, 10.5, 600, BROWN, 13.0)
 	blk.append_array(RP[0])
 	yy += float(RP[1]) + 6.0
 	var btns := []
@@ -124,7 +124,7 @@ func _body() -> Array:
 			Snap._move(n, Vector2(X0 + 10.0, yy))
 		blk.append_array(N[0])
 		yy += float(N[1]) + 4.0
-		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, G.mat_where(nm), 10.0, 600, SUB, 13.0)
+		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, G.mat_where(nm), 10.5, 600, SUB, 13.0)
 		blk.append_array(HP[0])
 		yy += float(HP[1]) + 6.0
 		if lk == "":

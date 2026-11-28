@@ -99,7 +99,7 @@ func _top(y: float, ttl: String, st: String, stc: String) -> Array:
 	var o: Dictionary = WH.hdn_s()
 	var out := []
 	var c := _chip(X0, y, XW, 52.0, "hd_top")
-	c.kids = [_hic(X0 + 28.0, y + 26.0, 40.0, DINH), _dt(X0 + 54.0, y + 8.0, XW - 62.0, 18.0, ttl, 12.5, 800, BROWN, "left"),
+	c.kids = [_hic(X0 + 28.0, y + 26.0, 40.0, DINH), _dt(X0 + 54.0, y + 8.0, XW - 62.0, 18.0, ttl, 12.0, 800, BROWN, "left"),
 		_dt(X0 + 54.0, y + 27.0, XW - 62.0, 16.0, st, 10.5, 700, stc, "left")]
 	out.append(c)
 	y += 52.0 + 6.0
@@ -161,7 +161,7 @@ func _mo() -> Array:
 				n.r[1] = float(n.r[1]) + y + 10.0
 				out.append(n)
 			if sub != "":
-				out.append(_dt(X0 + 34.0, y + 10.0 + float(P[1]) + 2.0, XW - 44.0, 14.0, sub, 9.5, 600, SUB, "left"))
+				out.append(_dt(X0 + 34.0, y + 10.0 + float(P[1]) + 2.0, XW - 44.0, 14.0, sub, 10.5, 600, SUB, "left"))
 			y += h + GG
 			if go != null:
 				out.append(_btn(X0, y, XW, 32.0, "Xem Uy tín làng ›", go, "go"))
@@ -169,7 +169,7 @@ func _mo() -> Array:
 		else:
 			out.append(_btn(X0, y, XW, 34.0, "Định ngày mở hội (3 ngày sau)", WH.hdn_open_hoi, "go"))
 			y += 34.0 + 6.0
-			out.append(_para(X0 + 2.0, y, XW, "Bà con góp lễ 3 ngày, mình dựng cổng treo cờ. Hội càng đông càng được nhiều uy tín." + ("" if big else " Lên Trưởng ấp thì mở được hội lớn."), 10.0, 600, SUB, 14.0)[0])
+			out.append(_para(X0 + 2.0, y, XW, "Bà con góp lễ 3 ngày, mình dựng cổng treo cờ. Hội càng đông càng được nhiều uy tín." + ("" if big else " Lên Trưởng ấp thì mở được hội lớn."), 10.5, 600, SUB, 14.0)[0])
 			y += 30.0
 		return [_flat(out), y + GG]
 	var left := int(cu.d) - day
@@ -181,7 +181,7 @@ func _mo() -> Array:
 	out.append_array(S2[0])
 	y = float(S2[1]) + GG
 	if left <= 0 and WH._tr(cu.get("att")):
-		out.append_array(_rowi(X0 + 2.0, y, 16.0, ["i:" + DINH, " " + str(cu.att.size()) + "/" + WH._sa(cu.tot) + " nhà tới dự · trò chuyện với nhà đi dự thân gấp đôi"], 10.0, 700, BROWN)[0])
+		out.append_array(_rowi(X0 + 2.0, y, 16.0, ["i:" + DINH, " " + str(cu.att.size()) + "/" + WH._sa(cu.tot) + " nhà tới dự · trò chuyện với nhà đi dự thân gấp đôi"], 10.5, 700, BROWN)[0])
 		y += 16.0 + GG
 	var g := 6.0
 	var cw := (XW - g) * 0.5
@@ -203,13 +203,13 @@ func _mo() -> Array:
 			out.append(_icx(x + 18.0, y + 17.0, 24.0, k))
 			out.append(_dt(x + 34.0, y + 4.0, cw - 40.0, 15.0, String(WH.HDNMON[k]), 10.5, 800, BROWN, "left"))
 			var ns: String = WH._sa(gt) + "/" + WH._sa(nd)
-			out.append(_dt(x + 34.0, y + 18.0, cw - 40.0, 14.0, ns, 10.0, 800, "rgb(40, 110, 50)" if full else BROWN, "left"))
+			out.append(_dt(x + 34.0, y + 18.0, cw - 40.0, 14.0, ns, 10.5, 800, "rgb(40, 110, 50)" if full else BROWN, "left"))
 			out.append_array(_pbar(x + 8.0, y + 33.0, cw - 16.0, gt / maxf(1.0, nd)))
 			if full:
 				out.append(_dtick(x + cw - 24.0, y + 8.0, 14.0))
-				out.append(_dt(x + 8.0, y + 39.0, cw - 16.0, 18.0, "Đủ lễ", 9.5, 700, "rgb(40, 110, 50)", "left"))
+				out.append(_dt(x + 8.0, y + 39.0, cw - 16.0, 18.0, "Đủ lễ", 10.5, 700, "rgb(40, 110, 50)", "left"))
 			else:
-				out.append(_dt(x + 8.0, y + 39.0, cw - 66.0, 18.0, ("Góp thêm " + WH._sa(mm)) if mm else "Chờ bà con", 9.0, 600, SUB, "left"))
+				out.append(_dt(x + 8.0, y + 39.0, cw - 66.0, 18.0, ("Góp thêm " + WH._sa(mm)) if mm else "Chờ bà con", 10.5, 600, SUB, "left"))
 				out.append(_btn(x + cw - 56.0, y + 37.0, 50.0, 18.0, "Góp", WH.hdn_give.bind(k), "go" if mm > 0 else "off"))
 		y += 58.0 + GG
 	if left >= 0:   # việc mình lo: 2 việc cạnh nhau
@@ -227,15 +227,15 @@ func _mo() -> Array:
 			out.append(_chip(x, y, cw, 58.0, "got" if done else "fut"))
 			out.append(_hic(x + 18.0, y + 18.0, 24.0, CONG if k == "cong" else FLAG))
 			out.append(_dt(x + 34.0, y + 6.0, cw - 40.0, 16.0, _fitw(String(VTEN.get(k, V[0])), 10.5, 800, cw - 40.0), 10.5, 800, BROWN, "left"))
-			out.append(_dt(x + 34.0, y + 21.0, cw - 40.0, 13.0, "Hội đông hơn", 9.0, 600, SUB, "left"))
+			out.append(_dt(x + 34.0, y + 21.0, cw - 40.0, 14.0, "Hội đông hơn", 10.5, 600, SUB, "left"))
 			if done:
 				out.append(_dtick(x + cw - 24.0, y + 38.0, 14.0))
-				out.append(_dt(x + 8.0, y + 37.0, cw - 40.0, 18.0, "Đã xong", 9.5, 700, "rgb(40, 110, 50)", "left"))
+				out.append(_dt(x + 8.0, y + 37.0, cw - 40.0, 18.0, "Đã xong", 10.5, 700, "rgb(40, 110, 50)", "left"))
 			else:
 				var px := x + 8.0
 				for kk in q:   # giá: hình to + số, thiếu thì số đỏ
 					var hv: int = WH.WL.WD._tn_hv(kk)
-					var RR: Array = _rowi(px, y + 37.0, 18.0, ["i:" + String(kk), " " + WH._sa(q[kk])], 9.5, 800, BROWN if hv >= int(q[kk]) else "rgb(190, 50, 60)")
+					var RR: Array = _rowi(px, y + 37.0, 18.0, ["i:" + String(kk), " " + WH._sa(q[kk])], 10.5, 800, BROWN if hv >= int(q[kk]) else "rgb(190, 50, 60)")
 					out.append_array(RR[0])
 					px += float(RR[1]) + 5.0
 				var ok: bool = WH.WL.WD.tn_have(q)
@@ -244,7 +244,7 @@ func _mo() -> Array:
 	if left > 0:   # hoãn: dòng chữ nhỏ
 		var hw := 170.0
 		var hc := _chip(X0 + (XW - hw) * 0.5, y, hw, 24.0, "sen")
-		hc.kids = [_dt(X0 + (XW - hw) * 0.5, y, hw, 24.0, "Hoãn hội (−10 uy tín)", 10.0, 700, "rgb(170, 50, 50)")]
+		hc.kids = [_dt(X0 + (XW - hw) * 0.5, y, hw, 24.0, "Hoãn hội (−10 uy tín)", 10.5, 700, "rgb(170, 50, 50)")]
 		hc.act = WH.hdn_huy
 		out.append(hc)
 		y += 24.0
@@ -252,7 +252,7 @@ func _mo() -> Array:
 
 func _sect2(y: float, t: String, col: String, sub: String) -> Array:   # (bản 503) tiêu đề phần + dòng giải thích ngay dưới (không nằm trên đường kẻ)
 	var o := _sect(y, t, col)
-	o.append(_dt(X0 + 8.0, y + 17.0, XW - 8.0, 13.0, sub, 9.5, 600, SUB, "left"))
+	o.append(_dt(X0 + 8.0, y + 17.0, XW - 8.0, 13.0, sub, 10.5, 600, SUB, "left"))
 	return o
 
 func _pbar(x: float, y: float, w: float, f: float, h := 5.0) -> Array:   # thanh lễ vật: chưa góp chỉ có rãnh, góp dần màu cam, đủ xanh
@@ -289,8 +289,8 @@ func _giai() -> Array:
 		var x := X0 + i * (w + 6.0)
 		var c := _chip(x, y, w, 50.0, "m" + str(i + 1))
 		c.kids = [_dic(x + 6.0, y + 13.0, 24.0, KL._medsvg(i)), _dt(x + 32.0, y + 5.0, w - 34.0, 15.0, "Giải " + String(WH.HDNHANG[i + 1]), 10.5, 800, BROWN, "left"),
-			_dt(x + 32.0, y + 20.0, w - 34.0, 13.0, "+" + str(int(T[0])) + " uy tín", 9.5, 700, "rgb(46, 130, 60)", "left"),
-			_dt(x + 32.0, y + 33.0, w - 34.0, 13.0, "+" + WH._sa(int(T[1])) + " xu", 9.5, 700, "rgb(150, 90, 10)", "left")]
+			_dt(x + 32.0, y + 20.0, w - 34.0, 13.0, "+" + str(int(T[0])) + " uy tín", 10.5, 700, "rgb(46, 130, 60)", "left"),
+			_dt(x + 32.0, y + 33.0, w - 34.0, 13.0, "+" + WH._sa(int(T[1])) + " xu", 10.5, 700, "rgb(150, 90, 10)", "left")]
 		out.append(c)
 	y += 50.0 + GG
 	var ids: Array = cu.giai if has else WH.HDNG.keys()
@@ -318,18 +318,18 @@ func _giai() -> Array:
 		var c2 := _chip(X0, y, XW, 58.0, "got" if won else ("miss" if lost else "fut"))
 		out.append(c2)
 		out.append(_hic(X0 + 24.0, y + 29.0, 32.0, String(GIC.get(id, QUIZ))))
-		out.append(_dt(X0 + 46.0, y + 6.0, XW - 130.0, 17.0, String(WH.HDNG[id]), 11.5, 800, BROWN, "left"))
-		var sw: float = minf(Box.text_w(sub, 9.5, 600) + 4.0, XW - 130.0)
-		out.append(_dt(X0 + 46.0, y + 27.0, sw, 22.0, _fitw(sub, 9.5, 600, sw), 9.5, 700 if xong else 600, "rgb(40, 110, 50)" if won else ("rgb(120, 112, 98)" if lost else SUB), "left"))
+		out.append(_dt(X0 + 46.0, y + 6.0, XW - 130.0, 17.0, String(WH.HDNG[id]), 12.0, 800, BROWN, "left"))
+		var sw: float = minf(Box.text_w(sub, 10.5, 600) + 4.0, XW - 130.0)
+		out.append(_dt(X0 + 46.0, y + 27.0, sw, 22.0, _fitw(sub, 10.5, 600, sw), 10.5, 700 if xong else 600, "rgb(40, 110, 50)" if won else ("rgb(120, 112, 98)" if lost else SUB), "left"))
 		var fx := X0 + 46.0 + sw + 4.0
 		var used := {}
 		for nm in who:   # mặt + tên gọi ngắn (chữ cuối), chạm hiện tên đủ
 			var sn: String = String(nm).split(" ")[-1]
-			var nw: float = Box.text_w(sn, 9.0, 700) + 2.0
+			var nw: float = Box.text_w(sn, 10.5, 700) + 2.0
 			if fx + 24.0 + nw > X0 + XW - 84.0:
 				break
 			out.append(_hic(fx + 12.0, y + 38.0, 24.0, _facen(String(nm), used)))
-			out.append(_dt(fx + 25.0, y + 31.0, nw, 14.0, sn, 9.0, 700, BROWN, "left"))
+			out.append(_dt(fx + 25.0, y + 31.0, nw, 14.0, sn, 10.5, 700, BROWN, "left"))
 			var hit := _dbx(fx, y + 26.0, 26.0 + nw, 24.0, "rgba(0, 0, 0, 0)", 0.0)
 			hit.act = _dsay.bind(String(nm))
 			out.append(hit)
@@ -350,24 +350,24 @@ func _so() -> Array:
 	var y := 6.0
 	if o.log.is_empty():
 		out.append(_hic(X0 + XW * 0.5, y + 40.0, 64.0, DINH))
-		out.append(_dt(X0, y + 80.0, XW, 16.0, "Chưa mở hội đình nào.", 11.5, 800, BROWN))
-		out.append(_dt(X0, y + 98.0, XW, 14.0, "Mỗi lần mở hội sẽ ghi lại ở đây: nhà dự, giải đoạt.", 10.0, 600, SUB))
+		out.append(_dt(X0, y + 80.0, XW, 16.0, "Chưa mở hội đình nào.", 12.0, 800, BROWN))
+		out.append(_dt(X0, y + 98.0, XW, 14.0, "Mỗi lần mở hội sẽ ghi lại ở đây: nhà dự, giải đoạt.", 10.5, 600, SUB))
 		return [out, y + 120.0]
 	for r in o.log:
 		var ago := day - int(r.d)
 		var dn := "hôm nay" if ago <= 0 else ("hôm qua" if ago == 1 else str(ago) + " ngày trước")
 		var c := _chip(X0, y, XW, 56.0, "hd_st")
 		var ks := [_hic(X0 + 20.0, y + 28.0, 28.0, DINH),
-			_dt(X0 + 40.0, y + 6.0, XW - 130.0, 16.0, ("Hội lớn" if WH._tr(r.big) else "Hội nhỏ") + " · " + dn, 11.0, 800, BROWN, "left")]
-		ks.append_array(_rowi(X0 + XW - 86.0, y + 6.0, 16.0, ["i:pic:res://ui/img/vlface/m0.webp", " " + WH._sa(r.att) + "/" + WH._sa(r.tot) + " nhà dự"], 9.5, 700, SUB)[0])
+			_dt(X0 + 40.0, y + 6.0, XW - 130.0, 16.0, ("Hội lớn" if WH._tr(r.big) else "Hội nhỏ") + " · " + dn, 10.5, 800, BROWN, "left")]
+		ks.append_array(_rowi(X0 + XW - 86.0, y + 6.0, 16.0, ["i:pic:res://ui/img/vlface/m0.webp", " " + WH._sa(r.att) + "/" + WH._sa(r.tot) + " nhà dự"], 10.5, 700, SUB)[0])
 		var gx := X0 + 40.0
 		for id in r.g:   # kết quả từng giải: chip huy chương / xám
 			var rk := int(r.g[id]) if WH._tr(r.g[id]) else 0
 			var t0 := String(WH.HDNG.get(id, id)).replace("Giải ", "")
 			var t := t0.substr(0, 1).to_upper() + t0.substr(1) + (": giải " + String(WH.HDNHANG[rk]) if rk else ": không giải")
-			var tw: float = Box.text_w(t, 9.5, 700) + (30.0 if rk else 14.0)
+			var tw: float = Box.text_w(t, 10.5, 700) + (30.0 if rk else 14.0)
 			var gc := _chip(gx, y + 28.0, tw, 22.0, "m" + str(rk) if rk else "miss")
-			gc.kids = ([_dic(gx + 4.0, y + 30.0, 18.0, KL._medsvg(rk - 1))] if rk else []) + [_dt(gx + (24.0 if rk else 7.0), y + 28.0, tw - 26.0, 22.0, t, 9.5, 700, BROWN if rk else "rgb(110, 104, 92)", "left")]
+			gc.kids = ([_dic(gx + 4.0, y + 30.0, 18.0, KL._medsvg(rk - 1))] if rk else []) + [_dt(gx + (24.0 if rk else 7.0), y + 28.0, tw - 26.0, 22.0, t, 10.5, 700, BROWN if rk else "rgb(110, 104, 92)", "left")]
 			ks.append(gc)
 			gx += tw + 5.0
 		c.kids = ks

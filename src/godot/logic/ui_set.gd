@@ -115,7 +115,7 @@ func _row(y: float, r: Array) -> Array:   # thẻ 1 cài đặt: [khối, cao]
 	var cur = _val(k)
 	var need := []
 	for o in O:
-		need.append(Box.text_w(String(o[1]), 11.0, 800) + 18.0)
+		need.append(Box.text_w(String(o[1]), 10.5, 800) + 18.0)
 	var sw := 6.0 * (O.size() - 1)
 	for w in need:
 		sw += float(w)
@@ -149,10 +149,10 @@ func _row(y: float, r: Array) -> Array:   # thẻ 1 cài đặt: [khối, cao]
 		var b: Dictionary
 		if str(o[0]) == str(cur):
 			b = _onbtn(sx, sy, cw, RH, "", null)
-			b.kids = [_dt(sx, sy, cw, RH, _fitw(String(o[1]), 11.0, 800, cw - 6.0), 11.0, 800, "rgb(255, 255, 255)")]
+			b.kids = [_dt(sx, sy, cw, RH, _fitw(String(o[1]), 10.5, 800, cw - 6.0), 10.5, 800, "rgb(255, 255, 255)")]
 		else:
 			b = _chip(sx, sy, cw, RH, "fut", true)
-			b.kids = [_dt(sx, sy, cw, RH, _fitw(String(o[1]), 11.0, 800, cw - 6.0), 11.0, 800, BROWN)]
+			b.kids = [_dt(sx, sy, cw, RH, _fitw(String(o[1]), 10.5, 800, cw - 6.0), 10.5, 800, BROWN)]
 			b.act = pick.bind("d" if k == "dx" else k, o[0])
 		out.append(b)
 		sx += cw + 6.0

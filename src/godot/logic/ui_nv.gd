@@ -176,9 +176,9 @@ func _row(y: float, lt: Array, title: String, sub: String, f: float, cnt: String
 	if f >= 0.0:
 		var cw := _cw   # chỗ số "0/3" cố định trong một tab: thanh mọi dòng dài bằng nhau
 		out.append_array(_bar(x, y + 27.0, tw - cw, f, 6.0, _trk(lk), gc if lk.begins_with("g_") else ""))
-		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.0, 700, SUB, "right"))
+		out.append(_dt(x + tw - cw, y + 23.0, cw, 14.0, cnt, 10.5, 700, SUB, "right"))
 	else:
-		out.append(_dt(x, y + 23.0, tw, 14.0, _fitw(sub, 10.0, 600, tw), 10.0, 600, SUB, "left"))
+		out.append(_dt(x, y + 23.0, tw, 14.0, _fitw(sub, 10.5, 600, tw), 10.5, 600, SUB, "left"))
 	var bh := 22.0
 	var by := y + (RH - bh) * 0.5
 	match st:
@@ -207,11 +207,11 @@ func _chu(y: float) -> Array:   # (11-28) chú thích màu nhóm việc: chấm 
 
 func _sbtn(b: Dictionary) -> Dictionary:   # nút chip Kho cỡ nhỏ: chữ 11
 	var t: Dictionary = b.kids[0]
-	t.css["font-size"] = _cpx(11.0)
+	t.css["font-size"] = _cpx(10.5)
 	return b
 
 func _sub(y: float, t: String) -> Dictionary:   # dòng chữ nhỏ dưới tiêu đề phần
-	return _dt(X0 + 2.0, y, XW - 4.0, 13.0, _fitw(t, 10.0, 600, XW - 4.0), 10.0, 600, SUB, "left")
+	return _dt(X0 + 2.0, y, XW - 4.0, 13.0, _fitw(t, 10.5, 600, XW - 4.0), 10.5, 600, SUB, "left")
 
 const E8D := {20: "Túi xu", 40: "2 vật liệu nâng sao", 60: "Túi xu, 1 phần cơm hồi sức", 80: "Ván gỗ, đinh sắt, gạch nung", 100: "1 sen đỏ"}   # quà trong rương năng động (nv.gd _e8)
 # thanh điểm + hình quà gắn đúng mốc: L = [[điểm mốc, hình, đã nhận, việc nhận, tên quà, quà bên trong]]; trả [khối, cao]
@@ -248,10 +248,10 @@ func _day() -> Array:
 	out.append(hit)
 	var t2 := (("đã đủ" if today else "chưa đủ") + " · rương +" + str(bn) + "%") if bn else ("đã đủ 100" if today else "chưa đủ 100")
 	var rt := "Nghỉ còn 1" if rest_ok else "Nghỉ hết"
-	var rw: float = Box.text_w(rt, 10.0, 700) + 14.0
+	var rw: float = Box.text_w(rt, 10.5, 700) + 14.0
 	out.append_array(_hd(y + 5.0, t1, "lua", rw + 6.0, t2, GREEN if today else SUB))   # (11-26) tiêu đề mục chung
 	var rc := _chip(X0 + XW - rw, y + 4.0, rw, 18.0, "fut" if rest_ok else "miss")
-	rc.kids = [_dt(X0 + XW - rw, y + 4.0, rw, 18.0, rt, 10.0, 700, SUB)]
+	rc.kids = [_dt(X0 + XW - rw, y + 4.0, rw, 18.0, rt, 10.5, 700, SUB)]
 	out.append(rc)
 	var dy := y + 26.0 + g
 	var ds := 19.0
@@ -260,14 +260,14 @@ func _day() -> Array:
 		var dx := X0 + 4.0 + i * (ds + gx)
 		var on_d := i < pos
 		out.append(_dbx(dx, dy + 7.5, ds, ds, FIRE if on_d else "rgb(255, 250, 238)", ds * 0.5, _cpx(1.0) + " solid " + ("rgb(196, 86, 24)" if on_d else "rgb(236, 168, 116)")))
-		out.append(_dt(dx, dy + 7.5, ds, ds, str(i + 1), 10.0, 800, "rgb(255, 255, 255)" if on_d else "rgb(200, 110, 50)"))
+		out.append(_dt(dx, dy + 7.5, ds, ds, str(i + 1), 10.5, 800, "rgb(255, 255, 255)" if on_d else "rgb(200, 110, 50)"))
 	var gxp := X0 + 4.0 + 6.0 * (ds + gx)
 	var gc := _chip(gxp, dy, 34.0, 34.0, "got" if pos >= 7 else "sen")
 	gc.kids = [_dick(gxp + 17.0, dy + 17.0, 24.0, "gift")]
 	out.append(gc)
 	var tx := gxp + 42.0
-	out.append(_dt(tx, dy + 2.0, X0 + XW - tx, 14.0, "Đủ 7 ngày được:", 10.0, 600, SUB, "left"))
-	out.append(_dt(tx, dy + 17.0, X0 + XW - tx, 16.0, _fitw(N.round_n(k), 11.5, 800, X0 + XW - tx), 11.5, 800, BROWN, "left"))
+	out.append(_dt(tx, dy + 2.0, X0 + XW - tx, 14.0, "Đủ 7 ngày được:", 10.5, 600, SUB, "left"))
+	out.append(_dt(tx, dy + 17.0, X0 + XW - tx, 16.0, _fitw(N.round_n(k), 12.0, 800, X0 + XW - tx), 12.0, 800, BROWN, "left"))
 	y = dy + 34.0 + 2.0 * g
 	# việc hôm nay
 	out.append_array(_shd(y, "Việc hôm nay", "làm mới sau " + N.ao((1.0 - fposmod(N._nowd(), 1.0)) * 86400.0)))
@@ -300,9 +300,9 @@ func _shd(y: float, t: String, right: String) -> Array:   # (11-26) tiêu đề 
 	return L
 
 func _pill(xr: float, y: float, t: String) -> Dictionary:   # (11-26) nhãn thời gian đỏ chữ trắng như "còn N ngày" Điểm danh; xr = mép phải
-	var w: float = Box.text_w(t, 10.0, 800) + 14.0
+	var w: float = Box.text_w(t, 10.5, 800) + 14.0
 	var p := _onbtn(xr - w, y, w, 17.0, t, null, true)
-	p.kids[0].css["font-size"] = _cpx(10.0)
+	p.kids[0].css["font-size"] = _cpx(10.5)
 	return p
 
 
@@ -333,7 +333,7 @@ func _week() -> Array:
 	out.append(qc)
 	out.append(_icn(X0 + 25.0, y + RH * 0.5, 28.0, "kh:" + String({"noibanhtet": "banh_tet"}.get(String(dc[0]), "long_den"))))
 	var qw := XW - 46.0 - 8.0
-	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Quà mốc " + str(top) + ": " + String(dc[1]) + " + 3 sen đỏ", 11.5, 800, qw), 11.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 46.0, y, qw, RH, _fitw("Quà mốc " + str(top) + ": " + String(dc[1]) + " + 3 sen đỏ", 12.0, 800, qw), 12.0, 800, BROWN, "left"))
 	y += RH + 2.0 * g
 	out.append_array(_shd(y, "Việc tuần này", "làm mới sau " + N.ao(left)))
 	y += 26.0 + g
@@ -377,9 +377,9 @@ func _ach() -> Array:
 	out.append(_icn(X0 + 25.0, y + bh * 0.5, 28.0, "d:gift"))
 	var x0 := X0 + 46.0
 	var ct := cur if cur != "" else "Chưa có"
-	var cw: float = Box.text_w(ct, 10.0, 700) + 16.0
+	var cw: float = Box.text_w(ct, 10.5, 700) + 16.0
 	var tc := _chip(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, "b4" if cur != "" else "miss")
-	tc.kids = [_dt(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, ct, 10.0, 700, BROWN if cur != "" else "rgb(110, 104, 92)")]
+	tc.kids = [_dt(X0 + XW - 8.0 - cw, y + 6.0, cw, 20.0, ct, 10.5, 700, BROWN if cur != "" else "rgb(110, 104, 92)")]
 	out.append(tc)
 	var tl := "Dài nhất " + str(best) + " ngày"
 	out.append(_dt(x0, y + 8.0, X0 + XW - 14.0 - cw - x0, 16.0, _fitw(tl, 12.0, 800, X0 + XW - 14.0 - cw - x0), 12.0, 800, BROWN, "left"))
@@ -397,18 +397,18 @@ func _ach() -> Array:
 		var mx := x0 + bw * float(k + 1) / 5.0
 		var ok := best >= int(th[k + 1])
 		out.append(_dbx(mx - 4.5, y + 31.5, 9.0, 9.0, String(NVC.b4[4]) if ok else "rgb(255, 250, 238)", 4.5, _cpx(1.0) + " solid " + ("rgb(176, 100, 10)" if ok else "rgb(214, 170, 100)")))
-		out.append(_dt(mx - 16.0, y + 42.0, 32.0, 11.0, str(th[k + 1]), 9.0, 700, SUB))
+		out.append(_dt(mx - 16.0, y + 41.0, 32.0, 14.0, str(th[k + 1]), 10.5, 700, SUB))
 	y += bh + 14.0
 	out.append_array(_hd(y, "Thành tựu", "d:gift"))
-	var sl := _wrap("5 bậc: " + ", ".join(N.T9).to_lower() + ".", 10.0, 600, XW - 4.0)   # (11-26) dài thì xuống dòng, không cắt
+	var sl := _wrap("5 bậc: " + ", ".join(N.T9).to_lower() + ".", 10.5, 600, XW - 4.0)   # (11-26) dài thì xuống dòng, không cắt
 	for i in sl.size():
-		out.append(_dt(X0 + 2.0, y + 23.0 + i * 13.0, XW - 4.0, 13.0, sl[i], 10.0, 600, SUB, "left"))
+		out.append(_dt(X0 + 2.0, y + 23.0 + i * 13.0, XW - 4.0, 13.0, sl[i], 10.5, 600, SUB, "left"))
 	y += 28.0 + sl.size() * 13.0
 	for A in N.L8:   # (11-26) số dài nhất quyết chỗ số cho cả tab
 		var t0: int = N.A8(A)
 		if t0 < 5:
 			var nd: int = N.S9(A, t0)
-			_cw = maxf(_cw, Box.text_w(G.fmt_n(mini(N.ach_f(A), nd)) + "/" + G.fmt_n(nd), 10.0, 700) + 8.0)
+			_cw = maxf(_cw, Box.text_w(G.fmt_n(mini(N.ach_f(A), nd)) + "/" + G.fmt_n(nd), 10.5, 700) + 8.0)
 	for A in N.L8:
 		var t: int = N.A8(A)
 		var v: int = N.ach_f(A)
@@ -458,14 +458,14 @@ func _event() -> Array:
 	var out := []
 	var y := 8.0
 	if ev.id == "":
-		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Hôm nay không có sự kiện", 12.5, 800, BROWN, "left"))
+		out.append(_dt(X0 + 2.0, y, XW, 16.0, "Hôm nay không có sự kiện", 12.0, 800, BROWN, "left"))
 		y += 22.0
 	else:
-		out.append(_dt(X0 + 2.0, y, XW - 110.0, 16.0, String(ev.n), 12.5, 800, BROWN, "left"))
+		out.append(_dt(X0 + 2.0, y, XW - 110.0, 16.0, String(ev.n), 12.0, 800, BROWN, "left"))
 		out.append(_dt(X0 + XW - 110.0, y, 108.0, 16.0, "còn " + N.vY(int(ev.d1)), 10.5, 700, SUB, "right"))
-		var dl := _wrap(String(ev.d), 10.0, 600, XW - 4.0)
+		var dl := _wrap(String(ev.d), 10.5, 600, XW - 4.0)
 		for i in dl.size():
-			out.append(_dt(X0 + 2.0, y + 20.0 + i * 13.0, XW - 4.0, 13.0, dl[i], 10.0, 600, SUB, "left"))
+			out.append(_dt(X0 + 2.0, y + 20.0 + i * 13.0, XW - 4.0, 13.0, dl[i], 10.5, 600, SUB, "left"))
 		y += 20.0 + dl.size() * 13.0 + 10.0
 	if ev.id == "hoi":
 		var dp := int(s.day.get(str(x.d), 0))
@@ -477,7 +477,7 @@ func _event() -> Array:
 			var c := _chip(cx, y, cw, 36.0, kd)
 			if i == int(x.d):   # chặng hôm nay: viền đậm
 				c.css["box-shadow"] = String(c.css["box-shadow"]).replace("0px 0px 0px 1px inset", "0px 0px 0px 2px inset")
-			c.kids = [_dt(cx, y + 4.0, cw, 12.0, "Chặng " + str(i + 1), 9.0, 600, SUB), _dt(cx, y + 17.0, cw, 15.0, _cap1(String(N.FL[i].n).replace("Ngày ", "")), 10.5, 800, BROWN)]
+			c.kids = [_dt(cx, y + 3.0, cw, 14.0, "Chặng " + str(i + 1), 10.5, 600, SUB), _dt(cx, y + 17.0, cw, 15.0, _cap1(String(N.FL[i].n).replace("Ngày ", "")), 10.5, 800, BROWN)]
 			c.act = _dsay.bind(String(N.FL[i].n) + ": " + String(N.FL[i].d) + ".")
 			out.append(c)
 		y += 36.0 + 14.0

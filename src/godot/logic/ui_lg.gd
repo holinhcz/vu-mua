@@ -45,7 +45,7 @@ func _body() -> Array:
 	var top := _chip(X0, y, XW, 34.0, "fut")
 	out.append(top)
 	out.append(_icx(X0 + 18.0, y + 17.0, 22.0, _mat_ic("gach")))
-	out.append(_dt(X0 + 34.0, y + 8.0, XW - 44.0, 18.0, "Gạch nung đang có: " + str(G.mat_n("gach")) + " viên", 11.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 34.0, y + 8.0, XW - 44.0, 18.0, "Gạch nung đang có: " + str(G.mat_n("gach")) + " viên", 12.0, 800, BROWN, "left"))
 	y += 34.0 + GG
 	var l: float = W.lg_left(k)
 	var sub := "Lò trống" if l < 0.0 else ("Gạch chín rồi, lấy ra đi" if l == 0.0 else "Đang nung · còn " + str(int(ceil(l / 60.0))) + " phút")
@@ -61,7 +61,7 @@ func _body() -> Array:
 			Snap._move(n, Vector2(X0 + 10.0, yy))
 		blk.append_array(N[0])
 		yy += float(N[1]) + 4.0
-		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, "Đất sét: vét mương, mò bãi bùn lúc nước ròng. Củi: cưa cây ngã, dọn bụi.", 10.0, 600, SUB, 13.0)
+		var HP: Array = _para(X0 + 10.0, yy, XW - 20.0, "Đất sét: vét mương, mò bãi bùn lúc nước ròng. Củi: cưa cây ngã, dọn bụi.", 10.5, 600, SUB, 13.0)
 		blk.append_array(HP[0])
 		yy += float(HP[1]) + 6.0
 	var btns := []

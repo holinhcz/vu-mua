@@ -36,9 +36,9 @@ func _build() -> void:
 	# đầu bảng
 	var y := 12.0
 	var mt := "Quà nạp đầu"
-	var mw: float = Box.text_w(mt, 12.5, 800) + 24.0
+	var mw: float = Box.text_w(mt, 12.0, 800) + 24.0
 	out.append(_onbtn(X0, y, mw, 26.0, mt, null, true))
-	out.append(_dt(X0 + mw + 10.0, y - 1.0, XW - mw - 10.0, 14.0, "Nạp gói bất kỳ lần đầu", 11.0, 700, BROWN, "left"))
+	out.append(_dt(X0 + mw + 10.0, y - 1.0, XW - mw - 10.0, 14.0, "Nạp gói bất kỳ lần đầu", 10.5, 700, BROWN, "left"))
 	out.append(_dt(X0 + mw + 10.0, y + 13.0, XW - mw - 10.0, 14.0, "nhận trọn bộ quà · trị giá gấp 10", 10.5, 600, SUB, "left"))
 	# chừa đáy: nút + dòng chú thích
 	var foot := 70.0
@@ -53,10 +53,10 @@ func _build() -> void:
 		var b: Array = BIG[i]
 		var x := X0 + i * (bw + g)
 		var c := _chip(x, top, bw, bh, "now")
-		var ks := [_dt(x, top + 8.0, bw, 14.0, "ĐỘC QUYỀN", 10.0, 800, "rgb(176, 110, 10)")]
+		var ks := [_dt(x, top + 8.0, bw, 14.0, "ĐỘC QUYỀN", 10.5, 800, "rgb(176, 110, 10)")]
 		var s := minf(bw - 30.0, bh - 76.0)
 		ks.append(_dic(x + (bw - s) * 0.5, top + 26.0, s, IC[int(b[0])]))
-		ks.append(_dt(x, top + bh - 42.0, bw, 18.0, String(b[1]), 13.5, 800, BROWN))
+		ks.append(_dt(x, top + bh - 42.0, bw, 18.0, String(b[1]), 14.0, 800, BROWN))
 		ks.append(_dt(x, top + bh - 23.0, bw, 14.0, String(b[2]), 10.5, 600, SUB))
 		c.kids = ks
 		c.act = _dsay.bind(String(b[3]))

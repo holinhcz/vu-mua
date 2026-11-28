@@ -86,7 +86,7 @@ func _sq(y: float, t: String, help: String) -> Array:   # tiêu đề phần + n
 		var rl: Dictionary = out[2]
 		rl.r[2] = maxf(0.0, float(rl.r[2]) - 26.0)
 		var q := _chip(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "info")
-		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 11.0, 800, "rgb(60, 110, 170)")]
+		q.kids = [_dt(X0 + XW - 20.0, y - 1.0, 20.0, 18.0, "?", 10.5, 800, "rgb(60, 110, 170)")]
 		q.act = func(): U.tre_help(t, help)
 		out.append(q)
 	return out
@@ -112,8 +112,8 @@ func _cond(x: float, y: float, w: float, cc: Array) -> Array:   # 1 điều ki�
 			out.append(_dt(x + 18.0, yy, w - 18.0, 15.0, String(ln), 10.5, 700, BROWN, "left"))
 			yy += 15.0
 	if sub != "":
-		for ln in _wrap(sub, 10.0, 600, w - 18.0):
-			out.append(_dt(x + 18.0, yy, w - 18.0, 13.0, String(ln), 10.0, 600, SUB, "left"))
+		for ln in _wrap(sub, 10.5, 600, w - 18.0):
+			out.append(_dt(x + 18.0, yy, w - 18.0, 13.0, String(ln), 10.5, 600, SUB, "left"))
 			yy += 13.0
 	return [out, yy - y + 6.0]
 
@@ -135,7 +135,7 @@ func _ut() -> Array:
 	hc.act = _dsay.bind("Mốc uy tín: " + ", ".join(PackedStringArray(W.UTM.map(func(m): return String(m[1]) + " " + str(m[0])))) + ".")
 	out.append(hc)
 	out.append(_dic(X0 + 8.0, y + 9.0, 34.0, _medal(ti)))   # (bản 468) huy hiệu màu theo bậc
-	out.append(_dt(X0 + 50.0, y + 9.0, XW - 150.0, 18.0, _fitw(W.ut_rank(), 13.0, 800, XW - 150.0), 13.0, 800, BROWN, "left"))
+	out.append(_dt(X0 + 50.0, y + 9.0, XW - 150.0, 18.0, _fitw(W.ut_rank(), 12.0, 800, XW - 150.0), 12.0, 800, BROWN, "left"))
 	out.append(_dt(X0 + XW - 100.0, y + 9.0, 88.0, 18.0, W._sv(o.p) + " điểm", 12.0, 800, "rgb(46, 120, 50)", "right"))
 	var bx := X0 + 50.0
 	var bw := XW - 62.0
@@ -149,7 +149,7 @@ func _ut() -> Array:
 	y += 66.0 + GG
 	if c and c < 4 and p < float(W.UTP[c]):   # đang dưới mốc chức
 		var wc := _chip(X0, y, XW, 40.0, "sen")
-		wc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Uy tín dưới mốc " + W._sv(W.UTP[c]) + " của " + String(W.UTCHUC[c]) + ".", 11.0, 800, "rgb(170, 50, 60)", "left"),
+		wc.kids = [_dt(X0 + 10.0, y + 5.0, XW - 20.0, 15.0, "Uy tín dưới mốc " + W._sv(W.UTP[c]) + " của " + String(W.UTCHUC[c]) + ".", 10.5, 800, "rgb(170, 50, 60)", "left"),
 			_dt(X0 + 10.0, y + 20.0, XW - 20.0, 15.0, "Qua " + str(2 - W._i(o.get("low"))) + " tuần nữa chưa lên lại là làng bầu người khác.", 10.5, 600, "rgb(170, 60, 60)", "left")]
 		out.append(wc)
 		y += 40.0 + GG
@@ -168,7 +168,7 @@ func _ut() -> Array:
 		var bc := _chip(X0, y, XW, 42.0, k)
 		out.append(bc)
 		var nc := _dbx(X0 + 8.0, y + 10.0, 22.0, 22.0, String(CHC[i]) if held or nxt else "rgb(200, 190, 170)", 11.0)
-		nc.kids = [_dt(X0 + 8.0, y + 10.0, 22.0, 22.0, str(i), 11.0, 800, "rgb(255, 255, 255)")]
+		nc.kids = [_dt(X0 + 8.0, y + 10.0, 22.0, 22.0, str(i), 10.5, 800, "rgb(255, 255, 255)")]
 		out.append(nc)
 		out.append(_dt(X0 + 38.0, y + 6.0, XW - 130.0, 16.0, String(W.UTCHUC[i]), 12.0, 800, BROWN, "left"))
 		out.append(_dt(X0 + 38.0, y + 23.0, XW - 48.0, 14.0, _fitw("Uy tín " + W._sv(W.UTP[i]) + " · cấp " + W._sv(W.UTLV[i]) + " · làng " + W._sv(W.UTLANG[i][0]) + " nhà", 10.5, 600, XW - 48.0), 10.5, 600, SUB, "left"))
@@ -187,7 +187,7 @@ func _ut() -> Array:
 	out.append_array(_sq(y, "Mới đây", "Việc nào làm lên, làm xuống uy tín. Giúp bà con, đi đám, góp cúng đình là lên uy tín."))
 	y += 16.0 + GG
 	if o.lg.is_empty():
-		out.append(_dt(X0, y, XW, 16.0, "Chưa có gì. Giúp bà con, đi đám là lên uy tín.", 11.0, 700, SUB, "left"))
+		out.append(_dt(X0, y, XW, 16.0, "Chưa có gì. Giúp bà con, đi đám là lên uy tín.", 10.5, 700, SUB, "left"))
 		y += 16.0 + GG
 	for l in o.lg:
 		var v := float(l[0])
@@ -219,7 +219,7 @@ func _bau() -> Array:
 		var bc := _chip(X0, y, XW, 10.0, "c" + str(c) + ("" if ok else "f"))   # (bản 468) màu chức đang nhắm
 		out.append(bc)
 		var yy := y + 10.0
-		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đủ " + str(nok) + "/" + str(C.size()) + " điều kiện", 11.5, 800, "rgb(46, 120, 50)" if ok else BROWN, "left"))
+		out.append(_dt(X0 + 10.0, yy, XW - 20.0, 16.0, "Đủ " + str(nok) + "/" + str(C.size()) + " điều kiện", 12.0, 800, "rgb(46, 120, 50)" if ok else BROWN, "left"))
 		yy += 20.0
 		for cc in C:
 			var r := _cond(X0 + 10.0, yy, XW - 20.0, cc)
@@ -235,7 +235,7 @@ func _bau() -> Array:
 		y += 32.0 + GG
 	else:
 		var hc := _chip(X0, y, XW, 34.0, "u_vang")
-		hc.kids = [_dt(X0 + 10.0, y, XW - 20.0, 34.0, "Bạn là Hương cả, bậc cao nhất trong làng.", 11.5, 800, BROWN, "left")]
+		hc.kids = [_dt(X0 + 10.0, y, XW - 20.0, 34.0, "Bạn là Hương cả, bậc cao nhất trong làng.", 12.0, 800, BROWN, "left")]
 		out.append(hc)
 		y += 34.0 + GG
 	if o.get("vr") is Dictionary:   # lần bầu gần nhất
@@ -249,12 +249,12 @@ func _bau() -> Array:
 			y += 20.0 + 6.0
 		for l in v.ln:
 			var gt: bool = W._tr(l[0])
-			var L := _wrap(String(l[2]), 10.0, 600, XW - 46.0)
+			var L := _wrap(String(l[2]), 10.5, 600, XW - 46.0)
 			var h := 10.0 + 15.0 + L.size() * 13.0 + 8.0
 			var lc := _chip(X0, y, XW, h, "got" if gt else "fut")
-			var ks := [_dtick(X0 + 10.0, y + 11.0, 11.0) if gt else _dic(X0 + 10.0, y + 11.0, 11.0, XM), _dt(X0 + 28.0, y + 8.0, XW - 38.0, 15.0, _fitw(String(l[1]), 11.0, 800, XW - 38.0), 11.0, 800, BROWN, "left")]
+			var ks := [_dtick(X0 + 10.0, y + 11.0, 11.0) if gt else _dic(X0 + 10.0, y + 11.0, 11.0, XM), _dt(X0 + 28.0, y + 8.0, XW - 38.0, 15.0, _fitw(String(l[1]), 10.5, 800, XW - 38.0), 10.5, 800, BROWN, "left")]
 			for j in L.size():
-				ks.append(_dt(X0 + 28.0, y + 24.0 + j * 13.0, XW - 38.0, 13.0, String(L[j]), 10.0, 600, SUB, "left"))
+				ks.append(_dt(X0 + 28.0, y + 24.0 + j * 13.0, XW - 38.0, 13.0, String(L[j]), 10.5, 600, SUB, "left"))
 			lc.kids = ks
 			out.append(lc)
 			y += h + 5.0
@@ -313,8 +313,8 @@ func _viec() -> Array:
 			var xw := 0.0
 			if xq > 0:
 				var P := [W._sa(xq), "c"]
-				xw = float(_rowi(0.0, 0.0, 26.0, P, 11.5, 800, "")[1])
-				out.append_array(_rowi(x + w - 72.0 - xw, yy + 4.0, 26.0, P, 11.5, 800, BROWN if W._n(G.g.coins) >= xq else "rgb(190, 60, 50)")[0])
+				xw = float(_rowi(0.0, 0.0, 26.0, P, 12.0, 800, "")[1])
+				out.append_array(_rowi(x + w - 72.0 - xw, yy + 4.0, 26.0, P, 12.0, 800, BROWN if W._n(G.g.coins) >= xq else "rgb(190, 60, 50)")[0])
 			var nd := _nchips(x, yy, w - 74.0 - (xw + 8.0 if xw > 0.0 else 0.0), it)
 			out.append_array(nd[0])
 			var gb := _btn(x + w - 66.0, yy + 4.0, 66.0, 26.0, "Góp" if t.k == "gop" else "Đem qua", W.ut_give.bind(String(t.k)), "go" if W.ut_give_ok(t) else "off")
@@ -330,20 +330,20 @@ func _viec() -> Array:
 		var cs: Dictionary = W.UTXU[int(x0.i)]
 		out.append_array(_sq(y, "Bà con nhờ phân xử" + (" · chuyện khó" if W._tr(cs.get("kho")) else ""), "Xử đúng lẽ thì cả hai nhà nể, bênh một bên thì bên kia giận."))
 		y += 16.0 + GG
-		var pp2 := _para(X0 + 10.0, y + 10.0, XW - 20.0, W.ut_xu_txt(x0, String(cs.t)), 11.0, 600, BROWN, 15.0)
+		var pp2 := _para(X0 + 10.0, y + 10.0, XW - 20.0, W.ut_xu_txt(x0, String(cs.t)), 10.5, 600, BROWN, 15.0)
 		var sc := _chip(X0, y, XW, float(pp2[1]) + 20.0, "info")
 		out.append(sc)
 		out.append_array(pp2[0])
 		y += float(sc.r[3]) + 8.0
 		for j in x0.op.size():
-			var L := _wrap(W.ut_xu_txt(x0, String(cs[x0.op[j]])), 11.0, 700, XW - 40.0)
+			var L := _wrap(W.ut_xu_txt(x0, String(cs[x0.op[j]])), 10.5, 700, XW - 40.0)
 			var h := L.size() * 14.0 + 14.0
 			var b := _chip(X0, y, XW, h, "fut")
 			var cc2 := _dbx(X0 + 8.0, y + (h - 18.0) * 0.5, 18.0, 18.0, "rgb(196, 160, 100)", 9.0)
-			cc2.kids = [_dt(X0 + 8.0, y + (h - 18.0) * 0.5, 18.0, 18.0, str(j + 1), 10.0, 800, "rgb(255, 255, 255)")]
+			cc2.kids = [_dt(X0 + 8.0, y + (h - 18.0) * 0.5, 18.0, 18.0, str(j + 1), 10.5, 800, "rgb(255, 255, 255)")]
 			var ks := [cc2]
 			for i in L.size():
-				ks.append(_dt(X0 + 32.0, y + 7.0 + i * 14.0, XW - 40.0, 14.0, String(L[i]), 11.0, 700, BROWN, "left"))
+				ks.append(_dt(X0 + 32.0, y + 7.0 + i * 14.0, XW - 40.0, 14.0, String(L[i]), 10.5, 700, BROWN, "left"))
 			b.kids = ks
 			b.act = W.ut_xu_pick.bind(j)
 			out.append(b)
@@ -369,7 +369,7 @@ func _ct() -> Array:
 	var cx := X0
 	for bac in [1, 2, 3]:
 		var t: String = ["", "Xóm", "Ấp", "Làng"][bac] + " " + str(cb[bac])
-		var tc := _tchip(cx, y, t, "fut", BROWN, null, 24.0, 11.0)
+		var tc := _tchip(cx, y, t, "fut", BROWN, null, 24.0, 10.5)
 		out.append(tc[0])
 		cx += float(tc[1]) + 6.0
 	y += 24.0 + GG
@@ -492,7 +492,7 @@ func _gop(y: float, i: int, c: Dictionary, P: Dictionary, F: Dictionary) -> Arra
 		if not full:
 			kb.act = _dsay.bind("Góp đủ các món mới khởi công được.")
 		out.append(kb)
-		var qc := _tchip(x, yy + 4.0, "Thôi không xây", "sen", "rgb(170, 50, 60)", W.ct_quit.bind(i), 20.0, 10.0)
+		var qc := _tchip(x, yy + 4.0, "Thôi không xây", "sen", "rgb(170, 50, 60)", W.ct_quit.bind(i), 20.0, 10.5)
 		out.append(qc[0])
 		yy += 26.0 + 10.0
 	bc.r[3] = yy - y

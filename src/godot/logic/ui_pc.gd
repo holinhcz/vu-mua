@@ -146,11 +146,11 @@ func _cell(k: String, x: float, y: float, w: float, h: float) -> Array:   # ô c
 	var is_ := minf(30.0, h - 26.0)
 	var op := 1.0 if s[3] or k == sel else 0.55
 	c.kids = [_dic(x + (w - is_) * 0.5, y + (h - is_ - 16.0) * 0.5, is_, _svg(String(s[0])), op),
-		_dt(x + 2.0, y + h - 18.0, w - 4.0, 14.0, _fitw(String(s[1]), 10.0, 700, w - 6.0), 10.0, 700, BROWN if s[3] else SUB)]
+		_dt(x + 2.0, y + h - 18.0, w - 4.0, 14.0, _fitw(String(s[1]), 10.5, 700, w - 6.0), 10.5, 700, BROWN if s[3] else SUB)]
 	if String(s[2]) != "":
-		var bw: float = Box.text_w(String(s[2]), 9.0, 800) + 8.0
+		var bw: float = Box.text_w(String(s[2]), 10.5, 800) + 8.0
 		c.kids.append(_dbx(x + w - bw - 3.0, y + 3.0, bw, 14.0, "rgb(214, 160, 30)", 7.0))
-		c.kids.append(_dt(x + w - bw - 3.0, y + 3.0, bw, 14.0, String(s[2]), 9.0, 800, "rgb(255, 255, 255)"))
+		c.kids.append(_dt(x + w - bw - 3.0, y + 3.0, bw, 14.0, String(s[2]), 10.5, 800, "rgb(255, 255, 255)"))
 	var kk := k
 	c.act = func(): sel = kk
 	return [c]
@@ -173,8 +173,8 @@ func _nv() -> Array:
 	var nm := String(p.get("name", ""))
 	if nm == "":
 		nm = "Anh Năm Gạo"
-	var nw: float = minf(Box.text_w(nm, 15.0, 800) + 4.0, XW - 150.0)
-	out.append(_dt(X0, 6.0, nw, 22.0, _fitw(nm, 15.0, 800, nw), 15.0, 800, BROWN, "left"))
+	var nw: float = minf(Box.text_w(nm, 14.0, 800) + 4.0, XW - 150.0)
+	out.append(_dt(X0, 6.0, nw, 22.0, _fitw(nm, 14.0, 800, nw), 14.0, 800, BROWN, "left"))
 	var lt := "Cấp " + str(lv)
 	var lw: float = Box.text_w(lt, 10.5, 800) + 16.0
 	var lp := _onbtn(X0 + nw + 6.0, 8.0, lw, 18.0, lt, null)
@@ -265,12 +265,12 @@ func _det(y: float, h: float) -> Array:   # thẻ chi tiết món đang chọn: 
 	var x := X0 + 52.0
 	var bw := 0.0
 	if bl != "" and act != null:
-		bw = Box.text_w(bl, 11.0, 800) + 22.0
+		bw = Box.text_w(bl, 10.5, 800) + 22.0
 		out.append(_btn(X0 + XW - 8.0 - bw, y + (h - 26.0) * 0.5, bw, 26.0, bl, act if ok else null, "go" if ok else "off"))
 	var tw := XW - 52.0 - 8.0 - (bw + 8.0 if bw > 0.0 else 0.0)
-	out.append(_dt(x, y + 7.0, tw, 16.0, _fitw(nm, 12.5, 800, tw), 12.5, 800, BROWN, "left"))
+	out.append(_dt(x, y + 7.0, tw, 16.0, _fitw(nm, 12.0, 800, tw), 12.0, 800, BROWN, "left"))
 	out.append(_dt(x, y + 24.0, tw, 14.0, _fitw(sm, 10.5, 700, tw), 10.5, 700, GREEN if s[3] else SUB, "left"))
-	out.append(_dt(x, y + 40.0, tw, 14.0, _fitw(tx, 10.0, 600, tw), 10.0, 600, SUB, "left"))
+	out.append(_dt(x, y + 40.0, tw, 14.0, _fitw(tx, 10.5, 600, tw), 10.5, 600, SUB, "left"))
 	return out
 
 # ------------------------------------------------------------------ tab Chỉ số
@@ -339,7 +339,7 @@ func _tui() -> Array:
 		var k := String(F[i][0])
 		var x := X0 + i * (fw + g)
 		var c := _chip(x, y, fw, 26.0, "now" if tui == k else "fut")
-		c.kids = [_dt(x, y, fw, 26.0, String(F[i][1]), 11.0, 800, BROWN)]
+		c.kids = [_dt(x, y, fw, 26.0, String(F[i][1]), 10.5, 800, BROWN)]
 		c.act = func(): tui = k
 		out.append(c)
 	y += 26.0 + GG

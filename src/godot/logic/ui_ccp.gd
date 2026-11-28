@@ -98,12 +98,12 @@ func _top(y: float) -> Array:
 			var xi: Array = cg.host.xpi.call() if cg.host != null and cg.host.has("xpi") else [0, 1]
 			f = float(xi[0]) / maxf(1.0, float(xi[1]))
 			parts = ["Cấp vườn " + str(cg.lv()) + " · còn " + G.fmt_n(maxi(0, int(xi[1]) - int(xi[0]))) + " kinh nghiệm"]
-	var cw: float = (Box.text_w(ch, 11.0, 800) + 22.0) if ch != "" else 0.0
+	var cw: float = (Box.text_w(ch, 10.5, 800) + 22.0) if ch != "" else 0.0
 	out.append_array(_bar(X0 + 2.0, y + 6.0, XW - cw - 14.0, f, 7.0))
-	out.append_array(_rowi(X0 + 2.0, y + 18.0, 18.0, parts, 11.0, 700, SUB)[0])
+	out.append_array(_rowi(X0 + 2.0, y + 18.0, 18.0, parts, 10.5, 700, SUB)[0])
 	if ch != "":
 		var c := _chip(X0 + XW - cw, y + 2.0, cw, 26.0, "now")
-		c.kids = [_dt(X0 + XW - cw, y + 2.0, cw, 26.0, ch, 11.0, 800, "rgb(150, 80, 10)")]
+		c.kids = [_dt(X0 + XW - cw, y + 2.0, cw, 26.0, ch, 10.5, 800, "rgb(150, 80, 10)")]
 		if cact.is_valid():
 			c.act = cact
 		out.append(c)
@@ -137,10 +137,10 @@ func _cell(i: int, y0: float, pic: String, nm: String, low: String, lowc: String
 		out.append(_dic(x + cw * 0.5 - 9.0, y + 13.0, 18.0, LOCK))
 	if tick:
 		out.append(_dtick(x + cw - 17.0, y + 5.0, 13.0))
-	var L := _wrap(nm, 10.0, 800, cw - 6.0)
+	var L := _wrap(nm, 10.5, 800, cw - 6.0)
 	for k in mini(2, L.size()):
-		out.append(_dt(x + 3.0, y + 42.0 + k * 13.0, cw - 6.0, 13.0, _fitw(String(L[k]), 10.0, 800, cw - 6.0), 10.0, 800, BROWN))
-	out.append(_dt(x + 3.0, y + CH - 17.0, cw - 6.0, 14.0, _fitw(low, 9.5, 700, cw - 6.0), 9.5, 700, lowc))
+		out.append(_dt(x + 3.0, y + 42.0 + k * 13.0, cw - 6.0, 13.0, _fitw(String(L[k]), 10.5, 800, cw - 6.0), 10.5, 800, BROWN))
+	out.append(_dt(x + 3.0, y + CH - 17.0, cw - 6.0, 14.0, _fitw(low, 10.5, 700, cw - 6.0), 10.5, 700, lowc))
 	return out
 
 func _rows(n: int) -> float:
@@ -321,7 +321,7 @@ func _caidat() -> Array:
 		y += 28.0 + GG + 4.0
 	out.append_array(_sect(y, "Thống kê", "rgb(214, 150, 20)"))
 	y += 22.0
-	var P: Array = _para(X0 + 2.0, y, XW - 4.0, "Quăng " + str(int(S.stats.casts)) + " lần · câu được " + str(int(S.stats.catches)) + " · đứt dây " + str(int(S.stats.snaps)), 11.0, 600, SUB, 15.0)
+	var P: Array = _para(X0 + 2.0, y, XW - 4.0, "Quăng " + str(int(S.stats.casts)) + " lần · câu được " + str(int(S.stats.catches)) + " · đứt dây " + str(int(S.stats.snaps)), 10.5, 600, SUB, 15.0)
 	out.append_array(P[0])
 	y += float(P[1]) + GG + 4.0
 	out.append(_btn(X0, y, XW, 30.0, "Thôi câu, về lại vườn", func(): close(); cg.close_game(), "go"))

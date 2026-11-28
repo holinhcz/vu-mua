@@ -47,14 +47,14 @@ static func _body(who: String, txt: String) -> String:   # lời thư: bỏ "Út
 
 func _head(x: float, y: float, w: float, who: String, t: String, s: String) -> Array:   # đầu thư: mặt tròn, tên đậm, dòng phụ
 	return [_icx(x + 18.0, y + 18.0, 34.0, _face(who)), _dt(x + 42.0, y + 2.0, w - 46.0, 16.0, t, 12.0, 800, BROWN, "left"),
-		_dt(x + 42.0, y + 19.0, w - 46.0, 14.0, s, 10.0, 600, SUB, "left")]
+		_dt(x + 42.0, y + 19.0, w - 46.0, 14.0, s, 10.5, 600, SUB, "left")]
 
 func _letter(y: float, who: String, txt: String, noi: String) -> Array:   # lá thư giấy vở: đầu thư, vạch kẻ, lề đỏ, ký tên
 	var out := []
 	txt = _body(who, txt)
 	var lh := 18.0
 	var tx := X0 + 34.0
-	var P := _para(tx, 0.0, XW - 46.0, txt, 11.0, 600, BROWN, lh)
+	var P := _para(tx, 0.0, XW - 46.0, txt, 10.5, 600, BROWN, lh)
 	var nl := int(round(float(P[1]) / lh)) + 1   # thêm 1 dòng ký tên
 	var ty := y + 50.0
 	var h := 50.0 + nl * lh + 10.0
@@ -66,13 +66,13 @@ func _letter(y: float, who: String, txt: String, noi: String) -> Array:   # lá 
 	for n in P[0]:
 		n.r[1] = float(n.r[1]) + ty
 		out.append(n)
-	out.append(_dt(X0, ty + (nl - 1) * lh, XW - 16.0, lh, "— " + who, 11.0, 700, SUB, "right"))
+	out.append(_dt(X0, ty + (nl - 1) * lh, XW - 16.0, lh, "— " + who, 10.5, 700, SUB, "right"))
 	return [out, h]
 
 func _gift(y: float, ic: String, t: String, s: String) -> Array:   # chip quà kèm thư: hình, số, dòng phụ
 	var c := _chip(X0, y, XW, 44.0, "got")
-	c.kids = [_icx(X0 + 26.0, y + 22.0, 30.0, ic), _dt(X0 + 48.0, y + 6.0, XW - 60.0, 18.0, t, 13.0, 800, "rgb(40, 110, 50)", "left"),
-		_dt(X0 + 48.0, y + 24.0, XW - 60.0, 14.0, s, 10.0, 600, SUB, "left")]
+	c.kids = [_icx(X0 + 26.0, y + 22.0, 30.0, ic), _dt(X0 + 48.0, y + 6.0, XW - 60.0, 18.0, t, 12.0, 800, "rgb(40, 110, 50)", "left"),
+		_dt(X0 + 48.0, y + 24.0, XW - 60.0, 14.0, s, 10.5, 600, SUB, "left")]
 	return [[c], 44.0]
 
 func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   # chip món (có / cần) sát chip tiền cước, hàng nút
@@ -83,14 +83,14 @@ func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   
 	var lw := floorf((XW - g) * 0.5)
 	var c := _chip(X0, y, lw, 38.0, "fut")
 	c.kids = [_icx(X0 + 20.0, y + 19.0, 28.0, id), _dt(X0 + 40.0, y + 4.0, lw - 44.0, 15.0, _fitw(G.item_name(id), 10.5, 700, lw - 44.0), 10.5, 700, BROWN, "left"),
-		_dt(X0 + 40.0, y + 19.0, lw - 44.0, 15.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 11.0, 800, "rgb(46, 120, 50)" if ok else "rgb(190, 60, 50)", "left")]
+		_dt(X0 + 40.0, y + 19.0, lw - 44.0, 15.0, G.fmt_n(mini(hv, 99999)) + "/" + G.fmt_n(q), 10.5, 800, "rgb(46, 120, 50)" if ok else "rgb(190, 60, 50)", "left")]
 	c.act = _dsay.bind(G.item_name(id) + ": kho có " + G.fmt_n(hv) + ", cần " + G.fmt_n(q) + ".")
 	out.append(c)
 	var rx := X0 + lw + g
 	var rw := XW - lw - g
 	var r := _chip(rx, y, rw, 38.0, "got")
 	r.kids = [_icx(rx + 20.0, y + 19.0, 26.0, "xu"), _dt(rx + 40.0, y + 4.0, rw - 44.0, 15.0, "Tiền cước", 10.5, 700, SUB, "left"),
-		_dt(rx + 40.0, y + 19.0, rw - 44.0, 15.0, "+" + G.fmt_n(xu) + " xu", 11.0, 800, "rgb(40, 110, 50)", "left")]
+		_dt(rx + 40.0, y + 19.0, rw - 44.0, 15.0, "+" + G.fmt_n(xu) + " xu", 10.5, 800, "rgb(40, 110, 50)", "left")]
 	out.append(r)
 	y += 38.0 + GG
 	if not ok:   # (bản 492) thiếu hàng: chỉ chỗ kiếm
@@ -100,14 +100,14 @@ func _send(y: float, id: String, q: int, xu: int, cb: Callable, de) -> Array:   
 		var bw := floorf((XW - g) * 0.6)
 		out.append(_btn(X0, y, bw, 32.0, "Gửi đi", cb, "go"))
 		var d := _chip(X0 + bw + g, y, XW - bw - g, 32.0, "fut")
-		d.kids = [_dt(X0 + bw + g, y, XW - bw - g, 32.0, "Để dành", 11.0, 700, BROWN)]
+		d.kids = [_dt(X0 + bw + g, y, XW - bw - g, 32.0, "Để dành", 10.5, 700, BROWN)]
 		d.act = de
 		out.append(d)
 	elif ok:
 		out.append(_btn(X0, y, XW, 32.0, "Gửi đi", cb, "go"))
 	elif de != null:   # thiếu hàng: chỉ còn Để dành
 		var d2 := _chip(X0, y, XW, 32.0, "fut")
-		d2.kids = [_dt(X0, y, XW, 32.0, "Để dành, đủ hàng gửi sau", 11.0, 700, BROWN)]
+		d2.kids = [_dt(X0, y, XW, 32.0, "Để dành, đủ hàng gửi sau", 10.5, 700, BROWN)]
 		d2.act = de
 		out.append(d2)
 	else:
@@ -131,7 +131,7 @@ func _old(y: float, t: Dictionary) -> Array:   # Thư cũ: mỗi lá một dòng
 		var rs := String(r.s)
 		var sw: float = minf(Box.text_w(rs, 10.5, 800) + 2.0, XW - 170.0)
 		var ks := [_icx(X0 + 16.0, y + 15.0, 22.0, _face(String(r.w))), _dt(X0 + 32.0, y, nw, 30.0, String(r.w), 10.5, 800, BROWN, "left"),
-			_dt(X0 + 32.0 + nw + 2.0, y, 90.0, 30.0, "· " + dn, 10.0, 600, SUB, "left"),
+			_dt(X0 + 32.0 + nw + 2.0, y, 90.0, 30.0, "· " + dn, 10.5, 600, SUB, "left"),
 			_dt(X0 + XW - 8.0 - sw, y, sw, 30.0, _fitw(rs, 10.5, 800, sw), 10.5, 800, String(LGC.get(String(r.get("k", "")), SUB)), "left")]
 		if r.has("ic"):
 			ks.append(_icx(X0 + XW - 8.0 - sw - 12.0, y + 15.0, 18.0, String(r.ic)))

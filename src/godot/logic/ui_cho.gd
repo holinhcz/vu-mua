@@ -63,15 +63,15 @@ func _build() -> void:
 	var n: Dictionary = W.s4[a]
 	var o := _left()
 	var tt := "còn " + ((str(int(floor(o))) + " tiếng") if o >= 1.0 else (str(int(round(fmod(o, 1.0) * 60.0))) + " phút"))
-	var tw: float = Box.text_w(tt, 10.0, 800) + 32.0
+	var tw: float = Box.text_w(tt, 10.5, 800) + 32.0
 	out.append(_pic(X0, y + 2.0, 58.0, 42.0, "res://ui/img/xt/g_ghe1.webp"))
-	out.append(_dt(X0 + 64.0, y + 2.0, XW - 70.0 - tw, 18.0, _fitw(String(n.who), 12.5, 800, XW - 70.0 - tw), 12.5, 800, BROWN, "left"))
+	out.append(_dt(X0 + 64.0, y + 2.0, XW - 70.0 - tw, 18.0, _fitw(String(n.who), 12.0, 800, XW - 70.0 - tw), 12.0, 800, BROWN, "left"))
 	var tc := _chip(X0 + XW - tw, y + 1.0, tw, 22.0, "sen" if o < 0.4 else "fire_l")
 	tc.kids = [_dic(X0 + XW - tw + 7.0, y + 4.0, 16.0, CLOCK),
-		_dt(X0 + XW - tw + 26.0, y + 1.0, tw - 30.0, 22.0, tt, 10.0, 800, "rgb(180, 60, 40)", "left")]
+		_dt(X0 + XW - tw + 26.0, y + 1.0, tw - 30.0, 22.0, tt, 10.5, 800, "rgb(180, 60, 40)", "left")]
 	tc.act = _dsay.bind("Chợ nổi họp 5–" + str(W.wm()) + " giờ sáng, " + tt + " nữa là tan.")
 	out.append(tc)
-	var P: Array = _para(X0 + 64.0, y + 22.0, XW - 66.0, String(n.d), 10.0, 600, SUB, 13.0)
+	var P: Array = _para(X0 + 64.0, y + 22.0, XW - 66.0, String(n.d), 10.5, 600, SUB, 13.0)
 	out.append_array(P[0])
 	y += maxf(46.0, 22.0 + float(P[1])) + GG
 	# hôm nay được giá: mỗi món một chip (hình + tên + ×)
@@ -175,10 +175,10 @@ func _box(x: float, y: float, w: float, h: float, a: int, f: int, c: Dictionary)
 	var grn := "rgb(40, 110, 50)"
 	if t == "doi":
 		var hv := int(G.g.barn.get(c.g, 0))
-		R = _rowi(x + 8.0, y + 46.0, 18.0, ["Đưa", "i:" + String(c.g), G.fmt_n(mini(hv, 9999)) + "/" + G.fmt_n(int(c.gq))], 10.0, 800, grn if ok or done else red)
+		R = _rowi(x + 8.0, y + 46.0, 18.0, ["Đưa", "i:" + String(c.g), G.fmt_n(mini(hv, 9999)) + "/" + G.fmt_n(int(c.gq))], 10.5, 800, grn if ok or done else red)
 	elif t == "mua":
 		var hv := int(G.g.barn.get(c.id, 0))
-		R = _rowi(x + 8.0, y + 46.0, 18.0, [(G.fmt_n(int(c.q)) if done else G.fmt_n(mini(hv, 9999))) + "/" + G.fmt_n(int(c.q)) + "  ", "c", " " + G.fmt_n(int(c.xu))], 10.0, 800, grn if ok or done else red)
+		R = _rowi(x + 8.0, y + 46.0, 18.0, [(G.fmt_n(int(c.q)) if done else G.fmt_n(mini(hv, 9999))) + "/" + G.fmt_n(int(c.q)) + "  ", "c", " " + G.fmt_n(int(c.xu))], 10.5, 800, grn if ok or done else red)
 	else:
 		R = _rowi(x + 8.0, y + 46.0, 18.0, ["c", " " + G.fmt_n(int(c.xu))], 10.5, 800, "rgb(150, 90, 10)" if ok or done else red)
 	out.append_array(R[0])
@@ -189,7 +189,7 @@ func _box(x: float, y: float, w: float, h: float, a: int, f: int, c: Dictionary)
 		bx.css = bx.css.duplicate()
 		bx.css["opacity"] = "0.7"
 		out.append(_dtick(x + w - 22.0, y + 6.0, 16.0))
-		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã " + bt.to_lower() + " hôm nay", 9.5, 700, grn, "left"))
+		out.append(_dt(x + 8.0, y + h - 26.0, w - 16.0, 20.0, "Đã " + bt.to_lower() + " hôm nay", 10.5, 700, grn, "left"))
 	else:
 		out.append(_btn(x + 8.0, y + h - 28.0, w - 16.0, 22.0, bt, _deal.bind(a, f), "go" if ok else "off"))
 	bx.act = _dsay.bind(info)
