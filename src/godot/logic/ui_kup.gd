@@ -21,6 +21,11 @@ func open_up() -> void:
 	kind = "up"
 	_go()
 
+func open_kf(n: int, cap: int) -> void:   # Kho đầy (lL .kfov)
+	kind = "kf"
+	sp = {"n": n, "cap": cap}
+	_go()
+
 func open_ns(s: Dictionary) -> void:
 	kind = "ns"
 	sp = s
@@ -53,7 +58,12 @@ func _build() -> void:
 	var sh := _kshell([], "", func(_k): pass)
 	var out := []
 	var y := 8.0 if kind == "up" else 4.0
-	y = _up(out, y) if kind == "up" else _ns(out, y)
+	if kind == "up":
+		y = _up(out, y)
+	elif kind == "kf":
+		y = _kf(out, y)
+	else:
+		y = _ns(out, y)
 	_kmount(sh[0], sh[1], sh[2], out, y)
 
 func _center(out: Array, y: float, t: String, fs: float, fw: int, col: String) -> float:
@@ -184,3 +194,34 @@ func _ns(out: Array, y: float) -> float:
 			close()
 			U.nap_open(), true))
 	return y + 34.0
+
+# ------------------------------------------------------------------ kho đầy
+const KHO_IC := "res://ui/img/cg/basket.webp"
+func _kf(out: Array, y: float) -> float:
+	var a: int = G.kho_star()
+	out.append(_dick(X0 + XW * 0.5, y + 22.0, 40.0, "crate"))
+	y += 46.0 + 6.0
+	y = _center(out, y, "Kho đầy rồi!", 17.0, 800, BROWN) + 6.0
+	y = _center(out, y, "Đang chứa " + G.fmt_n(int(sp.n)) + "/" + str(int(sp.cap)) + " món. Bán bớt hàng hoặc nâng kho để chứa thêm.", 12.0, 600, SUB) + GG
+	if a < 10:
+		var nd: Dictionary = G.kho_need(a + 1)
+		var lock: bool = G.lv() < int(nd.lv)
+		if not lock or G.early_ok(int(nd.lv)):
+			var bt := _onbtn(X0, y, XW, 34.0, ("Nâng kho sớm lên " if lock else "Nâng kho lên ") + str(a + 1) + "★", func():
+				close()
+				K.open())
+			bt.kids[0].css["font-size"] = _cpx(14.0)
+			out.append(bt)
+			y += 34.0 + 6.0
+	var w := (XW - 6.0) * 0.5
+	out.append(_b14(X0, y, w, 32.0, "Mở kho", func():
+		close()
+		U.kho_open(), "plain"))
+	out.append(_b14(X0 + w + 6.0, y, w, 32.0, "Để sau", close, "plain"))
+	return y + 32.0
+
+func _b14(x: float, y: float, w: float, h: float, t: String, cb, kind2 := "go") -> Dictionary:   # nút chung, chữ 14
+	var b := _btn(x, y, w, h, t, cb, kind2)
+	if b.kids.size() and b.kids[0] is Dictionary and b.kids[0].has("css"):
+		b.kids[0].css["font-size"] = _cpx(14.0)
+	return b

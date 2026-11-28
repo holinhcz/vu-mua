@@ -16,7 +16,6 @@ var U
 var G
 var T := {}
 var pop: Control = null      # (cũ) hộp Nâng sao kho: nay là bảng U.kupp, luôn null
-var kf: Control = null       # hộp Kho đầy
 var mat_svg := {}            # vật liệu -> svg
 var star_on := ""
 var star_off := ""
@@ -28,10 +27,6 @@ func _init(ui) -> void:
 	G = ui.G
 	for k in ["kup_lock", "kup_max", "k3_no"]:   # (11-28) chỉ lấy hình sao + kiểu ô (ui_sao dùng _chip)
 		T[k] = Snap.load_snap(k)[".u2pop"][0]
-	for k in ["kfov", "kfov2", "kfov3"]:
-		var n: Dictionary = Snap.load_snap(k)[".kfov"][0].duplicate(true)
-		_unscale(n, "kfbox")
-		T[k] = n
 	# hình vật liệu nâng kho (ván, đinh, gạch): hình món ui/svg/mat
 	for m in G.KHO_MAT:
 		mat_svg[m] = FileAccess.get_file_as_string("res://ui/svg/mat/" + String(m) + ".svg")
@@ -43,31 +38,6 @@ func _init(ui) -> void:
 	chip_css.no = lk[2]
 	chip_css.xok = lk[0]
 	chip_css.xno = Snap.find(T.k3_no, "need").kids[0]
-
-func _unscale(n: Dictionary, cls: String) -> void:
-	# hộp chụp lúc đang phóng to (animation): đưa về cỡ thật quanh tâm
-	var bx := Snap.find(n, cls)
-	var m := RegEx.create_from_string("matrix\\(([0-9.]+)").search(String(bx.css.get("transform", "")))
-	if m != null:
-		var k := float(m.get_string(1))
-		var c := Vector2(float(bx.r[0]) + float(bx.r[2]) * 0.5, float(bx.r[1]) + float(bx.r[3]) * 0.5)
-		U._od_unscale(bx, c, k)
-		bx.css["transform"] = "none"
-
-# ------------------------------------------------------------------ chữ lẫn hình (chữ, <i> hình, chữ)
-static func _plain_css(c: Dictionary) -> Dictionary:
-	var o := c.duplicate()
-	o["background-color"] = "rgba(0, 0, 0, 0)"
-	o["background-image"] = "none"
-	o["box-shadow"] = "none"
-	o["border-radius"] = "0px"
-	for s in ["top", "right", "bottom", "left"]:
-		o["border-" + s] = "0px none rgb(0, 0, 0)"
-		o["padding-" + s] = "0px"
-	o["filter"] = "none"
-	o["position"] = "static"
-	o["display"] = "inline"
-	return o
 
 func _mix(n: Dictionary, old_l: String, new_l: String, new_r: String, cx: float) -> void:
 	# n: chữ = trái + phải, kid[0] = hình ở giữa. Đo khoảng hở hai bên hình từ bản chụp, xếp lại giữa cx.
@@ -303,47 +273,15 @@ func _xn(b: Dictionary, s: String) -> void:
 	b.tr = [br - w, b.get("tr", b.r)[1], w + 0.5, b.get("tr", b.r)[3]]
 
 # ------------------------------------------------------------------ hộp Kho đầy (lL)
-func full(cnt: int, cap: int) -> void:
-	if kf != null or (U.bdp != null and U.bdp.mode != "off"):
+func full(cnt: int, cap: int) -> void:   # (11-28) Kho đầy: bảng khung chung ui_kup.gd kiểu "kf"
+	if kf_on() or (U.bdp != null and U.bdp.mode != "off"):
 		return
 	G.g.kfpop = G._now_ms()
-	var a: int = G.kho_star()
-	var key := "kfov2"
-	var lbl := ""
-	if a < 10:
-		var nd: Dictionary = G.kho_need(a + 1)
-		var lock: bool = G.lv() < int(nd.lv)
-		if not lock:
-			key = "kfov"
-			lbl = "Nâng kho lên " + str(a + 1) + "★"
-		elif G.early_ok(int(nd.lv)):
-			key = "kfov3"
-			lbl = "💎 Nâng kho sớm lên " + str(a + 1) + "★"
-	var n: Dictionary = T[key].duplicate(true)
-	var bx := Snap.find(n, "kfbox")
-	var p := Snap.find(bx, "", "p")
-	p.text = "Đang chứa " + G.fmt_n(cnt) + "/" + str(cap) + " món. Bán bớt hàng hoặc nâng kho để chứa thêm."
-	p.erase("tr")
-	if lbl != "":
-		_ctext(Snap.find(bx, "nskf"), lbl)
-	var ids := {}
-	kf = _show(n, "kfbox", ids, kf_close)
-	for bt in U._qall(kf, "btn", []):
-		var t: String = bt.texts[0].s if not bt.texts.is_empty() else ""
-		if t == "Mở kho":
-			U._click(bt, func():
-				kf_close()
-				U.kho_open(), "down")
-		elif t == "Để sau":
-			U._click(bt, kf_close, "down")
-		else:
-			U._click(bt, func():
-				kf_close()
-				up(), "down")
-	U._layout()
+	kup().open_kf(cnt, cap)
+
+func kf_on() -> bool:
+	return U.kupp != null and U.kupp.on and U.kupp.kind == "kf"
 
 func kf_close() -> void:
-	if kf != null:
-		U.anchors.erase(U._anchor_of(kf))
-		kf.queue_free()
-		kf = null
+	if kf_on():
+		U.kupp.close()
