@@ -72,6 +72,7 @@ var dgp = null               # ĐUA GÀ (ui_dg.gd, #dgBtn trong Giải trí)
 var carop = null             # CỜ CARO (ui_caro.gd, #caroBtn trong Giải trí)
 var spp = null               # Nâng sao ô ruộng (ui_sao.gd)
 var ordp = null              # (11-27) Đơn hàng trên khung chung (ui_ord2.gd)
+var dkp = null               # (11-28) Menu trên khung chung (ui_dock2.gd), thay bảng chụp web dock
 var khop = null              # (11-27) Kho trên khung chung (ui_kho2.gd), thay 4 bản chụp web khi Sen.ON
 var khp = null               # sức chứa kho, Nâng sao kho, Kho đầy, Nâng sớm (ui_kho.gd)
 
@@ -92,7 +93,6 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	add_child(root)
 	_build_dim()
 	_build_hud()
-	_build_dock()
 	_build_gv()
 	_build_rm()
 	_build_lock()
@@ -107,6 +107,7 @@ func setup(game: Node, pics: Node, farm: Node2D, dpr: float) -> void:
 	kdp = load("res://logic/ui_kdd.gd").new(self)
 	khop = load("res://logic/ui_kho2.gd").new(self)
 	ordp = load("res://logic/ui_ord2.gd").new(self)
+	dkp = load("res://logic/ui_dock2.gd").new(self)
 	bfp = load("res://logic/ui_bf.gd").new(self)
 	spp = load("res://logic/ui_sao.gd").new(self)
 	pcp = load("res://logic/ui_pc.gd").new(self)
@@ -790,70 +791,7 @@ func _clock() -> void:
 	var w: String = G.troi.cur if G.troi.cur != "" else "nang"
 	_txt(hid.get("#wxT"), G.troi.TEN[w])
 
-# ------------------------------------------------------------------ Menu (dock)
-var dock_b: Control = null
-var dock_btn2: Control = null
-var dock_catch: Control = null
-
-func _build_dock() -> void:
-	var d: Dictionary = Snap.load_snap("dock")
-	var ids := {}
-	dock_catch = Control.new()
-	dock_catch.mouse_filter = Control.MOUSE_FILTER_STOP
-	dock_catch.visible = false
-	tap_close(dock_catch, func(): dock_open(false))
-	root.add_child(dock_catch)
-	for sel in d:
-		for n in d[sel]:
-			if sel == "nav.dock":
-				Snap.chip_look(n, "hb")   # (bản 302) ô chức năng = kiểu chip lọc của Kho, nền popup giữ nguyên
-			var b := _build(n, ids)
-			b.visible = false
-			root.add_child(b)
-			anchors.append([b, 1, 1])
-			if sel == "nav.dock":
-				dock_b = b
-				_stop(b)
-				for bd in ids.get(".bdg*", []):   # (bản 304) bỏ huy hiệu chụp cứng của bản web ("10" Kho, "đẹp 0" Xây dựng): không nối số thật
-					bd.visible = false
-			else:
-				dock_btn2 = b
-				_click(b, func(): dock_open(false), "scale")
-	# each tile: Kho opens the barn, the rest are not here yet
-	if dock_b != null:
-		for b in _buttons(dock_b, []):
-			var lab := _label_of(b)
-			var words := lab.split(" ", false)   # ô có huy hiệu số ("10 Kho", "đẹp 0 Xây dựng"): so theo chữ trong ô
-			if words.has("Kho"):
-				_click(b, func(): dock_open(false); kho_open(), "scale94")
-			elif lab.contains("Đơn hàng"):
-				_click(b, func(): dock_open(false); ord_open(), "scale94")
-			elif lab.contains("Xây dựng"):
-				_click(b, func(): dock_open(false); bdp.open_shop(), "scale94")
-			elif lab == "Nghề":
-				_click(b, func(): dock_open(false); ng_open(), "scale94")
-			elif lab == "Lờ lọp":
-				_click(b, func(): dock_open(false); lop_open(), "scale94")
-			elif lab.contains("Sổ làng"):
-				_click(b, func(): dock_open(false); sl_open(), "scale94")
-			elif lab.contains("Câu cá"):
-				_click(b, func(): dock_open(false); ccp.open(), "scale94")
-			elif lab.contains("Cờ gánh"):
-				_click(b, func(): dock_open(false); cgp.open(), "scale94")
-			elif lab.contains("Ô ăn quan"):
-				_click(b, func(): dock_open(false); oqp.open(), "scale94")
-			elif lab.contains("Xếp trái"):
-				_click(b, func(): dock_open(false); xtp.open(), "scale94")
-			elif lab.contains("Cờ caro"):
-				_click(b, func(): dock_open(false); carop.open(), "scale94")
-			elif lab.contains("Tìm số"):
-				_click(b, func(): dock_open(false); tsop.open(), "scale94")
-			elif lab.contains("Đua gà"):
-				_click(b, func(): dock_open(false); dgp.open(), "scale94")
-			elif lab.contains("Hệ Thống"):
-				_click(b, func(): dock_open(false); sys_open(), "scale94")
-			else:
-				_click(b, func(): say(SOON), "scale94")
+# ------------------------------------------------------------------ Menu: ui_dock2.gd (dkp)
 
 func _buttons(b: Control, out: Array) -> Array:
 	# theo thứ tự trong trang (Snap.build xếp con theo z-index để vẽ: nút "on" bị đẩy xuống cuối)
@@ -889,13 +827,16 @@ func _all_text(n: Dictionary) -> String:
 			s += (" " if s != "" else "") + t
 	return s
 
-func dock_open(on: bool) -> void:
-	if dock_b == null:
+func dock_open(on: bool) -> void:   # (11-28) Menu = bảng khung chung dkp
+	if dkp == null:
 		return
-	dock_b.visible = on
-	dock_btn2.visible = on
-	dock_catch.visible = on
-	dock_catch.size = vsize() * Css.K
+	if on:
+		for p in _pans():
+			if p != null and p != dkp and p.on:
+				p.close()
+		dkp.open()
+	elif dkp.on:
+		dkp.close()
 	var b = hid.get("#dockBtn")
 	if b != null:
 		b.visible = not on and not focus
@@ -2524,7 +2465,7 @@ func rk_open() -> void:   # Qk: Sổ làng › Xếp hạng (Jg("xephang"))
 	rkp.open()
 
 func _pans() -> Array:   # các bảng dựng từ mẫu web (ui_bang.gd): đóng, step, input chung
-	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp]
+	return [slp, utp, hrp, gpp, ghp, chop, ccpp, lopp, lgp, tnp, hdnp, clgp, sysp, dlp, klp, klcp, gdp, rkp, ddp, napp, ttp, skyp, thup, pcp, khop, ordp, dkp]
 
 func _pan_open(v: String, path: String, args: Array) -> Variant:   # tạo bảng lần đầu, đóng bảng khác
 	if get(v) == null:
@@ -2632,7 +2573,7 @@ var _fing := {}      # ngón tay (chuột: -1) đang chạm
 func any_open() -> bool:   # (bản 283) đang mở bảng / vòng nút / khay nào trên làng
 	if rm_on() or kho_on or od_on or pc_b != null:
 		return true
-	if (gv_b != null and gv_b.visible) or (lk_b != null and lk_b.visible) or (dock_b != null and dock_b.visible):
+	if (gv_b != null and gv_b.visible) or (lk_b != null and lk_b.visible) or (dkp != null and dkp.on):
 		return true
 	if xfp != null and xfp.k != "":
 		return true
